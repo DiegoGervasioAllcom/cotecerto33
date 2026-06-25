@@ -176,6 +176,7 @@ function Page() {
         <span className="spacer" style={{ flex: 1 }} />
         <span className="chip chip-yellow">Última atualização {new Date(data.criado_em).toLocaleString("pt-BR")}</span>
         <button className="btn btn-slate btn-sm" onClick={() => window.location.reload()}>Recalcular tudo</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => doPrint()}>Imprimir comparativo</button>
       </div>
 
       {offers.length === 0 ? (
