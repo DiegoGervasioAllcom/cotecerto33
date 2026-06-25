@@ -137,6 +137,7 @@ function Page() {
                   <td>
                     <Link
                       to="/venda/novo-lead"
+                      search={{ id: r.id }}
                       className="btn"
                       style={{ padding: "4px 10px" }}
                     >
