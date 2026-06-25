@@ -60,7 +60,7 @@ const GROUPS: Group[] = [
       { to: "/operacao/comissoes", label: "Comissões", icon: DollarSign, soon: true },
       { to: "/operacao/premiacoes", label: "Premiações", icon: Trophy },
       { to: "/operacao/estornos", label: "Estornos", icon: RotateCcw },
-      { to: "/operacao/perdas", label: "Avaliação de perdas", icon: AlertTriangle, roles: ["matriz"] },
+      
       { to: "/operacao/renovacoes", label: "Renovações", icon: RefreshCw },
       { to: "/operacao/relatorios", label: "Relatórios", icon: BarChart3 },
       { to: "/operacao/mensagens", label: "Mensagens", icon: Mail },
