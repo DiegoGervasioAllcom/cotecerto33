@@ -19,5 +19,6 @@ function Index() {
 
   if (!session) return <Navigate to="/auth" />;
   if (profile?.status === "pendente") return <Navigate to="/auth/pendente" />;
+  if (profile?.perfil === "matriz") return <Navigate to="/comando/visao-geral" />;
   return <Navigate to="/inicio" />;
 }
