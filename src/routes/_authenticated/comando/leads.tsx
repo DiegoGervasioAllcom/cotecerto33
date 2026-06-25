@@ -228,6 +228,17 @@ function Page() {
     if (st === "ganho") navigate({ to: "/venda/aceite", search: {} });
   }
 
+  async function executarDistribuicaoAuto() {
+    if (kpis.pendentes === 0) { setDistAutoMsg({ type: "err", text: "Não há leads pendentes na fila." }); return; }
+    setDistAutoLoading(true); setDistAutoMsg(null);
+    const { data: n, error } = await supabase.rpc("distribuir_fila_pendente");
+    setDistAutoLoading(false);
+    if (error) { setDistAutoMsg({ type: "err", text: error.message }); return; }
+    const count = typeof n === "number" ? n : 0;
+    setDistAutoMsg({ type: "ok", text: `${count} lead${count === 1 ? "" : "s"} distribuído${count === 1 ? "" : "s"} automaticamente.` });
+    load();
+  }
+
   async function puxarDeVolta(l: Lead) {
     if (!confirm(`Puxar o lead "${l.nome}" de volta para a matriz?`)) return;
     const { error } = await supabase.rpc("puxar_lead_de_volta", { p_lead: l.id });
