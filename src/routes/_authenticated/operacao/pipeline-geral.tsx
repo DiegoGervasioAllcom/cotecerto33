@@ -24,6 +24,7 @@ type Lead = {
 };
 type Empresa = { id: string; nome: string | null };
 type Profile = { id: string; nome: string | null };
+type Seguradora = { id: string; nome: string };
 
 const STAGE_KEY: Record<string, string> = {
   Novo: "novo",
@@ -50,6 +51,7 @@ function Page() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [seguradoras, setSeguradoras] = useState<Seguradora[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
@@ -63,7 +65,7 @@ function Page() {
     (async () => {
       setLoading(true);
       try {
-        const [{ data: st }, { data: lds, error }, { data: emps }, { data: profs }] = await Promise.all([
+        const [{ data: st }, { data: lds, error }, { data: emps }, { data: profs }, { data: segs }] = await Promise.all([
           supabase.from("pipeline_stages").select("*").order("ordem"),
           supabase
             .from("leads")
@@ -71,8 +73,9 @@ function Page() {
             .neq("status_pipeline", "perdido")
             .order("atualizado_em", { ascending: false })
             .limit(1000),
-          supabase.from("empresas").select("id,nome"),
-          supabase.from("profiles").select("id,nome"),
+          supabase.from("empresas").select("id,nome").order("nome"),
+          supabase.from("profiles").select("id,nome").order("nome"),
+          supabase.from("seguradoras").select("id,nome").eq("ativo", true).order("ordem"),
         ]);
         if (error) setErr(error.message);
         setStages((st ?? []) as Stage[]);
@@ -83,6 +86,7 @@ function Page() {
         const pm: Record<string, Profile> = {};
         for (const p of (profs ?? []) as Profile[]) pm[p.id] = p;
         setProfiles(pm);
+        setSeguradoras(((segs ?? []) as Seguradora[]).filter((s) => s.nome));
       } finally {
         setLoading(false);
       }
@@ -90,37 +94,27 @@ function Page() {
   }, []);
 
   const filterOptions = useMemo(() => {
-    const fr = new Set<string>();
-    const vd = new Set<string>();
+    const fr = Object.values(empresas).filter((e) => e.nome).sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    const vd = Object.values(profiles).filter((p) => p.nome).sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     const og = new Set<string>();
-    const sg = new Set<string>();
     for (const l of leads) {
-      const e = l.empresa_id ? empresas[l.empresa_id] : null;
-      if (e) fr.add(e.nome || "—");
-      const v = l.responsavel_id ? profiles[l.responsavel_id] : null;
-      if (v?.nome) vd.add(v.nome);
       if (l.origem) og.add(l.origem);
-      const segs = (l.dados?.seguradoras_sel as string[] | undefined) ?? [];
-      for (const s of segs) if (s) sg.add(s);
     }
     return {
-      franquias: Array.from(fr).sort(),
-      vendedores: Array.from(vd).sort(),
+      franquias: fr,
+      vendedores: vd,
       origens: Array.from(og).sort(),
-      seguradoras: Array.from(sg).sort(),
+      seguradoras,
     };
-  }, [leads, empresas, profiles]);
+  }, [leads, empresas, profiles, seguradoras]);
 
   const filtered = useMemo(() => {
     return leads.filter((l) => {
       if (fFranq) {
-        const e = l.empresa_id ? empresas[l.empresa_id] : null;
-        const nf = e?.nome || "";
-        if (nf !== fFranq) return false;
+        if ((l.empresa_id || "") !== fFranq) return false;
       }
       if (fVend) {
-        const v = l.responsavel_id ? profiles[l.responsavel_id] : null;
-        if ((v?.nome || "") !== fVend) return false;
+        if ((l.responsavel_id || "") !== fVend) return false;
       }
       if (fOrigem && (l.origem || "") !== fOrigem) return false;
       if (fSeg) {
@@ -187,11 +181,11 @@ function Page() {
         <span className="label">FILTRAR</span>
         <select className="select-mini" value={fFranq} onChange={(e) => setFFranq(e.target.value)}>
           <option value="">Franquia</option>
-          {filterOptions.franquias.map((x) => <option key={x} value={x}>{x}</option>)}
+          {filterOptions.franquias.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
         </select>
         <select className="select-mini" value={fVend} onChange={(e) => setFVend(e.target.value)}>
           <option value="">Vendedor</option>
-          {filterOptions.vendedores.map((x) => <option key={x} value={x}>{x}</option>)}
+          {filterOptions.vendedores.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
         </select>
         <select className="select-mini" value={fOrigem} onChange={(e) => setFOrigem(e.target.value)}>
           <option value="">Origem</option>
@@ -199,7 +193,7 @@ function Page() {
         </select>
         <select className="select-mini" value={fSeg} onChange={(e) => setFSeg(e.target.value)}>
           <option value="">Seguradora</option>
-          {filterOptions.seguradoras.map((x) => <option key={x} value={x}>{x}</option>)}
+          {filterOptions.seguradoras.map((x) => <option key={x.id} value={x.nome}>{x.nome}</option>)}
         </select>
         <div className="spacer"></div>
         <span className="small muted">{filtered.length} de {leads.length} leads</span>
