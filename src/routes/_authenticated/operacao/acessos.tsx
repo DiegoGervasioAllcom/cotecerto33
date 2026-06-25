@@ -534,7 +534,7 @@ function AnalisarModal({
                 </div>
                 <div className="field-group">
                   <label>Salário base (R$)</label>
-                  <input className="input" placeholder="ex.: 1.800,00" />
+                  <MaskedInput mask="brl" className="input" placeholder="R$ 1.800,00" />
                 </div>
                 <div className="field-group">
                   <label>Bônus de campanha</label>
@@ -586,11 +586,10 @@ function AnalisarModal({
                         ))}
                       </select>
                     ) : p.k === "comVenda" ? (
-                      <input
+                      <MaskedInput
+                        mask="pct"
                         className="input"
-                        defaultValue={`${Number(
-                          modelos.find((m) => m.id === modelSel)?.perc_comissao_padrao ?? 0,
-                        ).toFixed(2)}%`}
+                        defaultValue={String(modelos.find((m) => m.id === modelSel)?.perc_comissao_padrao ?? 0)}
                       />
                     ) : (
                       <input className="input" defaultValue="—" />
@@ -610,11 +609,11 @@ function AnalisarModal({
                 </div>
                 <div className="field-group">
                   <label>Faixa: acima de (R$)</label>
-                  <input className="input" placeholder="ex.: 50.000" />
+                  <MaskedInput mask="brl" className="input" placeholder="R$ 50.000,00" />
                 </div>
                 <div className="field-group">
                   <label>…comissão passa a</label>
-                  <input className="input" placeholder="ex.: 55%" />
+                  <MaskedInput mask="pct" className="input" placeholder="55%" />
                 </div>
               </div>
             </>
