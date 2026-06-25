@@ -159,7 +159,9 @@ function Page() {
                 return (
                   <tr
                     key={r.id}
-                    onClick={() => nav({ to: "/venda/cotacoes/$id", params: { id: r.id } })}
+                    onClick={() =>
+                      nav({ to: "/venda/novo-lead", search: { id: r.id } })
+                    }
                     style={{ cursor: "pointer" }}
                   >
                     <td className="small muted" style={{ fontFamily: "ui-monospace,Menlo,monospace" }}>
