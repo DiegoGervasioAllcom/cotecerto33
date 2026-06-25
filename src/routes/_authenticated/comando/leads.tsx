@@ -190,7 +190,7 @@ function Page() {
   }), [enriched, fStatus, fUf, fOrigem, fArquivados]);
 
   const kpis = useMemo(() => {
-    const pendentes = enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo");
+    const pendentes = enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo" && !l.arquivado);
     const distribuidos = enriched.filter((l) => l.distribuido && l.distribuido_em);
     const oldest = pendentes.reduce((a, l) => Math.max(a, l.ageSec), 0);
     const avgDist = distribuidos.length ? Math.round(distribuidos.reduce((a, l) => a + l.slaSec, 0) / distribuidos.length) : 0;
@@ -205,8 +205,8 @@ function Page() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const today = (d: string) => new Date(d).getTime() >= todayStart.getTime();
     return {
-      pendentes: enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo").length,
-      slaOver: enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo" && l.ageSec > SLA_SECONDS).length,
+      pendentes: enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo" && !l.arquivado).length,
+      slaOver: enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo" && !l.arquivado && l.ageSec > SLA_SECONDS).length,
       emAtend: enriched.filter((l) => ["contato","qualificado","cotacao","proposta","negociacao"].includes(l.status_pipeline)).length,
       filaHoje: enriched.filter((l) => today(l.criado_em)).length,
       fechadosHoje: enriched.filter((l) => l.status_pipeline === "ganho" && today(l.criado_em)).length,
@@ -404,9 +404,11 @@ function Page() {
                       <button className="ic-mini" title={l.bloqueado ? "Desbloquear" : "Bloquear lead"} onClick={() => setModal({ kind: "block", lead: l })}>
                         <svg width="14" height="14"><use href="#i-lock"></use></svg>
                       </button>
-                      <button className="ic-mini" title={l.arquivado ? "Desarquivar" : "Arquivar"} onClick={() => toggleArquivar(l)}>
-                        <svg width="14" height="14"><use href="#i-archive"></use></svg>
-                      </button>
+                      {(l.arquivado || (!l.distribuido) || l.em_avaliacao_matriz) && (
+                        <button className="ic-mini" title={l.arquivado ? "Desarquivar" : "Arquivar"} onClick={() => toggleArquivar(l)}>
+                          <svg width="14" height="14"><use href="#i-archive"></use></svg>
+                        </button>
+                      )}
                       {!l.bloqueado && l.distribuido && (
                         <button className="ic-mini" title="Abrir" onClick={() => openLead(l)}>
                           <svg width="14" height="14"><use href="#i-eye"></use></svg>
