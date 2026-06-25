@@ -348,17 +348,17 @@ function Page() {
                   </td>
                   <td>
                     <div className="row-actions" style={{ justifyContent: "flex-end", gap: 4, flexWrap: "nowrap" }}>
-                      {!l.distribuido && !isPerdido && !isFechado && (
+                      {!l.bloqueado && !l.distribuido && !isPerdido && !isFechado && (
                         <button className="ic-mini" title="Distribuir" onClick={() => setModal({ kind: "redist", lead: l })}>
                           <svg width="14" height="14"><use href="#i-share"></use></svg>
                         </button>
                       )}
-                      {l.distribuido && !isFechado && (
+                      {!l.bloqueado && l.distribuido && !isFechado && (
                         <button className="ic-mini" title="Redistribuir" onClick={() => setModal({ kind: "redist", lead: l })}>
                           <svg width="14" height="14"><use href="#i-refresh"></use></svg>
                         </button>
                       )}
-                      {l.distribuido && !isFechado && (
+                      {!l.bloqueado && l.distribuido && !isFechado && (
                         <button className="ic-mini" title="Puxar de volta" onClick={() => puxarDeVolta(l)}>
                           <svg width="14" height="14"><use href="#i-corner-up-left"></use></svg>
                         </button>
@@ -369,7 +369,7 @@ function Page() {
                       <button className="ic-mini" title={l.bloqueado ? "Desbloquear" : "Bloquear lead"} onClick={() => setModal({ kind: "block", lead: l })}>
                         <svg width="14" height="14"><use href="#i-lock"></use></svg>
                       </button>
-                      {l.distribuido && (
+                      {!l.bloqueado && l.distribuido && (
                         <button className="ic-mini" title="Abrir" onClick={() => openLead(l)}>
                           <svg width="14" height="14"><use href="#i-eye"></use></svg>
                         </button>
