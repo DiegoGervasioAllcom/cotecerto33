@@ -38,9 +38,18 @@ function Page() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
+  const [matrizId, setMatrizId] = useState<string | null>(null);
+
   async function load() {
     setLoading(true);
     const since = new Date(); since.setMonth(since.getMonth() - 11); since.setDate(1); since.setHours(0,0,0,0);
+    const { data: u } = await supabase.auth.getUser();
+    let mId: string | null = null;
+    if (u.user) {
+      const { data: me } = await supabase.from("profiles").select("empresa_id").eq("id", u.user.id).maybeSingle();
+      mId = (me?.empresa_id as string) ?? null;
+      setMatrizId(mId);
+    }
     const [l, e, pr, pp] = await Promise.all([
       supabase.from("leads").select("id,status_pipeline,empresa_id,responsavel_id,criado_em,distribuido_em,ultimo_atendimento_em,bloqueado,arquivado,valor").gte("criado_em", since.toISOString()).limit(5000),
       supabase.from("empresas").select("id,nome,tipo,parent_id").limit(500),
@@ -61,8 +70,17 @@ function Page() {
     return () => clearInterval(t);
   }, []);
 
-  const franquias = useMemo(() => empresas.filter((x) => x.tipo === "franqueada" || x.parent_id), [empresas]);
-  const vendedores = useMemo(() => profiles.filter((x) => x.empresa_id && franquias.some((f) => f.id === x.empresa_id)), [profiles, franquias]);
+  // Franquias = todas as empresas exceto a matriz do usuário logado
+  const franquias = useMemo(
+    () => empresas.filter((x) => x.id !== matrizId),
+    [empresas, matrizId]
+  );
+  // Vendedores = profiles vinculados a uma franquia (não à matriz) e diferentes do usuário logado matriz
+  const vendedores = useMemo(
+    () => profiles.filter((x) => x.empresa_id && x.empresa_id !== matrizId),
+    [profiles, matrizId]
+  );
+
 
   // Janela do mês atual
   const monthStart = useMemo(() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; }, []);
