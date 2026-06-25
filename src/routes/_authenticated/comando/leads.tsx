@@ -295,6 +295,11 @@ function Page() {
           <option value="">Todas as origens</option>
           {filterOptions.origens.map((o) => <option key={o}>{o}</option>)}
         </select>
+        <select className="select-mini" value={fArquivados} onChange={(e) => setFArquivados(e.target.value as any)}>
+          <option value="ativos">Apenas ativos</option>
+          <option value="arquivados">Apenas arquivados</option>
+          <option value="todos">Ativos + arquivados</option>
+        </select>
         <div className="spacer"></div>
         <span className="small muted">fila ordenada por urgência · {filtered.length} de {leads.length} leads</span>
       </div>
