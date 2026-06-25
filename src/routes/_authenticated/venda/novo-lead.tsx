@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 
@@ -9,9 +9,8 @@ export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
 });
 
 // ---------- máscaras ----------
-function onlyDigits(s: string) {
-  return (s || "").replace(/\D/g, "");
-}
+const onlyDigits = (s: string) => (s || "").replace(/\D/g, "");
+
 function maskCpfCnpj(raw: string) {
   const d = onlyDigits(raw).slice(0, 14);
   if (d.length <= 11) {
@@ -28,77 +27,138 @@ function maskCpfCnpj(raw: string) {
 }
 function maskCel(raw: string) {
   const d = onlyDigits(raw).slice(0, 11);
-  if (d.length <= 10) {
-    return d
-      .replace(/^(\d{2})(\d)/, "($1) $2")
-      .replace(/(\d{4})(\d{1,4})$/, "$1-$2");
-  }
-  return d
-    .replace(/^(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d{1,4})$/, "$1-$2");
+  if (d.length <= 10) return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
+  return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{1,4})$/, "$1-$2");
 }
 function maskFixo(raw: string) {
   const d = onlyDigits(raw).slice(0, 10);
-  return d
-    .replace(/^(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{4})(\d{1,4})$/, "$1-$2");
+  return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
 }
 function maskCep(raw: string) {
-  const d = onlyDigits(raw).slice(0, 8);
-  return d.replace(/^(\d{5})(\d)/, "$1-$2");
+  return onlyDigits(raw).slice(0, 8).replace(/^(\d{5})(\d)/, "$1-$2");
+}
+function maskPlaca(raw: string) {
+  // Mercosul: AAA0A00 | Antigo: AAA0000
+  const v = (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
+  if (v.length <= 3) return v;
+  return v.slice(0, 3) + "-" + v.slice(3);
+}
+function maskAno(raw: string) {
+  return onlyDigits(raw).slice(0, 4);
+}
+function maskBRL(raw: string) {
+  const d = onlyDigits(raw);
+  if (!d) return "";
+  const n = parseInt(d, 10);
+  return "R$ " + (Math.floor(n / 100)).toLocaleString("pt-BR") + "," + String(n % 100).padStart(2, "0");
+}
+function maskKm(raw: string) {
+  const d = onlyDigits(raw);
+  return d ? Number(d).toLocaleString("pt-BR") + " km" : "";
 }
 
 type Form = {
-  cpf: string;
-  pessoa: string;
-  nome: string;
-  nomeSocial: string;
-  nasc: string;
-  sexo: string;
-  estadoCivil: string;
-  celular: string;
-  telRes: string;
-  email: string;
-  cep: string;
-  logradouro: string;
-  bairro: string;
-  cidade: string;
-  uf: string;
+  // Segurado
+  cpf: string; pessoa: string; nome: string; nomeSocial: string; nasc: string;
+  sexo: string; estadoCivil: string; celular: string; telRes: string; email: string;
+  cep: string; logradouro: string; bairro: string; cidade: string; uf: string;
   sms: "sim" | "nao";
+  // Seguro
+  tipoSeguro: string; ramo: string; categoria: string; vigIni: string; vigFim: string;
+  ciaAtual: string; apoliceAtual: string; ciAtual: string; classeBonus: string;
+  // Veículo
+  placa: string; chassi: string; renavam: string; marca: string; modelo: string;
+  anoModelo: string; anoFab: string; combustivel: string; cor: string; zeroKm: boolean;
+  blindado: boolean; alienado: boolean; banco: string; usoComercial: string; kmMensal: string;
+  // Perfil
+  condutorMesmo: "sim" | "nao"; condCpf: string; condNome: string; condNasc: string;
+  condSexo: string; condEstadoCivil: string; profissao: string; cepPernoite: string;
+  garagemResid: boolean; garagemTrab: boolean; garagemEsc: boolean;
+  jovens1825: "sim" | "nao";
+  // Coberturas
+  tipoCobertura: string; casco: string; cascoValor: string; franquia: string;
+  appMorte: string; appInval: string; dmh: string; rcfDm: string; rcfDc: string;
+  vidros: boolean; carroReserva: string; assist24: string;
 };
 
 const STEPS = ["Segurado", "Seguro", "Veículo", "Perfil", "Coberturas", "Cálculo"];
+const SEGURADORAS = ["Porto Seguro", "Azul Seguros", "Bradesco Auto", "HDI", "Allianz"];
 
 function Page() {
   const [step, setStep] = useState(0);
   const [cepLoading, setCepLoading] = useState(false);
+  const [marcas, setMarcas] = useState<{ codigo: string; nome: string }[]>([]);
+  const [modelos, setModelos] = useState<{ codigo: number; nome: string }[]>([]);
+  const [fipeValor, setFipeValor] = useState<string>("");
+  const [calculando, setCalculando] = useState(false);
+  const [resultados, setResultados] = useState<{ cia: string; premio: number; cobertura: string }[]>([]);
+
   const [f, setF] = useState<Form>({
     cpf: "", pessoa: "Física", nome: "", nomeSocial: "", nasc: "", sexo: "",
     estadoCivil: "", celular: "", telRes: "", email: "",
     cep: "", logradouro: "", bairro: "", cidade: "", uf: "", sms: "nao",
+    tipoSeguro: "Novo", ramo: "Automóvel", categoria: "Particular", vigIni: "", vigFim: "",
+    ciaAtual: "", apoliceAtual: "", ciAtual: "", classeBonus: "0",
+    placa: "", chassi: "", renavam: "", marca: "", modelo: "",
+    anoModelo: "", anoFab: "", combustivel: "Flex", cor: "", zeroKm: false,
+    blindado: false, alienado: false, banco: "", usoComercial: "Não", kmMensal: "",
+    condutorMesmo: "sim", condCpf: "", condNome: "", condNasc: "", condSexo: "",
+    condEstadoCivil: "", profissao: "", cepPernoite: "",
+    garagemResid: true, garagemTrab: false, garagemEsc: false, jovens1825: "nao",
+    tipoCobertura: "Compreensiva", casco: "100% Tabela FIPE", cascoValor: "", franquia: "Normal",
+    appMorte: "", appInval: "", dmh: "", rcfDm: "", rcfDc: "",
+    vidros: true, carroReserva: "7 dias", assist24: "Básica",
   });
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
 
-  async function lookupCep(cep: string) {
+  async function lookupCep(cep: string, prefix: "" | "cond" = "") {
     const d = onlyDigits(cep);
     if (d.length !== 8) return;
     setCepLoading(true);
     try {
       const r = await fetch(`https://viacep.com.br/ws/${d}/json/`);
       const j = await r.json();
-      if (!j.erro) {
-        setF((p) => ({
-          ...p,
-          logradouro: j.logradouro || "",
-          bairro: j.bairro || "",
-          cidade: j.localidade || "",
-          uf: j.uf || "",
-        }));
+      if (!j.erro && !prefix) {
+        setF((p) => ({ ...p, logradouro: j.logradouro || "", bairro: j.bairro || "", cidade: j.localidade || "", uf: j.uf || "" }));
       }
-    } catch { /* noop */ } finally {
-      setCepLoading(false);
-    }
+    } catch { /* noop */ } finally { setCepLoading(false); }
   }
+
+  // FIPE: marcas
+  useEffect(() => {
+    fetch("https://parallelum.com.br/fipe/api/v1/carros/marcas")
+      .then((r) => r.json()).then(setMarcas).catch(() => setMarcas([]));
+  }, []);
+  // FIPE: modelos quando marca muda
+  useEffect(() => {
+    if (!f.marca) { setModelos([]); return; }
+    fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${f.marca}/modelos`)
+      .then((r) => r.json()).then((j) => setModelos(j.modelos || [])).catch(() => setModelos([]));
+  }, [f.marca]);
+  // FIPE: valor quando modelo+ano
+  useEffect(() => {
+    if (!f.marca || !f.modelo || !f.anoModelo) { setFipeValor(""); return; }
+    const combCode = f.combustivel === "Diesel" ? 3 : f.combustivel === "Álcool" ? 2 : 1;
+    fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${f.marca}/modelos/${f.modelo}/anos/${f.anoModelo}-${combCode}`)
+      .then((r) => r.json()).then((j) => setFipeValor(j.Valor || "")).catch(() => setFipeValor(""));
+  }, [f.marca, f.modelo, f.anoModelo, f.combustivel]);
+
+  function simularCalculo() {
+    setCalculando(true);
+    setResultados([]);
+    setTimeout(() => {
+      const base = fipeValor ? Number(onlyDigits(fipeValor)) / 100 : 60000;
+      const fator = f.tipoCobertura === "Compreensiva" ? 0.035 : f.tipoCobertura === "RCF" ? 0.012 : 0.020;
+      setResultados(SEGURADORAS.map((cia, i) => ({
+        cia,
+        premio: Math.round(base * fator * (0.85 + i * 0.07)),
+        cobertura: f.tipoCobertura,
+      })));
+      setCalculando(false);
+    }, 900);
+  }
+
+  const podeCalcular = !!(f.cpf && f.nome && f.marca && f.modelo && f.anoModelo);
 
   return (
     <AppShell title="Novo lead">
@@ -125,12 +185,12 @@ function Page() {
             {i < STEPS.length - 1 && <div className="line " />}
           </span>
         ))}
-        <span className="ready "><svg width="12" height="12"><use href="#i-check" /></svg> Pronto para cotar</span>
+        {podeCalcular && <span className="ready "><svg width="12" height="12"><use href="#i-check" /></svg> Pronto para cotar</span>}
       </div>
 
       <div className="lead-shell">
         <div className="wizard-card">
-          {step === 0 ? (
+          {step === 0 && (
             <>
               <h2>Dados do Segurado</h2>
               <div className="sub">Digite o CPF/CNPJ que o sistema busca o cadastro. Se for novo, preenche o resto manualmente.</div>
@@ -138,8 +198,7 @@ function Page() {
                 <div className="field-group">
                   <label>CPF ou CNPJ<span className="req">*</span></label>
                   <input className="input" value={f.cpf} inputMode="numeric"
-                    onChange={(e) => up("cpf", maskCpfCnpj(e.target.value))}
-                    placeholder="000.000.000-00" />
+                    onChange={(e) => up("cpf", maskCpfCnpj(e.target.value))} placeholder="000.000.000-00" />
                 </div>
                 <div className="field-group">
                   <label>Pessoa</label>
@@ -149,7 +208,7 @@ function Page() {
                 </div>
                 <div className="field-group full">
                   <label>Nome<span className="req">*</span></label>
-                  <input className="input" value={f.nome} onChange={(e) => up("nome", e.target.value)} placeholder="Aparece automaticamente após CPF" />
+                  <input className="input" value={f.nome} onChange={(e) => up("nome", e.target.value)} placeholder="Nome completo" />
                 </div>
                 <div className="field-group full">
                   <label>Nome social</label>
@@ -163,10 +222,8 @@ function Page() {
                   <label>Sexo<span className="req">*</span></label>
                   <div className="row" style={{ gap: 8, paddingTop: 4 }}>
                     {["Masculino", "Feminino"].map((s) => (
-                      <span key={s}
-                        className={"chip " + (f.sexo === s ? "chip-slate" : "chip-outline")}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => up("sexo", s)}>{s}</span>
+                      <span key={s} className={"chip " + (f.sexo === s ? "chip-slate" : "chip-outline")}
+                        style={{ cursor: "pointer" }} onClick={() => up("sexo", s)}>{s}</span>
                     ))}
                   </div>
                 </div>
@@ -181,14 +238,12 @@ function Page() {
                 <div className="field-group">
                   <label>Telefone celular<span className="req">*</span> <span className="hint">WhatsApp</span></label>
                   <input className="input" value={f.celular} inputMode="numeric"
-                    onChange={(e) => up("celular", maskCel(e.target.value))}
-                    placeholder="(00) 00000-0000" />
+                    onChange={(e) => up("celular", maskCel(e.target.value))} placeholder="(00) 00000-0000" />
                 </div>
                 <div className="field-group">
                   <label>Telefone residencial</label>
                   <input className="input" value={f.telRes} inputMode="numeric"
-                    onChange={(e) => up("telRes", maskFixo(e.target.value))}
-                    placeholder="(00) 0000-0000" />
+                    onChange={(e) => up("telRes", maskFixo(e.target.value))} placeholder="(00) 0000-0000" />
                 </div>
                 <div className="field-group full">
                   <label>E-mail</label>
@@ -199,12 +254,10 @@ function Page() {
                   <label>CEP residencial<span className="req">*</span></label>
                   <input className="input" value={f.cep} inputMode="numeric"
                     onChange={(e) => {
-                      const v = maskCep(e.target.value);
-                      up("cep", v);
+                      const v = maskCep(e.target.value); up("cep", v);
                       if (onlyDigits(v).length === 8) lookupCep(v);
                     }}
-                    onBlur={() => lookupCep(f.cep)}
-                    placeholder="00000-000" />
+                    onBlur={() => lookupCep(f.cep)} placeholder="00000-000" />
                   {cepLoading && <span className="hint">Buscando CEP…</span>}
                 </div>
                 <div className="field-group">
@@ -222,11 +275,10 @@ function Page() {
                 <div className="field-group">
                   <label>UF</label>
                   <input className="input" value={f.uf} maxLength={2}
-                    onChange={(e) => up("uf", e.target.value.toUpperCase())}
-                    placeholder="UF" />
+                    onChange={(e) => up("uf", e.target.value.toUpperCase())} placeholder="UF" />
                 </div>
                 <div className="field-group">
-                  <label>Autorizo o envio de informações por SMS</label>
+                  <label>Autorizo o envio por SMS</label>
                   <div className="row" style={{ gap: 14, paddingTop: 6 }}>
                     <label><input type="radio" name="sms" checked={f.sms === "sim"} onChange={() => up("sms", "sim")} /> Sim</label>
                     <label><input type="radio" name="sms" checked={f.sms === "nao"} onChange={() => up("sms", "nao")} /> Não</label>
@@ -234,10 +286,350 @@ function Page() {
                 </div>
               </div>
             </>
-          ) : (
+          )}
+
+          {step === 1 && (
             <>
-              <h2>{STEPS[step]}</h2>
-              <div className="sub">Etapa em construção neste protótipo navegável.</div>
+              <h2>Dados do Seguro</h2>
+              <div className="sub">Tipo de operação, ramo e dados da apólice atual (se renovação).</div>
+              <div className="wizard-grid">
+                <div className="field-group">
+                  <label>Tipo<span className="req">*</span></label>
+                  <div className="row" style={{ gap: 8, paddingTop: 4 }}>
+                    {["Novo", "Renovação Congênere", "Renovação"].map((t) => (
+                      <span key={t} className={"chip " + (f.tipoSeguro === t ? "chip-slate" : "chip-outline")}
+                        style={{ cursor: "pointer" }} onClick={() => up("tipoSeguro", t)}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label>Ramo<span className="req">*</span></label>
+                  <select className="input" value={f.ramo} onChange={(e) => up("ramo", e.target.value)}>
+                    <option>Automóvel</option><option>Moto</option><option>Caminhão</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label>Categoria<span className="req">*</span></label>
+                  <select className="input" value={f.categoria} onChange={(e) => up("categoria", e.target.value)}>
+                    <option>Particular</option><option>Comercial</option><option>Aplicativo (Uber/99)</option><option>Táxi</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label>Vigência início</label>
+                  <input className="input" type="date" value={f.vigIni} onChange={(e) => up("vigIni", e.target.value)} />
+                </div>
+                <div className="field-group">
+                  <label>Vigência fim</label>
+                  <input className="input" type="date" value={f.vigFim} onChange={(e) => up("vigFim", e.target.value)} />
+                </div>
+                {f.tipoSeguro !== "Novo" && (
+                  <>
+                    <div className="field-group">
+                      <label>Seguradora atual</label>
+                      <select className="input" value={f.ciaAtual} onChange={(e) => up("ciaAtual", e.target.value)}>
+                        <option value="">Selecione</option>
+                        {SEGURADORAS.map((s) => <option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label>Apólice atual</label>
+                      <input className="input" value={f.apoliceAtual} onChange={(e) => up("apoliceAtual", e.target.value)} />
+                    </div>
+                    <div className="field-group">
+                      <label>CI atual</label>
+                      <input className="input" value={f.ciAtual} onChange={(e) => up("ciAtual", e.target.value)} />
+                    </div>
+                    <div className="field-group">
+                      <label>Classe de bônus</label>
+                      <select className="input" value={f.classeBonus} onChange={(e) => up("classeBonus", e.target.value)}>
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n}>{String(n)}</option>)}
+                      </select>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <h2>Dados do Veículo</h2>
+              <div className="sub">Marca / Modelo via Tabela FIPE. Valor sugerido aparece automaticamente.</div>
+              <div className="wizard-grid">
+                <div className="field-group">
+                  <label>Placa</label>
+                  <input className="input" value={f.placa}
+                    onChange={(e) => up("placa", maskPlaca(e.target.value))} placeholder="AAA-0A00" />
+                </div>
+                <div className="field-group">
+                  <label>Chassi</label>
+                  <input className="input" value={f.chassi} maxLength={17}
+                    onChange={(e) => up("chassi", e.target.value.toUpperCase())} placeholder="17 caracteres" />
+                </div>
+                <div className="field-group">
+                  <label>Renavam</label>
+                  <input className="input" value={f.renavam} inputMode="numeric"
+                    onChange={(e) => up("renavam", onlyDigits(e.target.value).slice(0, 11))} />
+                </div>
+                <div className="field-group">
+                  <label>Zero KM</label>
+                  <div className="row" style={{ gap: 14, paddingTop: 6 }}>
+                    <label><input type="checkbox" checked={f.zeroKm} onChange={(e) => up("zeroKm", e.target.checked)} /> Sim</label>
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label>Marca<span className="req">*</span></label>
+                  <select className="input" value={f.marca} onChange={(e) => { up("marca", e.target.value); up("modelo", ""); }}>
+                    <option value="">Selecione</option>
+                    {marcas.map((m) => <option key={m.codigo} value={m.codigo}>{m.nome}</option>)}
+                  </select>
+                </div>
+                <div className="field-group full">
+                  <label>Modelo<span className="req">*</span></label>
+                  <select className="input" value={f.modelo} onChange={(e) => up("modelo", e.target.value)} disabled={!f.marca}>
+                    <option value="">{f.marca ? "Selecione" : "Selecione a marca antes"}</option>
+                    {modelos.map((m) => <option key={m.codigo} value={m.codigo}>{m.nome}</option>)}
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label>Ano modelo<span className="req">*</span></label>
+                  <input className="input" value={f.anoModelo} inputMode="numeric"
+                    onChange={(e) => up("anoModelo", maskAno(e.target.value))} placeholder="2024" />
+                </div>
+                <div className="field-group">
+                  <label>Ano fabricação</label>
+                  <input className="input" value={f.anoFab} inputMode="numeric"
+                    onChange={(e) => up("anoFab", maskAno(e.target.value))} placeholder="2023" />
+                </div>
+                <div className="field-group">
+                  <label>Combustível</label>
+                  <select className="input" value={f.combustivel} onChange={(e) => up("combustivel", e.target.value)}>
+                    <option>Flex</option><option>Gasolina</option><option>Álcool</option><option>Diesel</option><option>Elétrico</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label>Cor</label>
+                  <input className="input" value={f.cor} onChange={(e) => up("cor", e.target.value)} />
+                </div>
+                <div className="field-group">
+                  <label>Valor FIPE</label>
+                  <input className="input" value={fipeValor} readOnly style={{ background: "var(--offwhite)" }} placeholder="Preenche via FIPE" />
+                </div>
+                <div className="field-group">
+                  <label>Blindado</label>
+                  <div className="row" style={{ gap: 14, paddingTop: 6 }}>
+                    <label><input type="checkbox" checked={f.blindado} onChange={(e) => up("blindado", e.target.checked)} /> Sim</label>
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label>Alienado</label>
+                  <div className="row" style={{ gap: 14, paddingTop: 6 }}>
+                    <label><input type="checkbox" checked={f.alienado} onChange={(e) => up("alienado", e.target.checked)} /> Sim</label>
+                  </div>
+                </div>
+                {f.alienado && (
+                  <div className="field-group">
+                    <label>Banco / Financeira</label>
+                    <input className="input" value={f.banco} onChange={(e) => up("banco", e.target.value)} />
+                  </div>
+                )}
+                <div className="field-group">
+                  <label>Uso comercial</label>
+                  <select className="input" value={f.usoComercial} onChange={(e) => up("usoComercial", e.target.value)}>
+                    <option>Não</option><option>Sim</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label>KM mensal</label>
+                  <input className="input" value={f.kmMensal} inputMode="numeric"
+                    onChange={(e) => up("kmMensal", maskKm(e.target.value))} placeholder="1.000 km" />
+                </div>
+              </div>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <h2>Perfil do Condutor</h2>
+              <div className="sub">Quem dirige o veículo na maior parte do tempo e detalhes de uso.</div>
+              <div className="wizard-grid">
+                <div className="field-group full">
+                  <label>Condutor principal é o próprio segurado?</label>
+                  <div className="row" style={{ gap: 14, paddingTop: 6 }}>
+                    <label><input type="radio" name="cond" checked={f.condutorMesmo === "sim"} onChange={() => up("condutorMesmo", "sim")} /> Sim</label>
+                    <label><input type="radio" name="cond" checked={f.condutorMesmo === "nao"} onChange={() => up("condutorMesmo", "nao")} /> Não</label>
+                  </div>
+                </div>
+                {f.condutorMesmo === "nao" && (
+                  <>
+                    <div className="field-group">
+                      <label>CPF do condutor</label>
+                      <input className="input" value={f.condCpf} inputMode="numeric"
+                        onChange={(e) => up("condCpf", maskCpfCnpj(e.target.value))} placeholder="000.000.000-00" />
+                    </div>
+                    <div className="field-group full">
+                      <label>Nome do condutor</label>
+                      <input className="input" value={f.condNome} onChange={(e) => up("condNome", e.target.value)} />
+                    </div>
+                    <div className="field-group">
+                      <label>Nascimento</label>
+                      <input className="input" type="date" value={f.condNasc} onChange={(e) => up("condNasc", e.target.value)} />
+                    </div>
+                    <div className="field-group">
+                      <label>Sexo</label>
+                      <select className="input" value={f.condSexo} onChange={(e) => up("condSexo", e.target.value)}>
+                        <option value="">Selecione</option><option>Masculino</option><option>Feminino</option>
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label>Estado civil</label>
+                      <select className="input" value={f.condEstadoCivil} onChange={(e) => up("condEstadoCivil", e.target.value)}>
+                        <option value="">Selecione</option>
+                        <option>Casado(a)</option><option>Solteiro(a)</option><option>Viúvo(a)</option>
+                        <option>Divorciado(a)</option><option>União estável</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                <div className="field-group">
+                  <label>Profissão</label>
+                  <input className="input" value={f.profissao} onChange={(e) => up("profissao", e.target.value)} />
+                </div>
+                <div className="field-group">
+                  <label>CEP de pernoite</label>
+                  <input className="input" value={f.cepPernoite} inputMode="numeric"
+                    onChange={(e) => up("cepPernoite", maskCep(e.target.value))} placeholder="00000-000" />
+                </div>
+                <div className="field-group full">
+                  <label>Garagem</label>
+                  <div className="row" style={{ gap: 18, paddingTop: 6 }}>
+                    <label><input type="checkbox" checked={f.garagemResid} onChange={(e) => up("garagemResid", e.target.checked)} /> Residência</label>
+                    <label><input type="checkbox" checked={f.garagemTrab} onChange={(e) => up("garagemTrab", e.target.checked)} /> Trabalho</label>
+                    <label><input type="checkbox" checked={f.garagemEsc} onChange={(e) => up("garagemEsc", e.target.checked)} /> Escola/Faculdade</label>
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label>Condutores entre 18-25 anos?</label>
+                  <div className="row" style={{ gap: 14, paddingTop: 6 }}>
+                    <label><input type="radio" name="j1825" checked={f.jovens1825 === "sim"} onChange={() => up("jovens1825", "sim")} /> Sim</label>
+                    <label><input type="radio" name="j1825" checked={f.jovens1825 === "nao"} onChange={() => up("jovens1825", "nao")} /> Não</label>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <h2>Coberturas</h2>
+              <div className="sub">Defina o tipo de cobertura, casco, franquia e adicionais.</div>
+              <div className="wizard-grid">
+                <div className="field-group full">
+                  <label>Tipo de cobertura<span className="req">*</span></label>
+                  <div className="row" style={{ gap: 8, paddingTop: 4, flexWrap: "wrap" }}>
+                    {["Compreensiva", "Incêndio + Roubo", "RCF"].map((t) => (
+                      <span key={t} className={"chip " + (f.tipoCobertura === t ? "chip-slate" : "chip-outline")}
+                        style={{ cursor: "pointer" }} onClick={() => up("tipoCobertura", t)}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label>Casco</label>
+                  <select className="input" value={f.casco} onChange={(e) => up("casco", e.target.value)}>
+                    <option>100% Tabela FIPE</option><option>95% Tabela FIPE</option><option>110% Tabela FIPE</option>
+                    <option>Valor determinado</option>
+                  </select>
+                </div>
+                {f.casco === "Valor determinado" && (
+                  <div className="field-group">
+                    <label>Valor determinado</label>
+                    <input className="input" value={f.cascoValor}
+                      onChange={(e) => up("cascoValor", maskBRL(e.target.value))} placeholder="R$ 0,00" />
+                  </div>
+                )}
+                <div className="field-group">
+                  <label>Franquia</label>
+                  <select className="input" value={f.franquia} onChange={(e) => up("franquia", e.target.value)}>
+                    <option>Reduzida</option><option>Normal</option><option>Majorada</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label>APP — Morte</label>
+                  <input className="input" value={f.appMorte}
+                    onChange={(e) => up("appMorte", maskBRL(e.target.value))} placeholder="R$ 10.000,00" />
+                </div>
+                <div className="field-group">
+                  <label>APP — Invalidez</label>
+                  <input className="input" value={f.appInval}
+                    onChange={(e) => up("appInval", maskBRL(e.target.value))} placeholder="R$ 10.000,00" />
+                </div>
+                <div className="field-group">
+                  <label>DMH (despesas médicas)</label>
+                  <input className="input" value={f.dmh}
+                    onChange={(e) => up("dmh", maskBRL(e.target.value))} placeholder="R$ 5.000,00" />
+                </div>
+                <div className="field-group">
+                  <label>RCF — Danos materiais</label>
+                  <input className="input" value={f.rcfDm}
+                    onChange={(e) => up("rcfDm", maskBRL(e.target.value))} placeholder="R$ 100.000,00" />
+                </div>
+                <div className="field-group">
+                  <label>RCF — Danos corporais</label>
+                  <input className="input" value={f.rcfDc}
+                    onChange={(e) => up("rcfDc", maskBRL(e.target.value))} placeholder="R$ 100.000,00" />
+                </div>
+                <div className="field-group">
+                  <label>Vidros</label>
+                  <div className="row" style={{ gap: 14, paddingTop: 6 }}>
+                    <label><input type="checkbox" checked={f.vidros} onChange={(e) => up("vidros", e.target.checked)} /> Incluir cobertura</label>
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label>Carro reserva</label>
+                  <select className="input" value={f.carroReserva} onChange={(e) => up("carroReserva", e.target.value)}>
+                    <option>Não</option><option>7 dias</option><option>15 dias</option><option>30 dias</option>
+                  </select>
+                </div>
+                <div className="field-group">
+                  <label>Assistência 24h</label>
+                  <select className="input" value={f.assist24} onChange={(e) => up("assist24", e.target.value)}>
+                    <option>Básica</option><option>Intermediária</option><option>Premium</option>
+                  </select>
+                </div>
+              </div>
+            </>
+          )}
+
+          {step === 5 && (
+            <>
+              <h2>Cálculo Multi-seguradora</h2>
+              <div className="sub">Envie a cotação para as seguradoras configuradas e compare os prêmios.</div>
+              <div style={{ padding: "12px 0" }}>
+                <button className="btn btn-yellow" disabled={!podeCalcular || calculando} onClick={simularCalculo}>
+                  <svg width="14" height="14"><use href="#i-bolt" /></svg>
+                  {calculando ? " Calculando…" : podeCalcular ? " Calcular agora" : " Preencha os dados obrigatórios"}
+                </button>
+              </div>
+              {resultados.length > 0 && (
+                <table className="table" style={{ width: "100%", marginTop: 8 }}>
+                  <thead>
+                    <tr><th>Seguradora</th><th>Cobertura</th><th style={{ textAlign: "right" }}>Prêmio anual</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {resultados.sort((a, b) => a.premio - b.premio).map((r) => (
+                      <tr key={r.cia}>
+                        <td>{r.cia}</td>
+                        <td>{r.cobertura}</td>
+                        <td style={{ textAlign: "right" }}>R$ {r.premio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+                        <td style={{ textAlign: "right" }}><button className="btn btn-ghost btn-sm">Gerar proposta</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {resultados.length === 0 && !calculando && (
+                <div className="empty">Os resultados aparecerão aqui após o cálculo.</div>
+              )}
             </>
           )}
 
@@ -259,26 +651,30 @@ function Page() {
         <div className="resumo">
           <div className="head"><svg width="16" height="16"><use href="#i-clock" /></svg><h3>Resumo da cotação</h3></div>
           <div className="body">
-            {f.nome || f.cpf || f.celular ? (
+            {(f.nome || f.cpf || f.marca || f.tipoCobertura) ? (
               <div style={{ display: "grid", gap: 6, fontSize: 13 }}>
-                {f.nome && <div><b>Nome:</b> {f.nome}</div>}
+                {f.nome && <div><b>Segurado:</b> {f.nome}</div>}
                 {f.cpf && <div><b>{f.pessoa === "Jurídica" ? "CNPJ" : "CPF"}:</b> {f.cpf}</div>}
-                {f.nasc && <div><b>Nascimento:</b> {f.nasc}</div>}
-                {f.sexo && <div><b>Sexo:</b> {f.sexo}</div>}
-                {f.estadoCivil && <div><b>Estado civil:</b> {f.estadoCivil}</div>}
                 {f.celular && <div><b>Celular:</b> {f.celular}</div>}
-                {f.email && <div><b>E-mail:</b> {f.email}</div>}
                 {(f.cidade || f.uf) && <div><b>Cidade/UF:</b> {f.cidade}{f.uf ? `/${f.uf}` : ""}</div>}
+                {f.tipoSeguro && <div><b>Tipo:</b> {f.tipoSeguro} · {f.ramo} · {f.categoria}</div>}
+                {f.marca && <div><b>Marca:</b> {marcas.find((m) => m.codigo === f.marca)?.nome || f.marca}</div>}
+                {f.modelo && <div><b>Modelo:</b> {modelos.find((m) => String(m.codigo) === f.modelo)?.nome || f.modelo}</div>}
+                {f.anoModelo && <div><b>Ano:</b> {f.anoModelo}{f.anoFab ? `/${f.anoFab}` : ""}</div>}
+                {fipeValor && <div><b>FIPE:</b> {fipeValor}</div>}
+                {f.tipoCobertura && <div><b>Cobertura:</b> {f.tipoCobertura} · Franquia {f.franquia}</div>}
               </div>
             ) : (
-              <div className="empty">Conforme você preenche, o resumo aparece aqui.<br />Clique nos valores para editar inline.</div>
+              <div className="empty">Conforme você preenche, o resumo aparece aqui.</div>
             )}
           </div>
           <div className="insurers-row">
-            <span className="ins-chip"><svg width="12" height="12"><use href="#i-shield" /></svg> 5 seguradoras no cálculo</span>
+            <span className="ins-chip"><svg width="12" height="12"><use href="#i-shield" /></svg> {SEGURADORAS.length} seguradoras no cálculo</span>
           </div>
           <div className="footer">
-            <button className="btn btn-yellow" disabled style={{ opacity: 0.5, cursor: "not-allowed" }}>
+            <button className="btn btn-yellow" disabled={!podeCalcular}
+              style={!podeCalcular ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+              onClick={() => { setStep(5); simularCalculo(); }}>
               <svg width="14" height="14"><use href="#i-bolt" /></svg> Calcular
             </button>
             <button className="btn btn-ghost btn-sm">
