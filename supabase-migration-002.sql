@@ -130,6 +130,9 @@ create policy oport_select on public.oportunidades for select to authenticated u
 );
 
 -- ---------- RPC: aprovar / recusar empresa ----------
+drop function if exists public.aprovar_empresa(uuid);
+drop function if exists public.recusar_empresa(uuid, text);
+drop function if exists public.desligar_usuario(uuid, text);
 create or replace function public.aprovar_empresa(empresa_id uuid)
 returns void language plpgsql security definer set search_path=public as $$
 begin
