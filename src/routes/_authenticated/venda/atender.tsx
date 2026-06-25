@@ -76,9 +76,20 @@ function Page() {
 
   useEffect(() => {
     load();
-    tickRef.current = setInterval(() => setNow(Date.now()), 1000);
+    tickRef.current = setInterval(() => {
+      const n = Date.now();
+      setNow(n);
+      // Se algum lead estourou o SLA, dispara a expiração e recarrega
+      const expired = leads.some((l) => {
+        const start = new Date(l.distribuido_em ?? l.criado_em).getTime();
+        return start + WINDOW_MS - n <= 0;
+      });
+      if (expired) {
+        supabase.rpc("expirar_leads_nao_atendidos", { p_janela_seg: 180 }).then(() => load());
+      }
+    }, 1000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
-  }, []);
+  }, [leads]);
 
   async function assumir(l: Lead) {
     setBusy(l.id);
