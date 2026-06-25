@@ -2,7 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { MaskedInput } from "@/components/masked-input";
+import { applyMask, maskPct, type Mask } from "@/lib/masks";
 import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
   head: () => ({ meta: [{ title: "Acessos e permissões · CoteCerto" }] }),
@@ -531,7 +534,7 @@ function AnalisarModal({
                 </div>
                 <div className="field-group">
                   <label>Salário base (R$)</label>
-                  <input className="input" placeholder="ex.: 1.800,00" />
+                  <MaskedInput mask="brl" className="input" placeholder="R$ 1.800,00" />
                 </div>
                 <div className="field-group">
                   <label>Bônus de campanha</label>
@@ -583,11 +586,10 @@ function AnalisarModal({
                         ))}
                       </select>
                     ) : p.k === "comVenda" ? (
-                      <input
+                      <MaskedInput
+                        mask="pct"
                         className="input"
-                        defaultValue={`${Number(
-                          modelos.find((m) => m.id === modelSel)?.perc_comissao_padrao ?? 0,
-                        ).toFixed(2)}%`}
+                        defaultValue={String(modelos.find((m) => m.id === modelSel)?.perc_comissao_padrao ?? 0)}
                       />
                     ) : (
                       <input className="input" defaultValue="—" />
@@ -607,11 +609,11 @@ function AnalisarModal({
                 </div>
                 <div className="field-group">
                   <label>Faixa: acima de (R$)</label>
-                  <input className="input" placeholder="ex.: 50.000" />
+                  <MaskedInput mask="brl" className="input" placeholder="R$ 50.000,00" />
                 </div>
                 <div className="field-group">
                   <label>…comissão passa a</label>
-                  <input className="input" placeholder="ex.: 55%" />
+                  <MaskedInput mask="pct" className="input" placeholder="55%" />
                 </div>
               </div>
             </>
@@ -1057,27 +1059,8 @@ function formatRange(de: string, ate: string): string {
   return `${d} – ${a}`;
 }
 
-type Mask = "brl" | "pct" | undefined;
-function maskBRL(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  if (!digits) return "";
-  const n = parseInt(digits, 10);
-  const reais = Math.floor(n / 100);
-  const cent = String(n % 100).padStart(2, "0");
-  return "R$ " + reais.toLocaleString("pt-BR") + "," + cent;
-}
-function maskPct(raw: string): string {
-  let s = raw.replace(/[^\d,]/g, "");
-  const parts = s.split(",");
-  if (parts.length > 2) s = parts[0] + "," + parts.slice(1).join("");
-  if (parts[1]) s = parts[0] + "," + parts[1].slice(0, 2);
-  return s ? s + "%" : "";
-}
-function applyMask(v: string, m: Mask): string {
-  if (m === "brl") return maskBRL(v);
-  if (m === "pct") return maskPct(v);
-  return v;
-}
+
+
 
 
 function DynamicRangeCard({
