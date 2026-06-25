@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { adminCreateUser, adminDeleteUser } from "@/lib/admin-users.functions";
 
 export const Route = createFileRoute("/_authenticated/operacao/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações · CoteCerto" }] }),
