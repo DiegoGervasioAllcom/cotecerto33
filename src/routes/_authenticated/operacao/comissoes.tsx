@@ -75,7 +75,7 @@ function Page() {
       setErr(null);
       const cols =
         "id,numero,apolice_numero,seguradora,premio,valor,comissao_valor,comissao_pct,emitida_em,pago_em,cancelada_em,empresa_id,responsavel_id";
-      const [emi, est, emps, profs] = await Promise.all([
+      const [emi, est, lan, emps, profs] = await Promise.all([
         supabase
           .from("propostas")
           .select(cols)
@@ -89,6 +89,13 @@ function Page() {
           .not("cancelada_em", "is", null)
           .gte("cancelada_em", period.ini)
           .lt("cancelada_em", period.fim)
+          .limit(5000),
+        supabase
+          .from("comissao_lancamentos")
+          .select(
+            "id,vendedor_id,empresa_id,proposta_id,tipo,valor,descricao,referencia,seguradora,origem,criado_em",
+          )
+          .order("criado_em", { ascending: false })
           .limit(5000),
         supabase.from("empresas").select("id,nome"),
         supabase.from("profiles").select("id,nome"),
