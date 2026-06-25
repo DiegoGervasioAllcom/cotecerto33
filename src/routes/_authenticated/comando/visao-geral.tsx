@@ -204,15 +204,39 @@ function Page() {
         <div>
           <h1>Operação CoteCerto</h1>
           <div className="sub">
-            {monthLabel(new Date())} · <strong>{franquias.length} franquias</strong> · <strong>{vendedores.length} vendedores</strong> ativos · dados de {new Date().toLocaleDateString("pt-BR", { month: "long", year: "2-digit" })}
+            {monthLabel(new Date())} · <strong>{franquias.length} franquias</strong> · <strong>{vendedores.length} vendedores</strong> ativos · período: <strong style={{ textTransform: "capitalize" }}>{periodLabel}</strong>
           </div>
         </div>
-        <div className="tools">
+        <div className="tools" style={{ gap: 8, flexWrap: "wrap" }}>
+          <div className="seg" role="tablist" style={{ display: "inline-flex", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+            {([
+              ["mes_atual", "Mês atual"],
+              ["mes_passado", "Mês passado"],
+              ["mes_retrasado", "Mês retrasado"],
+              ["ult_90", "Últimos 90 dias"],
+            ] as [Periodo, string][]).map(([k, lbl]) => (
+              <button
+                key={k}
+                className="btn btn-sm"
+                onClick={() => setPeriodo(k)}
+                style={{
+                  borderRadius: 0, border: "none",
+                  background: periodo === k ? "var(--slate)" : "transparent",
+                  color: periodo === k ? "#fff" : "var(--text)",
+                  padding: "6px 10px", fontWeight: 600,
+                }}
+              >{lbl}</button>
+            ))}
+          </div>
+          <button className="btn btn-yellow" onClick={() => exportarRelatorio()}>
+            <svg width="14" height="14"><use href="#i-download"></use></svg> Exportar relatório
+          </button>
           <button className="btn btn-slate" onClick={() => navigate({ to: "/comando/leads" })}>
             <svg width="14" height="14"><use href="#i-layers"></use></svg> Central de Leads
           </button>
         </div>
       </div>
+
 
       {err && <div className="audit-note" style={{ background: "var(--alert-soft)", color: "var(--alert)", marginBottom: 12 }}>{err}</div>}
       {loading && <div className="muted small" style={{ marginBottom: 12 }}>Carregando…</div>}
