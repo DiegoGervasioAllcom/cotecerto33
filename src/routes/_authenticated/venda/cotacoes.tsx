@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,36 +9,42 @@ export const Route = createFileRoute("/_authenticated/venda/cotacoes")({
   component: Page,
 });
 
+type Premio = { seguradora: string; premio: number };
 type Row = {
   id: string;
   numero: number;
   status: string;
   ramo: string;
-  step_atual: number;
   criado_em: string;
   atualizado_em: string;
-  lead_id: string | null;
-  segurado: { nome: string | null; cpf_cnpj: string | null } | null;
-  veiculo: { marca_nome: string | null; modelo_nome: string | null } | null;
+  segurado: { nome: string | null } | null;
+  veiculo: { marca_nome: string | null; modelo_nome: string | null; ano_modelo: string | null } | null;
+  premios: Premio[];
 };
 
-const fmtBRL = (n: number | null) =>
-  n
-    ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-    : "—";
+const money = (n: number) =>
+  Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
+const pad = (n: number) => String(n).padStart(5, "0");
+const cotNum = (numero: number) => `COT-${new Date().getFullYear()}-${pad(numero)}`;
 
 function statusChip(s: string) {
-  const map: Record<string, string> = {
-    rascunho: "chip-slate",
-    calculada: "chip-info",
-    proposta: "chip-yellow",
-    aceita: "chip-ok",
-    perdida: "chip-alert",
-  };
-  return <span className={`chip ${map[s] || "chip-slate"}`}>{s}</span>;
+  const label = s === "calculada" ? "Aberta" : s === "proposta" ? "Em ajuste" : s;
+  const cls = s === "calculada" ? "chip-info" : s === "proposta" ? "chip-yellow" : "chip-outline";
+  return <span className={`chip chip-status ${cls}`}>{label}</span>;
+}
+function expiraChip(criadoEm: string) {
+  const created = new Date(criadoEm).getTime();
+  const exp = created + 5 * 24 * 60 * 60 * 1000;
+  const d = Math.ceil((exp - Date.now()) / (24 * 60 * 60 * 1000));
+  if (d <= 0) return <span className="chip chip-alert" style={{ minWidth: 72 }}>Hoje</span>;
+  if (d <= 3) return <span className="chip chip-alert" style={{ minWidth: 72 }}>{d}d</span>;
+  if (d <= 5) return <span className="chip chip-yellow" style={{ minWidth: 72 }}>{d}d</span>;
+  return <span className="chip chip-outline" style={{ minWidth: 72 }}>{d}d</span>;
 }
 
 function Page() {
+  const nav = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -49,10 +55,12 @@ function Page() {
       const { data, error } = await supabase
         .from("cotacoes")
         .select(
-          "id,numero,status,ramo,step_atual,criado_em,atualizado_em,lead_id," +
-            "segurado:cotacao_segurado(nome,cpf_cnpj)," +
-            "veiculo:cotacao_veiculo(marca_nome,modelo_nome)"
+          "id,numero,status,ramo,criado_em,atualizado_em," +
+            "segurado:cotacao_segurado(nome)," +
+            "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
+            "premios:cotacao_premios(seguradora,premio)"
         )
+        .in("status", ["calculada", "proposta"])
         .order("atualizado_em", { ascending: false })
         .limit(200);
       if (error) setErr(error.message);
@@ -61,10 +69,19 @@ function Page() {
     })();
   }, []);
 
-  const filtered = rows.filter((r) => {
-    const t = `${r.numero} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
-    return !q || t.includes(q.toLowerCase());
-  });
+  const filtered = useMemo(
+    () =>
+      rows.filter((r) => {
+        const t = `${cotNum(r.numero)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
+        return !q || t.includes(q.toLowerCase());
+      }),
+    [rows, q]
+  );
+
+  const totVal = filtered.reduce((a, r) => {
+    const best = r.premios?.length ? Math.min(...r.premios.map((p) => Number(p.premio) || 0)) : 0;
+    return a + best;
+  }, 0);
 
   return (
     <AppShell title="Cotações">
@@ -72,22 +89,36 @@ function Page() {
       <div className="page-head">
         <div>
           <h1>Cotações</h1>
-          <div className="sub">Suas cotações em andamento e finalizadas</div>
+          <div className="sub">
+            {filtered.length} cotações ativas · valor total estimado <strong>{money(totVal)}/ano</strong>
+          </div>
         </div>
-        <Link to="/venda/novo-lead" className="btn btn-primary">
-          Nova cotação
-        </Link>
+        <div className="tools">
+          <Link to="/venda/novo-lead" className="btn btn-yellow">
+            + Nova cotação
+          </Link>
+        </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div className="card-b">
-          <input
-            className="input"
-            placeholder="Buscar por número, segurado ou modelo…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-        </div>
+      <div className="filters-bar">
+        <span className="label">FILTROS</span>
+        <select className="select-mini">
+          <option>Período · este mês</option>
+          <option>Últimos 30 dias</option>
+        </select>
+        <select className="select-mini">
+          <option>Status · todos</option>
+          <option>Aberta</option>
+          <option>Em ajuste</option>
+        </select>
+        <input
+          className="select-mini"
+          placeholder="Buscar segurado, placa, nº cotação…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          style={{ flex: 1, minWidth: 220 }}
+        />
+        <button className="btn-link btn-sm" onClick={() => setQ("")}>Limpar</button>
       </div>
 
       {err && <div className="alert alert-err">{err}</div>}
@@ -96,57 +127,69 @@ function Page() {
       {!loading && filtered.length === 0 && (
         <div className="card">
           <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
-            Nenhuma cotação encontrada.
+            Nenhuma cotação ativa. Cotações aparecem aqui depois que o cálculo é solicitado.
           </div>
-
         </div>
       )}
 
       {filtered.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
-          <table className="table-pipe mtable" style={{ minWidth: 900 }}>
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          <table className="table-pipe">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Segurado</th>
-                <th>Veículo</th>
-                <th>Ramo</th>
-                <th>Etapa</th>
-                <th>Status</th>
-                <th>Atualizada</th>
+                <th>Nº COTAÇÃO</th>
+                <th>SEGURADO</th>
+                <th>VEÍCULO</th>
+                <th style={{ textAlign: "center" }}>SEGURADORAS</th>
+                <th style={{ textAlign: "right" }}>MELHOR PREÇO</th>
+                <th>STATUS</th>
+                <th>CRIADA</th>
+                <th>EXPIRA EM</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <strong>#{r.numero}</strong>
-                  </td>
-                  <td>
-                    {r.segurado?.nome || "—"}
-                    <div className="small muted">{r.segurado?.cpf_cnpj}</div>
-                  </td>
-                  <td>
-                    {r.veiculo?.marca_nome ? `${r.veiculo.marca_nome} ${r.veiculo.modelo_nome ?? ""}` : "—"}
-                  </td>
-                  <td>{r.ramo}</td>
-                  <td>{r.step_atual + 1}/6</td>
-                  <td>{statusChip(r.status)}</td>
-                  <td>{new Date(r.atualizado_em).toLocaleString("pt-BR")}</td>
-                  <td>
-                    <Link
-                      to="/venda/novo-lead"
-                      search={{ id: r.id }}
-                      className="btn"
-                      style={{ padding: "4px 10px" }}
-                    >
-                      Abrir
-                    </Link>
-
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((r) => {
+                const best = r.premios?.length
+                  ? r.premios.reduce((m, p) => (Number(p.premio) < Number(m.premio) ? p : m))
+                  : null;
+                const veic = r.veiculo
+                  ? `${r.veiculo.marca_nome ?? ""} ${r.veiculo.modelo_nome ?? ""} ${r.veiculo.ano_modelo ?? ""}`.trim()
+                  : "—";
+                return (
+                  <tr
+                    key={r.id}
+                    onClick={() => nav({ to: "/venda/cotacoes/$id", params: { id: r.id } })}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <td className="small muted" style={{ fontFamily: "ui-monospace,Menlo,monospace" }}>
+                      #{cotNum(r.numero)}
+                    </td>
+                    <td><strong>{r.segurado?.nome || "—"}</strong></td>
+                    <td>{veic}</td>
+                    <td style={{ textAlign: "center" }}>
+                      <span className="chip chip-outline">{r.premios?.length || 0} cotadas</span>
+                    </td>
+                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      {best ? (
+                        <>
+                          <strong>{money(Number(best.premio))}</strong>
+                          <br />
+                          <span className="muted small">{best.seguradora}</span>
+                        </>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td>{statusChip(r.status)}</td>
+                    <td className="small muted">
+                      {new Date(r.criado_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                    </td>
+                    <td>{expiraChip(r.criado_em)}</td>
+                    <td>›</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
