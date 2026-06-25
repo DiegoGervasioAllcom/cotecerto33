@@ -303,7 +303,7 @@ function Page() {
                     : l.ageSec > SLA_SECONDS - 60
                     ? { cls: "warn", txt: `${fmtDur(SLA_SECONDS - l.ageSec)} p/ distribuir` }
                     : { cls: "ok", txt: `${fmtDur(SLA_SECONDS - l.ageSec)} p/ distribuir` }
-                  : { cls: l.slaSec > SLA_SECONDS ? "over" : "ok", txt: `distribuído em ${fmtDur(l.slaSec)}` };
+                  : { cls: l.slaSec > SLA_SECONDS ? "over" : "ok", txt: `distribuído há ${fmtDur(l.slaSec)}` };
               const empresa = l.empresa_id ? empresas[l.empresa_id]?.nome : null;
               const vendedor = l.responsavel_id ? profiles[l.responsavel_id]?.nome : null;
               const rowStyle = !l.distribuido && l.status_pipeline === "novo" && l.ageSec > SLA_SECONDS
