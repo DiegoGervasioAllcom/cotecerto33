@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
