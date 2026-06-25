@@ -445,8 +445,11 @@ function Modal({ children, onClose, title, icon = "i-clock" }: { children: any; 
 function HistoricoModal({ lead, empresas, profiles, onClose }: { lead: Lead; empresas: Record<string, Empresa>; profiles: Record<string, Profile>; onClose: () => void }) {
   const [eventos, setEventos] = useState<Evento[]>([]);
   useEffect(() => {
-    supabase.from("lead_eventos").select("id,tipo,titulo,descricao,criado_em").eq("lead_id", lead.id).order("criado_em").then(({ data }) => setEventos((data ?? []) as Evento[]));
+    supabase.from("lead_eventos").select("id,tipo,titulo,descricao,criado_em,meta").eq("lead_id", lead.id).order("criado_em").then(({ data }) => setEventos((data ?? []) as Evento[]));
   }, [lead.id]);
+
+  function nomeEmpresa(id?: string | null) { return id ? (empresas[id]?.nome || "—") : null; }
+  function nomeVendedor(id?: string | null) { return id ? (profiles[id]?.nome || "—") : null; }
 
   // sintetiza a linha do tempo a partir dos campos do lead + eventos
   const timeline = useMemo(() => {
@@ -457,20 +460,21 @@ function HistoricoModal({ lead, empresas, profiles, onClose }: { lead: Lead; emp
       ts: new Date(lead.criado_em).getTime(),
       icon: "i-layers",
     });
-    if (lead.distribuido_em) {
+    // Distribuição inicial só aparece sintetizada se não existir nenhum evento de redistribuição/assumir
+    const temEventoDist = eventos.some((e) => e.tipo === "redistribuido" || e.tipo === "lead_assumido");
+    if (lead.distribuido_em && !temEventoDist) {
       const empresaNome = lead.empresa_id ? empresas[lead.empresa_id]?.nome : null;
       const vendNome = lead.responsavel_id ? profiles[lead.responsavel_id]?.nome : null;
       items.push({
-        titulo: "Distribuído ao vendedor",
-        descricao: [vendNome, empresaNome].filter(Boolean).join(" · ") || "—",
+        titulo: "Distribuído",
+        descricao: [empresaNome && `Franquia: ${empresaNome}`, vendNome ? `Vendedor: ${vendNome}` : "Sem vendedor — fila da franquia"].filter(Boolean).join(" · "),
         ts: new Date(lead.distribuido_em).getTime(),
         icon: "i-share",
       });
     }
-    if (lead.ultimo_atendimento_em) {
+    if (lead.ultimo_atendimento_em && !eventos.some((e) => e.tipo === "lead_assumido")) {
       items.push({ titulo: "1º contato", descricao: "primeira conversa com o cliente", ts: new Date(lead.ultimo_atendimento_em).getTime(), icon: "i-phone" });
     }
-    // fases avançadas: usa atualizado_em como aproximação
     const stIdx = STAGE_ORDER.indexOf(lead.status_pipeline);
     if (stIdx >= 0) {
       const passados = ["qualificado", "cotacao", "proposta", "negociacao"].filter((s) => STAGE_ORDER.indexOf(s) <= stIdx);
@@ -490,10 +494,28 @@ function HistoricoModal({ lead, empresas, profiles, onClose }: { lead: Lead; emp
       }
     }
     for (const e of eventos) {
-      items.push({ titulo: e.titulo, descricao: e.descricao || "", ts: new Date(e.criado_em).getTime(), icon: "i-share" });
+      const meta = e.meta || {};
+      const partes: string[] = [];
+      if (e.tipo === "redistribuido" || e.tipo === "lead_assumido" || e.tipo === "reativado_de_perda") {
+        const emp = nomeEmpresa(meta.empresa_id);
+        const vend = nomeVendedor(meta.responsavel_id);
+        if (emp) partes.push(`Franquia: ${emp}`);
+        partes.push(vend ? `Vendedor: ${vend}` : "Sem vendedor — fila da franquia");
+      } else if (e.tipo === "sla_expirado") {
+        const emp = nomeEmpresa(meta.empresa_anterior);
+        const vend = nomeVendedor(meta.responsavel_anterior);
+        if (emp) partes.push(`Franquia anterior: ${emp}`);
+        if (vend) partes.push(`Vendedor anterior: ${vend}`);
+      } else if (e.tipo === "puxado_de_volta") {
+        const emp = nomeEmpresa(meta.empresa_anterior);
+        const vend = nomeVendedor(meta.responsavel_anterior);
+        if (emp) partes.push(`Estava em: ${emp}`);
+        if (vend) partes.push(`Com: ${vend}`);
+      }
+      const desc = [e.descricao, partes.join(" · ")].filter(Boolean).join(" — ");
+      items.push({ titulo: e.titulo, descricao: desc, ts: new Date(e.criado_em).getTime(), icon: EVENT_ICON[e.tipo] || "i-share" });
     }
     items.sort((a, b) => a.ts - b.ts);
-    // computa durações entre etapas e identifica o gargalo
     const dur: number[] = items.map((it, i) => (i === 0 ? Date.now() - it.ts : it.ts - items[i - 1].ts));
     const maxIdx = dur.reduce((mi, v, i) => (v > dur[mi] ? i : mi), 0);
     return items.map((it, i) => ({ ...it, durSec: Math.max(0, Math.floor(dur[i] / 1000)), gargalo: i === maxIdx && items.length > 1 }));
