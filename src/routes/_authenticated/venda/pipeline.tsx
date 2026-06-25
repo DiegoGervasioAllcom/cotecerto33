@@ -167,13 +167,23 @@ function Page() {
                   <div
                     key={l.id}
                     draggable
+                    role="button"
+                    tabIndex={0}
                     onDragStart={(e) => e.dataTransfer.setData("text/lead", l.id)}
+                    onClick={() => openLead(l)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openLead(l);
+                      }
+                    }}
                     style={{
                       border: "1px solid var(--border)",
                       borderRadius: 8,
                       padding: 10,
                       background: "#fff",
-                      cursor: "grab",
+                      cursor: opening === l.id ? "wait" : "pointer",
+                      opacity: opening === l.id ? 0.6 : 1,
                     }}
                   >
                     <div style={{ fontWeight: 600 }}>{l.nome || "Sem nome"}</div>
