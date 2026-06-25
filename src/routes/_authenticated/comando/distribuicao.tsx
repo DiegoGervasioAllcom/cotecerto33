@@ -17,6 +17,7 @@ type Config = {
 type LeadDev = {
   id: string; nome: string | null; motivo_perda: string | null; submotivo_perda: string | null;
   destino_perda_sugerido: string | null; observacao_perda: string | null; veiculo: string | null;
+  responsavel_id: string | null; empresa_id: string | null; atualizado_em: string | null;
 };
 type LeadFila = {
   id: string; nome: string | null; criado_em: string; cidade: string | null; uf: string | null;
