@@ -118,6 +118,8 @@ function Page() {
   const [pendentes, setPendentes] = useState<Pendente[]>([]);
   const [deslig, setDeslig] = useState<Deslig[]>([]);
   const [modelos, setModelos] = useState<Modelo[]>([]);
+  const [persoSub, setPersoSub] = useState<PersoSub>("franquia");
+  const [clt, setClt] = useState<CltConfig>(CLT_DEFAULT);
   const [err, setErr] = useState<string | null>(null);
 
   const [analisando, setAnalisando] = useState<Pendente | null>(null);
@@ -128,7 +130,7 @@ function Page() {
 
   const reload = useCallback(async () => {
     setErr(null);
-    const [p, d, m] = await Promise.all([
+    const [p, d, m, c] = await Promise.all([
       supabase
         .from("empresas")
         .select(
@@ -141,12 +143,23 @@ function Page() {
         .select("id,nome,email,desligado_em,desligado_motivo,empresa_id")
         .not("desligado_em", "is", null)
         .order("desligado_em", { ascending: false }),
-      supabase.from("modelos_franquia").select("*").order("nome"),
+      supabase.from("modelos_franquia").select("*").order("ordem").order("nome"),
+      supabase.from("clt_config").select("*").eq("id", "default").maybeSingle(),
     ]);
     if (p.error) setErr(p.error.message);
     setPendentes((p.data ?? []) as Pendente[]);
     setDeslig((d.data ?? []) as Deslig[]);
-    setModelos((m.data ?? []) as Modelo[]);
+    setModelos(((m.data ?? []) as Modelo[]).map((x) => ({ ...x, params: (x.params ?? {}) as ModeloParams })));
+    if (c.data) {
+      setClt({
+        progressiva: (c.data.progressiva ?? []) as Pair[],
+        fator_novas: (c.data.fator_novas ?? []) as Pair[],
+        fator_remalho: (c.data.fator_remalho ?? []) as Pair[],
+        ituran_planos: (c.data.ituran_planos ?? []) as Pair[],
+        ituran_adic: (c.data.ituran_adic ?? []) as Pair[],
+        regras: { ...CLT_DEFAULT.regras, ...((c.data.regras ?? {}) as Partial<CltRegras>) },
+      });
+    }
   }, []);
 
   useEffect(() => {
