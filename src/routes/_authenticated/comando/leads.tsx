@@ -48,6 +48,8 @@ const EVENT_ICON: Record<string, string> = {
   desbloqueado: "i-lock",
   sla_expirado: "i-alert-triangle",
   lead_assumido: "i-check",
+  arquivado: "i-archive",
+  desarquivado: "i-archive",
 };
 
 const SLA_SECONDS = 180;
