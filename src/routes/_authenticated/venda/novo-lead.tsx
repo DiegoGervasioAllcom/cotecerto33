@@ -253,7 +253,7 @@ function Page() {
       const p = (data as any).perfil || {};
       const c = (data as any).coberturas || {};
       const pr = ((data as any).premios || []) as { seguradora: string; cobertura: string; premio: number }[];
-      setStep(Number((data as any).step_atual ?? 0));
+      setStep(routeStep != null && !Number.isNaN(routeStep) ? routeStep : Number((data as any).step_atual ?? 0));
       setF((prev) => ({
         ...prev,
         cpf: s.cpf_cnpj ?? "", pessoa: s.pessoa ?? prev.pessoa, nome: s.nome ?? "", nomeSocial: s.nome_social ?? "",
