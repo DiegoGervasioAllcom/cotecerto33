@@ -176,6 +176,8 @@ function Page() {
   }, [enriched]);
 
   const filtered = useMemo(() => enriched.filter((l) => {
+    if (fArquivados === "ativos" && l.arquivado) return false;
+    if (fArquivados === "arquivados" && !l.arquivado) return false;
     if (fStatus) {
       if (fStatus === "Distribuído") { if (!l.distribuido || l.status_pipeline !== "novo") return false; }
       else if (fStatus === "SLA estourado") { if (l.distribuido || l.slaSec <= SLA_SECONDS) return false; }
@@ -185,7 +187,7 @@ function Page() {
     if (fUf && l.uf !== fUf) return false;
     if (fOrigem && (l.origem || "") !== fOrigem) return false;
     return true;
-  }), [enriched, fStatus, fUf, fOrigem]);
+  }), [enriched, fStatus, fUf, fOrigem, fArquivados]);
 
   const kpis = useMemo(() => {
     const pendentes = enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo");
