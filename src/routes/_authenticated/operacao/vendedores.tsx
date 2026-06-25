@@ -28,7 +28,7 @@ function VendedoresPage() {
         .from("profiles")
         .select("id,nome,email,status,empresa_id, empresas:empresa_id(nome)")
         .order("nome");
-      setRows((data as Row[]) ?? []);
+      setRows((data as unknown as Row[]) ?? []);
     })();
   }, []);
 
