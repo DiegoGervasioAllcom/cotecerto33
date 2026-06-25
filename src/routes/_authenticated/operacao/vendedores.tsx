@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,15 @@ type Row = {
 };
 
 type Presence = { user_id: string; status_efetivo: "online" | "ausente" | "offline"; last_seen_at: string };
+
+type LeadRow = {
+  responsavel_id: string | null;
+  status_pipeline: string | null;
+  criado_em: string | null;
+  assumido_em: string | null;
+};
+
+type Extra = { cotacoes: number; propostas: number; primeiroMin: number | null };
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -78,32 +87,126 @@ function metaBar(vendas: number, meta: number | null) {
   );
 }
 
+const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MESES_LONG = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
 function Page() {
   const [rows, setRows] = useState<Row[]>([]);
   const [presence, setPresence] = useState<Record<string, Presence>>({});
+  const [extras, setExtras] = useState<Record<string, Extra>>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+
+  const now = new Date();
+  const [mesIdx, setMesIdx] = useState(now.getMonth());
+  const [ano, setAno] = useState(now.getFullYear());
+
+  const periodo = useMemo(() => {
+    const start = new Date(ano, mesIdx, 1, 0, 0, 0, 0);
+    const end = new Date(ano, mesIdx + 1, 1, 0, 0, 0, 0);
+    return { start, end };
+  }, [ano, mesIdx]);
+
+  const opcoes = useMemo(() => {
+    const out: { label: string; value: string; m: number; y: number }[] = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push({
+        label: `${MESES_LONG[d.getMonth()]} / ${d.getFullYear()}`,
+        value: `${d.getFullYear()}-${d.getMonth()}`,
+        m: d.getMonth(),
+        y: d.getFullYear(),
+      });
+    }
+    return out;
+  }, [now]);
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const [{ data, error }, pres] = await Promise.all([
+      const [{ data, error }, pres, lq] = await Promise.all([
         supabase.from("v_vendedor_kpis").select("*").order("vendas_mes", { ascending: false }),
         supabase.from("v_user_presence").select("user_id,status_efetivo,last_seen_at"),
+        supabase
+          .from("leads")
+          .select("responsavel_id,status_pipeline,criado_em,assumido_em")
+          .gte("criado_em", periodo.start.toISOString())
+          .lt("criado_em", periodo.end.toISOString()),
       ]);
       if (!alive) return;
       if (error) setErr(error.message);
       else setRows((data ?? []) as Row[]);
+
       const map: Record<string, Presence> = {};
       ((pres.data ?? []) as Presence[]).forEach((p) => { map[p.user_id] = p; });
       setPresence(map);
+
+      // métricas por vendedor a partir dos leads
+      const ex: Record<string, Extra> = {};
+      const acumulaTempo: Record<string, number[]> = {};
+      ((lq.data ?? []) as LeadRow[]).forEach((l) => {
+        if (!l.responsavel_id) return;
+        const cur = ex[l.responsavel_id] ?? { cotacoes: 0, propostas: 0, primeiroMin: null };
+        const sp = l.status_pipeline ?? "";
+        if (["cotando", "cotacao", "proposta_enviada", "em_negociacao", "proposta", "negociacao", "ganho", "fechado"].includes(sp)) {
+          cur.cotacoes += 1;
+        }
+        if (["proposta_enviada", "em_negociacao", "proposta", "negociacao", "ganho", "fechado"].includes(sp)) {
+          cur.propostas += 1;
+        }
+        ex[l.responsavel_id] = cur;
+        if (l.criado_em && l.assumido_em) {
+          const min = (new Date(l.assumido_em).getTime() - new Date(l.criado_em).getTime()) / 60000;
+          if (min >= 0 && min < 60 * 24) {
+            (acumulaTempo[l.responsavel_id] ??= []).push(min);
+          }
+        }
+      });
+      Object.entries(acumulaTempo).forEach(([uid, arr]) => {
+        if (!arr.length) return;
+        arr.sort((a, b) => a - b);
+        const median = arr[Math.floor(arr.length / 2)];
+        ex[uid] = { ...(ex[uid] ?? { cotacoes: 0, propostas: 0, primeiroMin: null }), primeiroMin: Math.round(median) };
+      });
+      setExtras(ex);
+
       setLoading(false);
     };
     void load();
-    const t = window.setInterval(load, 15_000);
+    const t = window.setInterval(load, 30_000);
     return () => { alive = false; window.clearInterval(t); };
-  }, []);
+  }, [periodo.start, periodo.end]);
 
+  function exportar() {
+    const head = ["Vendedor", "Franquia", "Presença", "Leads", "1º contato", "Cotações", "Propostas", "Vendas", "Conv.", "Comissão", "Meta", "Status"];
+    const lines = rows.map((r) => {
+      const ex = extras[r.user_id] ?? { cotacoes: 0, propostas: 0, primeiroMin: null };
+      const conv = r.leads_mes > 0 ? Math.round((r.vendas_mes / r.leads_mes) * 100) : 0;
+      const p = presence[r.user_id]?.status_efetivo ?? "offline";
+      return [
+        r.nome || r.email,
+        r.empresa_nome ?? "",
+        p,
+        r.leads_mes,
+        ex.primeiroMin != null ? `${ex.primeiroMin} min` : "—",
+        ex.cotacoes,
+        ex.propostas,
+        r.vendas_mes,
+        `${conv}%`,
+        fmtBRL(Number(r.comissao_mes) || 0),
+        r.meta_vendas ? `${r.vendas_mes}/${r.meta_vendas}` : "—",
+        r.status,
+      ].map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",");
+    });
+    const csv = [head.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vendedores_${MESES[mesIdx]}_${ano}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <AppShell title="Vendedores">
@@ -112,6 +215,24 @@ function Page() {
         <div>
           <h1>Vendedores</h1>
           <div className="sub">Quem está vendendo, quem travou e quem precisa de apoio</div>
+        </div>
+        <div className="row" style={{ gap: 10 }}>
+          <select
+            className="select-mini"
+            value={`${ano}-${mesIdx}`}
+            onChange={(e) => {
+              const [y, m] = e.target.value.split("-").map(Number);
+              setAno(y);
+              setMesIdx(m);
+            }}
+          >
+            {opcoes.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <button className="btn btn-ghost" onClick={exportar}>
+            <svg width="14" height="14"><use href="#i-download"></use></svg> Exportar
+          </button>
         </div>
       </div>
 
@@ -127,16 +248,17 @@ function Page() {
 
       {rows.length > 0 && (
         <div style={{ overflowX: "auto" }}>
-          <table className="table-pipe mtable" style={{ minWidth: 1020 }}>
+          <table className="table-pipe mtable" style={{ minWidth: 1180 }}>
             <thead>
               <tr>
                 <th>Vendedor</th>
-                <th>Presença</th>
                 <th>Franquia</th>
+                <th>Presença</th>
                 <th>Leads</th>
-                <th>Em negoc.</th>
+                <th>1º contato</th>
+                <th>Cotações</th>
+                <th>Propostas</th>
                 <th>Vendas</th>
-                <th>Faturamento</th>
                 <th>Conv.</th>
                 <th>Comissão</th>
                 <th>Meta</th>
@@ -146,21 +268,17 @@ function Page() {
             <tbody>
               {rows.map((r) => {
                 const conv = r.leads_mes > 0 ? Math.round((r.vendas_mes / r.leads_mes) * 100) : 0;
+                const ex = extras[r.user_id] ?? { cotacoes: 0, propostas: 0, primeiroMin: null };
                 return (
                   <tr key={r.user_id}>
-                    <td>
-                      <strong>{r.nome || r.email}</strong>
-                    </td>
+                    <td><strong>{r.nome || r.email}</strong></td>
+                    <td><small>{r.empresa_nome ?? "—"}</small></td>
                     <td>{presenceDot(presence[r.user_id])}</td>
-                    <td>
-                      <small>{r.empresa_nome ?? "—"}</small>
-                    </td>
                     <td>{r.leads_mes}</td>
-                    <td>{r.em_negociacao}</td>
-                    <td>
-                      <strong>{r.vendas_mes}</strong>
-                    </td>
-                    <td>{fmtBRL(Number(r.faturamento_mes) || 0)}</td>
+                    <td>{ex.primeiroMin != null ? `${ex.primeiroMin} min` : "—"}</td>
+                    <td>{ex.cotacoes}</td>
+                    <td>{ex.propostas}</td>
+                    <td><strong>{r.vendas_mes}</strong></td>
                     <td>{conv}%</td>
                     <td>{fmtBRL(Number(r.comissao_mes) || 0)}</td>
                     <td>{metaBar(r.vendas_mes, r.meta_vendas)}</td>
@@ -168,7 +286,6 @@ function Page() {
                   </tr>
                 );
               })}
-
             </tbody>
           </table>
         </div>
