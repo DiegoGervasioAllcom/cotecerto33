@@ -21,11 +21,11 @@ type Lead = {
 
 const STAGE_KEY: Record<string, string> = {
   Novo: "novo",
-  Contato: "contato",
-  Cotação: "cotacao",
-  Proposta: "proposta",
-  Negociação: "negociacao",
-  Ganho: "ganho",
+  Qualificando: "contato",
+  Cotando: "cotacao",
+  "Proposta enviada": "proposta",
+  "Em negociação": "negociacao",
+  Fechado: "ganho",
 };
 
 function Page() {
