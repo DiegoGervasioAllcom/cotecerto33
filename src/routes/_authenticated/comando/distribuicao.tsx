@@ -133,7 +133,20 @@ function Page() {
 
   function escolherAlvoParaLead(l: LeadFila): { alvo: string; criterio: string } {
     if (!franquias.length) return { alvo: "—", criterio: "Sem franquia cadastrada" };
+    const onlyOnline = !!cfg.criterios.disp;
+    const vendsAtivos = onlyOnline ? vendedores.filter((v) => v.online) : vendedores;
+
     let candidatas = franquias;
+    // Quando "Vendedor disponível" estiver ativo, só franquias que possuem ao menos
+    // 1 vendedor online entram na disputa.
+    if (onlyOnline) {
+      const comOnline = new Set(vendsAtivos.map((v) => v.empresa_id));
+      candidatas = candidatas.filter((c) => comOnline.has(c.id));
+      if (!candidatas.length) {
+        return { alvo: "— (sem vendedor online)", criterio: "Aguardando vendedor online" };
+      }
+    }
+
     if (cfg.criterios.regiao && (l.uf || l.cidade)) {
       const local = candidatas.filter((f) =>
         (l.uf && f.uf && f.uf.toUpperCase() === l.uf.toUpperCase()) ||
@@ -144,19 +157,17 @@ function Page() {
     let franq = candidatas[0];
     let criterio = "Região";
     if (cfg.modo === "fila") {
-      // rodízio simples: menor número de leads na fila já atribuídos
       const count = new Map<string, number>();
       for (const c of candidatas) count.set(c.id, 0);
       for (const x of fila) if (x.id !== l.id) count.set(x.id, (count.get(x.id) || 0) + 1);
       franq = [...candidatas].sort((a, b) => (count.get(a.id) || 0) - (count.get(b.id) || 0))[0];
       criterio = "Rodízio (fila equilibrada)";
     } else if (cfg.modo === "performance") {
-      // sem histórico de conv aqui — escolhe a primeira franquia com vendedores
-      const comVend = candidatas.filter((c) => vendedores.some((v) => v.empresa_id === c.id));
+      const comVend = candidatas.filter((c) => vendsAtivos.some((v) => v.empresa_id === c.id));
       if (comVend.length) franq = comVend[0];
-      criterio = "Performance (vendedores disponíveis)";
+      criterio = onlyOnline ? "Performance (vendedores online)" : "Performance (vendedores disponíveis)";
     }
-    const vends = vendedores.filter((v) => v.empresa_id === franq.id);
+    const vends = vendsAtivos.filter((v) => v.empresa_id === franq.id);
     const vendNome = vends.length ? vends[Math.floor(Math.random() * vends.length)].nome : "—";
     return { alvo: `${franq.nome}${vendNome !== "—" ? ` · ${vendNome}` : ""}`, criterio };
   }
