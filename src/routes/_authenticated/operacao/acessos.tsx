@@ -852,6 +852,8 @@ function ModeloCltPanel({
         progressiva: clt.progressiva,
         fator_novas: clt.fator_novas,
         fator_remalho: clt.fator_remalho,
+        seguradora_planos: clt.seguradora_planos,
+        seguradora_adic: clt.seguradora_adic,
         regras: clt.regras,
         atualizado_em: new Date().toISOString(),
       })
