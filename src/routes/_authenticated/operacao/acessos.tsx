@@ -881,6 +881,8 @@ function ModeloCltPanel({
         vh="% comissionado"
         rows={clt.progressiva}
         onChange={(rows) => setClt({ ...clt, progressiva: rows })}
+        rangeMask="brl"
+        valueMask="pct"
         footer={
           <div className="muted small">
             <Icon id="info" size={13} /> Base: prêmio líquido = prêmio bruto − juros − IOF (7,38%). O % vem da faixa do faturamento mensal de comissão.
@@ -896,6 +898,8 @@ function ModeloCltPanel({
           vh="Fator"
           rows={clt.fator_novas}
           onChange={(rows) => setClt({ ...clt, fator_novas: rows })}
+          rangeMask="pct"
+          valueMask="pct"
         />
         <DynamicRangeCard
           title="Fator comissão média · Remalho"
@@ -904,6 +908,8 @@ function ModeloCltPanel({
           vh="Fator"
           rows={clt.fator_remalho}
           onChange={(rows) => setClt({ ...clt, fator_remalho: rows })}
+          rangeMask="pct"
+          valueMask="pct"
         />
       </div>
 
@@ -914,6 +920,7 @@ function ModeloCltPanel({
         vh="Comissão (R$)"
         rows={clt.seguradora_planos}
         onChange={(rows) => setClt({ ...clt, seguradora_planos: rows })}
+        valueMask="brl"
       />
       <DynamicTrioCard
         title="Seguradora — serviços adicionais (R$)"
@@ -922,7 +929,9 @@ function ModeloCltPanel({
         vh="Comissão (R$)"
         rows={clt.seguradora_adic}
         onChange={(rows) => setClt({ ...clt, seguradora_adic: rows })}
+        valueMask="brl"
       />
+
 
       <div className="card">
         <div className="card-h"><h3><Icon id="info" size={16} /> Regras gerais de remuneração</h3></div>
@@ -945,8 +954,8 @@ function ModeloCltPanel({
             </div>
             <div className="field-group">
               <label>IOF</label>
-              <input className="input" value={clt.regras.iof}
-                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, iof: e.target.value } })} />
+              <input className="input" value={clt.regras.iof} placeholder="0%"
+                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, iof: maskPct(e.target.value) } })} />
             </div>
           </div>
           <div style={{ marginTop: 14 }}>
@@ -1048,12 +1057,36 @@ function formatRange(de: string, ate: string): string {
   return `${d} – ${a}`;
 }
 
+type Mask = "brl" | "pct" | undefined;
+function maskBRL(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  const n = parseInt(digits, 10);
+  const reais = Math.floor(n / 100);
+  const cent = String(n % 100).padStart(2, "0");
+  return "R$ " + reais.toLocaleString("pt-BR") + "," + cent;
+}
+function maskPct(raw: string): string {
+  let s = raw.replace(/[^\d,]/g, "");
+  const parts = s.split(",");
+  if (parts.length > 2) s = parts[0] + "," + parts.slice(1).join("");
+  if (parts[1]) s = parts[0] + "," + parts[1].slice(0, 2);
+  return s ? s + "%" : "";
+}
+function applyMask(v: string, m: Mask): string {
+  if (m === "brl") return maskBRL(v);
+  if (m === "pct") return maskPct(v);
+  return v;
+}
+
+
 function DynamicRangeCard({
-  title, icon, lh, vh, rows, onChange, footer,
+  title, icon, lh, vh, rows, onChange, footer, rangeMask, valueMask,
 }: {
   title: string; icon: string; lh: string; vh: string;
   rows: Pair[]; onChange: (rows: Pair[]) => void;
   footer?: React.ReactNode;
+  rangeMask?: Mask; valueMask?: Mask;
 }) {
   function update(i: number, de: string, ate: string, val: string) {
     const next = rows.map((x, j) => j === i ? [formatRange(de, ate), val] as Pair : x);
@@ -1091,16 +1124,16 @@ function DynamicRangeCard({
               return (
                 <tr key={i}>
                   <td>
-                    <input className="input input-mini" placeholder="0" value={de}
-                      onChange={(e) => update(i, e.target.value, ate, r[1])} />
+                    <input className="input input-mini" placeholder={rangeMask === "brl" ? "R$ 0,00" : rangeMask === "pct" ? "0%" : "0"} value={de}
+                      onChange={(e) => update(i, applyMask(e.target.value, rangeMask), ate, r[1])} />
                   </td>
                   <td>
-                    <input className="input input-mini" placeholder="∞" value={ate}
-                      onChange={(e) => update(i, de, e.target.value, r[1])} />
+                    <input className="input input-mini" placeholder={rangeMask === "brl" ? "R$ ∞" : rangeMask === "pct" ? "∞%" : "∞"} value={ate}
+                      onChange={(e) => update(i, de, applyMask(e.target.value, rangeMask), r[1])} />
                   </td>
                   <td>
-                    <input className="input input-mini" value={r[1]}
-                      onChange={(e) => { const next = rows.map((x, j) => j === i ? [x[0], e.target.value] as Pair : x); onChange(next); }} />
+                    <input className="input input-mini" placeholder={valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""} value={r[1]}
+                      onChange={(e) => { const v = applyMask(e.target.value, valueMask); const next = rows.map((x, j) => j === i ? [x[0], v] as Pair : x); onChange(next); }} />
                   </td>
                   <td style={{ textAlign: "right" }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
@@ -1118,6 +1151,7 @@ function DynamicRangeCard({
   );
 }
 
+
 function toTrio(x: unknown): Trio {
   if (Array.isArray(x)) {
     if (x.length >= 3) return [String(x[0] ?? ""), String(x[1] ?? ""), String(x[2] ?? "")];
@@ -1127,16 +1161,18 @@ function toTrio(x: unknown): Trio {
 }
 
 function DynamicTrioCard({
-  title, icon, lh, vh, rows, onChange,
+  title, icon, lh, vh, rows, onChange, valueMask,
 }: {
   title: string; icon: string; lh: string; vh: string;
   rows: Trio[]; onChange: (rows: Trio[]) => void;
+  valueMask?: Mask;
 }) {
   function patch(i: number, k: 0 | 1 | 2, v: string) {
+    const masked = k === 2 ? applyMask(v, valueMask) : v;
     onChange(rows.map((x, j) => {
       if (j !== i) return x;
       const n: Trio = [x[0], x[1], x[2]];
-      n[k] = v;
+      n[k] = masked;
       return n;
     }));
   }
@@ -1168,7 +1204,7 @@ function DynamicTrioCard({
                   <input className="input input-mini" value={r[1]} onChange={(e) => patch(i, 1, e.target.value)} />
                 </td>
                 <td>
-                  <input className="input input-mini" value={r[2]} onChange={(e) => patch(i, 2, e.target.value)} />
+                  <input className="input input-mini" placeholder={valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""} value={r[2]} onChange={(e) => patch(i, 2, e.target.value)} />
                 </td>
                 <td style={{ textAlign: "right" }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
