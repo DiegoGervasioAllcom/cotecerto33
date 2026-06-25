@@ -224,12 +224,15 @@ function Page() {
     setTimeout(() => {
       const base = fipeValor ? Number(onlyDigits(fipeValor)) / 100 : 60000;
       const fator = f.tipoCobertura === "Compreensiva" ? 0.035 : f.tipoCobertura === "RCF" ? 0.012 : 0.020;
-      setResultados(SEGURADORAS.map((cia, i) => ({
+      const novos = SEGURADORAS.map((cia, i) => ({
         cia,
         premio: Math.round(base * fator * (0.85 + i * 0.07)),
         cobertura: f.tipoCobertura,
-      })));
+      }));
+      setResultados(novos);
       setCalculando(false);
+      // persiste prêmios no banco mapeando para o shape do RPC
+      void persistir({ premios: novos.map((r) => ({ cia: r.cia, premio: r.premio, cobertura: r.cobertura })) as never });
     }, 900);
   }
 
