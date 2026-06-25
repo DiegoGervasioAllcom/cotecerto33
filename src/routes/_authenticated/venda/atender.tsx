@@ -18,6 +18,7 @@ type Lead = {
   criado_em: string;
   distribuido_em: string | null;
   dados: Record<string, unknown> | null;
+  bloqueado: boolean | null;
 };
 
 const WINDOW_MS = 3 * 60 * 1000; // 3 min
