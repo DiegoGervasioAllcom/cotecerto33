@@ -45,6 +45,7 @@ type Modelo = {
 };
 
 type Pair = [string, string];
+type Trio = [string, string, string]; // [seguradora, item, valor]
 type CltRegras = {
   apuracao_ini: string;
   apuracao_fim: string;
@@ -56,10 +57,15 @@ type CltConfig = {
   progressiva: Pair[];
   fator_novas: Pair[];
   fator_remalho: Pair[];
-  ituran_planos: Pair[];
-  ituran_adic: Pair[];
+  ituran_planos: Trio[];
+  ituran_adic: Trio[];
   regras: CltRegras;
 };
+
+const SEGURADORAS = [
+  "Ituran", "Porto Seguro", "Azul Seguros", "Bradesco Seguros", "SulAmérica",
+  "HDI", "Allianz", "Mapfre", "Tokio Marine", "Liberty", "Itaú", "Zurich",
+];
 
 const CLT_DEFAULT: CltConfig = {
   progressiva: [], fator_novas: [], fator_remalho: [],
