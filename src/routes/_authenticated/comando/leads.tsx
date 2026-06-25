@@ -205,8 +205,8 @@ function Page() {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const today = (d: string) => new Date(d).getTime() >= todayStart.getTime();
     return {
-      pendentes: enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo").length,
-      slaOver: enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo" && l.ageSec > SLA_SECONDS).length,
+      pendentes: enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo" && !l.arquivado).length,
+      slaOver: enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo" && !l.arquivado && l.ageSec > SLA_SECONDS).length,
       emAtend: enriched.filter((l) => ["contato","qualificado","cotacao","proposta","negociacao"].includes(l.status_pipeline)).length,
       filaHoje: enriched.filter((l) => today(l.criado_em)).length,
       fechadosHoje: enriched.filter((l) => l.status_pipeline === "ganho" && today(l.criado_em)).length,
