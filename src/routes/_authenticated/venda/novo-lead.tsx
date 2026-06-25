@@ -183,11 +183,83 @@ function Page() {
   // auto-save com debounce
   useEffect(() => {
     if (firstRender.current) { firstRender.current = false; return; }
+    if (loadingRef.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => { void persistir(); }, 1500);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f, step]);
+
+  // carregar rascunho existente quando ?id=
+  useEffect(() => {
+    if (!routeId) return;
+    let cancel = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("cotacoes")
+        .select(
+          "id,step_atual,ramo," +
+          "segurado:cotacao_segurado(*)," +
+          "seguro:cotacao_seguro(*)," +
+          "veiculo:cotacao_veiculo(*)," +
+          "perfil:cotacao_perfil(*)," +
+          "coberturas:cotacao_coberturas(*)," +
+          "premios:cotacao_premios(seguradora,cobertura,premio)"
+        )
+        .eq("id", routeId)
+        .maybeSingle();
+      if (cancel) return;
+      if (error || !data) { loadingRef.current = false; setLoading(false); return; }
+      const s = (data as any).segurado || {};
+      const sg = (data as any).seguro || {};
+      const v = (data as any).veiculo || {};
+      const p = (data as any).perfil || {};
+      const c = (data as any).coberturas || {};
+      const pr = ((data as any).premios || []) as { seguradora: string; cobertura: string; premio: number }[];
+      setStep(Number((data as any).step_atual ?? 0));
+      setF((prev) => ({
+        ...prev,
+        cpf: s.cpf_cnpj ?? "", pessoa: s.pessoa ?? prev.pessoa, nome: s.nome ?? "", nomeSocial: s.nome_social ?? "",
+        nasc: s.nascimento ?? "", sexo: s.sexo ?? "", estadoCivil: s.estado_civil ?? "",
+        celular: s.celular ?? "", telRes: s.tel_res ?? "", email: s.email ?? "",
+        cep: s.cep ?? "", logradouro: s.logradouro ?? "", bairro: s.bairro ?? "",
+        cidade: s.cidade ?? "", uf: s.uf ?? "", sms: s.sms_optin ? "sim" : "nao",
+        tipoSeguro: sg.tipo_seguro ?? prev.tipoSeguro, ramo: sg.ramo ?? prev.ramo,
+        categoria: sg.categoria ?? prev.categoria, vigIni: sg.vig_ini ?? "", vigFim: sg.vig_fim ?? "",
+        ciaAtual: sg.cia_atual ?? "", apoliceAtual: sg.apolice_atual ?? "",
+        ciAtual: sg.ci_atual ?? "", classeBonus: sg.classe_bonus ?? "0",
+        placa: v.placa ?? "", chassi: v.chassi ?? "", renavam: v.renavam ?? "",
+        marca: v.marca_codigo ?? "", modelo: v.modelo_codigo ?? "",
+        anoModelo: v.ano_modelo ?? "", anoFab: v.ano_fab ?? "",
+        combustivel: v.combustivel ?? prev.combustivel, cor: v.cor ?? "",
+        zeroKm: !!v.zero_km, blindado: !!v.blindado, alienado: !!v.alienado,
+        banco: v.banco ?? "", usoComercial: v.uso_comercial ?? prev.usoComercial, kmMensal: v.km_mensal ?? "",
+        condutorMesmo: p.condutor_mesmo === false ? "nao" : "sim",
+        condCpf: p.cond_cpf ?? "", condNome: p.cond_nome ?? "", condNasc: p.cond_nasc ?? "",
+        condSexo: p.cond_sexo ?? "", condEstadoCivil: p.cond_estado_civil ?? "",
+        profissao: p.profissao ?? "", cepPernoite: p.cep_pernoite ?? "",
+        garagemResid: p.garagem_resid ?? prev.garagemResid,
+        garagemTrab: !!p.garagem_trab, garagemEsc: !!p.garagem_esc,
+        jovens1825: p.jovens_18_25 ? "sim" : "nao",
+        tipoCobertura: c.tipo_cobertura ?? prev.tipoCobertura, casco: c.casco ?? prev.casco,
+        cascoValor: c.casco_valor ?? "", franquia: c.franquia ?? prev.franquia,
+        appMorte: c.app_morte ?? "", appInval: c.app_invalidez ?? "", dmh: c.dmh ?? "",
+        rcfDm: c.rcf_dm ?? "", rcfDc: c.rcf_dc ?? "",
+        vidros: c.vidros ?? prev.vidros, carroReserva: c.carro_reserva ?? prev.carroReserva,
+        assist24: c.assist_24 ?? prev.assist24,
+      }));
+      if (v.fipe_valor) setFipeValor(v.fipe_valor);
+      if (v.marca_codigo && v.marca_nome) setMarcas((m) => m.some((x) => x.codigo === v.marca_codigo) ? m : [...m, { codigo: v.marca_codigo, nome: v.marca_nome }]);
+      if (v.modelo_codigo && v.modelo_nome) setModelos((m) => m.some((x) => String(x.codigo) === String(v.modelo_codigo)) ? m : [...m, { codigo: Number(v.modelo_codigo), nome: v.modelo_nome }]);
+      if (pr.length) setResultados(pr.map((x) => ({ cia: x.seguradora, premio: Number(x.premio), cobertura: x.cobertura })));
+      setCotacaoId(routeId);
+      setLastSavedAt(new Date());
+      setSaveState("saved");
+      // libera autosave após dois ticks pra evitar disparo pelo setF
+      setTimeout(() => { loadingRef.current = false; setLoading(false); }, 50);
+    })();
+    return () => { cancel = true; };
+  }, [routeId]);
 
 
   async function lookupCep(cep: string, prefix: "" | "cond" = "") {
