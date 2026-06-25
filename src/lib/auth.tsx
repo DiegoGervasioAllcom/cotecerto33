@@ -126,6 +126,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     if (!isSupabaseConfigured) return;
+    // Marca offline ANTES do signOut (depois perde o token e a RPC falha)
+    try {
+      const ua = typeof navigator !== "undefined" ? navigator.userAgent : null;
+      await supabase.rpc("presence_set", { p_status: "offline", p_user_agent: ua });
+    } catch {
+      /* noop */
+    }
     await supabase.auth.signOut();
   };
 
