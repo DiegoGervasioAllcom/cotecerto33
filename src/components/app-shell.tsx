@@ -97,6 +97,7 @@ export function AppShell({
   const { role, profile, empresa, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  usePresence();
 
   const handleSignOut = async () => {
     await signOut();
