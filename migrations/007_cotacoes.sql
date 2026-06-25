@@ -32,7 +32,7 @@ drop policy if exists cot_select on public.cotacoes;
 create policy cot_select on public.cotacoes for select to authenticated using (
   responsavel_id = auth.uid()
   or empresa_id in (select empresa_id from public.profiles where id=auth.uid())
-  or exists (select 1 from public.profiles p where p.id=auth.uid() and p.perfil in ('matriz','master'))
+  or (public.has_role(auth.uid(),'matriz') or public.has_role(auth.uid(),'master'))
 );
 drop policy if exists cot_iud on public.cotacoes;
 create policy cot_iud on public.cotacoes for all to authenticated
@@ -105,7 +105,7 @@ begin
       using (exists (select 1 from public.cotacoes c where c.id = %I.cotacao_id and (
         c.responsavel_id = auth.uid()
         or c.empresa_id in (select empresa_id from public.profiles where id=auth.uid())
-        or exists (select 1 from public.profiles p where p.id=auth.uid() and p.perfil in ('matriz','master'))
+        or (public.has_role(auth.uid(),'matriz') or public.has_role(auth.uid(),'master'))
       )))
       with check (exists (select 1 from public.cotacoes c where c.id = %I.cotacao_id and c.responsavel_id = auth.uid()));
     $f$, t, t, t, t);
