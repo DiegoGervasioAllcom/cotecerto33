@@ -449,63 +449,118 @@ function Page() {
           {step === 1 && (
             <>
               <h2>Dados do Seguro</h2>
-              <div className="sub">Tipo de operação, ramo e dados da apólice atual (se renovação).</div>
+              <div className="sub">Seguradoras para o cálculo, tipo de seguro e vigência.</div>
+
+              <div className="field-group" style={{ marginTop: 8 }}>
+                <label>
+                  Seguradoras disponíveis{" "}
+                  <span className="muted" style={{ fontWeight: 400 }}>marque e desmarque para o cálculo</span>
+                </label>
+                <div className="row" style={{ gap: 8, flexWrap: "wrap", paddingTop: 6 }}>
+                  {["Mapfre", "Aliro", "Yelum", "HDI", "Suhai", "Porto", "Azul", "Itaú", "Tokio"].map((s) => {
+                    const on = f.seguradorasSel.includes(s);
+                    return (
+                      <span
+                        key={s}
+                        className={"chip " + (on ? "chip-yellow" : "chip-outline")}
+                        style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+                        onClick={() =>
+                          up(
+                            "seguradorasSel",
+                            on ? f.seguradorasSel.filter((x) => x !== s) : [...f.seguradorasSel, s]
+                          )
+                        }
+                      >
+                        {on && <svg width="10" height="10"><use href="#i-check" /></svg>}
+                        {s}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="wizard-grid">
                 <div className="field-group">
-                  <label>Tipo<span className="req">*</span></label>
-                  <div className="row" style={{ gap: 8, paddingTop: 4 }}>
-                    {["Novo", "Renovação Congênere", "Renovação"].map((t) => (
-                      <span key={t} className={"chip " + (f.tipoSeguro === t ? "chip-slate" : "chip-outline")}
-                        style={{ cursor: "pointer" }} onClick={() => up("tipoSeguro", t)}>{t}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="field-group">
-                  <label>Ramo<span className="req">*</span></label>
-                  <select className="input" value={f.ramo} onChange={(e) => up("ramo", e.target.value)}>
-                    <option>Automóvel</option><option>Moto</option><option>Caminhão</option>
+                  <label>Tipo de seguro<span className="req">*</span></label>
+                  <select className="input" value={f.tipoSeguro} onChange={(e) => up("tipoSeguro", e.target.value)}>
+                    <option>Seguro novo</option>
+                    <option>Renovação congênere</option>
+                    <option>Renovação</option>
                   </select>
                 </div>
                 <div className="field-group">
-                  <label>Categoria<span className="req">*</span></label>
-                  <select className="input" value={f.categoria} onChange={(e) => up("categoria", e.target.value)}>
-                    <option>Particular</option><option>Comercial</option><option>Aplicativo (Uber/99)</option><option>Táxi</option>
+                  <label>Tipo de cálculo</label>
+                  <select className="input" value={f.tipoCalculo} onChange={(e) => up("tipoCalculo", e.target.value)}>
+                    <option>Anual</option>
+                    <option>Mensal</option>
                   </select>
                 </div>
                 <div className="field-group">
-                  <label>Vigência início</label>
+                  <label>Tipo de cobertura</label>
+                  <select className="input" value={f.tipoCobertura} onChange={(e) => up("tipoCobertura", e.target.value)}>
+                    <option>Compreensiva</option>
+                    <option>RCF</option>
+                    <option>Incêndio e Roubo</option>
+                  </select>
+                </div>
+
+                <div className="field-group">
+                  <label>Período de vigência<span className="req">*</span></label>
                   <input className="input" type="date" value={f.vigIni} onChange={(e) => up("vigIni", e.target.value)} />
                 </div>
                 <div className="field-group">
-                  <label>Vigência fim</label>
+                  <label>Até</label>
                   <input className="input" type="date" value={f.vigFim} onChange={(e) => up("vigFim", e.target.value)} />
                 </div>
-                {f.tipoSeguro !== "Novo" && (
-                  <>
-                    <div className="field-group">
-                      <label>Seguradora atual</label>
-                      <select className="input" value={f.ciaAtual} onChange={(e) => up("ciaAtual", e.target.value)}>
-                        <option value="">Selecione</option>
-                        {SEGURADORAS.map((s) => <option key={s}>{s}</option>)}
-                      </select>
-                    </div>
-                    <div className="field-group">
-                      <label>Apólice atual</label>
-                      <input className="input" value={f.apoliceAtual} onChange={(e) => up("apoliceAtual", e.target.value)} />
-                    </div>
-                    <div className="field-group">
-                      <label>CI atual</label>
-                      <input className="input" value={f.ciAtual} onChange={(e) => up("ciAtual", e.target.value)} />
-                    </div>
-                    <div className="field-group">
-                      <label>Classe de bônus</label>
-                      <select className="input" value={f.classeBonus} onChange={(e) => up("classeBonus", e.target.value)}>
-                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n}>{String(n)}</option>)}
-                      </select>
-                    </div>
-                  </>
-                )}
+                <div className="field-group">
+                  <label>Grupo de produção<span className="req">*</span></label>
+                  <input className="input" value={f.grupoProducao} onChange={(e) => up("grupoProducao", e.target.value)} />
+                </div>
+
+                <div className="field-group" style={{ gridColumn: "span 1" }}>
+                  <label>Campanha</label>
+                  <select className="input" value={f.campanha} onChange={(e) => up("campanha", e.target.value)}>
+                    <option value="">Selecione</option>
+                  </select>
+                </div>
               </div>
+
+              <div className="field-group" style={{ marginTop: 12 }}>
+                <label>Observações para a cotação</label>
+                <textarea
+                  className="input"
+                  rows={4}
+                  placeholder="Anotações internas desta cotação"
+                  value={f.observacoesCot}
+                  onChange={(e) => up("observacoesCot", e.target.value)}
+                />
+              </div>
+
+              {f.tipoSeguro !== "Seguro novo" && (
+                <div className="wizard-grid" style={{ marginTop: 12 }}>
+                  <div className="field-group">
+                    <label>Seguradora atual</label>
+                    <select className="input" value={f.ciaAtual} onChange={(e) => up("ciaAtual", e.target.value)}>
+                      <option value="">Selecione</option>
+                      {SEGURADORAS.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label>Apólice atual</label>
+                    <input className="input" value={f.apoliceAtual} onChange={(e) => up("apoliceAtual", e.target.value)} />
+                  </div>
+                  <div className="field-group">
+                    <label>CI atual</label>
+                    <input className="input" value={f.ciAtual} onChange={(e) => up("ciAtual", e.target.value)} />
+                  </div>
+                  <div className="field-group">
+                    <label>Classe de bônus</label>
+                    <select className="input" value={f.classeBonus} onChange={(e) => up("classeBonus", e.target.value)}>
+                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n}>{String(n)}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
