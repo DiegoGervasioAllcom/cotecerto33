@@ -105,7 +105,16 @@ function Page() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id}>
+                <tr
+                  key={r.id}
+                  ref={(el) => { rowRefs.current[r.id] = el; }}
+                  style={
+                    selected === r.id
+                      ? { outline: "2px solid var(--brand, #2563eb)", background: "rgba(37,99,235,.06)" }
+                      : undefined
+                  }
+                >
+
                   <td>
                     <strong>{r.numero || "—"}</strong>
                   </td>
