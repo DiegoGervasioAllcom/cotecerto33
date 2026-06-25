@@ -45,6 +45,7 @@ type Modelo = {
 };
 
 type Pair = [string, string];
+type Trio = [string, string, string]; // [seguradora, item, valor]
 type CltRegras = {
   apuracao_ini: string;
   apuracao_fim: string;
@@ -56,10 +57,15 @@ type CltConfig = {
   progressiva: Pair[];
   fator_novas: Pair[];
   fator_remalho: Pair[];
-  ituran_planos: Pair[];
-  ituran_adic: Pair[];
+  ituran_planos: Trio[];
+  ituran_adic: Trio[];
   regras: CltRegras;
 };
+
+const SEGURADORAS = [
+  "Ituran", "Porto Seguro", "Azul Seguros", "Bradesco Seguros", "SulAmérica",
+  "HDI", "Allianz", "Mapfre", "Tokio Marine", "Liberty", "Itaú", "Zurich",
+];
 
 const CLT_DEFAULT: CltConfig = {
   progressiva: [], fator_novas: [], fator_remalho: [],
@@ -155,8 +161,8 @@ function Page() {
         progressiva: (c.data.progressiva ?? []) as Pair[],
         fator_novas: (c.data.fator_novas ?? []) as Pair[],
         fator_remalho: (c.data.fator_remalho ?? []) as Pair[],
-        ituran_planos: (c.data.ituran_planos ?? []) as Pair[],
-        ituran_adic: (c.data.ituran_adic ?? []) as Pair[],
+        ituran_planos: ((c.data.ituran_planos ?? []) as unknown[]).map(toTrio),
+        ituran_adic: ((c.data.ituran_adic ?? []) as unknown[]).map(toTrio),
         regras: { ...CLT_DEFAULT.regras, ...((c.data.regras ?? {}) as Partial<CltRegras>) },
       });
     }
@@ -899,21 +905,21 @@ function ModeloCltPanel({
         />
       </div>
 
-      <StaticPairCard
-        title="Ituran — comissão por plano (R$)"
+      <DynamicTrioCard
+        title="Seguradora — comissão por plano (R$)"
         icon="car"
         lh="Plano"
         vh="Comissão (R$)"
         rows={clt.ituran_planos}
-        note="Em definição: validar se permanece exclusivo desta operadora ou se será dinâmico."
+        onChange={(rows) => setClt({ ...clt, ituran_planos: rows })}
       />
-      <StaticPairCard
-        title="Ituran — serviços adicionais (R$)"
+      <DynamicTrioCard
+        title="Seguradora — serviços adicionais (R$)"
         icon="shield"
         lh="Adicional"
         vh="Comissão (R$)"
         rows={clt.ituran_adic}
-        note="Em definição: validar se permanece exclusivo desta operadora ou se será dinâmico."
+        onChange={(rows) => setClt({ ...clt, ituran_adic: rows })}
       />
 
       <div className="card">
@@ -1110,26 +1116,68 @@ function DynamicRangeCard({
   );
 }
 
-function StaticPairCard({
-  title, icon, lh, vh, rows, note,
-}: { title: string; icon: string; lh: string; vh: string; rows: Pair[]; note?: string }) {
+function toTrio(x: unknown): Trio {
+  if (Array.isArray(x)) {
+    if (x.length >= 3) return [String(x[0] ?? ""), String(x[1] ?? ""), String(x[2] ?? "")];
+    if (x.length === 2) return ["Ituran", String(x[0] ?? ""), String(x[1] ?? "")];
+  }
+  return ["", "", ""];
+}
+
+function DynamicTrioCard({
+  title, icon, lh, vh, rows, onChange,
+}: {
+  title: string; icon: string; lh: string; vh: string;
+  rows: Trio[]; onChange: (rows: Trio[]) => void;
+}) {
+  function patch(i: number, k: 0 | 1 | 2, v: string) {
+    onChange(rows.map((x, j) => {
+      if (j !== i) return x;
+      const n: Trio = [x[0], x[1], x[2]];
+      n[k] = v;
+      return n;
+    }));
+  }
   return (
     <div className="card">
       <div className="card-h">
         <h3><Icon id={icon} size={16} /> {title}</h3>
-        <span className="chip chip-outline" style={{ marginLeft: "auto" }}>Em formulação</span>
+        <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={() => onChange([...rows, ["", "", ""]])}>
+          <Icon id="plus" size={13} /> Adicionar linha
+        </button>
       </div>
       <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
         <table className="table-pipe acc-modelos">
-          <thead><tr><th>{lh}</th><th>{vh}</th></tr></thead>
+          <thead><tr><th style={{ width: 200 }}>Seguradora</th><th>{lh}</th><th style={{ width: 160 }}>{vh}</th><th style={{ width: 60 }}></th></tr></thead>
           <tbody>
+            {rows.length === 0 && (
+              <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Sem linhas.</td></tr>
+            )}
             {rows.map((r, i) => (
-              <tr key={i}><td>{r[0]}</td><td>{r[1]}</td></tr>
+              <tr key={i}>
+                <td>
+                  <select className="input input-mini" value={r[0]} onChange={(e) => patch(i, 0, e.target.value)}>
+                    <option value="">— Seguradora —</option>
+                    {SEGURADORAS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    {r[0] && !SEGURADORAS.includes(r[0]) && <option value={r[0]}>{r[0]}</option>}
+                  </select>
+                </td>
+                <td>
+                  <input className="input input-mini" value={r[1]} onChange={(e) => patch(i, 1, e.target.value)} />
+                </td>
+                <td>
+                  <input className="input input-mini" value={r[2]} onChange={(e) => patch(i, 2, e.target.value)} />
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
+                    <Icon id="trash" size={13} />
+                  </button>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {note && <div className="card-b"><div className="muted small"><Icon id="info" size={13} /> {note}</div></div>}
     </div>
   );
 }
