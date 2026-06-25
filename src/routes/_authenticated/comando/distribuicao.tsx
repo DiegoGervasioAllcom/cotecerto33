@@ -22,7 +22,7 @@ type LeadFila = {
   id: string; nome: string | null; criado_em: string; cidade: string | null; uf: string | null;
   distribuido_em: string | null;
 };
-type Vendedor = { id: string; nome: string; empresa_id: string | null };
+type Vendedor = { id: string; nome: string; empresa_id: string | null; online: boolean };
 type Franquia = { id: string; nome: string; cidade: string | null; uf: string | null };
 
 const DEFAULT_CRIT: Criterios = { regiao: true, franquia: true, disp: true, conv: true, volume: true, horario: false };
