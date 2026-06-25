@@ -32,6 +32,7 @@ type Deslig = {
   empresa_id: string | null;
 };
 
+type ModeloParams = Record<string, string>;
 type Modelo = {
   id: string;
   nome: string;
@@ -39,9 +40,35 @@ type Modelo = {
   perc_comissao_padrao: number;
   descricao: string | null;
   ativo: boolean;
+  ordem: number;
+  params: ModeloParams;
+};
+
+type Pair = [string, string];
+type CltRegras = {
+  apuracao_ini: string;
+  apuracao_fim: string;
+  pagamento: string;
+  iof: string;
+  rules: string[];
+};
+type CltConfig = {
+  progressiva: Pair[];
+  fator_novas: Pair[];
+  fator_remalho: Pair[];
+  ituran_planos: Pair[];
+  ituran_adic: Pair[];
+  regras: CltRegras;
+};
+
+const CLT_DEFAULT: CltConfig = {
+  progressiva: [], fator_novas: [], fator_remalho: [],
+  ituran_planos: [], ituran_adic: [],
+  regras: { apuracao_ini: "26", apuracao_fim: "25", pagamento: "5º dia útil", iof: "7,38%", rules: [] },
 };
 
 type Tab = "pend" | "deslig" | "modelos";
+type PersoSub = "franquia" | "clt";
 
 const FAIXAS: Array<[string, string]> = [
   ["Faixa 1", "8"],
