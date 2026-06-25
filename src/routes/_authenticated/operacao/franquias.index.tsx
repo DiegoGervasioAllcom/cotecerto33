@@ -134,7 +134,16 @@ function Page() {
               {rows.map((r) => {
                 const conv = r.leads_mes > 0 ? Math.round((r.vendas_mes / r.leads_mes) * 100) : 0;
                 return (
-                  <tr key={r.empresa_id}>
+                  <tr
+                    key={r.empresa_id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() =>
+                      navigate({
+                        to: "/operacao/franquias/$id",
+                        params: { id: r.empresa_id },
+                      })
+                    }
+                  >
                     <td>
                       <div className="mini-cell">
                         <strong>{r.nome}</strong>
