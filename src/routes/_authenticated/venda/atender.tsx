@@ -176,7 +176,7 @@ function Page() {
                     <svg width={13} height={13}><use href="#i-check" /></svg>{" "}
                     {busy === l.id ? "Iniciando…" : "Assumir e iniciar"}
                   </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => verLead(l)}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setView(l)}>
                     <svg width={13} height={13}><use href="#i-eye" /></svg> Ver lead
                   </button>
                 </div>
