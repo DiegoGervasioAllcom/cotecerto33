@@ -134,7 +134,7 @@ function Page() {
         supabase
           .from("leads")
           .select(
-            "id,nome,contato,origem,status_pipeline,empresa_id,responsavel_id,criado_em,atualizado_em,distribuido_em,ultimo_atendimento_em,bloqueado,motivo_bloqueio,motivo_perda,submotivo_perda,em_avaliacao_matriz,dados"
+            "id,nome,contato,origem,status_pipeline,empresa_id,responsavel_id,criado_em,atualizado_em,distribuido_em,ultimo_atendimento_em,bloqueado,motivo_bloqueio,motivo_perda,submotivo_perda,em_avaliacao_matriz,arquivado,dados"
           )
           .order("criado_em", { ascending: false })
           .limit(500),
