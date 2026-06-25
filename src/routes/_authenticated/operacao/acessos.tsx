@@ -161,8 +161,8 @@ function Page() {
         progressiva: (c.data.progressiva ?? []) as Pair[],
         fator_novas: (c.data.fator_novas ?? []) as Pair[],
         fator_remalho: (c.data.fator_remalho ?? []) as Pair[],
-        ituran_planos: (c.data.ituran_planos ?? []) as Pair[],
-        ituran_adic: (c.data.ituran_adic ?? []) as Pair[],
+        ituran_planos: ((c.data.ituran_planos ?? []) as unknown[]).map(toTrio),
+        ituran_adic: ((c.data.ituran_adic ?? []) as unknown[]).map(toTrio),
         regras: { ...CLT_DEFAULT.regras, ...((c.data.regras ?? {}) as Partial<CltRegras>) },
       });
     }
