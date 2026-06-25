@@ -131,6 +131,7 @@ function Page() {
             <thead>
               <tr>
                 <th>Vendedor</th>
+                <th>Presença</th>
                 <th>Franquia</th>
                 <th>Leads</th>
                 <th>Em negoc.</th>
@@ -150,6 +151,7 @@ function Page() {
                     <td>
                       <strong>{r.nome || r.email}</strong>
                     </td>
+                    <td>{presenceDot(presence[r.user_id])}</td>
                     <td>
                       <small>{r.empresa_nome ?? "—"}</small>
                     </td>
@@ -166,6 +168,7 @@ function Page() {
                   </tr>
                 );
               })}
+
             </tbody>
           </table>
         </div>
