@@ -328,6 +328,7 @@ function Page() {
           <button className="btn btn-ghost"><svg width="14" height="14"><use href="#i-flag" /></svg> Classificar perda</button>
         </div>
       </div>
+      {loading && <div className="muted" style={{ marginBottom: 8 }}>Carregando rascunho…</div>}
 
       <div className="stepper">
         {STEPS.map((label, i) => (
