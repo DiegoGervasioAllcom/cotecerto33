@@ -22,7 +22,7 @@ type LeadFila = {
   id: string; nome: string | null; criado_em: string; cidade: string | null; uf: string | null;
   distribuido_em: string | null;
 };
-type Vendedor = { id: string; nome: string; empresa_id: string | null };
+type Vendedor = { id: string; nome: string; empresa_id: string | null; online: boolean };
 type Franquia = { id: string; nome: string; cidade: string | null; uf: string | null };
 
 const DEFAULT_CRIT: Criterios = { regiao: true, franquia: true, disp: true, conv: true, volume: true, horario: false };
@@ -51,7 +51,7 @@ function Page() {
       mId = (me?.empresa_id as string) ?? null; setMatrizId(mId);
     }
 
-    const [c, d, f, fr, vd] = await Promise.all([
+    const [c, d, f, fr, vd, pr] = await Promise.all([
       supabase.from("distribuicao_config").select("*").eq("id", "default").maybeSingle(),
       supabase.from("leads")
         .select("id,nome,motivo_perda,submotivo_perda,destino_perda_sugerido,observacao_perda,dados_veiculo")
@@ -62,6 +62,7 @@ function Page() {
         .eq("arquivado", false).eq("bloqueado", false).limit(500),
       supabase.from("empresas").select("id,nome,cidade,uf,tipo,status").limit(500),
       supabase.from("profiles").select("id,nome,empresa_id,status").limit(2000),
+      supabase.from("v_user_presence").select("user_id,status_efetivo"),
     ]);
 
     if (c.data) {
@@ -84,8 +85,9 @@ function Page() {
     setFranquias(((fr.data ?? []) as any[]).filter((e) => e.id !== mId && e.status === "aprovada").map((e) => ({
       id: e.id, nome: e.nome, cidade: e.cidade, uf: e.uf,
     })));
+    const presMap = new Map<string, string>(((pr.data ?? []) as any[]).map((x) => [x.user_id, x.status_efetivo]));
     setVendedores(((vd.data ?? []) as any[]).filter((p) => p.empresa_id && p.empresa_id !== mId && p.status === "aprovada").map((p) => ({
-      id: p.id, nome: p.nome, empresa_id: p.empresa_id,
+      id: p.id, nome: p.nome, empresa_id: p.empresa_id, online: presMap.get(p.id) === "online",
     })));
     setLoading(false);
   }
@@ -131,7 +133,20 @@ function Page() {
 
   function escolherAlvoParaLead(l: LeadFila): { alvo: string; criterio: string } {
     if (!franquias.length) return { alvo: "—", criterio: "Sem franquia cadastrada" };
+    const onlyOnline = !!cfg.criterios.disp;
+    const vendsAtivos = onlyOnline ? vendedores.filter((v) => v.online) : vendedores;
+
     let candidatas = franquias;
+    // Quando "Vendedor disponível" estiver ativo, só franquias que possuem ao menos
+    // 1 vendedor online entram na disputa.
+    if (onlyOnline) {
+      const comOnline = new Set(vendsAtivos.map((v) => v.empresa_id));
+      candidatas = candidatas.filter((c) => comOnline.has(c.id));
+      if (!candidatas.length) {
+        return { alvo: "— (sem vendedor online)", criterio: "Aguardando vendedor online" };
+      }
+    }
+
     if (cfg.criterios.regiao && (l.uf || l.cidade)) {
       const local = candidatas.filter((f) =>
         (l.uf && f.uf && f.uf.toUpperCase() === l.uf.toUpperCase()) ||
@@ -142,19 +157,17 @@ function Page() {
     let franq = candidatas[0];
     let criterio = "Região";
     if (cfg.modo === "fila") {
-      // rodízio simples: menor número de leads na fila já atribuídos
       const count = new Map<string, number>();
       for (const c of candidatas) count.set(c.id, 0);
       for (const x of fila) if (x.id !== l.id) count.set(x.id, (count.get(x.id) || 0) + 1);
       franq = [...candidatas].sort((a, b) => (count.get(a.id) || 0) - (count.get(b.id) || 0))[0];
       criterio = "Rodízio (fila equilibrada)";
     } else if (cfg.modo === "performance") {
-      // sem histórico de conv aqui — escolhe a primeira franquia com vendedores
-      const comVend = candidatas.filter((c) => vendedores.some((v) => v.empresa_id === c.id));
+      const comVend = candidatas.filter((c) => vendsAtivos.some((v) => v.empresa_id === c.id));
       if (comVend.length) franq = comVend[0];
-      criterio = "Performance (vendedores disponíveis)";
+      criterio = onlyOnline ? "Performance (vendedores online)" : "Performance (vendedores disponíveis)";
     }
-    const vends = vendedores.filter((v) => v.empresa_id === franq.id);
+    const vends = vendsAtivos.filter((v) => v.empresa_id === franq.id);
     const vendNome = vends.length ? vends[Math.floor(Math.random() * vends.length)].nome : "—";
     return { alvo: `${franq.nome}${vendNome !== "—" ? ` · ${vendNome}` : ""}`, criterio };
   }
