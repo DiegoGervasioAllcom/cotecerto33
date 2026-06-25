@@ -68,6 +68,7 @@ type Form = {
   // Seguro
   tipoSeguro: string; ramo: string; categoria: string; vigIni: string; vigFim: string;
   ciaAtual: string; apoliceAtual: string; ciAtual: string; classeBonus: string;
+  seguradorasSel: string[]; tipoCalculo: string; grupoProducao: string; campanha: string; observacoesCot: string;
   // Veículo
   placa: string; chassi: string; renavam: string; marca: string; modelo: string;
   anoModelo: string; anoFab: string; combustivel: string; cor: string; zeroKm: boolean;
