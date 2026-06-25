@@ -52,6 +52,58 @@ const CPF_FIELDS: FieldDef[] = [
   { key: "password", label: "Senha de acesso", type: "password", ph: "Mínimo 6 caracteres", required: true },
 ];
 
+function onlyDigits(s: string) {
+  return s.replace(/\D+/g, "");
+}
+
+function maskFor(key: string, raw: string): string {
+  const d = onlyDigits(raw);
+  switch (key) {
+    case "documento":
+      // CPF (11) ou CNPJ (14)
+      if (d.length <= 11) {
+        return d
+          .slice(0, 11)
+          .replace(/^(\d{3})(\d)/, "$1.$2")
+          .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+          .replace(/\.(\d{3})(\d)/, ".$1-$2");
+      }
+      return d
+        .slice(0, 14)
+        .replace(/^(\d{2})(\d)/, "$1.$2")
+        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+        .replace(/\.(\d{3})(\d)/, ".$1/$2")
+        .replace(/(\d{4})(\d)/, "$1-$2");
+    case "socio_cpf":
+      return d
+        .slice(0, 11)
+        .replace(/^(\d{3})(\d)/, "$1.$2")
+        .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+        .replace(/\.(\d{3})(\d)/, ".$1-$2");
+    case "socio_rg":
+    case "rg":
+      return d
+        .slice(0, 9)
+        .replace(/^(\d{2})(\d)/, "$1.$2")
+        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+        .replace(/\.(\d{3})(\d)/, ".$1-$2");
+    case "celular":
+    case "telefone_recado": {
+      const t = d.slice(0, 11);
+      if (t.length <= 10) {
+        return t
+          .replace(/^(\d{2})(\d)/, "($1) $2")
+          .replace(/(\d{4})(\d)/, "$1-$2");
+      }
+      return t
+        .replace(/^(\d{2})(\d)/, "($1) $2")
+        .replace(/(\d{5})(\d)/, "$1-$2");
+    }
+    default:
+      return raw;
+  }
+}
+
 function CadastroPage() {
   const navigate = useNavigate();
   const cadastrar = useServerFn(cadastrarFranquia);
@@ -189,8 +241,13 @@ function CadastroPage() {
                           placeholder={f.ph || ""}
                           required={f.required}
                           minLength={f.type === "password" ? 6 : undefined}
+                          inputMode={
+                            ["documento", "socio_cpf", "socio_rg", "rg", "celular", "telefone_recado"].includes(f.key)
+                              ? "numeric"
+                              : undefined
+                          }
                           value={values[f.key] || ""}
-                          onChange={(e) => update(f.key, e.target.value)}
+                          onChange={(e) => update(f.key, maskFor(f.key, e.target.value))}
                         />
                       </div>
                     </div>
