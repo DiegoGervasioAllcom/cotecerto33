@@ -57,6 +57,7 @@ function metaBar(vendas: number, meta: number | null) {
 }
 
 function Page() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [resps, setResps] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
