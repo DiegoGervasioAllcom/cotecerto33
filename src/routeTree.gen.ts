@@ -29,6 +29,7 @@ import { Route as AuthenticatedOperacaoRenovacoesRouteImport } from './routes/_a
 import { Route as AuthenticatedOperacaoRelatoriosRouteImport } from './routes/_authenticated/operacao/relatorios'
 import { Route as AuthenticatedOperacaoPremiacoesRouteImport } from './routes/_authenticated/operacao/premiacoes'
 import { Route as AuthenticatedOperacaoPipelineGeralRouteImport } from './routes/_authenticated/operacao/pipeline-geral'
+import { Route as AuthenticatedOperacaoPerdasRouteImport } from './routes/_authenticated/operacao/perdas'
 import { Route as AuthenticatedOperacaoMensagensRouteImport } from './routes/_authenticated/operacao/mensagens'
 import { Route as AuthenticatedOperacaoFranquiasRouteImport } from './routes/_authenticated/operacao/franquias'
 import { Route as AuthenticatedOperacaoEstornosRouteImport } from './routes/_authenticated/operacao/estornos'
@@ -154,6 +155,12 @@ const AuthenticatedOperacaoPipelineGeralRoute =
     path: '/operacao/pipeline-geral',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedOperacaoPerdasRoute =
+  AuthenticatedOperacaoPerdasRouteImport.update({
+    id: '/operacao/perdas',
+    path: '/operacao/perdas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOperacaoMensagensRoute =
   AuthenticatedOperacaoMensagensRouteImport.update({
     id: '/operacao/mensagens',
@@ -236,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
   '/operacao/franquias': typeof AuthenticatedOperacaoFranquiasRoute
   '/operacao/mensagens': typeof AuthenticatedOperacaoMensagensRoute
+  '/operacao/perdas': typeof AuthenticatedOperacaoPerdasRoute
   '/operacao/pipeline-geral': typeof AuthenticatedOperacaoPipelineGeralRoute
   '/operacao/premiacoes': typeof AuthenticatedOperacaoPremiacoesRoute
   '/operacao/relatorios': typeof AuthenticatedOperacaoRelatoriosRoute
@@ -268,6 +276,7 @@ export interface FileRoutesByTo {
   '/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
   '/operacao/franquias': typeof AuthenticatedOperacaoFranquiasRoute
   '/operacao/mensagens': typeof AuthenticatedOperacaoMensagensRoute
+  '/operacao/perdas': typeof AuthenticatedOperacaoPerdasRoute
   '/operacao/pipeline-geral': typeof AuthenticatedOperacaoPipelineGeralRoute
   '/operacao/premiacoes': typeof AuthenticatedOperacaoPremiacoesRoute
   '/operacao/relatorios': typeof AuthenticatedOperacaoRelatoriosRoute
@@ -302,6 +311,7 @@ export interface FileRoutesById {
   '/_authenticated/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
   '/_authenticated/operacao/franquias': typeof AuthenticatedOperacaoFranquiasRoute
   '/_authenticated/operacao/mensagens': typeof AuthenticatedOperacaoMensagensRoute
+  '/_authenticated/operacao/perdas': typeof AuthenticatedOperacaoPerdasRoute
   '/_authenticated/operacao/pipeline-geral': typeof AuthenticatedOperacaoPipelineGeralRoute
   '/_authenticated/operacao/premiacoes': typeof AuthenticatedOperacaoPremiacoesRoute
   '/_authenticated/operacao/relatorios': typeof AuthenticatedOperacaoRelatoriosRoute
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/operacao/estornos'
     | '/operacao/franquias'
     | '/operacao/mensagens'
+    | '/operacao/perdas'
     | '/operacao/pipeline-geral'
     | '/operacao/premiacoes'
     | '/operacao/relatorios'
@@ -368,6 +379,7 @@ export interface FileRouteTypes {
     | '/operacao/estornos'
     | '/operacao/franquias'
     | '/operacao/mensagens'
+    | '/operacao/perdas'
     | '/operacao/pipeline-geral'
     | '/operacao/premiacoes'
     | '/operacao/relatorios'
@@ -401,6 +413,7 @@ export interface FileRouteTypes {
     | '/_authenticated/operacao/estornos'
     | '/_authenticated/operacao/franquias'
     | '/_authenticated/operacao/mensagens'
+    | '/_authenticated/operacao/perdas'
     | '/_authenticated/operacao/pipeline-geral'
     | '/_authenticated/operacao/premiacoes'
     | '/_authenticated/operacao/relatorios'
@@ -569,6 +582,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperacaoPipelineGeralRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/operacao/perdas': {
+      id: '/_authenticated/operacao/perdas'
+      path: '/operacao/perdas'
+      fullPath: '/operacao/perdas'
+      preLoaderRoute: typeof AuthenticatedOperacaoPerdasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/operacao/mensagens': {
       id: '/_authenticated/operacao/mensagens'
       path: '/operacao/mensagens'
@@ -660,6 +680,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOperacaoEstornosRoute: typeof AuthenticatedOperacaoEstornosRoute
   AuthenticatedOperacaoFranquiasRoute: typeof AuthenticatedOperacaoFranquiasRoute
   AuthenticatedOperacaoMensagensRoute: typeof AuthenticatedOperacaoMensagensRoute
+  AuthenticatedOperacaoPerdasRoute: typeof AuthenticatedOperacaoPerdasRoute
   AuthenticatedOperacaoPipelineGeralRoute: typeof AuthenticatedOperacaoPipelineGeralRoute
   AuthenticatedOperacaoPremiacoesRoute: typeof AuthenticatedOperacaoPremiacoesRoute
   AuthenticatedOperacaoRelatoriosRoute: typeof AuthenticatedOperacaoRelatoriosRoute
@@ -690,6 +711,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOperacaoEstornosRoute: AuthenticatedOperacaoEstornosRoute,
   AuthenticatedOperacaoFranquiasRoute: AuthenticatedOperacaoFranquiasRoute,
   AuthenticatedOperacaoMensagensRoute: AuthenticatedOperacaoMensagensRoute,
+  AuthenticatedOperacaoPerdasRoute: AuthenticatedOperacaoPerdasRoute,
   AuthenticatedOperacaoPipelineGeralRoute:
     AuthenticatedOperacaoPipelineGeralRoute,
   AuthenticatedOperacaoPremiacoesRoute: AuthenticatedOperacaoPremiacoesRoute,
