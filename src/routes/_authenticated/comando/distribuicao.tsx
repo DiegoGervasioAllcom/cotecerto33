@@ -51,7 +51,7 @@ function Page() {
       mId = (me?.empresa_id as string) ?? null; setMatrizId(mId);
     }
 
-    const [c, d, f, fr, vd] = await Promise.all([
+    const [c, d, f, fr, vd, pr] = await Promise.all([
       supabase.from("distribuicao_config").select("*").eq("id", "default").maybeSingle(),
       supabase.from("leads")
         .select("id,nome,motivo_perda,submotivo_perda,destino_perda_sugerido,observacao_perda,dados_veiculo")
@@ -62,6 +62,7 @@ function Page() {
         .eq("arquivado", false).eq("bloqueado", false).limit(500),
       supabase.from("empresas").select("id,nome,cidade,uf,tipo,status").limit(500),
       supabase.from("profiles").select("id,nome,empresa_id,status").limit(2000),
+      supabase.from("v_user_presence").select("user_id,status_efetivo"),
     ]);
 
     if (c.data) {
@@ -84,8 +85,9 @@ function Page() {
     setFranquias(((fr.data ?? []) as any[]).filter((e) => e.id !== mId && e.status === "aprovada").map((e) => ({
       id: e.id, nome: e.nome, cidade: e.cidade, uf: e.uf,
     })));
+    const presMap = new Map<string, string>(((pr.data ?? []) as any[]).map((x) => [x.user_id, x.status_efetivo]));
     setVendedores(((vd.data ?? []) as any[]).filter((p) => p.empresa_id && p.empresa_id !== mId && p.status === "aprovada").map((p) => ({
-      id: p.id, nome: p.nome, empresa_id: p.empresa_id,
+      id: p.id, nome: p.nome, empresa_id: p.empresa_id, online: presMap.get(p.id) === "online",
     })));
     setLoading(false);
   }
