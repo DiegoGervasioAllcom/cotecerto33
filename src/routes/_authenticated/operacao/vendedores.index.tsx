@@ -270,8 +270,12 @@ function Page() {
                 const conv = r.leads_mes > 0 ? Math.round((r.vendas_mes / r.leads_mes) * 100) : 0;
                 const ex = extras[r.user_id] ?? { cotacoes: 0, propostas: 0, primeiroMin: null };
                 return (
-                  <tr key={r.user_id}>
-                    <td><strong>{r.nome || r.email}</strong></td>
+                  <tr key={r.user_id} style={{ cursor: "pointer" }}>
+                    <td>
+                      <Link to="/operacao/vendedores/$id" params={{ id: r.user_id }} style={{ color: "inherit", textDecoration: "none" }}>
+                        <strong style={{ color: "var(--primary, #0f172a)" }}>{r.nome || r.email}</strong>
+                      </Link>
+                    </td>
                     <td><small>{r.empresa_nome ?? "—"}</small></td>
                     <td>{presenceDot(presence[r.user_id])}</td>
                     <td>{r.leads_mes}</td>
