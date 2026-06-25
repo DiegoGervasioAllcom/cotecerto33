@@ -281,7 +281,7 @@ function Page() {
         garagemResid: p.garagem_resid ?? prev.garagemResid,
         garagemTrab: !!p.garagem_trab, garagemEsc: !!p.garagem_esc,
         jovens1825: p.jovens_18_25 ? "sim" : "nao",
-        tipoCobertura: c.tipo_cobertura ?? prev.tipoCobertura, casco: c.casco ?? prev.casco,
+        casco: c.casco ?? prev.casco,
         cascoValor: c.casco_valor ?? "", franquia: c.franquia ?? prev.franquia,
         appMorte: c.app_morte ?? "", appInval: c.app_invalidez ?? "", dmh: c.dmh ?? "",
         rcfDm: c.rcf_dm ?? "", rcfDc: c.rcf_dc ?? "",
