@@ -112,6 +112,80 @@ function Page() {
   });
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
 
+  // ----- persistência: cotação no Supabase -----
+  const [cotacaoId, setCotacaoId] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const firstRender = useRef(true);
+
+  function buildPayload(extra?: { premios?: typeof resultados }) {
+    return {
+      step_atual: step,
+      segurado: {
+        cpf: f.cpf, pessoa: f.pessoa, nome: f.nome, nome_social: f.nomeSocial, nasc: f.nasc,
+        sexo: f.sexo, estado_civil: f.estadoCivil, celular: f.celular, tel_res: f.telRes, email: f.email,
+        cep: f.cep, logradouro: f.logradouro, bairro: f.bairro, cidade: f.cidade, uf: f.uf,
+        sms_optin: f.sms === "sim",
+      },
+      seguro: {
+        tipo_seguro: f.tipoSeguro, ramo: f.ramo, categoria: f.categoria,
+        vig_ini: f.vigIni, vig_fim: f.vigFim,
+        cia_atual: f.ciaAtual, apolice_atual: f.apoliceAtual, ci_atual: f.ciAtual, classe_bonus: f.classeBonus,
+      },
+      veiculo: {
+        placa: f.placa, chassi: f.chassi, renavam: f.renavam,
+        marca_codigo: f.marca, marca_nome: marcas.find((m) => m.codigo === f.marca)?.nome || "",
+        modelo_codigo: f.modelo, modelo_nome: modelos.find((m) => String(m.codigo) === f.modelo)?.nome || "",
+        ano_modelo: f.anoModelo, ano_fab: f.anoFab, combustivel: f.combustivel, cor: f.cor,
+        zero_km: f.zeroKm, blindado: f.blindado, alienado: f.alienado, banco: f.banco,
+        uso_comercial: f.usoComercial, km_mensal: f.kmMensal, fipe_valor: fipeValor,
+      },
+      perfil: {
+        condutor_mesmo: f.condutorMesmo === "sim",
+        cond_cpf: f.condCpf, cond_nome: f.condNome, cond_nasc: f.condNasc,
+        cond_sexo: f.condSexo, cond_estado_civil: f.condEstadoCivil,
+        profissao: f.profissao, cep_pernoite: f.cepPernoite,
+        garagem_resid: f.garagemResid, garagem_trab: f.garagemTrab, garagem_esc: f.garagemEsc,
+        jovens_18_25: f.jovens1825 === "sim",
+      },
+      coberturas: {
+        tipo_cobertura: f.tipoCobertura, casco: f.casco, casco_valor: f.cascoValor, franquia: f.franquia,
+        app_morte: f.appMorte, app_invalidez: f.appInval, dmh: f.dmh, rcf_dm: f.rcfDm, rcf_dc: f.rcfDc,
+        vidros: f.vidros, carro_reserva: f.carroReserva, assist_24: f.assist24,
+      },
+      ...(extra?.premios ? { premios: extra.premios } : {}),
+    };
+  }
+
+  async function persistir(extra?: { premios?: typeof resultados }) {
+    // só persiste se tiver algo identificador mínimo
+    if (!f.cpf && !f.nome && !cotacaoId) return;
+    setSaveState("saving");
+    const { data, error } = await supabase.rpc("salvar_cotacao_rascunho", {
+      p_cotacao_id: cotacaoId,
+      p_payload: buildPayload(extra) as never,
+    });
+    if (error) {
+      console.error("[cotacao] save error", error);
+      setSaveState("error");
+      return;
+    }
+    if (data && !cotacaoId) setCotacaoId(data as string);
+    setSaveState("saved");
+    setLastSavedAt(new Date());
+  }
+
+  // auto-save com debounce
+  useEffect(() => {
+    if (firstRender.current) { firstRender.current = false; return; }
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => { void persistir(); }, 1500);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f, step]);
+
+
   async function lookupCep(cep: string, prefix: "" | "cond" = "") {
     const d = onlyDigits(cep);
     if (d.length !== 8) return;
