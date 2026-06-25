@@ -106,6 +106,13 @@ function Page() {
   const [fipeValor, setFipeValor] = useState<string>("");
   const [calculando, setCalculando] = useState(false);
   const [resultados, setResultados] = useState<{ cia: string; premio: number; cobertura: string }[]>([]);
+  const [seguradorasDb, setSeguradorasDb] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase.from("seguradoras").select("nome").eq("ativo", true).order("ordem").then(({ data }) => {
+      if (data) setSeguradorasDb(data.map((x: any) => x.nome));
+    });
+  }, []);
 
   const [f, setF] = useState<Form>({
     cpf: "", pessoa: "Física", nome: "", nomeSocial: "", nasc: "", sexo: "",
