@@ -755,9 +755,16 @@ function Page() {
               onClick={() => { setStep(5); simularCalculo(); }}>
               <svg width="14" height="14"><use href="#i-bolt" /></svg> Calcular
             </button>
-            <button className="btn btn-ghost btn-sm">
-              <svg width="13" height="13"><use href="#i-download" /></svg> Salvar rascunho
+            <button className="btn btn-ghost btn-sm" onClick={() => void persistir()} disabled={saveState === "saving"}>
+              <svg width="13" height="13"><use href="#i-download" /></svg>
+              {saveState === "saving" ? " Salvando…" : " Salvar rascunho"}
             </button>
+            <div className="muted small" style={{ marginTop: 6 }}>
+              {saveState === "saving" && "Salvando…"}
+              {saveState === "saved" && lastSavedAt && `Salvo às ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
+              {saveState === "error" && <span style={{ color: "#dc2626" }}>Erro ao salvar — tente novamente</span>}
+              {cotacaoId && <div style={{ fontSize: 11, opacity: 0.6 }}>ID: {cotacaoId.slice(0, 8)}…</div>}
+            </div>
           </div>
         </div>
       </div>
