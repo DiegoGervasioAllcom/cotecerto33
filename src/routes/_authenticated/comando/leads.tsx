@@ -263,7 +263,7 @@ function Page() {
         <div className="tools">
           <button className="btn btn-ghost" onClick={() => navigate({ to: "/comando/distribuicao" })}><svg width="14" height="14"><use href="#i-settings"></use></svg> Regras</button>
           <button className="btn btn-yellow" onClick={() => navigate({ to: "/comando/distribuicao" })}><svg width="14" height="14"><use href="#i-share"></use></svg> Distribuir pendentes ({kpis.pendentes})</button>
-          <button className="btn btn-ok" onClick={executarDistribuicaoAuto} disabled={distAutoLoading || kpis.pendentes === 0}>
+          <button className="btn btn-slate" onClick={executarDistribuicaoAuto} disabled={distAutoLoading || kpis.pendentes === 0}>
             <svg width="14" height="14"><use href="#i-spark"></use></svg> {distAutoLoading ? "Distribuindo…" : "Distribuir automático"}
           </button>
         </div>
