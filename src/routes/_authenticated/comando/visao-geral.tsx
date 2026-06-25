@@ -86,18 +86,43 @@ function Page() {
   );
 
 
-  // Janela do mês atual
-  const monthStart = useMemo(() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; }, []);
+  // Período selecionável
+  const [periodo, setPeriodo] = useState<Periodo>("mes_atual");
+  const { periodStart, periodEnd, periodLabel } = useMemo(() => {
+    const now = new Date();
+    const start = new Date(); start.setHours(0,0,0,0);
+    const end = new Date(); end.setHours(23,59,59,999);
+    if (periodo === "mes_atual") {
+      start.setDate(1);
+      end.setMonth(start.getMonth() + 1, 0); end.setHours(23,59,59,999);
+      return { periodStart: start, periodEnd: end, periodLabel: start.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) };
+    }
+    if (periodo === "mes_passado") {
+      start.setDate(1); start.setMonth(start.getMonth() - 1);
+      const e = new Date(start); e.setMonth(start.getMonth() + 1, 0); e.setHours(23,59,59,999);
+      return { periodStart: start, periodEnd: e, periodLabel: start.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) };
+    }
+    if (periodo === "mes_retrasado") {
+      start.setDate(1); start.setMonth(start.getMonth() - 2);
+      const e = new Date(start); e.setMonth(start.getMonth() + 1, 0); e.setHours(23,59,59,999);
+      return { periodStart: start, periodEnd: e, periodLabel: start.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) };
+    }
+    // últimos 90 dias
+    start.setDate(now.getDate() - 89);
+    return { periodStart: start, periodEnd: end, periodLabel: "Últimos 90 dias" };
+  }, [periodo]);
+
   const todayStart = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
 
-  const leadsMes = useMemo(() => leads.filter((x) => new Date(x.criado_em) >= monthStart && !x.arquivado), [leads, monthStart]);
+  const leadsMes = useMemo(() => leads.filter((x) => { const d = new Date(x.criado_em); return d >= periodStart && d <= periodEnd && !x.arquivado; }), [leads, periodStart, periodEnd]);
   const leadsHoje = useMemo(() => leads.filter((x) => new Date(x.criado_em) >= todayStart && !x.arquivado), [leads, todayStart]);
 
-  const propostasMes = useMemo(() => propostas.filter((x) => new Date(x.criado_em) >= monthStart), [propostas, monthStart]);
+  const propostasMes = useMemo(() => propostas.filter((x) => { const d = new Date(x.criado_em); return d >= periodStart && d <= periodEnd; }), [propostas, periodStart, periodEnd]);
   const emitidasMes = propostasMes.filter((x) => x.status === "gerada" || x.status === "transmitida");
   const pagasMes = propostasMes.filter((x) => x.status === "transmitida");
   const naoPagasMes = emitidasMes.length - pagasMes.length;
   const comissaoMes = pagasMes.reduce((a, x) => a + Number(x.valor || 0), 0);
+
 
   // Speed-to-lead
   const pendentes = useMemo(() => leadsMes.filter((l) => !l.distribuido_em && !l.responsavel_id && !l.empresa_id && l.status_pipeline === "novo"), [leadsMes]);
