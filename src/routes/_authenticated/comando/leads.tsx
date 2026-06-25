@@ -351,6 +351,7 @@ function Page() {
                   <td>
                     <span className={`chip ${chip}`}>{lbl}</span>
                     {l.bloqueado && <><br /><span className="chip chip-danger" style={{ marginTop: 4 }}>bloqueado</span></>}
+                    {l.arquivado && <><br /><span className="chip" style={{ marginTop: 4, background: "#eee", color: "#666" }}>arquivado</span></>}
                   </td>
                   <td>
                     {isPerdido ? (
