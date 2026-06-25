@@ -197,7 +197,7 @@ function Page() {
     if (!analisando) return;
     setBusy(true);
     const { error } = await supabase.rpc("recusar_empresa", {
-      empresa_id: analisando.id,
+      p_empresa_id: analisando.id,
       motivo: null,
     });
     setBusy(false);
@@ -214,7 +214,7 @@ function Page() {
     if (!analisando) return;
     setBusy(true);
     const { error } = await supabase.rpc("aprovar_empresa", {
-      empresa_id: analisando.id,
+      p_empresa_id: analisando.id,
     });
     setBusy(false);
     if (error) {
