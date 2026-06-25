@@ -71,6 +71,7 @@ function Page() {
             .from("leads")
             .select("id,nome,contato,status_pipeline,valor,origem,empresa_id,responsavel_id,criado_em,dados")
             .neq("status_pipeline", "perdido")
+            .or("arquivado.is.null,arquivado.eq.false")
             .order("atualizado_em", { ascending: false })
             .limit(1000),
           supabase.from("empresas").select("id,nome").order("nome"),
