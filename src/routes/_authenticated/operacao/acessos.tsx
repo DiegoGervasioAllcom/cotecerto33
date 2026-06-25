@@ -905,21 +905,21 @@ function ModeloCltPanel({
         />
       </div>
 
-      <StaticPairCard
-        title="Ituran — comissão por plano (R$)"
+      <DynamicTrioCard
+        title="Seguradora — comissão por plano (R$)"
         icon="car"
         lh="Plano"
         vh="Comissão (R$)"
         rows={clt.ituran_planos}
-        note="Em definição: validar se permanece exclusivo desta operadora ou se será dinâmico."
+        onChange={(rows) => setClt({ ...clt, ituran_planos: rows })}
       />
-      <StaticPairCard
-        title="Ituran — serviços adicionais (R$)"
+      <DynamicTrioCard
+        title="Seguradora — serviços adicionais (R$)"
         icon="shield"
         lh="Adicional"
         vh="Comissão (R$)"
         rows={clt.ituran_adic}
-        note="Em definição: validar se permanece exclusivo desta operadora ou se será dinâmico."
+        onChange={(rows) => setClt({ ...clt, ituran_adic: rows })}
       />
 
       <div className="card">
