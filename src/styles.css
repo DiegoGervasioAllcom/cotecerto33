@@ -644,12 +644,19 @@ textarea.input:focus {
 .auth-stage {
   position: relative;
   min-height: 100vh;
+  width: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
   background: linear-gradient(135deg, #34424d 0%, #2c3a45 100%);
+}
+.auth-stage > .auth-brand,
+.auth-stage > .auth-card {
+  width: 100%;
+  max-width: 440px;
 }
 .auth-stage > *:not(.auth-bg) { position: relative; z-index: 1; }
 .auth-brand {
