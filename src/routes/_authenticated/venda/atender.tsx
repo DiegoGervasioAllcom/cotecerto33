@@ -185,6 +185,68 @@ function Page() {
           })}
         </div>
       )}
+
+      {view && <VerLeadModal lead={view} onClose={() => setView(null)} />}
     </AppShell>
+  );
+}
+
+function VerLeadModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+  const d = (lead.dados ?? {}) as Record<string, any>;
+  const cliente = (d.cliente ?? {}) as Record<string, any>;
+  const endereco = (d.endereco ?? {}) as Record<string, any>;
+  const veic = (d.veiculo ?? {}) as Record<string, any>;
+  function row(label: string, value: any) {
+    if (value === null || value === undefined || value === "") return null;
+    return (
+      <div className="row" style={{ justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: "1px dashed var(--border)" }}>
+        <span className="small muted">{label}</span>
+        <strong className="small" style={{ textAlign: "right" }}>{String(value)}</strong>
+      </div>
+    );
+  }
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-h">
+          <h3><svg width={16} height={16}><use href="#i-eye" /></svg> Ver lead — {lead.nome || "—"}</h3>
+          <button className="ic-mini" onClick={onClose} title="Fechar"><svg width={14} height={14}><use href="#i-x" /></svg></button>
+        </div>
+        <div className="modal-b">
+          <div className="alert alert-info" style={{ marginBottom: 12 }}>
+            <svg width={14} height={14}><use href="#i-info" /></svg>{" "}
+            Modo somente leitura. Para interagir com o lead, clique em <strong>Assumir e iniciar</strong>.
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div>
+              <h4 style={{ margin: "0 0 6px" }}>Cliente</h4>
+              {row("Nome", lead.nome)}
+              {row("Contato", lead.contato)}
+              {row("CPF/CNPJ", cliente.cpf_cnpj ?? cliente.documento)}
+              {row("E-mail", cliente.email)}
+              {row("Origem", lead.origem)}
+            </div>
+            <div>
+              <h4 style={{ margin: "0 0 6px" }}>Endereço</h4>
+              {row("CEP", endereco.cep)}
+              {row("Logradouro", endereco.logradouro)}
+              {row("Bairro", endereco.bairro)}
+              {row("Cidade/UF", [endereco.cidade, endereco.uf].filter(Boolean).join("/"))}
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <h4 style={{ margin: "0 0 6px" }}>Veículo</h4>
+              {row("Marca", veic.marca_nome ?? veic.marca)}
+              {row("Modelo", veic.modelo_nome ?? veic.modelo)}
+              {row("Ano", veic.ano_modelo ?? veic.ano)}
+              {row("Placa", veic.placa)}
+              {row("Cor", veic.cor)}
+            </div>
+          </div>
+        </div>
+        <div className="modal-f">
+          <button className="btn btn-ghost" onClick={onClose}>Fechar</button>
+        </div>
+      </div>
+    </div>
   );
 }
