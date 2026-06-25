@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { printHtml, escapeHtml, fmtBRL } from "@/lib/print";
 
 export const Route = createFileRoute("/_authenticated/venda/cotacoes/$id")({
   head: () => ({ meta: [{ title: "Comparativo · CoteCerto" }] }),
