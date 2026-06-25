@@ -261,7 +261,7 @@ function Page() {
           <div className="lbl">PENDÊNCIAS FIN.</div>
           <div className="val">{pendNaoPagas}</div>
           <div className="meta">vendas não pagas</div>
-          <div className="ic-wrap"><svg><use href="#i-alert"></use></svg></div>
+          <div className="ic-wrap"><svg><use href="#i-alert-triangle"></use></svg></div>
         </div>
       </div>
 
@@ -271,7 +271,7 @@ function Page() {
           <div className="card-h">
             <h3>
               <svg width="14" height="14" style={{ verticalAlign: "-2px", marginRight: 6 }}>
-                <use href="#i-activity"></use>
+                <use href="#i-gauge"></use>
               </svg>
               Funil da unidade
             </h3>
@@ -390,7 +390,7 @@ function Page() {
           <div className="card-h">
             <h3>
               <svg width="14" height="14" style={{ verticalAlign: "-2px", marginRight: 6 }}>
-                <use href="#i-alert"></use>
+                <use href="#i-alert-triangle"></use>
               </svg>
               Pendências
             </h3>
