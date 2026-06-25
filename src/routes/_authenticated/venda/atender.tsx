@@ -93,10 +93,10 @@ function Page() {
       if (novos.length === 0) return;
       novos.forEach((l) => firedRef.current.add(l.id));
       expiringRef.current = true;
-      supabase
-        .rpc("expirar_leads_nao_atendidos", { p_janela_seg: 180 })
-        .then(() => load())
-        .finally(() => { expiringRef.current = false; });
+      (async () => {
+        try { await supabase.rpc("expirar_leads_nao_atendidos", { p_janela_seg: 180 }); await load(); }
+        finally { expiringRef.current = false; }
+      })();
     }, 1000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
   }, []);
