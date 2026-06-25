@@ -51,6 +51,7 @@ function Page() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [view, setView] = useState<Lead | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function load() {
@@ -61,10 +62,11 @@ function Page() {
 
     const { data, error } = await supabase
       .from("leads")
-      .select("id,nome,contato,origem,valor,criado_em,distribuido_em,dados")
+      .select("id,nome,contato,origem,valor,criado_em,distribuido_em,dados,bloqueado")
       .eq("responsavel_id", uid)
       .eq("status_pipeline", "novo")
       .is("ultimo_atendimento_em", null)
+      .or("bloqueado.is.null,bloqueado.eq.false")
       .order("distribuido_em", { ascending: true, nullsFirst: true })
       .limit(50);
     if (error) setErr(error.message);
@@ -86,12 +88,6 @@ function Page() {
     const cotId = data as string | null;
     if (cotId) navigate({ to: "/venda/novo-lead", search: { id: cotId, step: 0 } });
     else navigate({ to: "/venda/pipeline" });
-  }
-
-  function verLead(l: Lead) {
-    navigate({ to: "/venda/pipeline", search: {} as any });
-    // placeholder: detalhe do lead vive no Pipeline; abriremos card lá
-    void l;
   }
 
   const total = leads.length;
