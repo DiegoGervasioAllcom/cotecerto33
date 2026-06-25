@@ -1048,6 +1048,29 @@ function formatRange(de: string, ate: string): string {
   return `${d} – ${a}`;
 }
 
+type Mask = "brl" | "pct" | undefined;
+function maskBRL(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  const n = parseInt(digits, 10);
+  const reais = Math.floor(n / 100);
+  const cent = String(n % 100).padStart(2, "0");
+  return "R$ " + reais.toLocaleString("pt-BR") + "," + cent;
+}
+function maskPct(raw: string): string {
+  let s = raw.replace(/[^\d,]/g, "");
+  const parts = s.split(",");
+  if (parts.length > 2) s = parts[0] + "," + parts.slice(1).join("");
+  if (parts[1]) s = parts[0] + "," + parts[1].slice(0, 2);
+  return s ? s + "%" : "";
+}
+function applyMask(v: string, m: Mask): string {
+  if (m === "brl") return maskBRL(v);
+  if (m === "pct") return maskPct(v);
+  return v;
+}
+
+
 function DynamicRangeCard({
   title, icon, lh, vh, rows, onChange, footer,
 }: {
