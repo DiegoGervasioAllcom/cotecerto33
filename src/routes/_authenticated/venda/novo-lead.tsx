@@ -114,11 +114,14 @@ function Page() {
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
 
   // ----- persistência: cotação no Supabase -----
-  const [cotacaoId, setCotacaoId] = useState<string | null>(null);
+  const { id: routeId } = Route.useSearch();
+  const [cotacaoId, setCotacaoId] = useState<string | null>(routeId ?? null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
+  const loadingRef = useRef<boolean>(!!routeId);
+  const [loading, setLoading] = useState<boolean>(!!routeId);
 
   function buildPayload(extra?: { premios?: typeof resultados }) {
     return {
