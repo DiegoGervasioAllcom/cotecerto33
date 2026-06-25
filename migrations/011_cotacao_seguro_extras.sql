@@ -155,6 +155,7 @@ begin
     insert into public.cotacao_premios(cotacao_id, seguradora, cobertura, premio)
     select _cot_id, x->>'seguradora', x->>'cobertura', coalesce((x->>'premio')::numeric, 0)
     from jsonb_array_elements(p_payload->'premios') as x;
+    update public.cotacoes set status = 'calculada' where id = _cot_id and status = 'rascunho';
   end if;
 
   return _cot_id;
