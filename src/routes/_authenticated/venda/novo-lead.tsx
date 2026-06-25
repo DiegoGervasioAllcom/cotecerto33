@@ -125,7 +125,6 @@ function Page() {
     bonusAllianz: "0", bonusSuhai: "0", bonusPortoAzulItau: "0",
     bonusMapfre: "0", bonusTokio: "0", bonusHdi: "0",
     bonusBradesco: "0", bonusYelumAliroIndiana: "0",
-    tipoCalculo: "Anual", grupoProducao: "", campanha: "", observacoesCot: "",
     placa: "", chassi: "", renavam: "", marca: "", modelo: "",
     anoModelo: "", anoFab: "", combustivel: "Flex", cor: "", zeroKm: false,
     blindado: false, alienado: false, banco: "", usoComercial: "Não", kmMensal: "",
