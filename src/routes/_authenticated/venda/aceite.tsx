@@ -29,11 +29,13 @@ const fmtBRL = (n: number | null) =>
     : "—";
 
 function Page() {
+  const { selected } = Route.useSearch();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [obs, setObs] = useState<Record<string, string>>({});
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   async function load() {
     setLoading(true);
