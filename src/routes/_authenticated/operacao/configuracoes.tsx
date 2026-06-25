@@ -302,6 +302,10 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
   const [err, setErr] = useState<string | null>(null);
   const [nova, setNova] = useState({ nome: "", codigo: "" });
   const [busy, setBusy] = useState(false);
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "ativa" | "inativa">("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   async function load() {
     setLoading(true);
@@ -330,8 +334,16 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
   }
 
   async function rename(r: Seguradora, nome: string) {
-    if (nome === r.nome) return;
-    const { error } = await supabase.from("seguradoras").update({ nome }).eq("id", r.id);
+    if (nome === r.nome || !nome.trim()) return;
+    const { error } = await supabase.from("seguradoras").update({ nome: nome.trim() }).eq("id", r.id);
+    if (error) setErr(error.message);
+    void load();
+  }
+
+  async function updateCodigo(r: Seguradora, codigo: string) {
+    const novo = codigo.trim() || null;
+    if (novo === r.codigo) return;
+    const { error } = await supabase.from("seguradoras").update({ codigo: novo }).eq("id", r.id);
     if (error) setErr(error.message);
     void load();
   }
@@ -343,41 +355,118 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
     void load();
   }
 
+  const filtered = rows.filter((r) => {
+    if (statusFilter === "ativa" && !r.ativo) return false;
+    if (statusFilter === "inativa" && r.ativo) return false;
+    if (q.trim()) {
+      const t = q.trim().toLowerCase();
+      if (!r.nome.toLowerCase().includes(t) && !(r.codigo ?? "").toLowerCase().includes(t)) return false;
+    }
+    return true;
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const pageRows = filtered.slice((pageSafe - 1) * pageSize, pageSafe * pageSize);
+  const ativas = rows.filter((r) => r.ativo).length;
+
+  useEffect(() => { setPage(1); }, [q, statusFilter]);
+
   return (
     <ModalShell title="Gerenciar seguradoras" onClose={onClose} wide>
       {err && <div className="small" style={{ color: "#991b1b", marginBottom: 10 }}>{err}</div>}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, marginBottom: 14 }}>
-        <input className="input" placeholder="Nome da seguradora" value={nova.nome} onChange={(e) => setNova({ ...nova, nome: e.target.value })} />
-        <input className="input" placeholder="Código (opcional)" value={nova.codigo} onChange={(e) => setNova({ ...nova, codigo: e.target.value })} />
-        <button className="btn btn-primary" onClick={add} disabled={busy || !nova.nome.trim()}>Adicionar</button>
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+        <div className="muted small" style={{ marginRight: "auto" }}>
+          <strong style={{ color: "#0f172a" }}>{rows.length}</strong> seguradoras · {ativas} ativa(s)
+        </div>
+        <input
+          className="input"
+          placeholder="Buscar por nome ou código…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          style={{ width: 260 }}
+        />
+        <div style={{ display: "inline-flex", gap: 4 }}>
+          {(["all", "ativa", "inativa"] as const).map((s) => (
+            <button
+              key={s}
+              className={`chip ${statusFilter === s ? "chip-ok" : "chip-outline"}`}
+              onClick={() => setStatusFilter(s)}
+              style={{ cursor: "pointer", textTransform: "capitalize" }}
+            >
+              {s === "all" ? "Todas" : s}
+            </button>
+          ))}
+        </div>
       </div>
+
+      <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, background: "#f8fafc", marginBottom: 14 }}>
+        <div className="small muted" style={{ marginBottom: 6, fontWeight: 600 }}>Adicionar nova seguradora</div>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8 }}>
+          <input className="input" placeholder="Nome da seguradora" value={nova.nome} onChange={(e) => setNova({ ...nova, nome: e.target.value })} />
+          <input className="input" placeholder="Código (opcional)" value={nova.codigo} onChange={(e) => setNova({ ...nova, codigo: e.target.value })} />
+          <button className="btn btn-primary" onClick={add} disabled={busy || !nova.nome.trim()}>Adicionar</button>
+        </div>
+      </div>
+
       {loading ? <div className="muted small">Carregando…</div> : (
-        <table className="table">
-          <thead><tr><th>Nome</th><th>Código</th><th>Status</th><th style={{ width: 120 }}>Ações</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td>
-                  <input className="input" defaultValue={r.nome} onBlur={(e) => rename(r, e.target.value)} />
-                </td>
-                <td className="muted">{r.codigo ?? "—"}</td>
-                <td>
-                  <span className={`chip ${r.ativo ? "chip-ok" : "chip-outline"}`} onClick={() => toggle(r)} style={{ cursor: "pointer" }}>
-                    {r.ativo ? "Ativa" : "Inativa"}
-                  </span>
-                </td>
-                <td>
-                  <button className="btn btn-ghost btn-sm" onClick={() => remove(r)}>Remover</button>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && <tr><td colSpan={4} className="muted small">Nenhuma seguradora cadastrada.</td></tr>}
-          </tbody>
-        </table>
+        <>
+          <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+            <table className="table" style={{ margin: 0 }}>
+              <thead style={{ background: "#f9fafb" }}>
+                <tr>
+                  <th style={{ width: 48, textAlign: "center" }}>#</th>
+                  <th>Nome</th>
+                  <th style={{ width: 160 }}>Código</th>
+                  <th style={{ width: 110 }}>Status</th>
+                  <th style={{ width: 110, textAlign: "right" }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pageRows.map((r, i) => (
+                  <tr key={r.id}>
+                    <td className="muted small" style={{ textAlign: "center" }}>{(pageSafe - 1) * pageSize + i + 1}</td>
+                    <td>
+                      <input className="input" defaultValue={r.nome} onBlur={(e) => rename(r, e.target.value)} />
+                    </td>
+                    <td>
+                      <input className="input" defaultValue={r.codigo ?? ""} placeholder="—" onBlur={(e) => updateCodigo(r, e.target.value)} />
+                    </td>
+                    <td>
+                      <span className={`chip ${r.ativo ? "chip-ok" : "chip-outline"}`} onClick={() => toggle(r)} style={{ cursor: "pointer" }}>
+                        {r.ativo ? "Ativa" : "Inativa"}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => remove(r)} style={{ color: "#b91c1c" }}>Remover</button>
+                    </td>
+                  </tr>
+                ))}
+                {pageRows.length === 0 && (
+                  <tr><td colSpan={5} className="muted small" style={{ textAlign: "center", padding: 24 }}>
+                    {filtered.length === 0 ? "Nenhuma seguradora encontrada." : "Nenhum resultado nesta página."}
+                  </td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
+            <div className="muted small">
+              Mostrando {pageRows.length === 0 ? 0 : (pageSafe - 1) * pageSize + 1}–{(pageSafe - 1) * pageSize + pageRows.length} de {filtered.length}
+            </div>
+            <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+              <button className="btn btn-ghost btn-sm" disabled={pageSafe <= 1} onClick={() => setPage(pageSafe - 1)}>← Anterior</button>
+              <span className="small muted">Página {pageSafe} de {totalPages}</span>
+              <button className="btn btn-ghost btn-sm" disabled={pageSafe >= totalPages} onClick={() => setPage(pageSafe + 1)}>Próxima →</button>
+            </div>
+          </div>
+        </>
       )}
     </ModalShell>
   );
 }
+
 
 type UserFull = UserRow & { desligado_em: string | null; roles: string[] };
 type Empresa = { id: string; nome: string; tipo: string };
