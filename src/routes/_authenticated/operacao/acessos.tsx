@@ -1072,11 +1072,12 @@ function applyMask(v: string, m: Mask): string {
 
 
 function DynamicRangeCard({
-  title, icon, lh, vh, rows, onChange, footer,
+  title, icon, lh, vh, rows, onChange, footer, rangeMask, valueMask,
 }: {
   title: string; icon: string; lh: string; vh: string;
   rows: Pair[]; onChange: (rows: Pair[]) => void;
   footer?: React.ReactNode;
+  rangeMask?: Mask; valueMask?: Mask;
 }) {
   function update(i: number, de: string, ate: string, val: string) {
     const next = rows.map((x, j) => j === i ? [formatRange(de, ate), val] as Pair : x);
@@ -1114,16 +1115,16 @@ function DynamicRangeCard({
               return (
                 <tr key={i}>
                   <td>
-                    <input className="input input-mini" placeholder="0" value={de}
-                      onChange={(e) => update(i, e.target.value, ate, r[1])} />
+                    <input className="input input-mini" placeholder={rangeMask === "brl" ? "R$ 0,00" : rangeMask === "pct" ? "0%" : "0"} value={de}
+                      onChange={(e) => update(i, applyMask(e.target.value, rangeMask), ate, r[1])} />
                   </td>
                   <td>
-                    <input className="input input-mini" placeholder="∞" value={ate}
-                      onChange={(e) => update(i, de, e.target.value, r[1])} />
+                    <input className="input input-mini" placeholder={rangeMask === "brl" ? "R$ ∞" : rangeMask === "pct" ? "∞%" : "∞"} value={ate}
+                      onChange={(e) => update(i, de, applyMask(e.target.value, rangeMask), r[1])} />
                   </td>
                   <td>
-                    <input className="input input-mini" value={r[1]}
-                      onChange={(e) => { const next = rows.map((x, j) => j === i ? [x[0], e.target.value] as Pair : x); onChange(next); }} />
+                    <input className="input input-mini" placeholder={valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""} value={r[1]}
+                      onChange={(e) => { const v = applyMask(e.target.value, valueMask); const next = rows.map((x, j) => j === i ? [x[0], v] as Pair : x); onChange(next); }} />
                   </td>
                   <td style={{ textAlign: "right" }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
@@ -1140,6 +1141,7 @@ function DynamicRangeCard({
     </div>
   );
 }
+
 
 function toTrio(x: unknown): Trio {
   if (Array.isArray(x)) {
