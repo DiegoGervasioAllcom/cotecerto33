@@ -1177,7 +1177,7 @@ function DynamicTrioCard({
             {rows.map((r, i) => (
               <tr key={i}>
                 <td>
-                  <select className="input input-mini" value={r[0]} onChange={(e) => patch(i, 0, e.target.value)}>
+                  <select className="input input-mini" value={r[0]} onChange={(e) => patch(i, 0, e.target.value)} style={{ fontSize: 11 }}>
                     <option value="">— Seguradora —</option>
                     {SEGURADORAS.map((s) => <option key={s} value={s}>{s}</option>)}
                     {r[0] && !SEGURADORAS.includes(r[0]) && <option value={r[0]}>{r[0]}</option>}
