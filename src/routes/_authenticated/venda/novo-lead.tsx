@@ -106,6 +106,13 @@ function Page() {
   const [fipeValor, setFipeValor] = useState<string>("");
   const [calculando, setCalculando] = useState(false);
   const [resultados, setResultados] = useState<{ cia: string; premio: number; cobertura: string }[]>([]);
+  const [seguradorasDb, setSeguradorasDb] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase.from("seguradoras").select("nome").eq("ativo", true).order("ordem").then(({ data }) => {
+      if (data) setSeguradorasDb(data.map((x: any) => x.nome));
+    });
+  }, []);
 
   const [f, setF] = useState<Form>({
     cpf: "", pessoa: "Física", nome: "", nomeSocial: "", nasc: "", sexo: "",
@@ -468,8 +475,8 @@ function Page() {
           )}
 
           {step === 1 && (() => {
-            const SEG_HABILITADAS = ["Mapfre","Aliro","Yelum","HDI","Suhai","Porto","Azul","Itaú","Tokio"];
-            const INSURERS = ["Allianz","Suhai","Porto","Azul","Itaú","Mapfre","Tokio","HDI","Bradesco","Ezze","Zurich","Alfa","Darwin","Pier","Yelum","Aliro","Indiana","Sompo"];
+            const SEG_HABILITADAS = seguradorasDb;
+            const INSURERS = seguradorasDb;
             const bonusClasses = ["0","1","2","3","4","5","6","7","8","9","10"];
             const isRenov = (f.tipoSeguro || "").includes("Renovação");
             return (
