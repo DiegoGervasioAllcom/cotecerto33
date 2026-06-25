@@ -69,6 +69,17 @@ type Form = {
   tipoSeguro: string; ramo: string; categoria: string; vigIni: string; vigFim: string;
   ciaAtual: string; apoliceAtual: string; ciAtual: string; classeBonus: string;
   seguradorasSel: string[]; tipoCalculo: string; grupoProducao: string; campanha: string; observacoesCot: string;
+  // Renovação (conditional)
+  seguradoraAnterior: string; sucursalAnterior: string; apoliceAnterior: string;
+  coberturaAnterior: string; statusApoliceAnterior: string; itemApoliceAnterior: string;
+  inicioVigenciaAnterior: string; fimVigenciaAnterior: string;
+  renovacaoMesmoVeiculo: string; renovacaoInclusaoCasco: string;
+  qtdSinistrosParcialAnterior: string; ciApoliceAnterior: string;
+  classeBonusAnterior: string; comissaoApoliceAnterior: string;
+  bonusRenovacaoTodasSeguradoras: string;
+  bonusAllianz: string; bonusSuhai: string; bonusPortoAzulItau: string;
+  bonusMapfre: string; bonusTokio: string; bonusHdi: string;
+  bonusBradesco: string; bonusYelumAliroIndiana: string;
   // Veículo
   placa: string; chassi: string; renavam: string; marca: string; modelo: string;
   anoModelo: string; anoFab: string; combustivel: string; cor: string; zeroKm: boolean;
@@ -104,6 +115,16 @@ function Page() {
     ciaAtual: "", apoliceAtual: "", ciAtual: "", classeBonus: "0",
     seguradorasSel: ["Mapfre", "Aliro", "Yelum", "HDI", "Suhai"],
     tipoCalculo: "Anual", grupoProducao: "", campanha: "", observacoesCot: "",
+    seguradoraAnterior: "", sucursalAnterior: "", apoliceAnterior: "",
+    coberturaAnterior: "Compreensiva", statusApoliceAnterior: "Em vigor", itemApoliceAnterior: "",
+    inicioVigenciaAnterior: "", fimVigenciaAnterior: "",
+    renovacaoMesmoVeiculo: "Sim", renovacaoInclusaoCasco: "Não",
+    qtdSinistrosParcialAnterior: "", ciApoliceAnterior: "",
+    classeBonusAnterior: "0", comissaoApoliceAnterior: "",
+    bonusRenovacaoTodasSeguradoras: "0",
+    bonusAllianz: "0", bonusSuhai: "0", bonusPortoAzulItau: "0",
+    bonusMapfre: "0", bonusTokio: "0", bonusHdi: "0",
+    bonusBradesco: "0", bonusYelumAliroIndiana: "0",
     placa: "", chassi: "", renavam: "", marca: "", modelo: "",
     anoModelo: "", anoFab: "", combustivel: "Flex", cor: "", zeroKm: false,
     blindado: false, alienado: false, banco: "", usoComercial: "Não", kmMensal: "",
@@ -446,18 +467,23 @@ function Page() {
             </>
           )}
 
-          {step === 1 && (
+          {step === 1 && (() => {
+            const SEG_HABILITADAS = ["Mapfre","Aliro","Yelum","HDI","Suhai","Porto","Azul","Itaú","Tokio"];
+            const INSURERS = ["Allianz","Suhai","Porto","Azul","Itaú","Mapfre","Tokio","HDI","Bradesco","Ezze","Zurich","Alfa","Darwin","Pier","Yelum","Aliro","Indiana","Sompo"];
+            const bonusClasses = ["0","1","2","3","4","5","6","7","8","9","10"];
+            const isRenov = (f.tipoSeguro || "").includes("Renovação");
+            return (
             <>
               <h2>Dados do Seguro</h2>
               <div className="sub">Seguradoras para o cálculo, tipo de seguro e vigência.</div>
 
-              <div className="field-group" style={{ marginTop: 8 }}>
+              <div className="field-group full" style={{ marginBottom: 6 }}>
                 <label>
                   Seguradoras disponíveis{" "}
-                  <span className="muted" style={{ fontWeight: 400 }}>marque e desmarque para o cálculo</span>
+                  <span className="hint">marque e desmarque para o cálculo</span>
                 </label>
                 <div className="row" style={{ gap: 8, flexWrap: "wrap", paddingTop: 6 }}>
-                  {["Mapfre", "Aliro", "Yelum", "HDI", "Suhai", "Porto", "Azul", "Itaú", "Tokio"].map((s) => {
+                  {SEG_HABILITADAS.map((s) => {
                     const on = f.seguradorasSel.includes(s);
                     return (
                       <span
@@ -465,13 +491,10 @@ function Page() {
                         className={"chip " + (on ? "chip-yellow" : "chip-outline")}
                         style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
                         onClick={() =>
-                          up(
-                            "seguradorasSel",
-                            on ? f.seguradorasSel.filter((x) => x !== s) : [...f.seguradorasSel, s]
-                          )
+                          up("seguradorasSel", on ? f.seguradorasSel.filter((x) => x !== s) : [...f.seguradorasSel, s])
                         }
                       >
-                        {on && <svg width="10" height="10"><use href="#i-check" /></svg>}
+                        {on && <svg width="12" height="12"><use href="#i-check" /></svg>}
                         {s}
                       </span>
                     );
@@ -479,31 +502,25 @@ function Page() {
                 </div>
               </div>
 
-              <div className="wizard-grid">
+              <div className="wizard-grid cols-3">
                 <div className="field-group">
                   <label>Tipo de seguro<span className="req">*</span></label>
                   <select className="input" value={f.tipoSeguro} onChange={(e) => up("tipoSeguro", e.target.value)}>
-                    <option>Seguro novo</option>
-                    <option>Renovação congênere</option>
-                    <option>Renovação</option>
+                    {["Seguro novo","Renovação com nossa corretora","Renovação de outra corretora"].map((o) => <option key={o}>{o}</option>)}
                   </select>
                 </div>
                 <div className="field-group">
                   <label>Tipo de cálculo</label>
                   <select className="input" value={f.tipoCalculo} onChange={(e) => up("tipoCalculo", e.target.value)}>
-                    <option>Anual</option>
-                    <option>Mensal</option>
+                    {["Anual","Bianual","Trianual","Quadrianual","Quinquenal","Plurianual","Prazo curto"].map((o) => <option key={o}>{o}</option>)}
                   </select>
                 </div>
                 <div className="field-group">
                   <label>Tipo de cobertura</label>
                   <select className="input" value={f.tipoCobertura} onChange={(e) => up("tipoCobertura", e.target.value)}>
-                    <option>Compreensiva</option>
-                    <option>RCF</option>
-                    <option>Incêndio e Roubo</option>
+                    {["Compreensiva","Casco (Incêndio, Roubo e Furto)","Casco (Colisão e Incêndio)","RCF (Somente terceiros)"].map((o) => <option key={o}>{o}</option>)}
                   </select>
                 </div>
-
                 <div className="field-group">
                   <label>Período de vigência<span className="req">*</span></label>
                   <input className="input" type="date" value={f.vigIni} onChange={(e) => up("vigIni", e.target.value)} />
@@ -514,55 +531,110 @@ function Page() {
                 </div>
                 <div className="field-group">
                   <label>Grupo de produção<span className="req">*</span></label>
-                  <input className="input" value={f.grupoProducao} onChange={(e) => up("grupoProducao", e.target.value)} />
+                  <input className="input" value={f.grupoProducao} onChange={(e) => up("grupoProducao", e.target.value)} placeholder="Busca o produtor" />
                 </div>
+              </div>
 
-                <div className="field-group" style={{ gridColumn: "span 1" }}>
+              <div className="wizard-grid">
+                <div className="field-group">
                   <label>Campanha</label>
                   <select className="input" value={f.campanha} onChange={(e) => up("campanha", e.target.value)}>
                     <option value="">Selecione</option>
+                    <option>Campanha Supper Auto 2026</option>
+                    <option>Indique e ganhe</option>
                   </select>
+                </div>
+                <div className="field-group full">
+                  <label>Observações para a cotação</label>
+                  <textarea className="input" rows={2} placeholder="Anotações internas desta cotação"
+                    value={f.observacoesCot} onChange={(e) => up("observacoesCot", e.target.value)} />
                 </div>
               </div>
 
-              <div className="field-group" style={{ marginTop: 12 }}>
-                <label>Observações para a cotação</label>
-                <textarea
-                  className="input"
-                  rows={4}
-                  placeholder="Anotações internas desta cotação"
-                  value={f.observacoesCot}
-                  onChange={(e) => up("observacoesCot", e.target.value)}
-                />
-              </div>
+              {isRenov && (
+                <div style={{ marginTop: 16, border: "1px solid var(--border)", borderRadius: 12, padding: 16, background: "var(--cream-soft)" }}>
+                  <div className="sec-title" style={{ margin: "0 0 8px", color: "var(--slate)", fontWeight: 700, fontSize: 14 }}>
+                    <svg width="14" height="14"><use href="#i-history" /></svg> Dados da apólice anterior{" "}
+                    <span className="hint">obrigatório em renovação</span>
+                  </div>
+                  <div className="wizard-grid cols-3">
+                    <div className="field-group"><label>Seguradora anterior<span className="req">*</span></label>
+                      <select className="input" value={f.seguradoraAnterior} onChange={(e) => up("seguradoraAnterior", e.target.value)}>
+                        <option value="">Selecione</option>
+                        {INSURERS.map((o) => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group"><label>Sucursal / endosso <span className="hint">Bradesco e Porto</span></label>
+                      <input className="input" value={f.sucursalAnterior} onChange={(e) => up("sucursalAnterior", e.target.value)} /></div>
+                    <div className="field-group"><label>Nº da apólice anterior<span className="req">*</span></label>
+                      <input className="input" value={f.apoliceAnterior} onChange={(e) => up("apoliceAnterior", e.target.value)} /></div>
+                    <div className="field-group"><label>Cobertura anterior<span className="req">*</span></label>
+                      <select className="input" value={f.coberturaAnterior} onChange={(e) => up("coberturaAnterior", e.target.value)}>
+                        {["Compreensiva","Casco (Incêndio, Roubo e Furto)","Casco (Colisão e Incêndio)","RCF (Somente terceiros)"].map((o) => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group"><label>Status da apólice anterior<span className="req">*</span></label>
+                      <select className="input" value={f.statusApoliceAnterior} onChange={(e) => up("statusApoliceAnterior", e.target.value)}>
+                        {["Em vigor","Vencida","Cancelada"].map((o) => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group"><label>Item da apólice anterior</label>
+                      <input className="input" value={f.itemApoliceAnterior} onChange={(e) => up("itemApoliceAnterior", e.target.value)} placeholder="opcional" /></div>
+                    <div className="field-group"><label>Início vigência anterior<span className="req">*</span></label>
+                      <input className="input" type="date" value={f.inicioVigenciaAnterior} onChange={(e) => up("inicioVigenciaAnterior", e.target.value)} /></div>
+                    <div className="field-group"><label>Fim vigência anterior<span className="req">*</span></label>
+                      <input className="input" type="date" value={f.fimVigenciaAnterior} onChange={(e) => up("fimVigenciaAnterior", e.target.value)} /></div>
+                    <div className="field-group"><label>Renovação para o mesmo veículo?<span className="req">*</span></label>
+                      <select className="input" value={f.renovacaoMesmoVeiculo} onChange={(e) => up("renovacaoMesmoVeiculo", e.target.value)}>
+                        {["Sim","Não"].map((o) => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group"><label>Inclusão de casco <span className="hint">Yelum, Mapfre, Aliro</span></label>
+                      <select className="input" value={f.renovacaoInclusaoCasco} onChange={(e) => up("renovacaoInclusaoCasco", e.target.value)}>
+                        {["Não","Sim"].map((o) => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group"><label>Qtd. sinistros parciais anterior</label>
+                      <input className="input" value={f.qtdSinistrosParcialAnterior} onChange={(e) => up("qtdSinistrosParcialAnterior", e.target.value)} placeholder="0" /></div>
+                    <div className="field-group"><label>CI da apólice anterior</label>
+                      <input className="input" value={f.ciApoliceAnterior} onChange={(e) => up("ciApoliceAnterior", e.target.value)} placeholder="opcional" /></div>
+                    <div className="field-group"><label>Classe de bônus anterior</label>
+                      <select className="input" value={f.classeBonusAnterior} onChange={(e) => up("classeBonusAnterior", e.target.value)}>
+                        {bonusClasses.map((o) => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group"><label>Comissão da apólice anterior (%)</label>
+                      <input className="input" value={f.comissaoApoliceAnterior} onChange={(e) => up("comissaoApoliceAnterior", e.target.value)} placeholder="opcional" /></div>
+                  </div>
 
-              {f.tipoSeguro !== "Seguro novo" && (
-                <div className="wizard-grid" style={{ marginTop: 12 }}>
-                  <div className="field-group">
-                    <label>Seguradora atual</label>
-                    <select className="input" value={f.ciaAtual} onChange={(e) => up("ciaAtual", e.target.value)}>
-                      <option value="">Selecione</option>
-                      {SEGURADORAS.map((s) => <option key={s}>{s}</option>)}
-                    </select>
+                  <div className="sec-title" style={{ margin: "14px 0 6px", color: "var(--slate)", fontWeight: 700, fontSize: 13 }}>
+                    Bônus por seguradora
                   </div>
-                  <div className="field-group">
-                    <label>Apólice atual</label>
-                    <input className="input" value={f.apoliceAtual} onChange={(e) => up("apoliceAtual", e.target.value)} />
-                  </div>
-                  <div className="field-group">
-                    <label>CI atual</label>
-                    <input className="input" value={f.ciAtual} onChange={(e) => up("ciAtual", e.target.value)} />
-                  </div>
-                  <div className="field-group">
-                    <label>Classe de bônus</label>
-                    <select className="input" value={f.classeBonus} onChange={(e) => up("classeBonus", e.target.value)}>
-                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n}>{String(n)}</option>)}
-                    </select>
+                  <div className="wizard-grid cols-3">
+                    {[
+                      ["bonusRenovacaoTodasSeguradoras", "Bônus — todas as seguradoras", true],
+                      ["bonusAllianz", "Bônus Allianz", false],
+                      ["bonusSuhai", "Bônus Suhai", false],
+                      ["bonusPortoAzulItau", "Bônus Porto / Azul / Itaú", false],
+                      ["bonusMapfre", "Bônus Mapfre", false],
+                      ["bonusTokio", "Bônus Tokio Marine", false],
+                      ["bonusHdi", "Bônus HDI", false],
+                      ["bonusBradesco", "Bônus Bradesco", false],
+                      ["bonusYelumAliroIndiana", "Bônus Yelum / Aliro / Indiana", false],
+                    ].map(([key, label, req]) => (
+                      <div key={key as string} className="field-group">
+                        <label>{label as string}{req && <span className="req">*</span>}</label>
+                        <select className="input" value={(f as any)[key as string]} onChange={(e) => up(key as keyof Form, e.target.value)}>
+                          {bonusClasses.map((o) => <option key={o}>{o}</option>)}
+                        </select>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </>
-          )}
+            );
+          })()}
 
           {step === 2 && (
             <>
