@@ -22,8 +22,7 @@ create index if not exists cclanc_vend_idx     on public.comissao_lancamentos(ve
 create index if not exists cclanc_proposta_idx on public.comissao_lancamentos(proposta_id);
 create index if not exists cclanc_empresa_idx  on public.comissao_lancamentos(empresa_id, criado_em desc);
 create unique index if not exists cclanc_proposta_tipo_uq
-  on public.comissao_lancamentos(proposta_id, tipo)
-  where proposta_id is not null;
+  on public.comissao_lancamentos(proposta_id, tipo);
 
 grant select, insert, update, delete on public.comissao_lancamentos to authenticated;
 grant all on public.comissao_lancamentos to service_role;
