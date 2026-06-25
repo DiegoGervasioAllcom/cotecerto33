@@ -39,7 +39,8 @@ interface DashData {
 }
 
 function Page() {
-  const { profile, session } = useAuth();
+  const { profile, session, role } = useAuth();
+  if (role === "matriz") return <Navigate to="/comando/visao-geral" />;
   const [d, setD] = useState<DashData | null>(null);
   const [loading, setLoading] = useState(true);
 
