@@ -31,7 +31,6 @@ import { Route as AuthenticatedOperacaoPremiacoesRouteImport } from './routes/_a
 import { Route as AuthenticatedOperacaoPipelineGeralRouteImport } from './routes/_authenticated/operacao/pipeline-geral'
 import { Route as AuthenticatedOperacaoPerdasRouteImport } from './routes/_authenticated/operacao/perdas'
 import { Route as AuthenticatedOperacaoMensagensRouteImport } from './routes/_authenticated/operacao/mensagens'
-import { Route as AuthenticatedOperacaoFranquiasRouteImport } from './routes/_authenticated/operacao/franquias'
 import { Route as AuthenticatedOperacaoEstornosRouteImport } from './routes/_authenticated/operacao/estornos'
 import { Route as AuthenticatedOperacaoConfiguracoesRouteImport } from './routes/_authenticated/operacao/configuracoes'
 import { Route as AuthenticatedOperacaoComissoesRouteImport } from './routes/_authenticated/operacao/comissoes'
@@ -40,6 +39,7 @@ import { Route as AuthenticatedComandoVisaoGeralRouteImport } from './routes/_au
 import { Route as AuthenticatedComandoLeadsRouteImport } from './routes/_authenticated/comando/leads'
 import { Route as AuthenticatedComandoDistribuicaoRouteImport } from './routes/_authenticated/comando/distribuicao'
 import { Route as AuthenticatedVendaCotacoesIndexRouteImport } from './routes/_authenticated/venda/cotacoes.index'
+import { Route as AuthenticatedOperacaoFranquiasIndexRouteImport } from './routes/_authenticated/operacao/franquias.index'
 import { Route as AuthenticatedVendaCotacoesIdRouteImport } from './routes/_authenticated/venda/cotacoes.$id'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -167,12 +167,6 @@ const AuthenticatedOperacaoMensagensRoute =
     path: '/operacao/mensagens',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedOperacaoFranquiasRoute =
-  AuthenticatedOperacaoFranquiasRouteImport.update({
-    id: '/operacao/franquias',
-    path: '/operacao/franquias',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedOperacaoEstornosRoute =
   AuthenticatedOperacaoEstornosRouteImport.update({
     id: '/operacao/estornos',
@@ -221,6 +215,12 @@ const AuthenticatedVendaCotacoesIndexRoute =
     path: '/venda/cotacoes/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedOperacaoFranquiasIndexRoute =
+  AuthenticatedOperacaoFranquiasIndexRouteImport.update({
+    id: '/operacao/franquias/',
+    path: '/operacao/franquias/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedVendaCotacoesIdRoute =
   AuthenticatedVendaCotacoesIdRouteImport.update({
     id: '/venda/cotacoes/$id',
@@ -241,7 +241,6 @@ export interface FileRoutesByFullPath {
   '/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
   '/operacao/configuracoes': typeof AuthenticatedOperacaoConfiguracoesRoute
   '/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
-  '/operacao/franquias': typeof AuthenticatedOperacaoFranquiasRoute
   '/operacao/mensagens': typeof AuthenticatedOperacaoMensagensRoute
   '/operacao/perdas': typeof AuthenticatedOperacaoPerdasRoute
   '/operacao/pipeline-geral': typeof AuthenticatedOperacaoPipelineGeralRoute
@@ -259,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
   '/venda/propostas': typeof AuthenticatedVendaPropostasRoute
   '/venda/cotacoes/$id': typeof AuthenticatedVendaCotacoesIdRoute
+  '/operacao/franquias/': typeof AuthenticatedOperacaoFranquiasIndexRoute
   '/venda/cotacoes/': typeof AuthenticatedVendaCotacoesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -274,7 +274,6 @@ export interface FileRoutesByTo {
   '/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
   '/operacao/configuracoes': typeof AuthenticatedOperacaoConfiguracoesRoute
   '/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
-  '/operacao/franquias': typeof AuthenticatedOperacaoFranquiasRoute
   '/operacao/mensagens': typeof AuthenticatedOperacaoMensagensRoute
   '/operacao/perdas': typeof AuthenticatedOperacaoPerdasRoute
   '/operacao/pipeline-geral': typeof AuthenticatedOperacaoPipelineGeralRoute
@@ -292,6 +291,7 @@ export interface FileRoutesByTo {
   '/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
   '/venda/propostas': typeof AuthenticatedVendaPropostasRoute
   '/venda/cotacoes/$id': typeof AuthenticatedVendaCotacoesIdRoute
+  '/operacao/franquias': typeof AuthenticatedOperacaoFranquiasIndexRoute
   '/venda/cotacoes': typeof AuthenticatedVendaCotacoesIndexRoute
 }
 export interface FileRoutesById {
@@ -309,7 +309,6 @@ export interface FileRoutesById {
   '/_authenticated/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
   '/_authenticated/operacao/configuracoes': typeof AuthenticatedOperacaoConfiguracoesRoute
   '/_authenticated/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
-  '/_authenticated/operacao/franquias': typeof AuthenticatedOperacaoFranquiasRoute
   '/_authenticated/operacao/mensagens': typeof AuthenticatedOperacaoMensagensRoute
   '/_authenticated/operacao/perdas': typeof AuthenticatedOperacaoPerdasRoute
   '/_authenticated/operacao/pipeline-geral': typeof AuthenticatedOperacaoPipelineGeralRoute
@@ -327,6 +326,7 @@ export interface FileRoutesById {
   '/_authenticated/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
   '/_authenticated/venda/propostas': typeof AuthenticatedVendaPropostasRoute
   '/_authenticated/venda/cotacoes/$id': typeof AuthenticatedVendaCotacoesIdRoute
+  '/_authenticated/operacao/franquias/': typeof AuthenticatedOperacaoFranquiasIndexRoute
   '/_authenticated/venda/cotacoes/': typeof AuthenticatedVendaCotacoesIndexRoute
 }
 export interface FileRouteTypes {
@@ -344,7 +344,6 @@ export interface FileRouteTypes {
     | '/operacao/comissoes'
     | '/operacao/configuracoes'
     | '/operacao/estornos'
-    | '/operacao/franquias'
     | '/operacao/mensagens'
     | '/operacao/perdas'
     | '/operacao/pipeline-geral'
@@ -362,6 +361,7 @@ export interface FileRouteTypes {
     | '/venda/pipeline'
     | '/venda/propostas'
     | '/venda/cotacoes/$id'
+    | '/operacao/franquias/'
     | '/venda/cotacoes/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -377,7 +377,6 @@ export interface FileRouteTypes {
     | '/operacao/comissoes'
     | '/operacao/configuracoes'
     | '/operacao/estornos'
-    | '/operacao/franquias'
     | '/operacao/mensagens'
     | '/operacao/perdas'
     | '/operacao/pipeline-geral'
@@ -395,6 +394,7 @@ export interface FileRouteTypes {
     | '/venda/pipeline'
     | '/venda/propostas'
     | '/venda/cotacoes/$id'
+    | '/operacao/franquias'
     | '/venda/cotacoes'
   id:
     | '__root__'
@@ -411,7 +411,6 @@ export interface FileRouteTypes {
     | '/_authenticated/operacao/comissoes'
     | '/_authenticated/operacao/configuracoes'
     | '/_authenticated/operacao/estornos'
-    | '/_authenticated/operacao/franquias'
     | '/_authenticated/operacao/mensagens'
     | '/_authenticated/operacao/perdas'
     | '/_authenticated/operacao/pipeline-geral'
@@ -429,6 +428,7 @@ export interface FileRouteTypes {
     | '/_authenticated/venda/pipeline'
     | '/_authenticated/venda/propostas'
     | '/_authenticated/venda/cotacoes/$id'
+    | '/_authenticated/operacao/franquias/'
     | '/_authenticated/venda/cotacoes/'
   fileRoutesById: FileRoutesById
 }
@@ -596,13 +596,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperacaoMensagensRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/operacao/franquias': {
-      id: '/_authenticated/operacao/franquias'
-      path: '/operacao/franquias'
-      fullPath: '/operacao/franquias'
-      preLoaderRoute: typeof AuthenticatedOperacaoFranquiasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/operacao/estornos': {
       id: '/_authenticated/operacao/estornos'
       path: '/operacao/estornos'
@@ -659,6 +652,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVendaCotacoesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/operacao/franquias/': {
+      id: '/_authenticated/operacao/franquias/'
+      path: '/operacao/franquias'
+      fullPath: '/operacao/franquias/'
+      preLoaderRoute: typeof AuthenticatedOperacaoFranquiasIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/venda/cotacoes/$id': {
       id: '/_authenticated/venda/cotacoes/$id'
       path: '/venda/cotacoes/$id'
@@ -678,7 +678,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOperacaoComissoesRoute: typeof AuthenticatedOperacaoComissoesRoute
   AuthenticatedOperacaoConfiguracoesRoute: typeof AuthenticatedOperacaoConfiguracoesRoute
   AuthenticatedOperacaoEstornosRoute: typeof AuthenticatedOperacaoEstornosRoute
-  AuthenticatedOperacaoFranquiasRoute: typeof AuthenticatedOperacaoFranquiasRoute
   AuthenticatedOperacaoMensagensRoute: typeof AuthenticatedOperacaoMensagensRoute
   AuthenticatedOperacaoPerdasRoute: typeof AuthenticatedOperacaoPerdasRoute
   AuthenticatedOperacaoPipelineGeralRoute: typeof AuthenticatedOperacaoPipelineGeralRoute
@@ -696,6 +695,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedVendaPipelineRoute: typeof AuthenticatedVendaPipelineRoute
   AuthenticatedVendaPropostasRoute: typeof AuthenticatedVendaPropostasRoute
   AuthenticatedVendaCotacoesIdRoute: typeof AuthenticatedVendaCotacoesIdRoute
+  AuthenticatedOperacaoFranquiasIndexRoute: typeof AuthenticatedOperacaoFranquiasIndexRoute
   AuthenticatedVendaCotacoesIndexRoute: typeof AuthenticatedVendaCotacoesIndexRoute
 }
 
@@ -709,7 +709,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOperacaoConfiguracoesRoute:
     AuthenticatedOperacaoConfiguracoesRoute,
   AuthenticatedOperacaoEstornosRoute: AuthenticatedOperacaoEstornosRoute,
-  AuthenticatedOperacaoFranquiasRoute: AuthenticatedOperacaoFranquiasRoute,
   AuthenticatedOperacaoMensagensRoute: AuthenticatedOperacaoMensagensRoute,
   AuthenticatedOperacaoPerdasRoute: AuthenticatedOperacaoPerdasRoute,
   AuthenticatedOperacaoPipelineGeralRoute:
@@ -729,6 +728,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedVendaPipelineRoute: AuthenticatedVendaPipelineRoute,
   AuthenticatedVendaPropostasRoute: AuthenticatedVendaPropostasRoute,
   AuthenticatedVendaCotacoesIdRoute: AuthenticatedVendaCotacoesIdRoute,
+  AuthenticatedOperacaoFranquiasIndexRoute:
+    AuthenticatedOperacaoFranquiasIndexRoute,
   AuthenticatedVendaCotacoesIndexRoute: AuthenticatedVendaCotacoesIndexRoute,
 }
 

@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_authenticated/operacao/franquias")({
+export const Route = createFileRoute("/_authenticated/operacao/franquias/")({
   head: () => ({ meta: [{ title: "Franquias · CoteCerto" }] }),
   component: Page,
 });
