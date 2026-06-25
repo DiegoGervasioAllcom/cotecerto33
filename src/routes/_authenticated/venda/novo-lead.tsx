@@ -148,7 +148,7 @@ function Page() {
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
 
   // ----- persistência: cotação no Supabase -----
-  const { id: routeId } = Route.useSearch();
+  const { id: routeId, step: routeStep } = Route.useSearch();
   const [cotacaoId, setCotacaoId] = useState<string | null>(routeId ?? null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
