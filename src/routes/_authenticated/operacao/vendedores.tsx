@@ -24,6 +24,8 @@ type Row = {
   meta_vendas: number | null;
 };
 
+type Presence = { user_id: string; status_efetivo: "online" | "ausente" | "offline"; last_seen_at: string };
+
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
@@ -34,6 +36,30 @@ function statusChip(status: string, vendas: number, meta: number | null) {
   if (pct >= 0.8) return <span className="chip chip-ok">Ativo</span>;
   if (pct >= 0.4) return <span className="chip chip-yellow">Atenção</span>;
   return <span className="chip chip-alert">Travado</span>;
+}
+
+function timeAgo(iso?: string | null) {
+  if (!iso) return "—";
+  const sec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
+function presenceDot(p?: Presence) {
+  const s = p?.status_efetivo ?? "offline";
+  const color = s === "online" ? "var(--ok, #16a34a)" : s === "ausente" ? "var(--yellow, #ca8a04)" : "var(--muted, #94a3b8)";
+  const label = s === "online" ? "Online" : s === "ausente" ? "Ausente" : "Offline";
+  const title = s === "online" ? "Online agora" : s === "ausente" ? `Ausente · visto há ${timeAgo(p?.last_seen_at)}` : p?.last_seen_at ? `Offline · visto há ${timeAgo(p?.last_seen_at)}` : "Nunca conectou";
+  return (
+    <span className="row" style={{ gap: 6, alignItems: "center" }} title={title}>
+      <span style={{ width: 8, height: 8, borderRadius: 999, background: color, display: "inline-block", boxShadow: s === "online" ? `0 0 0 3px color-mix(in srgb, ${color} 25%, transparent)` : "none" }} />
+      <span className="small" style={{ fontWeight: 600 }}>{label}</span>
+    </span>
+  );
 }
 
 function metaBar(vendas: number, meta: number | null) {
@@ -54,20 +80,30 @@ function metaBar(vendas: number, meta: number | null) {
 
 function Page() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [presence, setPresence] = useState<Record<string, Presence>>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase
-        .from("v_vendedor_kpis")
-        .select("*")
-        .order("vendas_mes", { ascending: false });
+    let alive = true;
+    const load = async () => {
+      const [{ data, error }, pres] = await Promise.all([
+        supabase.from("v_vendedor_kpis").select("*").order("vendas_mes", { ascending: false }),
+        supabase.from("v_user_presence").select("user_id,status_efetivo,last_seen_at"),
+      ]);
+      if (!alive) return;
       if (error) setErr(error.message);
       else setRows((data ?? []) as Row[]);
+      const map: Record<string, Presence> = {};
+      ((pres.data ?? []) as Presence[]).forEach((p) => { map[p.user_id] = p; });
+      setPresence(map);
       setLoading(false);
-    })();
+    };
+    void load();
+    const t = window.setInterval(load, 15_000);
+    return () => { alive = false; window.clearInterval(t); };
   }, []);
+
 
   return (
     <AppShell title="Vendedores">
@@ -95,6 +131,7 @@ function Page() {
             <thead>
               <tr>
                 <th>Vendedor</th>
+                <th>Presença</th>
                 <th>Franquia</th>
                 <th>Leads</th>
                 <th>Em negoc.</th>
@@ -114,6 +151,7 @@ function Page() {
                     <td>
                       <strong>{r.nome || r.email}</strong>
                     </td>
+                    <td>{presenceDot(presence[r.user_id])}</td>
                     <td>
                       <small>{r.empresa_nome ?? "—"}</small>
                     </td>
@@ -130,6 +168,7 @@ function Page() {
                   </tr>
                 );
               })}
+
             </tbody>
           </table>
         </div>

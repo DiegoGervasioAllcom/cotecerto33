@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 import { useAuth } from "@/lib/auth";
+import { usePresence } from "@/lib/use-presence";
 import type { Perfil } from "@/integrations/supabase/client";
 
 type Item = {
@@ -96,6 +97,7 @@ export function AppShell({
   const { role, profile, empresa, signOut } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  usePresence();
 
   const handleSignOut = async () => {
     await signOut();
