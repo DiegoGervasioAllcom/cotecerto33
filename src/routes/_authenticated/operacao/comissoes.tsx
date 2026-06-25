@@ -460,6 +460,137 @@ function Page() {
           </div>
         </div>
       </div>
+
+      {/* CONTA CORRENTE DE COMISSÕES */}
+      <div className="card" style={{ marginTop: 18 }}>
+        <div className="card-h">
+          <h3>
+            <svg width="16" height="16"><use href="#i-dollar" /></svg> Conta
+            corrente de comissões
+          </h3>
+          <div className="row" style={{ gap: 8 }}>
+            <select
+              className="select-mini"
+              value={vendedorSel}
+              onChange={(e) => setVendedorSel(e.target.value)}
+            >
+              <option value="">Todos os vendedores</option>
+              {Array.from(new Set(lancs.map((l) => l.vendedor_id))).map(
+                (id) => (
+                  <option key={id} value={id}>
+                    {profiles[id]?.nome || id.slice(0, 8)}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+        </div>
+        <div className="card-b">
+          {(() => {
+            const filtered = vendedorSel
+              ? lancs.filter((l) => l.vendedor_id === vendedorSel)
+              : lancs;
+            const cred = filtered
+              .filter((l) => l.tipo === "credito")
+              .reduce((s, l) => s + Number(l.valor), 0);
+            const deb = filtered
+              .filter((l) => l.tipo === "debito")
+              .reduce((s, l) => s + Number(l.valor), 0);
+            const saldo = cred - deb;
+            return (
+              <>
+                <div
+                  className="row"
+                  style={{ gap: 16, marginBottom: 12, flexWrap: "wrap" }}
+                >
+                  <span className="chip chip-ok">
+                    Créditos: <strong>{fmtBRL(cred)}</strong>
+                  </span>
+                  <span className="chip chip-alert">
+                    Débitos: <strong>{fmtBRL(deb)}</strong>
+                  </span>
+                  <span className="chip">
+                    Saldo: <strong>{fmtBRL(saldo)}</strong>
+                  </span>
+                  <span className="small muted">
+                    {filtered.length} lançamentos
+                  </span>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table className="table-pipe mtable" style={{ minWidth: 900 }}>
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Vendedor</th>
+                        <th>Tipo</th>
+                        <th>Descrição</th>
+                        <th>Referência</th>
+                        <th>Seguradora</th>
+                        <th style={{ textAlign: "right" }}>Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="muted" style={{ padding: 16 }}>
+                            Nenhum lançamento ainda.
+                          </td>
+                        </tr>
+                      )}
+                      {filtered.slice(0, 200).map((l) => (
+                        <tr key={l.id}>
+                          <td>
+                            <small className="muted">
+                              {new Date(l.criado_em).toLocaleDateString("pt-BR")}
+                            </small>
+                          </td>
+                          <td>
+                            <small>
+                              {profiles[l.vendedor_id]?.nome || "—"}
+                            </small>
+                          </td>
+                          <td>
+                            <span
+                              className={
+                                "chip " +
+                                (l.tipo === "credito" ? "chip-ok" : "chip-alert")
+                              }
+                            >
+                              {l.tipo === "credito" ? "Crédito" : "Débito"}
+                            </span>
+                          </td>
+                          <td>
+                            <small>{l.descricao}</small>
+                          </td>
+                          <td>
+                            <small className="muted">{l.referencia || "—"}</small>
+                          </td>
+                          <td>
+                            <small>{l.seguradora || "—"}</small>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <strong
+                              style={{
+                                color:
+                                  l.tipo === "credito"
+                                    ? "var(--ok)"
+                                    : "var(--alert)",
+                              }}
+                            >
+                              {l.tipo === "credito" ? "+" : "−"}{" "}
+                              {fmtBRL(Number(l.valor))}
+                            </strong>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      </div>
     </AppShell>
   );
 }
