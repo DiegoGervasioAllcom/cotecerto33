@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { printHtml, escapeHtml, fmtBRL } from "@/lib/print";
 
 export const Route = createFileRoute("/_authenticated/venda/cotacoes/$id")({
   head: () => ({ meta: [{ title: "Comparativo · CoteCerto" }] }),
@@ -85,6 +86,57 @@ function Page() {
   if (offers[1]) seals[offers[1].seguradora] = "most";
   if (offers[2]) seals[offers[2].seguradora] = "best";
 
+  const rows: Array<[string, string, (o: Premio) => string]> = [
+    ["Cobertura compreensiva", "Casco + roubo/furto + incêndio", () => cobs?.casco_valor || "100% FIPE"],
+    ["Franquia · casco", "Valor pago pelo cliente em sinistro", () => cobs?.franquia || "—"],
+    ["RCF · danos materiais", "Cobre danos a terceiros", () => cobs?.rcf_dm || "—"],
+    ["RCF · danos corporais", "Lesões a terceiros", () => cobs?.rcf_dc || "—"],
+    ["APP por passageiro", "Acidentes pessoais", () => cobs?.app_morte || "—"],
+    ["Carro reserva", "Em sinistro de média/grande monta", () => cobs?.carro_reserva || "—"],
+    ["Vidros · faróis · retrovisores", "Cobertura específica", () => (cobs?.vidros ? "incluído" : "opcional")],
+    ["Assistência 24h", "Guincho, chaveiro, pane", () => cobs?.assist_24 || "Padrão"],
+  ];
+
+  const doPrint = (only?: string) => {
+    const list = only ? offers.filter((o) => o.seguradora === only) : offers;
+    const head = `
+      <div class="grid">
+        <div class="kv"><b>Cliente:</b> ${escapeHtml(headName)}</div>
+        <div class="kv"><b>CPF/CNPJ:</b> ${escapeHtml(data.segurado?.cpf_cnpj || "—")}</div>
+        <div class="kv"><b>Veículo:</b> ${escapeHtml(headCar)}</div>
+        <div class="kv"><b>Placa:</b> ${escapeHtml(v?.placa || "—")}</div>
+        <div class="kv"><b>Cotação:</b> #${escapeHtml(cotNum(data.numero, data.criado_em))}</div>
+        <div class="kv"><b>Status:</b> ${escapeHtml(data.status)}</div>
+      </div>`;
+    const thead = `<tr><th>Cobertura</th>${list
+      .map((o) => `<th>${escapeHtml(o.seguradora)}</th>`)
+      .join("")}</tr>`;
+    const trs = rows
+      .map(
+        ([t, s, fn]) =>
+          `<tr><td><strong>${escapeHtml(t)}</strong><br/><small style="color:#64748b">${escapeHtml(
+            s
+          )}</small></td>${list.map((o) => `<td>${escapeHtml(fn(o))}</td>`).join("")}</tr>`
+      )
+      .join("");
+    const totals = `<tr><td><strong>Prêmio total</strong><br/><small style="color:#64748b">à vista ou 12x</small></td>${list
+      .map(
+        (o) =>
+          `<td class="num"><div class="price">${fmtBRL(Number(o.premio))}</div><small style="color:#64748b">12x ${fmtBRL(
+            Number(o.premio) / 12
+          )}</small></td>`
+      )
+      .join("")}</tr>`;
+    const body = `
+      <h1>Comparativo de cotação</h1>
+      <div class="sub">Gerado a partir de #${escapeHtml(cotNum(data.numero, data.criado_em))}</div>
+      ${head}
+      <h2>Coberturas & prêmios</h2>
+      <table>${thead}${trs}${totals}</table>
+      <p style="font-size:11px;color:#64748b">Cotação válida por 5 dias. Sujeita à aceitação da seguradora.</p>`;
+    printHtml(only ? `Cotação · ${only}` : "Comparativo de cotação", body);
+  };
+
   const rowCmp = (title: string, sub: string, fn: (o: Premio) => string) => (
     <tr>
       <td className="cov-name">{title}<small>{sub}</small></td>
@@ -124,6 +176,7 @@ function Page() {
         <span className="spacer" style={{ flex: 1 }} />
         <span className="chip chip-yellow">Última atualização {new Date(data.criado_em).toLocaleString("pt-BR")}</span>
         <button className="btn btn-slate btn-sm" onClick={() => window.location.reload()}>Recalcular tudo</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => doPrint()}>Imprimir comparativo</button>
       </div>
 
       {offers.length === 0 ? (
@@ -181,7 +234,7 @@ function Page() {
                     <div className="ins-actions">
                       <Link to="/venda/propostas" className="btn btn-yellow">Gerar proposta</Link>
                       <button className="btn btn-ghost" type="button">Enviar</button>
-                      <button className="btn btn-ghost" type="button" onClick={() => window.print()}>Imprimir</button>
+                      <button className="btn btn-ghost" type="button" onClick={() => doPrint(o.seguradora)}>Imprimir</button>
                     </div>
                   </td>
                 ))}

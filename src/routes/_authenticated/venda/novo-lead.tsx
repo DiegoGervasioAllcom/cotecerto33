@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { printHtml, escapeHtml, fmtBRL } from "@/lib/print";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
@@ -954,7 +955,56 @@ function Page() {
                 <button className="btn btn-ghost btn-sm" disabled={!podeCalcular || calculando} onClick={simularCalculo}>
                   <svg width="13" height="13"><use href="#i-refresh" /></svg> {calculando ? "Calculando…" : "Recalcular"}
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => window.print()}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={resultados.length === 0}
+                  onClick={() => {
+                    const sorted = [...resultados].sort((a, b) => a.premio - b.premio);
+                    const head = `
+                      <div class="grid">
+                        <div class="kv"><b>Cliente:</b> ${escapeHtml(f.nome || "—")}</div>
+                        <div class="kv"><b>${f.pessoa === "Jurídica" ? "CNPJ" : "CPF"}:</b> ${escapeHtml(f.cpf || "—")}</div>
+                        <div class="kv"><b>Celular:</b> ${escapeHtml(f.celular || "—")}</div>
+                        <div class="kv"><b>Cidade/UF:</b> ${escapeHtml((f.cidade || "—") + (f.uf ? "/" + f.uf : ""))}</div>
+                        <div class="kv"><b>Veículo:</b> ${escapeHtml(`${f.marca || ""} ${f.modelo || ""} ${f.anoModelo || ""}`.trim() || "—")}</div>
+                        <div class="kv"><b>Placa:</b> ${escapeHtml(f.placa || "—")}</div>
+                        <div class="kv"><b>Tipo de cobertura:</b> ${escapeHtml(f.tipoCobertura || "Compreensiva")}</div>
+                        <div class="kv"><b>Tipo de cálculo:</b> ${escapeHtml(f.tipoCalculo || "—")}</div>
+                      </div>`;
+                    const cards = sorted
+                      .map((r) => {
+                        const reduz = Math.round(r.premio * 1.18);
+                        return `<div class="card">
+                          <div style="display:flex;justify-content:space-between;align-items:baseline">
+                            <strong style="font-size:14px">${escapeHtml(r.cia)}</strong>
+                            <span style="color:#64748b;font-size:11px">${escapeHtml(r.cobertura || f.tipoCobertura || "Compreensiva")}</span>
+                          </div>
+                          <table style="margin-top:8px">
+                            <tr><th>Plano</th><th>Franquia</th><th class="num">À vista</th><th class="num">Parcelado</th></tr>
+                            <tr><td>Normal 100%</td><td>R$ ${Math.round(r.premio * 1.5).toLocaleString("pt-BR")}</td><td class="num"><strong>${fmtBRL(r.premio)}</strong></td><td class="num">10x ${fmtBRL(r.premio / 10)}</td></tr>
+                            <tr><td>Reduzida 50%</td><td>R$ ${Math.round(r.premio * 0.75).toLocaleString("pt-BR")}</td><td class="num"><strong>${fmtBRL(reduz)}</strong></td><td class="num">10x ${fmtBRL(reduz / 10)}</td></tr>
+                          </table>
+                        </div>`;
+                      })
+                      .join("");
+                    const cob = `
+                      <h2>Coberturas</h2>
+                      <table>
+                        <tr><th>Item</th><th>Valor</th></tr>
+                        <tr><td>Valor de mercado</td><td>100% FIPE</td></tr>
+                        <tr><td>RCF · Danos materiais</td><td>R$ ${(Number(onlyDigits(f.rcfDm || "")) || 100000).toLocaleString("pt-BR")}</td></tr>
+                        <tr><td>RCF · Danos corporais</td><td>R$ ${(Number(onlyDigits(f.rcfDc || "")) || 100000).toLocaleString("pt-BR")}</td></tr>
+                        <tr><td>APP por passageiro</td><td>${f.appMorte ? "R$ " + Number(onlyDigits(f.appMorte)).toLocaleString("pt-BR") : "R$ 5.000"}</td></tr>
+                        <tr><td>Assistência 24h</td><td>${escapeHtml(f.assist24 || "Padrão")}</td></tr>
+                        <tr><td>Carro reserva</td><td>${escapeHtml(f.carroReserva || "30 dias")}</td></tr>
+                        <tr><td>Vidros</td><td>${f.vidros ? "Sim" : "—"}</td></tr>
+                      </table>`;
+                    printHtml(
+                      "Cotação · " + (f.nome || "Cliente"),
+                      `<h1>Resumo da cotação</h1><div class="sub">${sorted.length} seguradora(s) calculada(s)</div>${head}<h2>Prêmios</h2>${cards}${cob}<p style="font-size:11px;color:#64748b">Cotação válida por 5 dias. Sujeita à aceitação da seguradora.</p>`
+                    );
+                  }}
+                >
                   <svg width="13" height="13"><use href="#i-download" /></svg> Imprimir
                 </button>
               </div>
