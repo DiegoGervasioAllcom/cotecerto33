@@ -1,11 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AppShell, PagePlaceholder } from "@/components/app-shell";
+import { AppShell } from "@/components/app-shell";
+import { ProtoPage } from "@/components/proto-page";
 
 export const Route = createFileRoute("/_authenticated/operacao/estornos")({
   head: () => ({ meta: [{ title: "Estornos · CoteCerto" }] }),
-  component: () => (
-    <AppShell title="Estornos" crumbs="Operação">
-      <PagePlaceholder />
-    </AppShell>
-  ),
+  component: Page,
 });
+
+function Page() {
+  return (
+    <AppShell title="Estornos">
+      <ProtoPage pageKey="mestorno" />
+    </AppShell>
+  );
+}
