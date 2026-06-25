@@ -123,6 +123,8 @@ function Page() {
   const [fUf, setFUf] = useState("");
   const [fOrigem, setFOrigem] = useState("");
   const [fArquivados, setFArquivados] = useState<"ativos" | "arquivados" | "todos">("ativos");
+  const [distAutoMsg, setDistAutoMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [distAutoLoading, setDistAutoLoading] = useState(false);
 
   // modals
   const [modal, setModal] = useState<null | { kind: "hist" | "redist" | "block"; lead: Lead }>(null);
@@ -226,6 +228,17 @@ function Page() {
     if (st === "ganho") navigate({ to: "/venda/aceite", search: {} });
   }
 
+  async function executarDistribuicaoAuto() {
+    if (kpis.pendentes === 0) { setDistAutoMsg({ type: "err", text: "Não há leads pendentes na fila." }); return; }
+    setDistAutoLoading(true); setDistAutoMsg(null);
+    const { data: n, error } = await supabase.rpc("distribuir_fila_pendente");
+    setDistAutoLoading(false);
+    if (error) { setDistAutoMsg({ type: "err", text: error.message }); return; }
+    const count = typeof n === "number" ? n : 0;
+    setDistAutoMsg({ type: "ok", text: `${count} lead${count === 1 ? "" : "s"} distribuído${count === 1 ? "" : "s"} automaticamente.` });
+    load();
+  }
+
   async function puxarDeVolta(l: Lead) {
     if (!confirm(`Puxar o lead "${l.nome}" de volta para a matriz?`)) return;
     const { error } = await supabase.rpc("puxar_lead_de_volta", { p_lead: l.id });
@@ -250,8 +263,17 @@ function Page() {
         <div className="tools">
           <button className="btn btn-ghost" onClick={() => navigate({ to: "/comando/distribuicao" })}><svg width="14" height="14"><use href="#i-settings"></use></svg> Regras</button>
           <button className="btn btn-yellow" onClick={() => navigate({ to: "/comando/distribuicao" })}><svg width="14" height="14"><use href="#i-share"></use></svg> Distribuir pendentes ({kpis.pendentes})</button>
+          <button className="btn btn-slate" onClick={executarDistribuicaoAuto} disabled={distAutoLoading || kpis.pendentes === 0}>
+            <svg width="14" height="14"><use href="#i-spark"></use></svg> {distAutoLoading ? "Distribuindo…" : "Distribuir automático"}
+          </button>
         </div>
       </div>
+
+      {distAutoMsg && (
+        <div className="audit-note" style={{ background: distAutoMsg.type === "ok" ? "var(--ok-soft)" : "var(--alert-soft)", color: distAutoMsg.type === "ok" ? "var(--ok)" : "var(--alert)", marginBottom: 16 }}>
+          <svg width="16" height="16"><use href={distAutoMsg.type === "ok" ? "#i-check-circle" : "#i-alert-triangle"}></use></svg> <strong style={{ marginRight: 4 }}>{distAutoMsg.type === "ok" ? "Sucesso." : "Erro."}</strong> {distAutoMsg.text}
+        </div>
+      )}
 
       {chips.pendentes > 0 && (
         <div className="audit-note" style={{ background: "var(--alert-soft)", color: "var(--alert)", marginBottom: 16 }}>
