@@ -335,24 +335,28 @@ function Page() {
   }, [f.marca, f.modelo, f.anoModelo, f.combustivel]);
 
   function simularCalculo() {
+    const alvos = (f.seguradorasSel ?? []).filter(Boolean);
+    if (!alvos.length) {
+      setResultados([]);
+      return;
+    }
     setCalculando(true);
     setResultados([]);
     setTimeout(() => {
       const base = fipeValor ? Number(onlyDigits(fipeValor)) / 100 : 60000;
       const fator = f.tipoCobertura === "Compreensiva" ? 0.035 : f.tipoCobertura === "RCF" ? 0.012 : 0.020;
-      const novos = SEGURADORAS.map((cia, i) => ({
+      const novos = alvos.map((cia, i) => ({
         cia,
         premio: Math.round(base * fator * (0.85 + i * 0.07)),
         cobertura: f.tipoCobertura,
       }));
       setResultados(novos);
       setCalculando(false);
-      // persiste prêmios no banco mapeando para o shape do RPC
       void persistir({ premios: novos.map((r) => ({ cia: r.cia, premio: r.premio, cobertura: r.cobertura })) as never });
     }, 900);
   }
 
-  const podeCalcular = !!(f.cpf && f.nome && f.marca && f.modelo && f.anoModelo);
+  const podeCalcular = !!(f.cpf && f.nome && f.marca && f.modelo && f.anoModelo && (f.seguradorasSel?.length ?? 0) > 0);
 
   return (
     <AppShell title="Novo lead">
