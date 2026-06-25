@@ -55,8 +55,8 @@ function Page() {
     const [c, d, f, fr, vd, pr] = await Promise.all([
       supabase.from("distribuicao_config").select("*").eq("id", "default").maybeSingle(),
       supabase.from("leads")
-        .select("id,nome,motivo_perda,submotivo_perda,destino_perda_sugerido,observacao_perda,dados_veiculo")
-        .eq("em_avaliacao_matriz", true).limit(200),
+        .select("id,nome,motivo_perda,submotivo_perda,destino_perda_sugerido,observacao_perda,dados_veiculo,responsavel_id,empresa_id,atualizado_em")
+        .eq("em_avaliacao_matriz", true).order("atualizado_em", { ascending: false }).limit(200),
       supabase.from("leads")
         .select("id,nome,criado_em,dados,distribuido_em")
         .eq("status_pipeline", "novo").is("responsavel_id", null).is("empresa_id", null)
@@ -77,6 +77,8 @@ function Page() {
     setDevolvidos((d.data ?? []).map((x: any) => ({
       id: x.id, nome: x.nome, motivo_perda: x.motivo_perda, submotivo_perda: x.submotivo_perda,
       destino_perda_sugerido: x.destino_perda_sugerido, observacao_perda: x.observacao_perda,
+      responsavel_id: x.responsavel_id ?? null, empresa_id: x.empresa_id ?? null,
+      atualizado_em: x.atualizado_em ?? null,
       veiculo: x.dados_veiculo ? `${x.dados_veiculo.marca || ""} ${x.dados_veiculo.modelo || ""} ${x.dados_veiculo.ano || ""}`.trim() : null,
     })));
     setFila(((f.data ?? []) as any[]).map((x) => ({
