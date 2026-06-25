@@ -41,7 +41,7 @@ function Page() {
   async function load() {
     setLoading(true);
     const since = new Date(); since.setMonth(since.getMonth() - 11); since.setDate(1); since.setHours(0,0,0,0);
-    const [l, e, p, pr] = await Promise.all([
+    const [l, e, pr, pp] = await Promise.all([
       supabase.from("leads").select("id,status_pipeline,empresa_id,responsavel_id,criado_em,distribuido_em,ultimo_atendimento_em,bloqueado,arquivado,valor").gte("criado_em", since.toISOString()).limit(5000),
       supabase.from("empresas").select("id,nome,tipo,parent_id").limit(500),
       supabase.from("profiles").select("id,nome,empresa_id").limit(2000),
@@ -51,7 +51,7 @@ function Page() {
     setLeads((l.data ?? []) as Lead[]);
     setEmpresas((e.data ?? []) as Empresa[]);
     setProfiles((pr.data ?? []) as Profile[]);
-    setPropostas((p.data ?? []) as Proposta[]);
+    setPropostas((pp.data ?? []) as Proposta[]);
     setLoading(false);
   }
 
