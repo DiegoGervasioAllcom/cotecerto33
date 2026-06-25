@@ -69,6 +69,17 @@ type Form = {
   tipoSeguro: string; ramo: string; categoria: string; vigIni: string; vigFim: string;
   ciaAtual: string; apoliceAtual: string; ciAtual: string; classeBonus: string;
   seguradorasSel: string[]; tipoCalculo: string; grupoProducao: string; campanha: string; observacoesCot: string;
+  // Renovação (conditional)
+  seguradoraAnterior: string; sucursalAnterior: string; apoliceAnterior: string;
+  coberturaAnterior: string; statusApoliceAnterior: string; itemApoliceAnterior: string;
+  inicioVigenciaAnterior: string; fimVigenciaAnterior: string;
+  renovacaoMesmoVeiculo: string; renovacaoInclusaoCasco: string;
+  qtdSinistrosParcialAnterior: string; ciApoliceAnterior: string;
+  classeBonusAnterior: string; comissaoApoliceAnterior: string;
+  bonusRenovacaoTodasSeguradoras: string;
+  bonusAllianz: string; bonusSuhai: string; bonusPortoAzulItau: string;
+  bonusMapfre: string; bonusTokio: string; bonusHdi: string;
+  bonusBradesco: string; bonusYelumAliroIndiana: string;
   // Veículo
   placa: string; chassi: string; renavam: string; marca: string; modelo: string;
   anoModelo: string; anoFab: string; combustivel: string; cor: string; zeroKm: boolean;
