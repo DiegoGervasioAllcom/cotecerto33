@@ -70,7 +70,6 @@ function Page() {
       .eq("responsavel_id", uid)
       .eq("status_pipeline", "novo")
       .is("ultimo_atendimento_em", null)
-      .or("bloqueado.is.null,bloqueado.eq.false")
       .order("distribuido_em", { ascending: true, nullsFirst: true })
       .limit(50);
     if (error) setErr(error.message);
