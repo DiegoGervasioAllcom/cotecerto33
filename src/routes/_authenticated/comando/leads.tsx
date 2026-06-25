@@ -123,6 +123,8 @@ function Page() {
   const [fUf, setFUf] = useState("");
   const [fOrigem, setFOrigem] = useState("");
   const [fArquivados, setFArquivados] = useState<"ativos" | "arquivados" | "todos">("ativos");
+  const [distAutoMsg, setDistAutoMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [distAutoLoading, setDistAutoLoading] = useState(false);
 
   // modals
   const [modal, setModal] = useState<null | { kind: "hist" | "redist" | "block"; lead: Lead }>(null);
