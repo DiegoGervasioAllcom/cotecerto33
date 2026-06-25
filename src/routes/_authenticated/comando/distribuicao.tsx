@@ -42,6 +42,8 @@ function Page() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [simResult, setSimResult] = useState<{ leadId: string; nome: string; alvo: string; criterio: string }[] | null>(null);
+  const [obsDecisao, setObsDecisao] = useState<Record<string, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true); setErr(null);
