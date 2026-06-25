@@ -26,6 +26,7 @@ type Lead = {
   motivo_perda: string | null;
   submotivo_perda: string | null;
   em_avaliacao_matriz: boolean | null;
+  arquivado: boolean | null;
   dados: any;
 };
 type Empresa = { id: string; nome: string | null };
@@ -47,6 +48,8 @@ const EVENT_ICON: Record<string, string> = {
   desbloqueado: "i-lock",
   sla_expirado: "i-alert-triangle",
   lead_assumido: "i-check",
+  arquivado: "i-archive",
+  desarquivado: "i-archive",
 };
 
 const SLA_SECONDS = 180;
@@ -119,6 +122,7 @@ function Page() {
   const [fStatus, setFStatus] = useState("");
   const [fUf, setFUf] = useState("");
   const [fOrigem, setFOrigem] = useState("");
+  const [fArquivados, setFArquivados] = useState<"ativos" | "arquivados" | "todos">("ativos");
 
   // modals
   const [modal, setModal] = useState<null | { kind: "hist" | "redist" | "block"; lead: Lead }>(null);
@@ -130,7 +134,7 @@ function Page() {
         supabase
           .from("leads")
           .select(
-            "id,nome,contato,origem,status_pipeline,empresa_id,responsavel_id,criado_em,atualizado_em,distribuido_em,ultimo_atendimento_em,bloqueado,motivo_bloqueio,motivo_perda,submotivo_perda,em_avaliacao_matriz,dados"
+            "id,nome,contato,origem,status_pipeline,empresa_id,responsavel_id,criado_em,atualizado_em,distribuido_em,ultimo_atendimento_em,bloqueado,motivo_bloqueio,motivo_perda,submotivo_perda,em_avaliacao_matriz,arquivado,dados"
           )
           .order("criado_em", { ascending: false })
           .limit(500),
@@ -172,6 +176,8 @@ function Page() {
   }, [enriched]);
 
   const filtered = useMemo(() => enriched.filter((l) => {
+    if (fArquivados === "ativos" && l.arquivado) return false;
+    if (fArquivados === "arquivados" && !l.arquivado) return false;
     if (fStatus) {
       if (fStatus === "Distribuído") { if (!l.distribuido || l.status_pipeline !== "novo") return false; }
       else if (fStatus === "SLA estourado") { if (l.distribuido || l.slaSec <= SLA_SECONDS) return false; }
@@ -181,7 +187,7 @@ function Page() {
     if (fUf && l.uf !== fUf) return false;
     if (fOrigem && (l.origem || "") !== fOrigem) return false;
     return true;
-  }), [enriched, fStatus, fUf, fOrigem]);
+  }), [enriched, fStatus, fUf, fOrigem, fArquivados]);
 
   const kpis = useMemo(() => {
     const pendentes = enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo");
@@ -223,6 +229,13 @@ function Page() {
   async function puxarDeVolta(l: Lead) {
     if (!confirm(`Puxar o lead "${l.nome}" de volta para a matriz?`)) return;
     const { error } = await supabase.rpc("puxar_lead_de_volta", { p_lead: l.id });
+    if (error) alert(error.message); else load();
+  }
+
+  async function toggleArquivar(l: Lead) {
+    const arquivar = !l.arquivado;
+    if (arquivar && !confirm(`Arquivar o lead "${l.nome}"? Ele sairá da lista padrão e pode ser visto no filtro "Arquivados".`)) return;
+    const { error } = await supabase.rpc(arquivar ? "arquivar_lead" : "desarquivar_lead", { p_lead: l.id });
     if (error) alert(error.message); else load();
   }
 
@@ -282,6 +295,11 @@ function Page() {
           <option value="">Todas as origens</option>
           {filterOptions.origens.map((o) => <option key={o}>{o}</option>)}
         </select>
+        <select className="select-mini" value={fArquivados} onChange={(e) => setFArquivados(e.target.value as any)}>
+          <option value="ativos">Apenas ativos</option>
+          <option value="arquivados">Apenas arquivados</option>
+          <option value="todos">Ativos + arquivados</option>
+        </select>
         <div className="spacer"></div>
         <span className="small muted">fila ordenada por urgência · {filtered.length} de {leads.length} leads</span>
       </div>
@@ -333,6 +351,7 @@ function Page() {
                   <td>
                     <span className={`chip ${chip}`}>{lbl}</span>
                     {l.bloqueado && <><br /><span className="chip chip-danger" style={{ marginTop: 4 }}>bloqueado</span></>}
+                    {l.arquivado && <><br /><span className="chip" style={{ marginTop: 4, background: "#eee", color: "#666" }}>arquivado</span></>}
                   </td>
                   <td>
                     {isPerdido ? (
@@ -384,6 +403,9 @@ function Page() {
                       </button>
                       <button className="ic-mini" title={l.bloqueado ? "Desbloquear" : "Bloquear lead"} onClick={() => setModal({ kind: "block", lead: l })}>
                         <svg width="14" height="14"><use href="#i-lock"></use></svg>
+                      </button>
+                      <button className="ic-mini" title={l.arquivado ? "Desarquivar" : "Arquivar"} onClick={() => toggleArquivar(l)}>
+                        <svg width="14" height="14"><use href="#i-archive"></use></svg>
                       </button>
                       {!l.bloqueado && l.distribuido && (
                         <button className="ic-mini" title="Abrir" onClick={() => openLead(l)}>
