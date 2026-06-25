@@ -55,6 +55,13 @@ function Page() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (!selected || loading) return;
+    const el = cardRefs.current[selected];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selected, loading, rows.length]);
+
+
   async function transmitir(id: string) {
     setBusy(id);
     const { error } = await supabase.rpc("transmitir_proposta", {
