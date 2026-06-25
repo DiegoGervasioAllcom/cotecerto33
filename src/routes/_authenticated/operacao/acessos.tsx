@@ -881,6 +881,8 @@ function ModeloCltPanel({
         vh="% comissionado"
         rows={clt.progressiva}
         onChange={(rows) => setClt({ ...clt, progressiva: rows })}
+        rangeMask="brl"
+        valueMask="pct"
         footer={
           <div className="muted small">
             <Icon id="info" size={13} /> Base: prêmio líquido = prêmio bruto − juros − IOF (7,38%). O % vem da faixa do faturamento mensal de comissão.
@@ -896,6 +898,8 @@ function ModeloCltPanel({
           vh="Fator"
           rows={clt.fator_novas}
           onChange={(rows) => setClt({ ...clt, fator_novas: rows })}
+          rangeMask="pct"
+          valueMask="pct"
         />
         <DynamicRangeCard
           title="Fator comissão média · Remalho"
@@ -904,6 +908,8 @@ function ModeloCltPanel({
           vh="Fator"
           rows={clt.fator_remalho}
           onChange={(rows) => setClt({ ...clt, fator_remalho: rows })}
+          rangeMask="pct"
+          valueMask="pct"
         />
       </div>
 
@@ -914,6 +920,7 @@ function ModeloCltPanel({
         vh="Comissão (R$)"
         rows={clt.seguradora_planos}
         onChange={(rows) => setClt({ ...clt, seguradora_planos: rows })}
+        valueMask="brl"
       />
       <DynamicTrioCard
         title="Seguradora — serviços adicionais (R$)"
@@ -922,7 +929,9 @@ function ModeloCltPanel({
         vh="Comissão (R$)"
         rows={clt.seguradora_adic}
         onChange={(rows) => setClt({ ...clt, seguradora_adic: rows })}
+        valueMask="brl"
       />
+
 
       <div className="card">
         <div className="card-h"><h3><Icon id="info" size={16} /> Regras gerais de remuneração</h3></div>
