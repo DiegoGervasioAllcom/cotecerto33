@@ -57,8 +57,8 @@ type CltConfig = {
   progressiva: Pair[];
   fator_novas: Pair[];
   fator_remalho: Pair[];
-  ituran_planos: Trio[];
-  ituran_adic: Trio[];
+  seguradora_planos: Trio[];
+  seguradora_adic: Trio[];
   regras: CltRegras;
 };
 
@@ -69,7 +69,7 @@ const SEGURADORAS = [
 
 const CLT_DEFAULT: CltConfig = {
   progressiva: [], fator_novas: [], fator_remalho: [],
-  ituran_planos: [], ituran_adic: [],
+  seguradora_planos: [], seguradora_adic: [],
   regras: { apuracao_ini: "26", apuracao_fim: "25", pagamento: "5º dia útil", iof: "7,38%", rules: [] },
 };
 
@@ -161,8 +161,8 @@ function Page() {
         progressiva: (c.data.progressiva ?? []) as Pair[],
         fator_novas: (c.data.fator_novas ?? []) as Pair[],
         fator_remalho: (c.data.fator_remalho ?? []) as Pair[],
-        ituran_planos: ((c.data.ituran_planos ?? []) as unknown[]).map(toTrio),
-        ituran_adic: ((c.data.ituran_adic ?? []) as unknown[]).map(toTrio),
+        seguradora_planos: ((c.data.seguradora_planos ?? []) as unknown[]).map(toTrio),
+        seguradora_adic: ((c.data.seguradora_adic ?? []) as unknown[]).map(toTrio),
         regras: { ...CLT_DEFAULT.regras, ...((c.data.regras ?? {}) as Partial<CltRegras>) },
       });
     }
@@ -852,6 +852,8 @@ function ModeloCltPanel({
         progressiva: clt.progressiva,
         fator_novas: clt.fator_novas,
         fator_remalho: clt.fator_remalho,
+        seguradora_planos: clt.seguradora_planos,
+        seguradora_adic: clt.seguradora_adic,
         regras: clt.regras,
         atualizado_em: new Date().toISOString(),
       })
@@ -910,16 +912,16 @@ function ModeloCltPanel({
         icon="car"
         lh="Plano"
         vh="Comissão (R$)"
-        rows={clt.ituran_planos}
-        onChange={(rows) => setClt({ ...clt, ituran_planos: rows })}
+        rows={clt.seguradora_planos}
+        onChange={(rows) => setClt({ ...clt, seguradora_planos: rows })}
       />
       <DynamicTrioCard
         title="Seguradora — serviços adicionais (R$)"
         icon="shield"
         lh="Adicional"
         vh="Comissão (R$)"
-        rows={clt.ituran_adic}
-        onChange={(rows) => setClt({ ...clt, ituran_adic: rows })}
+        rows={clt.seguradora_adic}
+        onChange={(rows) => setClt({ ...clt, seguradora_adic: rows })}
       />
 
       <div className="card">
