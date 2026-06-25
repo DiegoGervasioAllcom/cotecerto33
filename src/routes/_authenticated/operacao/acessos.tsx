@@ -113,7 +113,7 @@ function Page() {
         </button>
       </div>
 
-      {err && <div className="alert alert-error">{err}</div>}
+      {err && <div className="alert alert-err">{err}</div>}
 
       {tab === "pend" && (
         <div className="card">

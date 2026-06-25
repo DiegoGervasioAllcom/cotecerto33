@@ -79,7 +79,7 @@ function Page() {
         </div>
       </div>
 
-      {err && <div className="alert alert-error">{err}</div>}
+      {err && <div className="alert alert-err">{err}</div>}
 
       {!loading && rows.length === 0 && (
         <div className="card">
