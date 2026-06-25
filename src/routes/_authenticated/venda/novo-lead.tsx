@@ -6,7 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({ id: typeof s.id === "string" ? s.id : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    id: typeof s.id === "string" ? s.id : undefined,
+    step: typeof s.step === "number" ? s.step : (typeof s.step === "string" ? Number(s.step) : undefined),
+  }),
   component: Page,
 });
 
