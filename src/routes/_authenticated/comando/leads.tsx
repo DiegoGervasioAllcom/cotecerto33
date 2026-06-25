@@ -190,7 +190,7 @@ function Page() {
   }), [enriched, fStatus, fUf, fOrigem, fArquivados]);
 
   const kpis = useMemo(() => {
-    const pendentes = enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo");
+    const pendentes = enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo" && !l.arquivado);
     const distribuidos = enriched.filter((l) => l.distribuido && l.distribuido_em);
     const oldest = pendentes.reduce((a, l) => Math.max(a, l.ageSec), 0);
     const avgDist = distribuidos.length ? Math.round(distribuidos.reduce((a, l) => a + l.slaSec, 0) / distribuidos.length) : 0;
