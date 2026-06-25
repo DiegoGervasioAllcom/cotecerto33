@@ -160,7 +160,7 @@ function Page() {
                   <tr
                     key={r.id}
                     onClick={() =>
-                      nav({ to: "/venda/cotacoes/$id", params: { id: r.id } })
+                      nav({ to: "/venda/novo-lead", search: { id: r.id, step: 5 } })
                     }
                     style={{ cursor: "pointer" }}
                   >

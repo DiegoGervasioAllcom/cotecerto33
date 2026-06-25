@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
@@ -6,7 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({ id: typeof s.id === "string" ? s.id : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    id: typeof s.id === "string" ? s.id : undefined,
+    step: typeof s.step === "number" ? s.step : (typeof s.step === "string" ? Number(s.step) : undefined),
+  }),
   component: Page,
 });
 
@@ -145,7 +148,7 @@ function Page() {
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
 
   // ----- persistência: cotação no Supabase -----
-  const { id: routeId } = Route.useSearch();
+  const { id: routeId, step: routeStep } = Route.useSearch();
   const [cotacaoId, setCotacaoId] = useState<string | null>(routeId ?? null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -250,7 +253,7 @@ function Page() {
       const p = (data as any).perfil || {};
       const c = (data as any).coberturas || {};
       const pr = ((data as any).premios || []) as { seguradora: string; cobertura: string; premio: number }[];
-      setStep(Number((data as any).step_atual ?? 0));
+      setStep(routeStep != null && !Number.isNaN(routeStep) ? routeStep : Number((data as any).step_atual ?? 0));
       setF((prev) => ({
         ...prev,
         cpf: s.cpf_cnpj ?? "", pessoa: s.pessoa ?? prev.pessoa, nome: s.nome ?? "", nomeSocial: s.nome_social ?? "",
@@ -943,6 +946,11 @@ function Page() {
                   </div>
                 </div>
                 <span className="spacer" style={{ flex: 1 }} />
+                {cotacaoId && resultados.length > 1 && (
+                  <Link to="/venda/cotacoes/$id" params={{ id: cotacaoId }} className="btn btn-slate btn-sm">
+                    <svg width="13" height="13"><use href="#i-shield" /></svg> Comparativo lado a lado
+                  </Link>
+                )}
                 <button className="btn btn-ghost btn-sm" onClick={() => window.print()}>
                   <svg width="13" height="13"><use href="#i-download" /></svg> Imprimir
                 </button>
