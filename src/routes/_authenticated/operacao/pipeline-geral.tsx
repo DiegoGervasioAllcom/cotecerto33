@@ -22,7 +22,7 @@ type Lead = {
   criado_em: string;
   dados: any;
 };
-type Empresa = { id: string; nome_fantasia: string | null; razao_social: string | null };
+type Empresa = { id: string; nome: string | null };
 type Profile = { id: string; nome: string | null };
 
 const STAGE_KEY: Record<string, string> = {
@@ -71,7 +71,7 @@ function Page() {
             .neq("status_pipeline", "perdido")
             .order("atualizado_em", { ascending: false })
             .limit(1000),
-          supabase.from("empresas").select("id,nome_fantasia,razao_social"),
+          supabase.from("empresas").select("id,nome"),
           supabase.from("profiles").select("id,nome"),
         ]);
         if (error) setErr(error.message);
@@ -96,7 +96,7 @@ function Page() {
     const sg = new Set<string>();
     for (const l of leads) {
       const e = l.empresa_id ? empresas[l.empresa_id] : null;
-      if (e) fr.add(e.nome_fantasia || e.razao_social || "—");
+      if (e) fr.add(e.nome || "—");
       const v = l.responsavel_id ? profiles[l.responsavel_id] : null;
       if (v?.nome) vd.add(v.nome);
       if (l.origem) og.add(l.origem);
@@ -115,7 +115,7 @@ function Page() {
     return leads.filter((l) => {
       if (fFranq) {
         const e = l.empresa_id ? empresas[l.empresa_id] : null;
-        const nf = e?.nome_fantasia || e?.razao_social || "";
+        const nf = e?.nome || "";
         if (nf !== fFranq) return false;
       }
       if (fVend) {
@@ -221,7 +221,7 @@ function Page() {
               {list.map((l) => {
                 const e = l.empresa_id ? empresas[l.empresa_id] : null;
                 const v = l.responsavel_id ? profiles[l.responsavel_id] : null;
-                const fr = e?.nome_fantasia || e?.razao_social || "—";
+                const fr = e?.nome || "—";
                 const car = [l.dados?.veiculo_marca, l.dados?.veiculo_modelo, l.dados?.veiculo_ano].filter(Boolean).join(" ") || (l.dados?.veiculo as string | undefined) || "";
                 const segs: string[] = (l.dados?.seguradoras_sel as string[] | undefined) ?? [];
                 return (
