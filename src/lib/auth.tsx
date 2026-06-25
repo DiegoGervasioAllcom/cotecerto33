@@ -1,6 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase, type Perfil, type Profile, type Empresa } from "@/integrations/supabase/client";
+import {
+  isSupabaseConfigured,
+  supabase,
+  type Perfil,
+  type Profile,
+  type Empresa,
+} from "@/integrations/supabase/client";
 
 interface AuthState {
   loading: boolean;
@@ -19,6 +25,10 @@ async function loadContext(userId: string): Promise<{
   empresa: Empresa | null;
   role: Perfil | null;
 }> {
+  if (!isSupabaseConfigured) {
+    return { profile: null, empresa: null, role: null };
+  }
+
   const [{ data: profile }, { data: roleRow }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
     supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
@@ -49,6 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = async () => {
+    if (!isSupabaseConfigured) {
+      setSession(null);
+      setProfile(null);
+      setEmpresa(null);
+      setRole(null);
+      setLoading(false);
+      return;
+    }
+
     const { data } = await supabase.auth.getSession();
     setSession(data.session);
     if (data.session?.user) {
@@ -65,6 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
     let active = true;
     const sub = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!active) return;
@@ -101,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    if (!isSupabaseConfigured) return;
     await supabase.auth.signOut();
   };
 

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { isSupabaseConfigured, supabase, supabaseConfigError } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 
@@ -28,6 +28,10 @@ function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSupabaseConfigured) {
+      setError(supabaseConfigError ?? "Supabase não configurado.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -49,6 +53,11 @@ function AuthPage() {
       <div className="auth-card">
         <h3>Entrar na sua franquia</h3>
         <p className="lead">Use seu e-mail corporativo e senha.</p>
+        {!isSupabaseConfigured && (
+          <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
+            {supabaseConfigError} Configure as variáveis do Supabase para entrar.
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           <div className="field-group">
             <label>E-mail</label>
@@ -77,7 +86,7 @@ function AuthPage() {
               {error}
             </div>
           )}
-          <button className="auth-btn" type="submit" disabled={submitting}>
+          <button className="auth-btn" type="submit" disabled={submitting || !isSupabaseConfigured}>
             {submitting ? "Entrando…" : "Entrar"}
           </button>
         </form>
