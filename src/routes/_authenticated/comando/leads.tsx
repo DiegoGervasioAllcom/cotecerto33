@@ -404,9 +404,11 @@ function Page() {
                       <button className="ic-mini" title={l.bloqueado ? "Desbloquear" : "Bloquear lead"} onClick={() => setModal({ kind: "block", lead: l })}>
                         <svg width="14" height="14"><use href="#i-lock"></use></svg>
                       </button>
-                      <button className="ic-mini" title={l.arquivado ? "Desarquivar" : "Arquivar"} onClick={() => toggleArquivar(l)}>
-                        <svg width="14" height="14"><use href="#i-archive"></use></svg>
-                      </button>
+                      {(l.arquivado || (!l.distribuido) || l.em_avaliacao_matriz) && (
+                        <button className="ic-mini" title={l.arquivado ? "Desarquivar" : "Arquivar"} onClick={() => toggleArquivar(l)}>
+                          <svg width="14" height="14"><use href="#i-archive"></use></svg>
+                        </button>
+                      )}
                       {!l.bloqueado && l.distribuido && (
                         <button className="ic-mini" title="Abrir" onClick={() => openLead(l)}>
                           <svg width="14" height="14"><use href="#i-eye"></use></svg>
