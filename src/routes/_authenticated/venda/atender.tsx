@@ -85,23 +85,26 @@ function Page() {
     tickRef.current = setInterval(() => {
       const n = Date.now();
       setNow(n);
-      if (expiringRef.current) return;
-      const novos = leadsRef.current.filter((l) => {
+      // A devolução à Matriz é feita pelo servidor (pg_cron + trigger).
+      // O frontend apenas reflete o tempo e recarrega quando o SLA estoura,
+      // para remover o card que já foi devolvido do lado do banco.
+      const expirou = leadsRef.current.some((l) => {
         if (firedRef.current.has(l.id)) return false;
         if (l.bloqueado) return false;
         const start = new Date(l.distribuido_em ?? l.criado_em).getTime();
         return start + WINDOW_MS - n <= 0;
       });
-      if (novos.length === 0) return;
-      novos.forEach((l) => firedRef.current.add(l.id));
+      if (!expirou || expiringRef.current) return;
+      leadsRef.current.forEach((l) => { if (!l.bloqueado) firedRef.current.add(l.id); });
       expiringRef.current = true;
       (async () => {
-        try { await supabase.rpc("expirar_leads_nao_atendidos", { p_janela_seg: 180 }); await load(); }
+        try { await load(); }
         finally { expiringRef.current = false; }
       })();
     }, 1000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
   }, []);
+
 
   async function assumir(l: Lead) {
     setBusy(l.id);
