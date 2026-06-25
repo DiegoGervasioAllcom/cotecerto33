@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { cadastrarFranquia } from "@/lib/cadastro.functions";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 
 export const Route = createFileRoute("/auth/cadastro")({
@@ -53,6 +54,7 @@ const CPF_FIELDS: FieldDef[] = [
 
 function CadastroPage() {
   const navigate = useNavigate();
+  const cadastrar = useServerFn(cadastrarFranquia);
   const [view, setView] = useState<View>("model");
   const [model, setModel] = useState<Model>("cnpj");
   const [values, setValues] = useState<Record<string, string>>({});
@@ -85,48 +87,25 @@ function CadastroPage() {
       return;
     }
 
-    const { data, error: signErr } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo:
-          typeof window !== "undefined" ? `${window.location.origin}/auth` : undefined,
+    const { password: _pwd, email: _em, nome: _n, documento: _d, tipo: _t, ...extras } = values;
+
+    try {
+      await cadastrar({
         data: {
-          nome: values.socio_nome || values.nome,
-          empresa_nome: values.nome,
-          empresa_tipo: model === "cnpj" ? "pj" : "pf",
-          empresa_documento: values.documento,
+          email,
+          password,
+          tipo: model === "cnpj" ? "pj" : "pf",
+          nome: values.nome,
+          documento: values.documento,
+          extras,
         },
-      },
-    });
-
-    if (signErr) {
-      setError(signErr.message);
+      });
+      setView("success");
+    } catch (err: any) {
+      setError(err?.message || "Falha ao enviar cadastro.");
+    } finally {
       setSubmitting(false);
-      return;
     }
-    if (!data.user) {
-      setError("Não foi possível concluir o cadastro. Tente novamente.");
-      setSubmitting(false);
-      return;
-    }
-
-    // Sessão pode não estar ativa se confirmação de e-mail estiver ligada.
-    // Como o RPC precisa de auth.uid(), tentamos login direto após o signUp.
-    if (!data.session) {
-      await supabase.auth.signInWithPassword({ email, password });
-    }
-
-    const { password: _pwd, ...rest } = values;
-    const payload = { ...rest, tipo: model === "cnpj" ? "pj" : "pf" };
-
-    const { error: rpcErr } = await supabase.rpc("cadastrar_franquia", { p: payload });
-    if (rpcErr && !rpcErr.message.toLowerCase().includes("já cadastrada")) {
-      console.warn("[cadastro] cadastrar_franquia:", rpcErr.message);
-    }
-
-    setSubmitting(false);
-    setView("success");
   }
 
   const title = model === "cnpj" ? "Cadastro · Pessoa Jurídica" : "Cadastro · Pessoa Física";
