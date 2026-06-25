@@ -57,7 +57,7 @@ function Page() {
         .select("id,nome,motivo_perda,submotivo_perda,destino_perda_sugerido,observacao_perda,dados_veiculo")
         .eq("em_avaliacao_matriz", true).limit(200),
       supabase.from("leads")
-        .select("id,nome,criado_em,cidade,uf,distribuido_em")
+        .select("id,nome,criado_em,dados,distribuido_em")
         .eq("status_pipeline", "novo").is("responsavel_id", null).is("empresa_id", null)
         .eq("arquivado", false).eq("bloqueado", false).limit(500),
       supabase.from("empresas").select("id,nome,cidade,uf,tipo,status").limit(500),
