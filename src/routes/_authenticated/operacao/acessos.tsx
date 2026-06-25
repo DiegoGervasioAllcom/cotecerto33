@@ -866,7 +866,7 @@ function ModeloCltPanel({
         </button>
       </div>
 
-      <DynamicPairCard
+      <DynamicRangeCard
         title="Comissão de seguros — progressiva"
         icon="percent"
         lh="Faturamento comissão (R$)"
@@ -881,7 +881,7 @@ function ModeloCltPanel({
       />
 
       <div className="acc-two">
-        <DynamicPairCard
+        <DynamicRangeCard
           title="Fator comissão média · Novas Vendas"
           icon="users"
           lh="Comissão média"
@@ -889,7 +889,7 @@ function ModeloCltPanel({
           rows={clt.fator_novas}
           onChange={(rows) => setClt({ ...clt, fator_novas: rows })}
         />
-        <DynamicPairCard
+        <DynamicRangeCard
           title="Fator comissão média · Remalho"
           icon="users"
           lh="Comissão média"
