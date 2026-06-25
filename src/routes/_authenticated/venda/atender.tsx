@@ -87,6 +87,7 @@ function Page() {
       if (expiringRef.current) return;
       const novos = leadsRef.current.filter((l) => {
         if (firedRef.current.has(l.id)) return false;
+        if (l.bloqueado) return false;
         const start = new Date(l.distribuido_em ?? l.criado_em).getTime();
         return start + WINDOW_MS - n <= 0;
       });
