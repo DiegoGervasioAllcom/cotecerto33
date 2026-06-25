@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/propostas")({
   head: () => ({ meta: [{ title: "Propostas · CoteCerto" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    selected: typeof s.selected === "string" ? s.selected : undefined,
+  }),
   component: Page,
 });
 
