@@ -154,7 +154,7 @@ export function AppShell({
             <LogOut className="ic" style={{ width: 16, height: 16, color: "var(--muted)" }} />
           </button>
         </div>
-        <div className="page">{children}</div>
+        <div className="page active">{children}</div>
       </main>
     </div>
   );
