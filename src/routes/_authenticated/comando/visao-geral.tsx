@@ -197,6 +197,104 @@ function Page() {
 
   const alertasCount = (pendTransmHoje.length > 0 ? 1 : 0) + (semAtendimento.length > 0 ? 1 : 0) + (slaEstourado.length > 0 ? 1 : 0) + (naoPagasMes > 0 ? 1 : 0);
 
+  function chartBarsSVG(): string {
+    const W = 720, H = 240, padL = 36, padR = 12, padT = 12, padB = 26;
+    const innerW = W - padL - padR, innerH = H - padT - padB;
+    const ticks = [0, 0.25, 0.5, 0.75, 1];
+    const colW = innerW / Math.max(1, evol.length);
+    const bw = Math.min(28, colW / 2 - 6);
+    const grid = ticks.map((p) => {
+      const y = padT + innerH - p * innerH;
+      return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#e2e8f0" stroke-width="1"/><text x="4" y="${y + 3}" font-size="10" fill="#64748b">${Math.round(maxEvol * p)}</text>`;
+    }).join("");
+    const bars = evol.map((m, i) => {
+      const x0 = padL + i * colW + (colW / 2 - bw - 2);
+      const he = (m.emitidas / maxEvol) * innerH;
+      const hp = (m.pagas / maxEvol) * innerH;
+      return `
+        <rect x="${x0}" y="${padT + innerH - he}" width="${bw}" height="${he}" rx="3" fill="#475569"/>
+        <rect x="${x0 + bw + 4}" y="${padT + innerH - hp}" width="${bw}" height="${hp}" rx="3" fill="#facc15"/>
+        <text x="${x0 + bw + 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#64748b">${m.label}</text>
+        <text x="${x0 + bw / 2}" y="${padT + innerH - he - 4}" text-anchor="middle" font-size="9" fill="#0f172a">${m.emitidas || ""}</text>
+        <text x="${x0 + bw + 4 + bw / 2}" y="${padT + innerH - hp - 4}" text-anchor="middle" font-size="9" fill="#0f172a">${m.pagas || ""}</text>`;
+    }).join("");
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" xmlns="http://www.w3.org/2000/svg">${grid}${bars}</svg>`;
+  }
+
+  function pieFunilSVG(): string {
+    const total = recebidosMes;
+    const distrib = distribuidosMes;
+    const emit = emitidasMes.length;
+    const pag = pagasMes.length;
+    const rows = [
+      { lbl: "Leads recebidos", v: total, c: "#94a3b8" },
+      { lbl: "Distribuídos", v: distrib, c: "#3b82f6" },
+      { lbl: "Vendas emitidas", v: emit, c: "#475569" },
+      { lbl: "Vendas pagas", v: pag, c: "#facc15" },
+    ];
+    const max = Math.max(1, total);
+    return `<svg viewBox="0 0 520 ${rows.length * 36 + 10}" width="100%" xmlns="http://www.w3.org/2000/svg">` +
+      rows.map((r, i) => {
+        const y = 8 + i * 36;
+        const w = (r.v / max) * 360;
+        return `<text x="0" y="${y + 14}" font-size="11" fill="#334155">${r.lbl}</text>
+          <rect x="140" y="${y + 4}" width="360" height="16" rx="3" fill="#f1f5f9"/>
+          <rect x="140" y="${y + 4}" width="${w}" height="16" rx="3" fill="${r.c}"/>
+          <text x="505" y="${y + 16}" font-size="11" fill="#0f172a" text-anchor="end" font-weight="700">${r.v}</text>`;
+      }).join("") + `</svg>`;
+  }
+
+  function exportarRelatorio() {
+    const fmtBR = (n: number) => "R$ " + (n || 0).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+    const tFranq = `<table><thead><tr><th>#</th><th>Franquia</th><th class="num">Leads</th><th class="num">Vendas</th><th class="num">Conv.</th></tr></thead><tbody>${
+      (rankFranq.length ? rankFranq.slice(0, 10) : []).map((r, i) => `<tr><td>${i + 1}</td><td>${r.nome}</td><td class="num">${r.leads}</td><td class="num">${r.vendas}</td><td class="num">${r.conv}%</td></tr>`).join("") || `<tr><td colspan="5" style="text-align:center;color:#94a3b8">Sem franquias cadastradas</td></tr>`
+    }</tbody></table>`;
+    const tVend = `<table><thead><tr><th>#</th><th>Vendedor</th><th>Franquia</th><th class="num">Leads</th><th class="num">Vendas</th><th class="num">Conv.</th></tr></thead><tbody>${
+      (rankVend.length ? rankVend : []).map((r, i) => `<tr><td>${i + 1}</td><td>${r.nome}</td><td>${r.franq}</td><td class="num">${r.leads}</td><td class="num">${r.vendas}</td><td class="num">${r.conv}%</td></tr>`).join("") || `<tr><td colspan="6" style="text-align:center;color:#94a3b8">Sem atividade no período</td></tr>`
+    }</tbody></table>`;
+    const body = `
+      <h1>Relatório operacional — Visão geral</h1>
+      <div class="sub">Período: <b>${periodLabel}</b> · ${franquias.length} franquias · ${vendedores.length} vendedores ativos</div>
+
+      <h2>Indicadores principais</h2>
+      <div class="grid">
+        <div class="kv"><b>Leads recebidos:</b> ${recebidosMes}</div>
+        <div class="kv"><b>Leads distribuídos:</b> ${distribuidosMes}</div>
+        <div class="kv"><b>Sem atendimento:</b> ${semAtendimento.length}</div>
+        <div class="kv"><b>Tempo médio 1º contato:</b> ${(avg1Contato / 60).toFixed(1)} min</div>
+        <div class="kv"><b>Vendas emitidas:</b> ${emitidasMes.length}</div>
+        <div class="kv"><b>Vendas pagas:</b> ${pagasMes.length}</div>
+        <div class="kv"><b>Vendas não pagas:</b> ${Math.max(0, naoPagasMes)}</div>
+        <div class="kv"><b>Conversão geral:</b> ${convMes}%</div>
+        <div class="kv"><b>Prêmio pago:</b> ${fmtBR(comissaoMes)}</div>
+        <div class="kv"><b>Tempo médio até distribuir:</b> ${fmtDur(avgDistSec)}</div>
+        <div class="kv"><b>Distribuídos em &lt; 3 min:</b> ${sub3min}%</div>
+        <div class="kv"><b>Mais antigo sem distribuir:</b> ${fmtDur(oldestSec)}</div>
+      </div>
+
+      <h2>Funil do período</h2>
+      <div class="card">${pieFunilSVG()}</div>
+
+      <h2>Evolução mensal (últimos 6 meses)</h2>
+      <div class="card">
+        <div style="display:flex;gap:14px;font-size:11px;color:#475569;margin-bottom:6px">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#475569;border-radius:2px;margin-right:4px"></span>Emitidas</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#facc15;border-radius:2px;margin-right:4px"></span>Pagas</span>
+        </div>
+        ${chartBarsSVG()}
+      </div>
+
+      <h2>Ranking de franquias</h2>
+      ${tFranq}
+
+      <h2>Ranking de vendedores</h2>
+      ${tVend}
+    `;
+    printHtml(`Visão geral · ${periodLabel}`, body);
+  }
+
+
+
   return (
     <AppShell title="Visão geral">
       <ProtoIcons />
