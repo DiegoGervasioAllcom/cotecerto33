@@ -3,7 +3,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, PlayCircle, GitBranch, UserPlus, FileText, Send, CheckSquare, Receipt, MessageSquare,
   LayoutDashboard, Users, Share2, Building2, ShieldCheck, TrendingUp, DollarSign, Trophy,
-  RotateCcw, RefreshCw, BarChart3, Mail, KeyRound, Settings, LogOut, Briefcase, Activity,
+  RotateCcw, RefreshCw, BarChart3, Mail, KeyRound, Settings, LogOut, Briefcase, Activity, AlertTriangle,
 } from "lucide-react";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 import { useAuth } from "@/lib/auth";
