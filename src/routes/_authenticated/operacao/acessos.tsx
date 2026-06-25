@@ -218,7 +218,8 @@ function Page() {
     });
     setBusy(false);
     if (error) {
-      setErr(error.message);
+      console.error("aprovar_empresa error", error);
+      setErr(`${error.message}${error.details ? ` · ${error.details}` : ""}${error.hint ? ` · ${error.hint}` : ""}`);
       return;
     }
     const m = modelos.find((x) => x.id === modelSel);
