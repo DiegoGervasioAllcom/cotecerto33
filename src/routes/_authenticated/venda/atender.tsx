@@ -158,33 +158,43 @@ function Page() {
       ) : (
         <div className="atender-grid">
           {leads.map((l) => {
+            const blocked = !!l.bloqueado;
             const start = new Date(l.distribuido_em ?? l.criado_em).getTime();
             const left = start + WINDOW_MS - now;
             const t = fmtTimer(left);
-            const cls =
-              t.tone === "urgent" ? "atender-card urgent" :
-              t.tone === "warn" ? "atender-card warn" : "atender-card";
-            const barColor =
-              t.tone === "urgent" ? "var(--alert)" :
-              t.tone === "warn" ? "var(--yellow)" : "var(--ok)";
+            const cls = blocked
+              ? "atender-card"
+              : t.tone === "urgent" ? "atender-card urgent"
+              : t.tone === "warn" ? "atender-card warn" : "atender-card";
+            const barColor = blocked
+              ? "var(--muted)"
+              : t.tone === "urgent" ? "var(--alert)"
+              : t.tone === "warn" ? "var(--yellow)" : "var(--ok)";
             const txtColor = barColor;
             return (
-              <div key={l.id} className={cls}>
+              <div key={l.id} className={cls} style={blocked ? { opacity: 0.85 } : undefined}>
                 <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <strong style={{ fontSize: 15, color: "var(--slate)" }}>{l.nome || "Lead sem nome"}</strong>
                     <div className="small muted">{veiculoLabel(l.dados)}</div>
                   </div>
-                  <span className="chip chip-yellow">
-                    <svg width={11} height={11}><use href="#i-share" /></svg> Matriz
-                  </span>
+                  {blocked ? (
+                    <span className="chip chip-red">
+                      <svg width={11} height={11}><use href="#i-lock" /></svg> Bloqueado
+                    </span>
+                  ) : (
+                    <span className="chip chip-yellow">
+                      <svg width={11} height={11}><use href="#i-share" /></svg> Matriz
+                    </span>
+                  )}
                 </div>
                 <div className="at-bar">
-                  <div className="at-fill" style={{ width: `${t.pct}%`, background: barColor }} />
+                  <div className="at-fill" style={{ width: blocked ? "100%" : `${t.pct}%`, background: barColor }} />
                 </div>
                 <div className="row" style={{ justifyContent: "space-between" }}>
                   <span style={{ color: txtColor, fontWeight: 700, fontSize: 13 }}>
-                    <svg width={12} height={12}><use href="#i-clock" /></svg> {t.txt}
+                    <svg width={12} height={12}><use href={blocked ? "#i-lock" : "#i-clock"} /></svg>{" "}
+                    {blocked ? "SLA pausado — aguardando desbloqueio pela Matriz" : t.txt}
                   </span>
                   <span className="small muted">{l.contato || "—"}</span>
                 </div>
@@ -192,13 +202,19 @@ function Page() {
                   <button
                     className="btn btn-yellow btn-sm"
                     style={{ flex: 1 }}
-                    disabled={busy === l.id}
-                    onClick={() => assumir(l)}
+                    disabled={busy === l.id || blocked}
+                    title={blocked ? "Lead bloqueado — solicite o desbloqueio à Matriz" : undefined}
+                    onClick={() => !blocked && assumir(l)}
                   >
-                    <svg width={13} height={13}><use href="#i-check" /></svg>{" "}
-                    {busy === l.id ? "Iniciando…" : "Assumir e iniciar"}
+                    <svg width={13} height={13}><use href={blocked ? "#i-lock" : "#i-check"} /></svg>{" "}
+                    {blocked ? "Bloqueado" : (busy === l.id ? "Iniciando…" : "Assumir e iniciar")}
                   </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setView(l)}>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={blocked}
+                    title={blocked ? "Indisponível enquanto bloqueado" : undefined}
+                    onClick={() => !blocked && setView(l)}
+                  >
                     <svg width={13} height={13}><use href="#i-eye" /></svg> Ver lead
                   </button>
                 </div>
