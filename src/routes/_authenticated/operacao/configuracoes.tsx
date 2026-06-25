@@ -379,64 +379,247 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+type UserFull = UserRow & { desligado_em: string | null; roles: string[] };
+type Empresa = { id: string; nome: string; tipo: string };
+
 function UsuariosModal({ role, title, onClose }: { role: "matriz" | "franqueado" | "vendedor"; title: string; onClose: () => void }) {
-  const [rows, setRows] = useState<UserRow[]>([]);
+  const [rows, setRows] = useState<UserFull[]>([]);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [edit, setEdit] = useState<UserFull | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const ur = await supabase.from("user_roles").select("user_id").eq("role", role);
-      if (ur.error) { setErr(ur.error.message); setLoading(false); return; }
-      const ids = (ur.data ?? []).map((x: { user_id: string }) => x.user_id);
-      if (ids.length === 0) { setRows([]); setLoading(false); return; }
-      const pr = await supabase.from("profiles").select("id,nome,email,status,empresa_id").in("id", ids);
-      if (pr.error) { setErr(pr.error.message); setLoading(false); return; }
-      const empIds = Array.from(new Set((pr.data ?? []).map((p: { empresa_id: string | null }) => p.empresa_id).filter(Boolean))) as string[];
-      let empMap: Record<string, string> = {};
-      if (empIds.length) {
-        const em = await supabase.from("empresas").select("id,nome").in("id", empIds);
-        empMap = Object.fromEntries((em.data ?? []).map((e: { id: string; nome: string }) => [e.id, e.nome]));
-      }
-      setRows((pr.data ?? []).map((p: { id: string; nome: string; email: string; status: string; empresa_id: string | null }) => ({
-        ...p,
-        empresa_nome: p.empresa_id ? empMap[p.empresa_id] ?? null : null,
-      })));
-      setLoading(false);
-    })();
-  }, [role]);
+  const createFn = useServerFn(adminCreateUser);
+  const deleteFn = useServerFn(adminDeleteUser);
+
+  const targetRoles = role === "franqueado" ? ["franqueado", "master"] : [role];
+
+  async function load() {
+    setLoading(true); setErr(null);
+    const ur = await supabase.from("user_roles").select("user_id,role").in("role", targetRoles);
+    if (ur.error) { setErr(ur.error.message); setLoading(false); return; }
+    const ids = Array.from(new Set((ur.data ?? []).map((x: { user_id: string }) => x.user_id)));
+    const rolesByUser: Record<string, string[]> = {};
+    (ur.data ?? []).forEach((x: { user_id: string; role: string }) => {
+      (rolesByUser[x.user_id] ||= []).push(x.role);
+    });
+
+    const [em, pr] = await Promise.all([
+      supabase.from("empresas").select("id,nome,tipo").order("nome"),
+      ids.length
+        ? supabase.from("profiles").select("id,nome,email,status,empresa_id,desligado_em").in("id", ids)
+        : Promise.resolve({ data: [], error: null } as any),
+    ]);
+    setEmpresas((em.data ?? []) as Empresa[]);
+    const empMap = Object.fromEntries(((em.data ?? []) as Empresa[]).map((e) => [e.id, e.nome]));
+    setRows(((pr.data ?? []) as any[]).map((p) => ({
+      id: p.id, nome: p.nome, email: p.email, status: p.status,
+      empresa_id: p.empresa_id, empresa_nome: p.empresa_id ? empMap[p.empresa_id] ?? null : null,
+      desligado_em: p.desligado_em, roles: rolesByUser[p.id] ?? [],
+    })));
+    setLoading(false);
+  }
+  useEffect(() => { void load(); }, [role]);
+
+  async function toggleAtivo(u: UserFull) {
+    const ativo = !!u.desligado_em; // se já está desligado → reativar
+    const motivo = !ativo ? (prompt("Motivo da desativação (opcional):") ?? null) : null;
+    const { error } = await supabase.rpc("admin_set_usuario_status", {
+      p_user_id: u.id, p_ativo: ativo, p_motivo: motivo,
+    });
+    if (error) setErr(error.message);
+    void load();
+  }
+
+  async function remover(u: UserFull) {
+    if (!confirm(`Excluir definitivamente ${u.nome || u.email}? Esta ação é irreversível.`)) return;
+    const { data: sess } = await supabase.auth.getSession();
+    try {
+      await deleteFn({ data: { user_id: u.id, caller_token: sess.session?.access_token ?? "" } });
+      void load();
+    } catch (e: any) { setErr(e.message); }
+  }
+
+  const empresasFiltradas = role === "franqueado"
+    ? empresas.filter((e) => e.tipo !== "matriz")
+    : empresas;
 
   return (
-    <ModalShell title={title} onClose={onClose} wide>
+    <ModalShell
+      title={title}
+      onClose={onClose}
+      wide
+      footer={
+        <>
+          <span className="muted small" style={{ marginRight: "auto" }}>{rows.length} usuário(s)</span>
+          <button className="btn btn-primary" onClick={() => setCreating(true)}>+ Novo usuário</button>
+        </>
+      }
+    >
       {err && <div className="small" style={{ color: "#991b1b", marginBottom: 10 }}>{err}</div>}
       {loading ? <div className="muted small">Carregando…</div> : (
-        <table className="table">
+        <table className="table-pipe">
           <thead>
             <tr>
               <th>Nome</th>
               <th>E-mail</th>
               {role !== "matriz" && <th>{role === "franqueado" ? "Franquia" : "Unidade"}</th>}
               <th>Status</th>
+              <th style={{ width: 200, textAlign: "right" }}>Ações</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((u) => (
-              <tr key={u.id}>
-                <td>{u.nome || "—"}</td>
-                <td className="muted">{u.email}</td>
-                {role !== "matriz" && <td>{u.empresa_nome ?? "—"}</td>}
-                <td>
-                  <span className={`chip ${u.status === "ativo" ? "chip-ok" : u.status === "pendente" ? "chip-warn" : "chip-outline"}`}>
-                    {u.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && <tr><td colSpan={role === "matriz" ? 3 : 4} className="muted small">Nenhum usuário com este perfil.</td></tr>}
+            {rows.map((u) => {
+              const desligado = !!u.desligado_em;
+              return (
+                <tr key={u.id}>
+                  <td><strong>{u.nome || "—"}</strong></td>
+                  <td className="muted">{u.email}</td>
+                  {role !== "matriz" && <td>{u.empresa_nome ?? "—"}</td>}
+                  <td>
+                    <span className={`chip ${desligado ? "chip-outline" : "chip-ok"}`}>
+                      {desligado ? "Desativado" : "Ativo"}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEdit(u)}>Editar</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => toggleAtivo(u)} style={{ marginLeft: 6 }}>
+                      {desligado ? "Reativar" : "Desativar"}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => remover(u)} style={{ marginLeft: 6, color: "#b91c1c" }}>
+                      Excluir
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+            {rows.length === 0 && <tr><td colSpan={role === "matriz" ? 4 : 5} className="muted small" style={{ padding: 20, textAlign: "center" }}>Nenhum usuário com este perfil.</td></tr>}
           </tbody>
         </table>
+      )}
+
+      {edit && <EditUserModal user={edit} empresas={empresasFiltradas} role={role} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); void load(); }} />}
+      {creating && (
+        <CreateUserModal
+          role={role}
+          empresas={empresasFiltradas}
+          onClose={() => setCreating(false)}
+          onCreated={() => { setCreating(false); void load(); }}
+          createFn={async (payload) => {
+            const { data: sess } = await supabase.auth.getSession();
+            return createFn({ data: { ...payload, caller_token: sess.session?.access_token ?? "" } });
+          }}
+        />
       )}
     </ModalShell>
   );
 }
+
+function EditUserModal({ user, empresas, role, onClose, onSaved }: {
+  user: UserFull; empresas: Empresa[]; role: "matriz" | "franqueado" | "vendedor";
+  onClose: () => void; onSaved: () => void;
+}) {
+  const [nome, setNome] = useState(user.nome);
+  const [empresaId, setEmpresaId] = useState<string>(user.empresa_id ?? "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true); setErr(null);
+    const { error } = await supabase.rpc("admin_atualizar_usuario", {
+      p_user_id: user.id, p_nome: nome, p_empresa_id: empresaId || null,
+    });
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    onSaved();
+  }
+
+  return (
+    <ModalShell title={`Editar · ${user.email}`} onClose={onClose} footer={
+      <>
+        <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={save} disabled={busy}>Salvar</button>
+      </>
+    }>
+      {err && <div className="small" style={{ color: "#991b1b", marginBottom: 10 }}>{err}</div>}
+      <div className="field-group">
+        <label>Nome</label>
+        <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} />
+      </div>
+      <div className="field-group">
+        <label>E-mail</label>
+        <input className="input" value={user.email} disabled />
+      </div>
+      {role !== "matriz" && (
+        <div className="field-group">
+          <label>{role === "franqueado" ? "Franquia" : "Unidade"}</label>
+          <select className="input" value={empresaId} onChange={(e) => setEmpresaId(e.target.value)}>
+            <option value="">— Selecionar —</option>
+            {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+          </select>
+        </div>
+      )}
+    </ModalShell>
+  );
+}
+
+function CreateUserModal({ role, empresas, onClose, onCreated, createFn }: {
+  role: "matriz" | "franqueado" | "vendedor"; empresas: Empresa[];
+  onClose: () => void; onCreated: () => void;
+  createFn: (p: { email: string; password: string; nome: string; role: "matriz" | "franqueado" | "vendedor"; empresa_id: string | null }) => Promise<unknown>;
+}) {
+  const [form, setForm] = useState({ nome: "", email: "", password: "", empresa_id: "" });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    setBusy(true); setErr(null);
+    try {
+      await createFn({
+        nome: form.nome.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        role,
+        empresa_id: form.empresa_id || null,
+      });
+      onCreated();
+    } catch (e: any) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <ModalShell title={`Novo usuário · ${role}`} onClose={onClose} footer={
+      <>
+        <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={submit} disabled={busy || !form.nome || !form.email || form.password.length < 6}>
+          {busy ? "Criando…" : "Criar usuário"}
+        </button>
+      </>
+    }>
+      {err && <div className="small" style={{ color: "#991b1b", marginBottom: 10 }}>{err}</div>}
+      <div className="field-group">
+        <label>Nome</label>
+        <input className="input" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+      </div>
+      <div className="field-group">
+        <label>E-mail</label>
+        <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+      </div>
+      <div className="field-group">
+        <label>Senha (mín. 6)</label>
+        <input className="input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+      </div>
+      {role !== "matriz" && (
+        <div className="field-group">
+          <label>{role === "franqueado" ? "Franquia" : "Unidade"}</label>
+          <select className="input" value={form.empresa_id} onChange={(e) => setForm({ ...form, empresa_id: e.target.value })}>
+            <option value="">— Selecionar —</option>
+            {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+          </select>
+        </div>
+      )}
+    </ModalShell>
+  );
+}
+
