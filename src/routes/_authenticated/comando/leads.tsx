@@ -26,6 +26,7 @@ type Lead = {
   motivo_perda: string | null;
   submotivo_perda: string | null;
   em_avaliacao_matriz: boolean | null;
+  arquivado: boolean | null;
   dados: any;
 };
 type Empresa = { id: string; nome: string | null };
