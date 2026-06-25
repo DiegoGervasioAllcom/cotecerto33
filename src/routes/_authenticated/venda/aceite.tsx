@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/aceite")({
   head: () => ({ meta: [{ title: "Aceite & transmissão · CoteCerto" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    selected: typeof s.selected === "string" ? s.selected : undefined,
+  }),
   component: Page,
 });
 
@@ -26,11 +29,13 @@ const fmtBRL = (n: number | null) =>
     : "—";
 
 function Page() {
+  const { selected } = Route.useSearch();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [obs, setObs] = useState<Record<string, string>>({});
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   async function load() {
     setLoading(true);
@@ -49,6 +54,13 @@ function Page() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!selected || loading) return;
+    const el = cardRefs.current[selected];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selected, loading, rows.length]);
+
 
   async function transmitir(id: string) {
     setBusy(id);
@@ -87,7 +99,16 @@ function Page() {
 
       <div style={{ display: "grid", gap: 12 }}>
         {rows.map((r) => (
-          <div key={r.id} className="card">
+          <div
+            key={r.id}
+            ref={(el) => { cardRefs.current[r.id] = el; }}
+            className="card"
+            style={
+              selected === r.id
+                ? { outline: "2px solid var(--brand, #2563eb)" }
+                : undefined
+            }
+          >
             <div className="card-h">
               <div>
                 <strong>{r.numero}</strong>{" "}

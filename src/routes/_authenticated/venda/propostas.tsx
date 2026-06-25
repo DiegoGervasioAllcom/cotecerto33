@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/propostas")({
   head: () => ({ meta: [{ title: "Propostas · CoteCerto" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    selected: typeof s.selected === "string" ? s.selected : undefined,
+  }),
   component: Page,
 });
 
@@ -34,9 +37,11 @@ function statusChip(s: string) {
 }
 
 function Page() {
+  const { selected } = Route.useSearch();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
   useEffect(() => {
     (async () => {
@@ -53,6 +58,13 @@ function Page() {
       setLoading(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!selected || loading) return;
+    const el = rowRefs.current[selected];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selected, loading, rows.length]);
+
 
   return (
     <AppShell title="Propostas">
@@ -93,7 +105,16 @@ function Page() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id}>
+                <tr
+                  key={r.id}
+                  ref={(el) => { rowRefs.current[r.id] = el; }}
+                  style={
+                    selected === r.id
+                      ? { outline: "2px solid var(--brand, #2563eb)", background: "rgba(37,99,235,.06)" }
+                      : undefined
+                  }
+                >
+
                   <td>
                     <strong>{r.numero || "—"}</strong>
                   </td>

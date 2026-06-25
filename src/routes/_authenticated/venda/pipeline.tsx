@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
@@ -29,10 +29,53 @@ const STAGE_KEY: Record<string, string> = {
 };
 
 function Page() {
+  const navigate = useNavigate();
   const [stages, setStages] = useState<Stage[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
+
+  async function openLead(l: Lead) {
+    setOpening(l.id);
+    try {
+      const st = l.status_pipeline;
+      if (st === "novo" || st === "contato" || st === "cotacao") {
+        const { data: cot } = await supabase
+          .from("cotacoes")
+          .select("id,step_atual")
+          .eq("lead_id", l.id)
+          .order("atualizado_em", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cot?.id) {
+          navigate({
+            to: "/venda/novo-lead",
+            search: { id: cot.id, step: Math.max(0, Number(cot.step_atual ?? 0)) },
+          });
+        } else {
+          navigate({ to: "/venda/novo-lead", search: {} });
+        }
+        return;
+      }
+      if (st === "proposta" || st === "negociacao" || st === "ganho") {
+        const { data: prop } = await supabase
+          .from("propostas")
+          .select("id")
+          .eq("lead_id", l.id)
+          .order("criado_em", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const target = st === "ganho" ? "/venda/aceite" : "/venda/propostas";
+        navigate({ to: target, search: prop?.id ? { selected: prop.id } : {} });
+        return;
+      }
+      navigate({ to: "/venda/novo-lead", search: {} });
+    } finally {
+      setOpening(null);
+    }
+  }
+
 
   async function load() {
     setLoading(true);
@@ -124,13 +167,23 @@ function Page() {
                   <div
                     key={l.id}
                     draggable
+                    role="button"
+                    tabIndex={0}
                     onDragStart={(e) => e.dataTransfer.setData("text/lead", l.id)}
+                    onClick={() => openLead(l)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openLead(l);
+                      }
+                    }}
                     style={{
                       border: "1px solid var(--border)",
                       borderRadius: 8,
                       padding: 10,
                       background: "#fff",
-                      cursor: "grab",
+                      cursor: opening === l.id ? "wait" : "pointer",
+                      opacity: opening === l.id ? 0.6 : 1,
                     }}
                   >
                     <div style={{ fontWeight: 600 }}>{l.nome || "Sem nome"}</div>
