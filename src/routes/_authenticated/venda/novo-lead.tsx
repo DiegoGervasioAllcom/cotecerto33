@@ -154,7 +154,7 @@ function Page() {
         app_morte: f.appMorte, app_invalidez: f.appInval, dmh: f.dmh, rcf_dm: f.rcfDm, rcf_dc: f.rcfDc,
         vidros: f.vidros, carro_reserva: f.carroReserva, assist_24: f.assist24,
       },
-      ...(extra?.premios ? { premios: extra.premios } : {}),
+      ...(extra?.premios ? { premios: extra.premios.map((p) => ({ seguradora: (p as any).cia ?? (p as any).seguradora, premio: p.premio, cobertura: p.cobertura })) } : {}),
     };
   }
 
