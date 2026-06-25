@@ -149,7 +149,7 @@ function Page() {
     const ageSec = Math.floor((now - new Date(l.criado_em).getTime()) / 1000);
     const distribuido = !!(l.empresa_id || l.responsavel_id || l.distribuido_em);
     const slaSec = distribuido && l.distribuido_em
-      ? Math.max(0, Math.floor((new Date(l.distribuido_em).getTime() - new Date(l.criado_em).getTime()) / 1000))
+      ? Math.max(0, Math.floor((now - new Date(l.distribuido_em).getTime()) / 1000))
       : ageSec;
     return { ...l, uf, cidade, ageSec, distribuido, slaSec };
   }), [leads, now]);
@@ -303,7 +303,7 @@ function Page() {
                     : l.ageSec > SLA_SECONDS - 60
                     ? { cls: "warn", txt: `${fmtDur(SLA_SECONDS - l.ageSec)} p/ distribuir` }
                     : { cls: "ok", txt: `${fmtDur(SLA_SECONDS - l.ageSec)} p/ distribuir` }
-                  : { cls: l.slaSec > SLA_SECONDS ? "over" : "ok", txt: `distribuído em ${fmtDur(l.slaSec)}` };
+                  : { cls: l.slaSec > SLA_SECONDS ? "over" : "ok", txt: `distribuído há ${fmtDur(l.slaSec)}` };
               const empresa = l.empresa_id ? empresas[l.empresa_id]?.nome : null;
               const vendedor = l.responsavel_id ? profiles[l.responsavel_id]?.nome : null;
               const rowStyle = !l.distribuido && l.status_pipeline === "novo" && l.ageSec > SLA_SECONDS
