@@ -69,6 +69,7 @@ function Page() {
       .select("id,nome,contato,origem,valor,criado_em,distribuido_em,dados,bloqueado")
       .eq("responsavel_id", uid)
       .eq("status_pipeline", "novo")
+      .not("arquivado", "is", true)
       .is("ultimo_atendimento_em", null)
       .order("distribuido_em", { ascending: true, nullsFirst: true })
       .limit(50);
