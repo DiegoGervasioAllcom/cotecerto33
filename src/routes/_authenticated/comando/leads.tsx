@@ -232,6 +232,13 @@ function Page() {
     if (error) alert(error.message); else load();
   }
 
+  async function toggleArquivar(l: Lead) {
+    const arquivar = !l.arquivado;
+    if (arquivar && !confirm(`Arquivar o lead "${l.nome}"? Ele sairá da lista padrão e pode ser visto no filtro "Arquivados".`)) return;
+    const { error } = await supabase.rpc(arquivar ? "arquivar_lead" : "desarquivar_lead", { p_lead: l.id });
+    if (error) alert(error.message); else load();
+  }
+
   return (
     <AppShell title="Leads">
       <ProtoIcons />
