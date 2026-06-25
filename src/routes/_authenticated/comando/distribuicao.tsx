@@ -17,6 +17,7 @@ type Config = {
 type LeadDev = {
   id: string; nome: string | null; motivo_perda: string | null; submotivo_perda: string | null;
   destino_perda_sugerido: string | null; observacao_perda: string | null; veiculo: string | null;
+  responsavel_id: string | null; empresa_id: string | null; atualizado_em: string | null;
 };
 type LeadFila = {
   id: string; nome: string | null; criado_em: string; cidade: string | null; uf: string | null;
@@ -41,6 +42,8 @@ function Page() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [simResult, setSimResult] = useState<{ leadId: string; nome: string; alvo: string; criterio: string }[] | null>(null);
+  const [obsDecisao, setObsDecisao] = useState<Record<string, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true); setErr(null);
@@ -54,8 +57,8 @@ function Page() {
     const [c, d, f, fr, vd, pr] = await Promise.all([
       supabase.from("distribuicao_config").select("*").eq("id", "default").maybeSingle(),
       supabase.from("leads")
-        .select("id,nome,motivo_perda,submotivo_perda,destino_perda_sugerido,observacao_perda,dados_veiculo")
-        .eq("em_avaliacao_matriz", true).limit(200),
+        .select("id,nome,motivo_perda,submotivo_perda,destino_perda_sugerido,observacao_perda,dados_veiculo,responsavel_id,empresa_id,atualizado_em")
+        .eq("em_avaliacao_matriz", true).order("atualizado_em", { ascending: false }).limit(200),
       supabase.from("leads")
         .select("id,nome,criado_em,dados,distribuido_em")
         .eq("status_pipeline", "novo").is("responsavel_id", null).is("empresa_id", null)
@@ -76,6 +79,8 @@ function Page() {
     setDevolvidos((d.data ?? []).map((x: any) => ({
       id: x.id, nome: x.nome, motivo_perda: x.motivo_perda, submotivo_perda: x.submotivo_perda,
       destino_perda_sugerido: x.destino_perda_sugerido, observacao_perda: x.observacao_perda,
+      responsavel_id: x.responsavel_id ?? null, empresa_id: x.empresa_id ?? null,
+      atualizado_em: x.atualizado_em ?? null,
       veiculo: x.dados_veiculo ? `${x.dados_veiculo.marca || ""} ${x.dados_veiculo.modelo || ""} ${x.dados_veiculo.ano || ""}`.trim() : null,
     })));
     setFila(((f.data ?? []) as any[]).map((x) => ({
@@ -125,10 +130,29 @@ function Page() {
     if (error) setErr(error.message);
   }
 
-  async function setDestinoPerda(leadId: string, decisao: "Remalho" | "Descarte") {
-    const { error } = await supabase.rpc("avaliar_perda_lead", { p_lead_id: leadId, p_decisao: decisao });
+  async function setDestinoPerda(leadId: string, decisao: "Remalho" | "Descarte" | "Reativar") {
+    setBusyId(leadId); setErr(null);
+    const obs = (obsDecisao[leadId] || "").trim() || null;
+    const { error } = await supabase.rpc("avaliar_perda_lead", {
+      p_lead_id: leadId, p_decisao: decisao, p_observacao: obs,
+    });
+    setBusyId(null);
     if (error) { setErr(error.message); return; }
+    setObsDecisao((s) => { const n = { ...s }; delete n[leadId]; return n; });
     setDevolvidos((d) => d.filter((x) => x.id !== leadId));
+    // Reativar manda o lead de volta à fila — recarrega para refletir a fila atualizada.
+    if (decisao === "Reativar") await load();
+  }
+
+  function fmtAtras(iso: string | null): string {
+    if (!iso) return "—";
+    const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+    if (s < 60) return `há ${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `há ${m}min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `há ${h}h`;
+    return `há ${Math.floor(h / 24)}d`;
   }
 
   function escolherAlvoParaLead(l: LeadFila): { alvo: string; criterio: string } {
@@ -195,32 +219,74 @@ function Page() {
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="card-h">
           <h3><svg width="16" height="16"><use href="#i-flag"></use></svg> Leads devolvidos pelos vendedores — triagem</h3>
-          <span className="small muted">{devolvidos.length} aguardando · defina remalho ou descarte</span>
+          <span className="small muted">{devolvidos.length} aguardando · Remalho, Descarte ou Reativar</span>
         </div>
         <div className="card-b">
           {devolvidos.length === 0 && <div className="muted small" style={{ padding: 6 }}>Nenhum lead devolvido aguardando triagem.</div>}
-          {devolvidos.map((l) => (
-            <div key={l.id} className="row" style={{ alignItems: "center", gap: 14, padding: "10px 0", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
-              <div style={{ minWidth: 170 }}>
-                <strong style={{ color: "var(--slate)", fontSize: 13 }}>{l.nome || "—"}</strong>
-                {l.veiculo && <div className="small muted">{l.veiculo}</div>}
+          {devolvidos.map((l) => {
+            const vendNome = l.responsavel_id ? (vendedores.find((v) => v.id === l.responsavel_id)?.nome ?? "—") : "—";
+            const franqNome = l.empresa_id ? (franquias.find((f) => f.id === l.empresa_id)?.nome ?? "—") : "—";
+            return (
+              <div key={l.id} style={{ padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+                <div className="row" style={{ alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+                  <div style={{ minWidth: 200 }}>
+                    <strong style={{ color: "var(--slate)", fontSize: 13 }}>{l.nome || "—"}</strong>
+                    {l.veiculo && <div className="small muted">{l.veiculo}</div>}
+                    <div className="small muted" style={{ marginTop: 4 }}>
+                      <svg width="11" height="11"><use href="#i-clock"></use></svg> devolvido {fmtAtras(l.atualizado_em)}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 240 }}>
+                    <div className="row" style={{ gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
+                      <span className="chip chip-slate" style={{ fontSize: 10 }}>{l.motivo_perda || "Sem motivo"}{l.submotivo_perda ? ` · ${l.submotivo_perda}` : ""}</span>
+                      {l.destino_perda_sugerido && (
+                        <span className="chip" style={{ fontSize: 10, background: l.destino_perda_sugerido === "Descarte" ? "var(--alert-soft)" : "var(--ok-soft)", color: l.destino_perda_sugerido === "Descarte" ? "var(--alert)" : "var(--ok)" }}>
+                          sugerido: {l.destino_perda_sugerido}
+                        </span>
+                      )}
+                    </div>
+                    <div className="small muted">
+                      <svg width="11" height="11"><use href="#i-user"></use></svg> {vendNome}
+                      {" · "}
+                      <svg width="11" height="11"><use href="#i-building"></use></svg> {franqNome}
+                    </div>
+                    {l.observacao_perda && (
+                      <div className="small muted" style={{ marginTop: 4 }}>
+                        <svg width="11" height="11"><use href="#i-message"></use></svg> {l.observacao_perda}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+                  <input
+                    className="input"
+                    placeholder="Observação da matriz (opcional)"
+                    value={obsDecisao[l.id] || ""}
+                    onChange={(e) => setObsDecisao((s) => ({ ...s, [l.id]: e.target.value }))}
+                    style={{ flex: 1, minWidth: 220, fontSize: 12 }}
+                    disabled={busyId === l.id}
+                  />
+                  <button className="btn btn-ghost btn-sm" disabled={busyId === l.id} onClick={() => setDestinoPerda(l.id, "Reativar")}>
+                    <svg width="12" height="12"><use href="#i-refresh"></use></svg> Reativar
+                  </button>
+                  <button className="btn btn-ghost btn-sm" disabled={busyId === l.id} onClick={() => setDestinoPerda(l.id, "Remalho")}>
+                    <svg width="12" height="12"><use href="#i-mail"></use></svg> Remalho
+                  </button>
+                  <button className="btn btn-ghost btn-sm" disabled={busyId === l.id} onClick={() => setDestinoPerda(l.id, "Descarte")}>
+                    <svg width="12" height="12"><use href="#i-trash"></use></svg> Descarte
+                  </button>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <span className="chip chip-slate" style={{ fontSize: 10 }}>{l.motivo_perda || "Sem motivo"} {l.submotivo_perda ? `· ${l.submotivo_perda}` : ""}</span>
-                {l.observacao_perda && <div className="small muted" style={{ marginTop: 4 }}><svg width="11" height="11"><use href="#i-message"></use></svg> {l.observacao_perda}</div>}
-              </div>
-              <div className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                {l.destino_perda_sugerido && (
-                  <span className="small muted">sugerido: <strong style={{ color: l.destino_perda_sugerido === "Descarte" ? "var(--alert)" : "var(--ok)" }}>{l.destino_perda_sugerido}</strong></span>
-                )}
-                <button className="btn btn-ghost btn-sm" onClick={() => setDestinoPerda(l.id, "Remalho")}><svg width="12" height="12"><use href="#i-refresh"></use></svg> Remalho</button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setDestinoPerda(l.id, "Descarte")}><svg width="12" height="12"><use href="#i-trash"></use></svg> Descarte</button>
-              </div>
-            </div>
-          ))}
-          <div className="audit-note" style={{ marginTop: 12 }}><svg width="16" height="16"><use href="#i-info"></use></svg> O motivo pode virar <strong style={{ margin: "0 4px" }}>regra de distribuição</strong>.</div>
+            );
+          })}
+          <div className="audit-note" style={{ marginTop: 12 }}>
+            <svg width="16" height="16"><use href="#i-info"></use></svg>
+            <strong style={{ margin: "0 4px" }}>Reativar</strong> devolve o lead à fila de distribuição.
+            <strong style={{ margin: "0 4px" }}>Remalho</strong> e <strong style={{ margin: "0 4px" }}>Descarte</strong> encerram o lead — a decisão fica registrada no histórico.
+          </div>
         </div>
       </div>
+
 
       {/* MASTER */}
       <div className="card card-yellow" style={{ marginBottom: 18 }}>
