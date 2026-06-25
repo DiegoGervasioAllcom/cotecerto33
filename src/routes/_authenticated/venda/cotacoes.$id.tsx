@@ -234,7 +234,7 @@ function Page() {
                     <div className="ins-actions">
                       <Link to="/venda/propostas" className="btn btn-yellow">Gerar proposta</Link>
                       <button className="btn btn-ghost" type="button">Enviar</button>
-                      <button className="btn btn-ghost" type="button" onClick={() => window.print()}>Imprimir</button>
+                      <button className="btn btn-ghost" type="button" onClick={() => doPrint(o.seguradora)}>Imprimir</button>
                     </div>
                   </td>
                 ))}
