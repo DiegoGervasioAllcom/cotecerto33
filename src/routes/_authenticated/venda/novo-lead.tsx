@@ -518,9 +518,21 @@ function Page() {
                 </div>
                 <div className="field-group">
                   <label>Tipo de cálculo</label>
-                  <select className="input" value={f.tipoCalculo} onChange={(e) => up("tipoCalculo", e.target.value)}>
-                    {["Anual","Bianual","Trianual","Quadrianual","Quinquenal","Plurianual","Prazo curto"].map((o) => <option key={o}>{o}</option>)}
-                  </select>
+                  <select className="input" value={f.tipoCalculo} onChange={(e) => {
+                    const tc = e.target.value;
+                    const yearsMap: Record<string, number> = { "Anual": 1, "Bianual": 2, "Trianual": 3, "Quadrianual": 4, "Quinquenal": 5 };
+                    const add = yearsMap[tc];
+                    let fim = f.vigFim;
+                    if (f.vigIni && add) {
+                      const d = new Date(f.vigIni + "T00:00:00");
+                      d.setFullYear(d.getFullYear() + add);
+                      d.setDate(d.getDate() - 1);
+                      fim = d.toISOString().slice(0, 10);
+                    }
+                    setF((s) => ({ ...s, tipoCalculo: tc, vigFim: fim }));
+                  }}>
+                     {["Anual","Bianual","Trianual","Quadrianual","Quinquenal","Plurianual","Prazo curto"].map((o) => <option key={o}>{o}</option>)}
+                   </select>
                 </div>
                 <div className="field-group">
                   <label>Tipo de cobertura</label>
