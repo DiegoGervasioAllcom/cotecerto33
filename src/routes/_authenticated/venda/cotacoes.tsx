@@ -95,9 +95,10 @@ function Page() {
 
       {!loading && filtered.length === 0 && (
         <div className="card">
-          <div className="card-b" style={{ padding: 40, textAlign: "center" }} className="muted">
+          <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
             Nenhuma cotação encontrada.
           </div>
+
         </div>
       )}
 
