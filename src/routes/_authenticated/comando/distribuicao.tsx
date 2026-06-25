@@ -77,7 +77,10 @@ function Page() {
       destino_perda_sugerido: x.destino_perda_sugerido, observacao_perda: x.observacao_perda,
       veiculo: x.dados_veiculo ? `${x.dados_veiculo.marca || ""} ${x.dados_veiculo.modelo || ""} ${x.dados_veiculo.ano || ""}`.trim() : null,
     })));
-    setFila((f.data ?? []) as LeadFila[]);
+    setFila(((f.data ?? []) as any[]).map((x) => ({
+      id: x.id, nome: x.nome, criado_em: x.criado_em, distribuido_em: x.distribuido_em,
+      cidade: x.dados?.cidade ?? null, uf: x.dados?.uf ?? null,
+    })));
     setFranquias(((fr.data ?? []) as any[]).filter((e) => e.id !== mId && e.status === "aprovada").map((e) => ({
       id: e.id, nome: e.nome, cidade: e.cidade, uf: e.uf,
     })));
