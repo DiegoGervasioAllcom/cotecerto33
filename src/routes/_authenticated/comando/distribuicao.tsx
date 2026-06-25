@@ -130,10 +130,29 @@ function Page() {
     if (error) setErr(error.message);
   }
 
-  async function setDestinoPerda(leadId: string, decisao: "Remalho" | "Descarte") {
-    const { error } = await supabase.rpc("avaliar_perda_lead", { p_lead_id: leadId, p_decisao: decisao });
+  async function setDestinoPerda(leadId: string, decisao: "Remalho" | "Descarte" | "Reativar") {
+    setBusyId(leadId); setErr(null);
+    const obs = (obsDecisao[leadId] || "").trim() || null;
+    const { error } = await supabase.rpc("avaliar_perda_lead", {
+      p_lead_id: leadId, p_decisao: decisao, p_observacao: obs,
+    });
+    setBusyId(null);
     if (error) { setErr(error.message); return; }
+    setObsDecisao((s) => { const n = { ...s }; delete n[leadId]; return n; });
     setDevolvidos((d) => d.filter((x) => x.id !== leadId));
+    // Reativar manda o lead de volta à fila — recarrega para refletir a fila atualizada.
+    if (decisao === "Reativar") await load();
+  }
+
+  function fmtAtras(iso: string | null): string {
+    if (!iso) return "—";
+    const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+    if (s < 60) return `há ${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `há ${m}min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `há ${h}h`;
+    return `há ${Math.floor(h / 24)}d`;
   }
 
   function escolherAlvoParaLead(l: LeadFila): { alvo: string; criterio: string } {
