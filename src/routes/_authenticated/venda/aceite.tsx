@@ -99,7 +99,16 @@ function Page() {
 
       <div style={{ display: "grid", gap: 12 }}>
         {rows.map((r) => (
-          <div key={r.id} className="card">
+          <div
+            key={r.id}
+            ref={(el) => { cardRefs.current[r.id] = el; }}
+            className="card"
+            style={
+              selected === r.id
+                ? { outline: "2px solid var(--brand, #2563eb)" }
+                : undefined
+            }
+          >
             <div className="card-h">
               <div>
                 <strong>{r.numero}</strong>{" "}
