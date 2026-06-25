@@ -103,6 +103,7 @@ function Page() {
       if (emi.error) setErr(emi.error.message);
       setEmitidas((emi.data ?? []) as Proposta[]);
       setEstornadas((est.data ?? []) as Proposta[]);
+      setLancs((lan.data ?? []) as Lanc[]);
       const em: Record<string, Empresa> = {};
       for (const e of (emps.data ?? []) as Empresa[]) em[e.id] = e;
       setEmpresas(em);
