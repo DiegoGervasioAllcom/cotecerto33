@@ -348,12 +348,17 @@ function Page() {
                   </td>
                   <td>
                     <div className="row-actions" style={{ justifyContent: "flex-end", gap: 4, flexWrap: "nowrap" }}>
-                      {!l.bloqueado && !l.distribuido && !isPerdido && !isFechado && (
+                      {!l.bloqueado && !l.distribuido && !isFechado && !isPerdido && (
                         <button className="ic-mini" title="Distribuir" onClick={() => setModal({ kind: "redist", lead: l })}>
                           <svg width="14" height="14"><use href="#i-share"></use></svg>
                         </button>
                       )}
-                      {!l.bloqueado && l.distribuido && !isFechado && (
+                      {!l.bloqueado && isPerdido && (
+                        <button className="ic-mini" title="Reativar e distribuir" onClick={() => setModal({ kind: "redist", lead: l })}>
+                          <svg width="14" height="14"><use href="#i-share"></use></svg>
+                        </button>
+                      )}
+                      {!l.bloqueado && l.distribuido && !isFechado && !isPerdido && (
                         <button className="ic-mini" title="Redistribuir" onClick={() => setModal({ kind: "redist", lead: l })}>
                           <svg width="14" height="14"><use href="#i-refresh"></use></svg>
                         </button>
