@@ -2,9 +2,9 @@
 -- 007: Cotações (wizard Novo Lead) — tabelas dedicadas
 -- ============================================================
 
-create type if not exists public.cotacao_status as enum (
-  'rascunho','calculada','proposta','aceita','perdida'
-);
+do $$ begin
+  create type public.cotacao_status as enum ('rascunho','calculada','proposta','aceita','perdida');
+exception when duplicate_object then null; end $$;
 
 -- ---------- COTAÇÕES (núcleo) ----------
 create table if not exists public.cotacoes (
