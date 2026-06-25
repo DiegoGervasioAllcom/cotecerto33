@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 
-export const Route = createFileRoute("/auth")({
+export const Route = createFileRoute("/auth/")({
   head: () => ({
     meta: [{ title: "Entrar · CoteCerto" }],
   }),

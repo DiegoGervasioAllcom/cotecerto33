@@ -9,9 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthIndexRouteImport } from './routes/auth.index'
 import { Route as AuthPendenteRouteImport } from './routes/auth.pendente'
 import { Route as AuthCadastroRouteImport } from './routes/auth.cadastro'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
@@ -40,11 +40,6 @@ import { Route as AuthenticatedComandoVisaoGeralRouteImport } from './routes/_au
 import { Route as AuthenticatedComandoLeadsRouteImport } from './routes/_authenticated/comando/leads'
 import { Route as AuthenticatedComandoDistribuicaoRouteImport } from './routes/_authenticated/comando/distribuicao'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -54,15 +49,20 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthIndexRoute = AuthIndexRouteImport.update({
+  id: '/auth/',
+  path: '/auth/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthPendenteRoute = AuthPendenteRouteImport.update({
-  id: '/pendente',
-  path: '/pendente',
-  getParentRoute: () => AuthRoute,
+  id: '/auth/pendente',
+  path: '/auth/pendente',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCadastroRoute = AuthCadastroRouteImport.update({
-  id: '/cadastro',
-  path: '/cadastro',
-  getParentRoute: () => AuthRoute,
+  id: '/auth/cadastro',
+  path: '/auth/cadastro',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedInicioRoute = AuthenticatedInicioRouteImport.update({
   id: '/inicio',
@@ -216,10 +216,10 @@ const AuthenticatedComandoDistribuicaoRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteWithChildren
   '/inicio': typeof AuthenticatedInicioRoute
   '/auth/cadastro': typeof AuthCadastroRoute
   '/auth/pendente': typeof AuthPendenteRoute
+  '/auth/': typeof AuthIndexRoute
   '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
   '/comando/leads': typeof AuthenticatedComandoLeadsRoute
   '/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
@@ -247,10 +247,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteWithChildren
   '/inicio': typeof AuthenticatedInicioRoute
   '/auth/cadastro': typeof AuthCadastroRoute
   '/auth/pendente': typeof AuthPendenteRoute
+  '/auth': typeof AuthIndexRoute
   '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
   '/comando/leads': typeof AuthenticatedComandoLeadsRoute
   '/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
@@ -280,10 +280,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/auth': typeof AuthRouteWithChildren
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/auth/cadastro': typeof AuthCadastroRoute
   '/auth/pendente': typeof AuthPendenteRoute
+  '/auth/': typeof AuthIndexRoute
   '/_authenticated/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
   '/_authenticated/comando/leads': typeof AuthenticatedComandoLeadsRoute
   '/_authenticated/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
@@ -313,10 +313,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/auth'
     | '/inicio'
     | '/auth/cadastro'
     | '/auth/pendente'
+    | '/auth/'
     | '/comando/distribuicao'
     | '/comando/leads'
     | '/comando/visao-geral'
@@ -344,10 +344,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/auth'
     | '/inicio'
     | '/auth/cadastro'
     | '/auth/pendente'
+    | '/auth'
     | '/comando/distribuicao'
     | '/comando/leads'
     | '/comando/visao-geral'
@@ -376,10 +376,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
-    | '/auth'
     | '/_authenticated/inicio'
     | '/auth/cadastro'
     | '/auth/pendente'
+    | '/auth/'
     | '/_authenticated/comando/distribuicao'
     | '/_authenticated/comando/leads'
     | '/_authenticated/comando/visao-geral'
@@ -409,18 +409,13 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  AuthRoute: typeof AuthRouteWithChildren
+  AuthCadastroRoute: typeof AuthCadastroRoute
+  AuthPendenteRoute: typeof AuthPendenteRoute
+  AuthIndexRoute: typeof AuthIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -435,19 +430,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/': {
+      id: '/auth/'
+      path: '/auth'
+      fullPath: '/auth/'
+      preLoaderRoute: typeof AuthIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/pendente': {
       id: '/auth/pendente'
-      path: '/pendente'
+      path: '/auth/pendente'
       fullPath: '/auth/pendente'
       preLoaderRoute: typeof AuthPendenteRouteImport
-      parentRoute: typeof AuthRoute
+      parentRoute: typeof rootRouteImport
     }
     '/auth/cadastro': {
       id: '/auth/cadastro'
-      path: '/cadastro'
+      path: '/auth/cadastro'
       fullPath: '/auth/cadastro'
       preLoaderRoute: typeof AuthCadastroRouteImport
-      parentRoute: typeof AuthRoute
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/inicio': {
       id: '/_authenticated/inicio'
@@ -689,22 +691,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
-interface AuthRouteChildren {
-  AuthCadastroRoute: typeof AuthCadastroRoute
-  AuthPendenteRoute: typeof AuthPendenteRoute
-}
-
-const AuthRouteChildren: AuthRouteChildren = {
-  AuthCadastroRoute: AuthCadastroRoute,
-  AuthPendenteRoute: AuthPendenteRoute,
-}
-
-const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AuthRoute: AuthRouteWithChildren,
+  AuthCadastroRoute: AuthCadastroRoute,
+  AuthPendenteRoute: AuthPendenteRoute,
+  AuthIndexRoute: AuthIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
