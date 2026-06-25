@@ -167,6 +167,9 @@ function Page() {
         tipo_seguro: f.tipoSeguro, ramo: f.ramo, categoria: f.categoria,
         vig_ini: f.vigIni, vig_fim: f.vigFim,
         cia_atual: f.ciaAtual, apolice_atual: f.apoliceAtual, ci_atual: f.ciAtual, classe_bonus: f.classeBonus,
+        seguradoras_sel: f.seguradorasSel,
+        tipo_calculo: f.tipoCalculo, tipo_cobertura: f.tipoCobertura,
+        grupo_producao: f.grupoProducao, campanha: f.campanha, observacoes: f.observacoesCot,
       },
       veiculo: {
         placa: f.placa, chassi: f.chassi, renavam: f.renavam,
