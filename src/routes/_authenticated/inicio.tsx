@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
@@ -39,7 +39,8 @@ interface DashData {
 }
 
 function Page() {
-  const { profile, session } = useAuth();
+  const { profile, session, role } = useAuth();
+  if (role === "matriz") return <Navigate to="/comando/visao-geral" />;
   const [d, setD] = useState<DashData | null>(null);
   const [loading, setLoading] = useState(true);
 
