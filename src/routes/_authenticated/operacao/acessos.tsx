@@ -353,49 +353,23 @@ function Page() {
       )}
 
       {tab === "modelos" && (
-        <div className="card">
-          <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
-            <table className="table-pipe">
-              <thead>
-                <tr>
-                  <th>Modelo</th>
-                  <th>Tipo</th>
-                  <th>Comissão padrão</th>
-                  <th>Descrição</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {modelos.length === 0 && (
-                  <tr>
-                    <td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}>
-                      Nenhum modelo cadastrado.
-                    </td>
-                  </tr>
-                )}
-                {modelos.map((m) => (
-                  <tr key={m.id}>
-                    <td><strong>{m.nome}</strong></td>
-                    <td>
-                      <span className="chip chip-slate">
-                        {m.tipo === "clt" ? "CLT" : "Franqueada"}
-                      </span>
-                    </td>
-                    <td><strong>{Number(m.perc_comissao_padrao).toFixed(2)}%</strong></td>
-                    <td>{m.descricao ?? "—"}</td>
-                    <td>
-                      {m.ativo ? (
-                        <span className="chip chip-ok">Ativo</span>
-                      ) : (
-                        <span className="chip chip-alert">Inativo</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <PersoGeral
+          sub={persoSub}
+          setSub={setPersoSub}
+          modelos={modelos.filter((m) => m.tipo === "franqueada")}
+          setModelos={(updater) =>
+            setModelos((prev) => {
+              const fran = prev.filter((m) => m.tipo === "franqueada");
+              const next = typeof updater === "function" ? updater(fran) : updater;
+              return [...next, ...prev.filter((m) => m.tipo !== "franqueada")];
+            })
+          }
+          clt={clt}
+          setClt={setClt}
+          onToast={(msg, kind) => setToast({ msg, kind })}
+          onError={(e) => setErr(e)}
+          reload={reload}
+        />
       )}
 
       {analisando && (
