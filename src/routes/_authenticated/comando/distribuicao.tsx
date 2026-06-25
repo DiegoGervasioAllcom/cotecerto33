@@ -115,6 +115,10 @@ function Page() {
       automatico_on: next.automatico_on, modo: next.modo,
       criterios: next.criterios, sla_segundos: next.sla_segundos,
     }).eq("id", "default");
+    if (!error && next.automatico_on) {
+      const { data: n } = await supabase.rpc("distribuir_fila_pendente");
+      if (typeof n === "number" && n > 0) await load();
+    }
     setSaving(false);
     if (error) setErr(error.message);
   }
