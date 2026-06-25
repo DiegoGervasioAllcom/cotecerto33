@@ -1152,12 +1152,21 @@ function toTrio(x: unknown): Trio {
 }
 
 function DynamicTrioCard({
-  title, icon, lh, vh, rows, onChange,
+  title, icon, lh, vh, rows, onChange, valueMask,
 }: {
   title: string; icon: string; lh: string; vh: string;
   rows: Trio[]; onChange: (rows: Trio[]) => void;
+  valueMask?: Mask;
 }) {
   function patch(i: number, k: 0 | 1 | 2, v: string) {
+    const masked = k === 2 ? applyMask(v, valueMask) : v;
+    onChange(rows.map((x, j) => {
+      if (j !== i) return x;
+      const n: Trio = [x[0], x[1], x[2]];
+      n[k] = masked;
+      return n;
+    }));
+  }
     onChange(rows.map((x, j) => {
       if (j !== i) return x;
       const n: Trio = [x[0], x[1], x[2]];
