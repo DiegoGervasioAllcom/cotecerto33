@@ -3,9 +3,18 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 const FALLBACK_SUPABASE_URL = "https://missing-supabase-url.invalid";
 const FALLBACK_SUPABASE_KEY = "missing-supabase-anon-key";
 
-const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? "").trim();
+// Self-hosted Supabase — anon key é publishable, ok no bundle do cliente.
+const DEFAULT_SUPABASE_URL = "https://supabase-cotecerto.sandboxallcom.com";
+const DEFAULT_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc2NzE2MjYyLCJleHAiOjE5MzQzOTYyNjJ9.6DLaG_KS4JoehbSWS4NcLBJqd7UiAD3IE2oyHqhv5rQ";
+
+const SUPABASE_URL = String(
+  import.meta.env.VITE_SUPABASE_URL ?? DEFAULT_SUPABASE_URL,
+).trim();
 const SUPABASE_ANON_KEY = String(
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
+  import.meta.env.VITE_SUPABASE_ANON_KEY ??
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+    DEFAULT_SUPABASE_ANON_KEY,
 ).trim();
 
 function isHttpUrl(value: string) {
