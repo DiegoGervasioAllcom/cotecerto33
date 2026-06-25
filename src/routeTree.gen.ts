@@ -9,38 +9,425 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthPendenteRouteImport } from './routes/auth.pendente'
+import { Route as AuthCadastroRouteImport } from './routes/auth.cadastro'
+import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
+import { Route as AuthenticatedVendaPropostasRouteImport } from './routes/_authenticated/venda/propostas'
+import { Route as AuthenticatedVendaPipelineRouteImport } from './routes/_authenticated/venda/pipeline'
+import { Route as AuthenticatedVendaNovoLeadRouteImport } from './routes/_authenticated/venda/novo-lead'
+import { Route as AuthenticatedVendaMensagensProntasRouteImport } from './routes/_authenticated/venda/mensagens-prontas'
+import { Route as AuthenticatedVendaExtratoRouteImport } from './routes/_authenticated/venda/extrato'
+import { Route as AuthenticatedVendaCotacoesRouteImport } from './routes/_authenticated/venda/cotacoes'
+import { Route as AuthenticatedVendaAtenderRouteImport } from './routes/_authenticated/venda/atender'
+import { Route as AuthenticatedVendaAceiteRouteImport } from './routes/_authenticated/venda/aceite'
+import { Route as AuthenticatedOperacaoVendedoresRouteImport } from './routes/_authenticated/operacao/vendedores'
+import { Route as AuthenticatedOperacaoVendasRouteImport } from './routes/_authenticated/operacao/vendas'
+import { Route as AuthenticatedOperacaoSupervisaoRouteImport } from './routes/_authenticated/operacao/supervisao'
+import { Route as AuthenticatedOperacaoRenovacoesRouteImport } from './routes/_authenticated/operacao/renovacoes'
+import { Route as AuthenticatedOperacaoRelatoriosRouteImport } from './routes/_authenticated/operacao/relatorios'
+import { Route as AuthenticatedOperacaoPremiacoesRouteImport } from './routes/_authenticated/operacao/premiacoes'
+import { Route as AuthenticatedOperacaoPipelineGeralRouteImport } from './routes/_authenticated/operacao/pipeline-geral'
+import { Route as AuthenticatedOperacaoMensagensRouteImport } from './routes/_authenticated/operacao/mensagens'
+import { Route as AuthenticatedOperacaoFranquiasRouteImport } from './routes/_authenticated/operacao/franquias'
+import { Route as AuthenticatedOperacaoEstornosRouteImport } from './routes/_authenticated/operacao/estornos'
+import { Route as AuthenticatedOperacaoConfiguracoesRouteImport } from './routes/_authenticated/operacao/configuracoes'
+import { Route as AuthenticatedOperacaoComissoesRouteImport } from './routes/_authenticated/operacao/comissoes'
+import { Route as AuthenticatedOperacaoAcessosRouteImport } from './routes/_authenticated/operacao/acessos'
+import { Route as AuthenticatedComandoVisaoGeralRouteImport } from './routes/_authenticated/comando/visao-geral'
+import { Route as AuthenticatedComandoLeadsRouteImport } from './routes/_authenticated/comando/leads'
+import { Route as AuthenticatedComandoDistribuicaoRouteImport } from './routes/_authenticated/comando/distribuicao'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthPendenteRoute = AuthPendenteRouteImport.update({
+  id: '/pendente',
+  path: '/pendente',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthCadastroRoute = AuthCadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthenticatedInicioRoute = AuthenticatedInicioRouteImport.update({
+  id: '/inicio',
+  path: '/inicio',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVendaPropostasRoute =
+  AuthenticatedVendaPropostasRouteImport.update({
+    id: '/venda/propostas',
+    path: '/venda/propostas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVendaPipelineRoute =
+  AuthenticatedVendaPipelineRouteImport.update({
+    id: '/venda/pipeline',
+    path: '/venda/pipeline',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVendaNovoLeadRoute =
+  AuthenticatedVendaNovoLeadRouteImport.update({
+    id: '/venda/novo-lead',
+    path: '/venda/novo-lead',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVendaMensagensProntasRoute =
+  AuthenticatedVendaMensagensProntasRouteImport.update({
+    id: '/venda/mensagens-prontas',
+    path: '/venda/mensagens-prontas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVendaExtratoRoute =
+  AuthenticatedVendaExtratoRouteImport.update({
+    id: '/venda/extrato',
+    path: '/venda/extrato',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVendaCotacoesRoute =
+  AuthenticatedVendaCotacoesRouteImport.update({
+    id: '/venda/cotacoes',
+    path: '/venda/cotacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVendaAtenderRoute =
+  AuthenticatedVendaAtenderRouteImport.update({
+    id: '/venda/atender',
+    path: '/venda/atender',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVendaAceiteRoute =
+  AuthenticatedVendaAceiteRouteImport.update({
+    id: '/venda/aceite',
+    path: '/venda/aceite',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoVendedoresRoute =
+  AuthenticatedOperacaoVendedoresRouteImport.update({
+    id: '/operacao/vendedores',
+    path: '/operacao/vendedores',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoVendasRoute =
+  AuthenticatedOperacaoVendasRouteImport.update({
+    id: '/operacao/vendas',
+    path: '/operacao/vendas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoSupervisaoRoute =
+  AuthenticatedOperacaoSupervisaoRouteImport.update({
+    id: '/operacao/supervisao',
+    path: '/operacao/supervisao',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoRenovacoesRoute =
+  AuthenticatedOperacaoRenovacoesRouteImport.update({
+    id: '/operacao/renovacoes',
+    path: '/operacao/renovacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoRelatoriosRoute =
+  AuthenticatedOperacaoRelatoriosRouteImport.update({
+    id: '/operacao/relatorios',
+    path: '/operacao/relatorios',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoPremiacoesRoute =
+  AuthenticatedOperacaoPremiacoesRouteImport.update({
+    id: '/operacao/premiacoes',
+    path: '/operacao/premiacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoPipelineGeralRoute =
+  AuthenticatedOperacaoPipelineGeralRouteImport.update({
+    id: '/operacao/pipeline-geral',
+    path: '/operacao/pipeline-geral',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoMensagensRoute =
+  AuthenticatedOperacaoMensagensRouteImport.update({
+    id: '/operacao/mensagens',
+    path: '/operacao/mensagens',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoFranquiasRoute =
+  AuthenticatedOperacaoFranquiasRouteImport.update({
+    id: '/operacao/franquias',
+    path: '/operacao/franquias',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoEstornosRoute =
+  AuthenticatedOperacaoEstornosRouteImport.update({
+    id: '/operacao/estornos',
+    path: '/operacao/estornos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoConfiguracoesRoute =
+  AuthenticatedOperacaoConfiguracoesRouteImport.update({
+    id: '/operacao/configuracoes',
+    path: '/operacao/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoComissoesRoute =
+  AuthenticatedOperacaoComissoesRouteImport.update({
+    id: '/operacao/comissoes',
+    path: '/operacao/comissoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoAcessosRoute =
+  AuthenticatedOperacaoAcessosRouteImport.update({
+    id: '/operacao/acessos',
+    path: '/operacao/acessos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedComandoVisaoGeralRoute =
+  AuthenticatedComandoVisaoGeralRouteImport.update({
+    id: '/comando/visao-geral',
+    path: '/comando/visao-geral',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedComandoLeadsRoute =
+  AuthenticatedComandoLeadsRouteImport.update({
+    id: '/comando/leads',
+    path: '/comando/leads',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedComandoDistribuicaoRoute =
+  AuthenticatedComandoDistribuicaoRouteImport.update({
+    id: '/comando/distribuicao',
+    path: '/comando/distribuicao',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRouteWithChildren
+  '/inicio': typeof AuthenticatedInicioRoute
+  '/auth/cadastro': typeof AuthCadastroRoute
+  '/auth/pendente': typeof AuthPendenteRoute
+  '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
+  '/comando/leads': typeof AuthenticatedComandoLeadsRoute
+  '/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
+  '/operacao/acessos': typeof AuthenticatedOperacaoAcessosRoute
+  '/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
+  '/operacao/configuracoes': typeof AuthenticatedOperacaoConfiguracoesRoute
+  '/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
+  '/operacao/franquias': typeof AuthenticatedOperacaoFranquiasRoute
+  '/operacao/mensagens': typeof AuthenticatedOperacaoMensagensRoute
+  '/operacao/pipeline-geral': typeof AuthenticatedOperacaoPipelineGeralRoute
+  '/operacao/premiacoes': typeof AuthenticatedOperacaoPremiacoesRoute
+  '/operacao/relatorios': typeof AuthenticatedOperacaoRelatoriosRoute
+  '/operacao/renovacoes': typeof AuthenticatedOperacaoRenovacoesRoute
+  '/operacao/supervisao': typeof AuthenticatedOperacaoSupervisaoRoute
+  '/operacao/vendas': typeof AuthenticatedOperacaoVendasRoute
+  '/operacao/vendedores': typeof AuthenticatedOperacaoVendedoresRoute
+  '/venda/aceite': typeof AuthenticatedVendaAceiteRoute
+  '/venda/atender': typeof AuthenticatedVendaAtenderRoute
+  '/venda/cotacoes': typeof AuthenticatedVendaCotacoesRoute
+  '/venda/extrato': typeof AuthenticatedVendaExtratoRoute
+  '/venda/mensagens-prontas': typeof AuthenticatedVendaMensagensProntasRoute
+  '/venda/novo-lead': typeof AuthenticatedVendaNovoLeadRoute
+  '/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
+  '/venda/propostas': typeof AuthenticatedVendaPropostasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRouteWithChildren
+  '/inicio': typeof AuthenticatedInicioRoute
+  '/auth/cadastro': typeof AuthCadastroRoute
+  '/auth/pendente': typeof AuthPendenteRoute
+  '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
+  '/comando/leads': typeof AuthenticatedComandoLeadsRoute
+  '/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
+  '/operacao/acessos': typeof AuthenticatedOperacaoAcessosRoute
+  '/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
+  '/operacao/configuracoes': typeof AuthenticatedOperacaoConfiguracoesRoute
+  '/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
+  '/operacao/franquias': typeof AuthenticatedOperacaoFranquiasRoute
+  '/operacao/mensagens': typeof AuthenticatedOperacaoMensagensRoute
+  '/operacao/pipeline-geral': typeof AuthenticatedOperacaoPipelineGeralRoute
+  '/operacao/premiacoes': typeof AuthenticatedOperacaoPremiacoesRoute
+  '/operacao/relatorios': typeof AuthenticatedOperacaoRelatoriosRoute
+  '/operacao/renovacoes': typeof AuthenticatedOperacaoRenovacoesRoute
+  '/operacao/supervisao': typeof AuthenticatedOperacaoSupervisaoRoute
+  '/operacao/vendas': typeof AuthenticatedOperacaoVendasRoute
+  '/operacao/vendedores': typeof AuthenticatedOperacaoVendedoresRoute
+  '/venda/aceite': typeof AuthenticatedVendaAceiteRoute
+  '/venda/atender': typeof AuthenticatedVendaAtenderRoute
+  '/venda/cotacoes': typeof AuthenticatedVendaCotacoesRoute
+  '/venda/extrato': typeof AuthenticatedVendaExtratoRoute
+  '/venda/mensagens-prontas': typeof AuthenticatedVendaMensagensProntasRoute
+  '/venda/novo-lead': typeof AuthenticatedVendaNovoLeadRoute
+  '/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
+  '/venda/propostas': typeof AuthenticatedVendaPropostasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRouteWithChildren
+  '/_authenticated/inicio': typeof AuthenticatedInicioRoute
+  '/auth/cadastro': typeof AuthCadastroRoute
+  '/auth/pendente': typeof AuthPendenteRoute
+  '/_authenticated/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
+  '/_authenticated/comando/leads': typeof AuthenticatedComandoLeadsRoute
+  '/_authenticated/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
+  '/_authenticated/operacao/acessos': typeof AuthenticatedOperacaoAcessosRoute
+  '/_authenticated/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
+  '/_authenticated/operacao/configuracoes': typeof AuthenticatedOperacaoConfiguracoesRoute
+  '/_authenticated/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
+  '/_authenticated/operacao/franquias': typeof AuthenticatedOperacaoFranquiasRoute
+  '/_authenticated/operacao/mensagens': typeof AuthenticatedOperacaoMensagensRoute
+  '/_authenticated/operacao/pipeline-geral': typeof AuthenticatedOperacaoPipelineGeralRoute
+  '/_authenticated/operacao/premiacoes': typeof AuthenticatedOperacaoPremiacoesRoute
+  '/_authenticated/operacao/relatorios': typeof AuthenticatedOperacaoRelatoriosRoute
+  '/_authenticated/operacao/renovacoes': typeof AuthenticatedOperacaoRenovacoesRoute
+  '/_authenticated/operacao/supervisao': typeof AuthenticatedOperacaoSupervisaoRoute
+  '/_authenticated/operacao/vendas': typeof AuthenticatedOperacaoVendasRoute
+  '/_authenticated/operacao/vendedores': typeof AuthenticatedOperacaoVendedoresRoute
+  '/_authenticated/venda/aceite': typeof AuthenticatedVendaAceiteRoute
+  '/_authenticated/venda/atender': typeof AuthenticatedVendaAtenderRoute
+  '/_authenticated/venda/cotacoes': typeof AuthenticatedVendaCotacoesRoute
+  '/_authenticated/venda/extrato': typeof AuthenticatedVendaExtratoRoute
+  '/_authenticated/venda/mensagens-prontas': typeof AuthenticatedVendaMensagensProntasRoute
+  '/_authenticated/venda/novo-lead': typeof AuthenticatedVendaNovoLeadRoute
+  '/_authenticated/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
+  '/_authenticated/venda/propostas': typeof AuthenticatedVendaPropostasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/inicio'
+    | '/auth/cadastro'
+    | '/auth/pendente'
+    | '/comando/distribuicao'
+    | '/comando/leads'
+    | '/comando/visao-geral'
+    | '/operacao/acessos'
+    | '/operacao/comissoes'
+    | '/operacao/configuracoes'
+    | '/operacao/estornos'
+    | '/operacao/franquias'
+    | '/operacao/mensagens'
+    | '/operacao/pipeline-geral'
+    | '/operacao/premiacoes'
+    | '/operacao/relatorios'
+    | '/operacao/renovacoes'
+    | '/operacao/supervisao'
+    | '/operacao/vendas'
+    | '/operacao/vendedores'
+    | '/venda/aceite'
+    | '/venda/atender'
+    | '/venda/cotacoes'
+    | '/venda/extrato'
+    | '/venda/mensagens-prontas'
+    | '/venda/novo-lead'
+    | '/venda/pipeline'
+    | '/venda/propostas'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/inicio'
+    | '/auth/cadastro'
+    | '/auth/pendente'
+    | '/comando/distribuicao'
+    | '/comando/leads'
+    | '/comando/visao-geral'
+    | '/operacao/acessos'
+    | '/operacao/comissoes'
+    | '/operacao/configuracoes'
+    | '/operacao/estornos'
+    | '/operacao/franquias'
+    | '/operacao/mensagens'
+    | '/operacao/pipeline-geral'
+    | '/operacao/premiacoes'
+    | '/operacao/relatorios'
+    | '/operacao/renovacoes'
+    | '/operacao/supervisao'
+    | '/operacao/vendas'
+    | '/operacao/vendedores'
+    | '/venda/aceite'
+    | '/venda/atender'
+    | '/venda/cotacoes'
+    | '/venda/extrato'
+    | '/venda/mensagens-prontas'
+    | '/venda/novo-lead'
+    | '/venda/pipeline'
+    | '/venda/propostas'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/inicio'
+    | '/auth/cadastro'
+    | '/auth/pendente'
+    | '/_authenticated/comando/distribuicao'
+    | '/_authenticated/comando/leads'
+    | '/_authenticated/comando/visao-geral'
+    | '/_authenticated/operacao/acessos'
+    | '/_authenticated/operacao/comissoes'
+    | '/_authenticated/operacao/configuracoes'
+    | '/_authenticated/operacao/estornos'
+    | '/_authenticated/operacao/franquias'
+    | '/_authenticated/operacao/mensagens'
+    | '/_authenticated/operacao/pipeline-geral'
+    | '/_authenticated/operacao/premiacoes'
+    | '/_authenticated/operacao/relatorios'
+    | '/_authenticated/operacao/renovacoes'
+    | '/_authenticated/operacao/supervisao'
+    | '/_authenticated/operacao/vendas'
+    | '/_authenticated/operacao/vendedores'
+    | '/_authenticated/venda/aceite'
+    | '/_authenticated/venda/atender'
+    | '/_authenticated/venda/cotacoes'
+    | '/_authenticated/venda/extrato'
+    | '/_authenticated/venda/mensagens-prontas'
+    | '/_authenticated/venda/novo-lead'
+    | '/_authenticated/venda/pipeline'
+    | '/_authenticated/venda/propostas'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +435,277 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/pendente': {
+      id: '/auth/pendente'
+      path: '/pendente'
+      fullPath: '/auth/pendente'
+      preLoaderRoute: typeof AuthPendenteRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/cadastro': {
+      id: '/auth/cadastro'
+      path: '/cadastro'
+      fullPath: '/auth/cadastro'
+      preLoaderRoute: typeof AuthCadastroRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_authenticated/inicio': {
+      id: '/_authenticated/inicio'
+      path: '/inicio'
+      fullPath: '/inicio'
+      preLoaderRoute: typeof AuthenticatedInicioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/propostas': {
+      id: '/_authenticated/venda/propostas'
+      path: '/venda/propostas'
+      fullPath: '/venda/propostas'
+      preLoaderRoute: typeof AuthenticatedVendaPropostasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/pipeline': {
+      id: '/_authenticated/venda/pipeline'
+      path: '/venda/pipeline'
+      fullPath: '/venda/pipeline'
+      preLoaderRoute: typeof AuthenticatedVendaPipelineRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/novo-lead': {
+      id: '/_authenticated/venda/novo-lead'
+      path: '/venda/novo-lead'
+      fullPath: '/venda/novo-lead'
+      preLoaderRoute: typeof AuthenticatedVendaNovoLeadRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/mensagens-prontas': {
+      id: '/_authenticated/venda/mensagens-prontas'
+      path: '/venda/mensagens-prontas'
+      fullPath: '/venda/mensagens-prontas'
+      preLoaderRoute: typeof AuthenticatedVendaMensagensProntasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/extrato': {
+      id: '/_authenticated/venda/extrato'
+      path: '/venda/extrato'
+      fullPath: '/venda/extrato'
+      preLoaderRoute: typeof AuthenticatedVendaExtratoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/cotacoes': {
+      id: '/_authenticated/venda/cotacoes'
+      path: '/venda/cotacoes'
+      fullPath: '/venda/cotacoes'
+      preLoaderRoute: typeof AuthenticatedVendaCotacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/atender': {
+      id: '/_authenticated/venda/atender'
+      path: '/venda/atender'
+      fullPath: '/venda/atender'
+      preLoaderRoute: typeof AuthenticatedVendaAtenderRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/aceite': {
+      id: '/_authenticated/venda/aceite'
+      path: '/venda/aceite'
+      fullPath: '/venda/aceite'
+      preLoaderRoute: typeof AuthenticatedVendaAceiteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/vendedores': {
+      id: '/_authenticated/operacao/vendedores'
+      path: '/operacao/vendedores'
+      fullPath: '/operacao/vendedores'
+      preLoaderRoute: typeof AuthenticatedOperacaoVendedoresRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/vendas': {
+      id: '/_authenticated/operacao/vendas'
+      path: '/operacao/vendas'
+      fullPath: '/operacao/vendas'
+      preLoaderRoute: typeof AuthenticatedOperacaoVendasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/supervisao': {
+      id: '/_authenticated/operacao/supervisao'
+      path: '/operacao/supervisao'
+      fullPath: '/operacao/supervisao'
+      preLoaderRoute: typeof AuthenticatedOperacaoSupervisaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/renovacoes': {
+      id: '/_authenticated/operacao/renovacoes'
+      path: '/operacao/renovacoes'
+      fullPath: '/operacao/renovacoes'
+      preLoaderRoute: typeof AuthenticatedOperacaoRenovacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/relatorios': {
+      id: '/_authenticated/operacao/relatorios'
+      path: '/operacao/relatorios'
+      fullPath: '/operacao/relatorios'
+      preLoaderRoute: typeof AuthenticatedOperacaoRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/premiacoes': {
+      id: '/_authenticated/operacao/premiacoes'
+      path: '/operacao/premiacoes'
+      fullPath: '/operacao/premiacoes'
+      preLoaderRoute: typeof AuthenticatedOperacaoPremiacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/pipeline-geral': {
+      id: '/_authenticated/operacao/pipeline-geral'
+      path: '/operacao/pipeline-geral'
+      fullPath: '/operacao/pipeline-geral'
+      preLoaderRoute: typeof AuthenticatedOperacaoPipelineGeralRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/mensagens': {
+      id: '/_authenticated/operacao/mensagens'
+      path: '/operacao/mensagens'
+      fullPath: '/operacao/mensagens'
+      preLoaderRoute: typeof AuthenticatedOperacaoMensagensRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/franquias': {
+      id: '/_authenticated/operacao/franquias'
+      path: '/operacao/franquias'
+      fullPath: '/operacao/franquias'
+      preLoaderRoute: typeof AuthenticatedOperacaoFranquiasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/estornos': {
+      id: '/_authenticated/operacao/estornos'
+      path: '/operacao/estornos'
+      fullPath: '/operacao/estornos'
+      preLoaderRoute: typeof AuthenticatedOperacaoEstornosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/configuracoes': {
+      id: '/_authenticated/operacao/configuracoes'
+      path: '/operacao/configuracoes'
+      fullPath: '/operacao/configuracoes'
+      preLoaderRoute: typeof AuthenticatedOperacaoConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/comissoes': {
+      id: '/_authenticated/operacao/comissoes'
+      path: '/operacao/comissoes'
+      fullPath: '/operacao/comissoes'
+      preLoaderRoute: typeof AuthenticatedOperacaoComissoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/acessos': {
+      id: '/_authenticated/operacao/acessos'
+      path: '/operacao/acessos'
+      fullPath: '/operacao/acessos'
+      preLoaderRoute: typeof AuthenticatedOperacaoAcessosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/comando/visao-geral': {
+      id: '/_authenticated/comando/visao-geral'
+      path: '/comando/visao-geral'
+      fullPath: '/comando/visao-geral'
+      preLoaderRoute: typeof AuthenticatedComandoVisaoGeralRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/comando/leads': {
+      id: '/_authenticated/comando/leads'
+      path: '/comando/leads'
+      fullPath: '/comando/leads'
+      preLoaderRoute: typeof AuthenticatedComandoLeadsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/comando/distribuicao': {
+      id: '/_authenticated/comando/distribuicao'
+      path: '/comando/distribuicao'
+      fullPath: '/comando/distribuicao'
+      preLoaderRoute: typeof AuthenticatedComandoDistribuicaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
+  AuthenticatedComandoDistribuicaoRoute: typeof AuthenticatedComandoDistribuicaoRoute
+  AuthenticatedComandoLeadsRoute: typeof AuthenticatedComandoLeadsRoute
+  AuthenticatedComandoVisaoGeralRoute: typeof AuthenticatedComandoVisaoGeralRoute
+  AuthenticatedOperacaoAcessosRoute: typeof AuthenticatedOperacaoAcessosRoute
+  AuthenticatedOperacaoComissoesRoute: typeof AuthenticatedOperacaoComissoesRoute
+  AuthenticatedOperacaoConfiguracoesRoute: typeof AuthenticatedOperacaoConfiguracoesRoute
+  AuthenticatedOperacaoEstornosRoute: typeof AuthenticatedOperacaoEstornosRoute
+  AuthenticatedOperacaoFranquiasRoute: typeof AuthenticatedOperacaoFranquiasRoute
+  AuthenticatedOperacaoMensagensRoute: typeof AuthenticatedOperacaoMensagensRoute
+  AuthenticatedOperacaoPipelineGeralRoute: typeof AuthenticatedOperacaoPipelineGeralRoute
+  AuthenticatedOperacaoPremiacoesRoute: typeof AuthenticatedOperacaoPremiacoesRoute
+  AuthenticatedOperacaoRelatoriosRoute: typeof AuthenticatedOperacaoRelatoriosRoute
+  AuthenticatedOperacaoRenovacoesRoute: typeof AuthenticatedOperacaoRenovacoesRoute
+  AuthenticatedOperacaoSupervisaoRoute: typeof AuthenticatedOperacaoSupervisaoRoute
+  AuthenticatedOperacaoVendasRoute: typeof AuthenticatedOperacaoVendasRoute
+  AuthenticatedOperacaoVendedoresRoute: typeof AuthenticatedOperacaoVendedoresRoute
+  AuthenticatedVendaAceiteRoute: typeof AuthenticatedVendaAceiteRoute
+  AuthenticatedVendaAtenderRoute: typeof AuthenticatedVendaAtenderRoute
+  AuthenticatedVendaCotacoesRoute: typeof AuthenticatedVendaCotacoesRoute
+  AuthenticatedVendaExtratoRoute: typeof AuthenticatedVendaExtratoRoute
+  AuthenticatedVendaMensagensProntasRoute: typeof AuthenticatedVendaMensagensProntasRoute
+  AuthenticatedVendaNovoLeadRoute: typeof AuthenticatedVendaNovoLeadRoute
+  AuthenticatedVendaPipelineRoute: typeof AuthenticatedVendaPipelineRoute
+  AuthenticatedVendaPropostasRoute: typeof AuthenticatedVendaPropostasRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedInicioRoute: AuthenticatedInicioRoute,
+  AuthenticatedComandoDistribuicaoRoute: AuthenticatedComandoDistribuicaoRoute,
+  AuthenticatedComandoLeadsRoute: AuthenticatedComandoLeadsRoute,
+  AuthenticatedComandoVisaoGeralRoute: AuthenticatedComandoVisaoGeralRoute,
+  AuthenticatedOperacaoAcessosRoute: AuthenticatedOperacaoAcessosRoute,
+  AuthenticatedOperacaoComissoesRoute: AuthenticatedOperacaoComissoesRoute,
+  AuthenticatedOperacaoConfiguracoesRoute:
+    AuthenticatedOperacaoConfiguracoesRoute,
+  AuthenticatedOperacaoEstornosRoute: AuthenticatedOperacaoEstornosRoute,
+  AuthenticatedOperacaoFranquiasRoute: AuthenticatedOperacaoFranquiasRoute,
+  AuthenticatedOperacaoMensagensRoute: AuthenticatedOperacaoMensagensRoute,
+  AuthenticatedOperacaoPipelineGeralRoute:
+    AuthenticatedOperacaoPipelineGeralRoute,
+  AuthenticatedOperacaoPremiacoesRoute: AuthenticatedOperacaoPremiacoesRoute,
+  AuthenticatedOperacaoRelatoriosRoute: AuthenticatedOperacaoRelatoriosRoute,
+  AuthenticatedOperacaoRenovacoesRoute: AuthenticatedOperacaoRenovacoesRoute,
+  AuthenticatedOperacaoSupervisaoRoute: AuthenticatedOperacaoSupervisaoRoute,
+  AuthenticatedOperacaoVendasRoute: AuthenticatedOperacaoVendasRoute,
+  AuthenticatedOperacaoVendedoresRoute: AuthenticatedOperacaoVendedoresRoute,
+  AuthenticatedVendaAceiteRoute: AuthenticatedVendaAceiteRoute,
+  AuthenticatedVendaAtenderRoute: AuthenticatedVendaAtenderRoute,
+  AuthenticatedVendaCotacoesRoute: AuthenticatedVendaCotacoesRoute,
+  AuthenticatedVendaExtratoRoute: AuthenticatedVendaExtratoRoute,
+  AuthenticatedVendaMensagensProntasRoute:
+    AuthenticatedVendaMensagensProntasRoute,
+  AuthenticatedVendaNovoLeadRoute: AuthenticatedVendaNovoLeadRoute,
+  AuthenticatedVendaPipelineRoute: AuthenticatedVendaPipelineRoute,
+  AuthenticatedVendaPropostasRoute: AuthenticatedVendaPropostasRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
+interface AuthRouteChildren {
+  AuthCadastroRoute: typeof AuthCadastroRoute
+  AuthPendenteRoute: typeof AuthPendenteRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthCadastroRoute: AuthCadastroRoute,
+  AuthPendenteRoute: AuthPendenteRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
