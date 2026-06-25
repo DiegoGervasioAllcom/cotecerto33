@@ -23,6 +23,15 @@ type Cfg = {
 
 type Integracao = { id: string; nome: string; descricao: string | null; status: string };
 type RoleCount = { role: string; count: number };
+type Seguradora = { id: string; nome: string; codigo: string | null; ativo: boolean; ordem: number };
+type UserRow = {
+  id: string;
+  nome: string;
+  email: string;
+  status: string;
+  empresa_id: string | null;
+  empresa_nome?: string | null;
+};
 
 const DEFAULT_CFG: Cfg = {
   meta_vendedor: 14,
@@ -47,6 +56,7 @@ function Page() {
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [modal, setModal] = useState<null | "seguradoras" | "matriz" | "franqueado" | "vendedor">(null);
 
   async function load() {
     setLoading(true); setErr(null);
@@ -173,11 +183,11 @@ function Page() {
             <div className="card-b">
               <div className="conf-section">
                 <PerfilRow title="Matriz" desc="Acesso total · distribui, audita e remunera"
-                  count={roleCount("matriz")} solid />
+                  count={roleCount("matriz")} solid onClick={() => setModal("matriz")} />
                 <PerfilRow title="Franqueado" desc="Vê a própria unidade e equipe"
-                  count={roleCount("franqueado")} />
+                  count={roleCount("franqueado")} onClick={() => setModal("franqueado")} />
                 <PerfilRow title="Vendedor" desc="Pipeline, cotação, proposta e extrato próprios"
-                  count={roleCount("vendedor")} />
+                  count={roleCount("vendedor")} onClick={() => setModal("vendedor")} />
               </div>
             </div>
           </div>
@@ -197,12 +207,12 @@ function Page() {
                     </span>
                   </div>
                 ))}
-                <div className="crit-row">
+                <div className="crit-row" style={{ cursor: "pointer" }} onClick={() => setModal("seguradoras")}>
                   <div className="cr-body">
                     <div className="cr-t">Seguradoras ({segCount})</div>
                     <div className="cr-d">{segPreview || "Nenhuma cadastrada"}</div>
                   </div>
-                  <span className="chip chip-ok">Ativas</span>
+                  <span className="chip chip-ok">Gerenciar</span>
                 </div>
               </div>
             </div>
@@ -229,6 +239,11 @@ function Page() {
           </div>
         </div>
       </div>
+
+      {modal === "seguradoras" && <SeguradorasModal onClose={() => { setModal(null); void load(); }} />}
+      {modal === "matriz" && <UsuariosModal role="matriz" title="Usuários · Matriz" onClose={() => setModal(null)} />}
+      {modal === "franqueado" && <UsuariosModal role="franqueado" title="Usuários · Franqueados" onClose={() => setModal(null)} />}
+      {modal === "vendedor" && <UsuariosModal role="vendedor" title="Usuários · Vendedores" onClose={() => setModal(null)} />}
     </AppShell>
   );
 }
@@ -247,14 +262,176 @@ function Toggle({ title, desc, on, onChange }: { title: string; desc: string; on
   );
 }
 
-function PerfilRow({ title, desc, count, solid }: { title: string; desc: string; count: number; solid?: boolean }) {
+function PerfilRow({ title, desc, count, solid, onClick }: { title: string; desc: string; count: number; solid?: boolean; onClick?: () => void }) {
   return (
-    <div className="crit-row">
+    <div className="crit-row" style={onClick ? { cursor: "pointer" } : undefined} onClick={onClick}>
       <div className="cr-body">
         <div className="cr-t">{title}</div>
         <div className="cr-d">{desc}</div>
       </div>
       <span className={`chip ${solid ? "chip-slate" : "chip-outline"}`}>{count} {count === 1 ? "usuário" : "usuários"}</span>
     </div>
+  );
+}
+
+/* ============== MODAIS ============== */
+
+function ModalShell({ title, onClose, children, footer, wide }: { title: string; onClose: () => void; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className="modal-host" onClick={onClose}>
+      <div className={`modal ${wide ? "lg" : ""}`} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-h">
+          <h3>{title}</h3>
+          <div className="x" onClick={onClose} role="button" aria-label="Fechar">✕</div>
+        </div>
+        <div className="modal-b">{children}</div>
+        {footer && <div className="modal-f">{footer}</div>}
+      </div>
+    </div>
+  );
+}
+
+function SeguradorasModal({ onClose }: { onClose: () => void }) {
+  const [rows, setRows] = useState<Seguradora[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [nova, setNova] = useState({ nome: "", codigo: "" });
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    setLoading(true);
+    const { data, error } = await supabase.from("seguradoras").select("id,nome,codigo,ativo,ordem").order("ordem").order("nome");
+    if (error) setErr(error.message);
+    setRows((data ?? []) as Seguradora[]);
+    setLoading(false);
+  }
+  useEffect(() => { void load(); }, []);
+
+  async function add() {
+    if (!nova.nome.trim()) return;
+    setBusy(true); setErr(null);
+    const ordem = (rows.at(-1)?.ordem ?? 0) + 1;
+    const { error } = await supabase.from("seguradoras").insert({ nome: nova.nome.trim(), codigo: nova.codigo.trim() || null, ordem });
+    if (error) setErr(error.message);
+    setNova({ nome: "", codigo: "" });
+    setBusy(false);
+    void load();
+  }
+
+  async function toggle(r: Seguradora) {
+    const { error } = await supabase.from("seguradoras").update({ ativo: !r.ativo }).eq("id", r.id);
+    if (error) setErr(error.message);
+    void load();
+  }
+
+  async function rename(r: Seguradora, nome: string) {
+    if (nome === r.nome) return;
+    const { error } = await supabase.from("seguradoras").update({ nome }).eq("id", r.id);
+    if (error) setErr(error.message);
+    void load();
+  }
+
+  async function remove(r: Seguradora) {
+    if (!confirm(`Remover ${r.nome}?`)) return;
+    const { error } = await supabase.from("seguradoras").delete().eq("id", r.id);
+    if (error) setErr(error.message);
+    void load();
+  }
+
+  return (
+    <ModalShell title="Gerenciar seguradoras" onClose={onClose} wide>
+      {err && <div className="small" style={{ color: "#991b1b", marginBottom: 10 }}>{err}</div>}
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, marginBottom: 14 }}>
+        <input className="input" placeholder="Nome da seguradora" value={nova.nome} onChange={(e) => setNova({ ...nova, nome: e.target.value })} />
+        <input className="input" placeholder="Código (opcional)" value={nova.codigo} onChange={(e) => setNova({ ...nova, codigo: e.target.value })} />
+        <button className="btn btn-primary" onClick={add} disabled={busy || !nova.nome.trim()}>Adicionar</button>
+      </div>
+      {loading ? <div className="muted small">Carregando…</div> : (
+        <table className="table">
+          <thead><tr><th>Nome</th><th>Código</th><th>Status</th><th style={{ width: 120 }}>Ações</th></tr></thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td>
+                  <input className="input" defaultValue={r.nome} onBlur={(e) => rename(r, e.target.value)} />
+                </td>
+                <td className="muted">{r.codigo ?? "—"}</td>
+                <td>
+                  <span className={`chip ${r.ativo ? "chip-ok" : "chip-outline"}`} onClick={() => toggle(r)} style={{ cursor: "pointer" }}>
+                    {r.ativo ? "Ativa" : "Inativa"}
+                  </span>
+                </td>
+                <td>
+                  <button className="btn btn-ghost btn-sm" onClick={() => remove(r)}>Remover</button>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={4} className="muted small">Nenhuma seguradora cadastrada.</td></tr>}
+          </tbody>
+        </table>
+      )}
+    </ModalShell>
+  );
+}
+
+function UsuariosModal({ role, title, onClose }: { role: "matriz" | "franqueado" | "vendedor"; title: string; onClose: () => void }) {
+  const [rows, setRows] = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const ur = await supabase.from("user_roles").select("user_id").eq("role", role);
+      if (ur.error) { setErr(ur.error.message); setLoading(false); return; }
+      const ids = (ur.data ?? []).map((x: { user_id: string }) => x.user_id);
+      if (ids.length === 0) { setRows([]); setLoading(false); return; }
+      const pr = await supabase.from("profiles").select("id,nome,email,status,empresa_id").in("id", ids);
+      if (pr.error) { setErr(pr.error.message); setLoading(false); return; }
+      const empIds = Array.from(new Set((pr.data ?? []).map((p: { empresa_id: string | null }) => p.empresa_id).filter(Boolean))) as string[];
+      let empMap: Record<string, string> = {};
+      if (empIds.length) {
+        const em = await supabase.from("empresas").select("id,nome").in("id", empIds);
+        empMap = Object.fromEntries((em.data ?? []).map((e: { id: string; nome: string }) => [e.id, e.nome]));
+      }
+      setRows((pr.data ?? []).map((p: { id: string; nome: string; email: string; status: string; empresa_id: string | null }) => ({
+        ...p,
+        empresa_nome: p.empresa_id ? empMap[p.empresa_id] ?? null : null,
+      })));
+      setLoading(false);
+    })();
+  }, [role]);
+
+  return (
+    <ModalShell title={title} onClose={onClose} wide>
+      {err && <div className="small" style={{ color: "#991b1b", marginBottom: 10 }}>{err}</div>}
+      {loading ? <div className="muted small">Carregando…</div> : (
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              {role !== "matriz" && <th>{role === "franqueado" ? "Franquia" : "Unidade"}</th>}
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((u) => (
+              <tr key={u.id}>
+                <td>{u.nome || "—"}</td>
+                <td className="muted">{u.email}</td>
+                {role !== "matriz" && <td>{u.empresa_nome ?? "—"}</td>}
+                <td>
+                  <span className={`chip ${u.status === "ativo" ? "chip-ok" : u.status === "pendente" ? "chip-warn" : "chip-outline"}`}>
+                    {u.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && <tr><td colSpan={role === "matriz" ? 3 : 4} className="muted small">Nenhum usuário com este perfil.</td></tr>}
+          </tbody>
+        </table>
+      )}
+    </ModalShell>
   );
 }
