@@ -111,6 +111,52 @@ function Page() {
   const [calculando, setCalculando] = useState(false);
   const [resultados, setResultados] = useState<{ cia: string; premio: number; cobertura: string }[]>([]);
   const [seguradorasDb, setSeguradorasDb] = useState<string[]>([]);
+  const navigate = useNavigate();
+
+  // ----- Classificar perda -----
+  type PerdaMotivo = { id: number; nome: string };
+  type PerdaSubmotivo = { id: number; motivo_id: number; nome: string; destino_sugerido: "Remalho" | "Descarte" };
+  const [perdaOpen, setPerdaOpen] = useState(false);
+  const [perdaMotivos, setPerdaMotivos] = useState<PerdaMotivo[]>([]);
+  const [perdaSubs, setPerdaSubs] = useState<PerdaSubmotivo[]>([]);
+  const [perdaForm, setPerdaForm] = useState<{ motivo: string; sub: string; obs: string }>({ motivo: "", sub: "", obs: "" });
+  const [perdaSaving, setPerdaSaving] = useState(false);
+
+  useEffect(() => {
+    if (!perdaOpen) return;
+    if (perdaMotivos.length) return;
+    void (async () => {
+      const [m, s] = await Promise.all([
+        supabase.from("perda_motivos").select("id,nome").eq("ativo", true).order("ordem"),
+        supabase.from("perda_submotivos").select("id,motivo_id,nome,destino_sugerido").eq("ativo", true).order("ordem"),
+      ]);
+      if (m.data) setPerdaMotivos(m.data as PerdaMotivo[]);
+      if (s.data) setPerdaSubs(s.data as PerdaSubmotivo[]);
+    })();
+  }, [perdaOpen, perdaMotivos.length]);
+
+  async function abrirPerda() {
+    if (!cotacaoId) {
+      try { await persistir(); } catch { /* noop */ }
+    }
+    setPerdaForm({ motivo: "", sub: "", obs: "" });
+    setPerdaOpen(true);
+  }
+
+  async function confirmarPerda() {
+    if (!cotacaoId || !perdaForm.motivo || !perdaForm.sub) return;
+    setPerdaSaving(true);
+    const { error } = await supabase.rpc("classificar_perda_cotacao", {
+      p_cotacao_id: cotacaoId,
+      p_motivo: perdaForm.motivo,
+      p_submotivo: perdaForm.sub,
+      p_observacao: perdaForm.obs || null,
+    });
+    setPerdaSaving(false);
+    if (error) { alert("Erro ao classificar perda: " + error.message); return; }
+    setPerdaOpen(false);
+    navigate({ to: "/venda/pipeline" });
+  }
 
   useEffect(() => {
     supabase.from("seguradoras").select("nome").eq("ativo", true).order("ordem").then(({ data }) => {
