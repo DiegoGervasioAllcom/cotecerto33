@@ -946,6 +946,11 @@ function Page() {
                   </div>
                 </div>
                 <span className="spacer" style={{ flex: 1 }} />
+                {cotacaoId && resultados.length > 1 && (
+                  <Link to="/venda/cotacoes/$id" params={{ id: cotacaoId }} className="btn btn-slate btn-sm">
+                    <svg width="13" height="13"><use href="#i-shield" /></svg> Comparativo lado a lado
+                  </Link>
+                )}
                 <button className="btn btn-ghost btn-sm" onClick={() => window.print()}>
                   <svg width="13" height="13"><use href="#i-download" /></svg> Imprimir
                 </button>
