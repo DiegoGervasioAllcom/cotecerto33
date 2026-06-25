@@ -529,13 +529,25 @@ function Page() {
                   </select>
                 </div>
                 <div className="field-group">
-                  <label>Período de vigência<span className="req">*</span></label>
-                  <input className="input" type="date" value={f.vigIni} onChange={(e) => up("vigIni", e.target.value)} />
-                </div>
-                <div className="field-group">
-                  <label>Até</label>
-                  <input className="input" type="date" value={f.vigFim} onChange={(e) => up("vigFim", e.target.value)} />
-                </div>
+                   <label>Período de vigência<span className="req">*</span></label>
+                   <input className="input" type="date" value={f.vigIni} onChange={(e) => {
+                     const ini = e.target.value;
+                     const yearsMap: Record<string, number> = { "Anual": 1, "Bianual": 2, "Trianual": 3, "Quadrianual": 4, "Quinquenal": 5 };
+                     const add = yearsMap[f.tipoCalculo];
+                     let fim = f.vigFim;
+                     if (ini && add) {
+                       const d = new Date(ini + "T00:00:00");
+                       d.setFullYear(d.getFullYear() + add);
+                       d.setDate(d.getDate() - 1);
+                       fim = d.toISOString().slice(0, 10);
+                     }
+                     setF((s) => ({ ...s, vigIni: ini, vigFim: fim }));
+                   }} />
+                 </div>
+                 <div className="field-group">
+                   <label>Até</label>
+                   <input className="input" type="date" value={f.vigFim} onChange={(e) => up("vigFim", e.target.value)} />
+                 </div>
                 <div className="field-group">
                   <label>Grupo de produção<span className="req">*</span></label>
                   <input className="input" value={f.grupoProducao} onChange={(e) => up("grupoProducao", e.target.value)} placeholder="Busca o produtor" />
