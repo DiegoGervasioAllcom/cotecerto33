@@ -1167,13 +1167,6 @@ function DynamicTrioCard({
       return n;
     }));
   }
-    onChange(rows.map((x, j) => {
-      if (j !== i) return x;
-      const n: Trio = [x[0], x[1], x[2]];
-      n[k] = v;
-      return n;
-    }));
-  }
   return (
     <div className="card">
       <div className="card-h">
