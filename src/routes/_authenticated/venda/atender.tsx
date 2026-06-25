@@ -53,6 +53,9 @@ function Page() {
   const [now, setNow] = useState(Date.now());
   const [view, setView] = useState<Lead | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const leadsRef = useRef<Lead[]>([]);
+  const firedRef = useRef<Set<string>>(new Set());
+  const expiringRef = useRef(false);
 
   async function load() {
     setLoading(true);
@@ -70,7 +73,9 @@ function Page() {
       .order("distribuido_em", { ascending: true, nullsFirst: true })
       .limit(50);
     if (error) setErr(error.message);
-    setLeads((data ?? []) as Lead[]);
+    const list = (data ?? []) as Lead[];
+    leadsRef.current = list;
+    setLeads(list);
     setLoading(false);
   }
 
@@ -79,17 +84,22 @@ function Page() {
     tickRef.current = setInterval(() => {
       const n = Date.now();
       setNow(n);
-      // Se algum lead estourou o SLA, dispara a expiração e recarrega
-      const expired = leads.some((l) => {
+      if (expiringRef.current) return;
+      const novos = leadsRef.current.filter((l) => {
+        if (firedRef.current.has(l.id)) return false;
         const start = new Date(l.distribuido_em ?? l.criado_em).getTime();
         return start + WINDOW_MS - n <= 0;
       });
-      if (expired) {
-        supabase.rpc("expirar_leads_nao_atendidos", { p_janela_seg: 180 }).then(() => load());
-      }
+      if (novos.length === 0) return;
+      novos.forEach((l) => firedRef.current.add(l.id));
+      expiringRef.current = true;
+      supabase
+        .rpc("expirar_leads_nao_atendidos", { p_janela_seg: 180 })
+        .then(() => load())
+        .finally(() => { expiringRef.current = false; });
     }, 1000);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
-  }, [leads]);
+  }, []);
 
   async function assumir(l: Lead) {
     setBusy(l.id);
