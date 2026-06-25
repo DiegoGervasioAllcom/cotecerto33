@@ -263,8 +263,17 @@ function Page() {
         <div className="tools">
           <button className="btn btn-ghost" onClick={() => navigate({ to: "/comando/distribuicao" })}><svg width="14" height="14"><use href="#i-settings"></use></svg> Regras</button>
           <button className="btn btn-yellow" onClick={() => navigate({ to: "/comando/distribuicao" })}><svg width="14" height="14"><use href="#i-share"></use></svg> Distribuir pendentes ({kpis.pendentes})</button>
+          <button className="btn btn-ok" onClick={executarDistribuicaoAuto} disabled={distAutoLoading || kpis.pendentes === 0}>
+            <svg width="14" height="14"><use href="#i-spark"></use></svg> {distAutoLoading ? "Distribuindo…" : "Distribuir automático"}
+          </button>
         </div>
       </div>
+
+      {distAutoMsg && (
+        <div className="audit-note" style={{ background: distAutoMsg.type === "ok" ? "var(--ok-soft)" : "var(--alert-soft)", color: distAutoMsg.type === "ok" ? "var(--ok)" : "var(--alert)", marginBottom: 16 }}>
+          <svg width="16" height="16"><use href={distAutoMsg.type === "ok" ? "#i-check-circle" : "#i-alert-triangle"}></use></svg> <strong style={{ marginRight: 4 }}>{distAutoMsg.type === "ok" ? "Sucesso." : "Erro."}</strong> {distAutoMsg.text}
+        </div>
+      )}
 
       {chips.pendentes > 0 && (
         <div className="audit-note" style={{ background: "var(--alert-soft)", color: "var(--alert)", marginBottom: 16 }}>
