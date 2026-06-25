@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_authenticated/operacao/franquias")({
+export const Route = createFileRoute("/_authenticated/operacao/franquias/")({
   head: () => ({ meta: [{ title: "Franquias · CoteCerto" }] }),
   component: Page,
 });
@@ -57,6 +57,7 @@ function metaBar(vendas: number, meta: number | null) {
 }
 
 function Page() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [resps, setResps] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -133,7 +134,16 @@ function Page() {
               {rows.map((r) => {
                 const conv = r.leads_mes > 0 ? Math.round((r.vendas_mes / r.leads_mes) * 100) : 0;
                 return (
-                  <tr key={r.empresa_id}>
+                  <tr
+                    key={r.empresa_id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() =>
+                      navigate({
+                        to: "/operacao/franquias/$id",
+                        params: { id: r.empresa_id },
+                      })
+                    }
+                  >
                     <td>
                       <div className="mini-cell">
                         <strong>{r.nome}</strong>
