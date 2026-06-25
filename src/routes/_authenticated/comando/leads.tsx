@@ -36,6 +36,17 @@ type Evento = {
   titulo: string;
   descricao: string | null;
   criado_em: string;
+  meta: Record<string, any> | null;
+};
+
+const EVENT_ICON: Record<string, string> = {
+  redistribuido: "i-share",
+  reativado_de_perda: "i-refresh",
+  puxado_de_volta: "i-corner-up-left",
+  bloqueado: "i-lock",
+  desbloqueado: "i-lock",
+  sla_expirado: "i-alert-triangle",
+  lead_assumido: "i-check",
 };
 
 const SLA_SECONDS = 180;
