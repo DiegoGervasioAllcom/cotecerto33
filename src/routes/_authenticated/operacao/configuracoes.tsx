@@ -104,7 +104,10 @@ function Page() {
     setSavingKey(null);
   }
 
-  const roleCount = (r: string) => roles.find((x) => x.role === r)?.count ?? 0;
+  const roleCount = (r: string) => {
+    if (r === "franqueado") return (roles.find((x) => x.role === "franqueado")?.count ?? 0) + (roles.find((x) => x.role === "master")?.count ?? 0);
+    return roles.find((x) => x.role === r)?.count ?? 0;
+  };
   const modoLabel = dist?.modo === "regiao" ? "Automático por região"
     : dist?.modo === "performance" ? "Performance (vendedores disponíveis)"
     : dist?.modo === "fila" ? "Fila (round-robin)" : "—";
