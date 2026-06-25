@@ -37,9 +37,11 @@ function statusChip(s: string) {
 }
 
 function Page() {
+  const { selected } = Route.useSearch();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
   useEffect(() => {
     (async () => {
@@ -56,6 +58,13 @@ function Page() {
       setLoading(false);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!selected || loading) return;
+    const el = rowRefs.current[selected];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selected, loading, rows.length]);
+
 
   return (
     <AppShell title="Propostas">
