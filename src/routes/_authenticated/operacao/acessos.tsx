@@ -1195,7 +1195,7 @@ function DynamicTrioCard({
                   <input className="input input-mini" value={r[1]} onChange={(e) => patch(i, 1, e.target.value)} />
                 </td>
                 <td>
-                  <input className="input input-mini" value={r[2]} onChange={(e) => patch(i, 2, e.target.value)} />
+                  <input className="input input-mini" placeholder={valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""} value={r[2]} onChange={(e) => patch(i, 2, e.target.value)} />
                 </td>
                 <td style={{ textAlign: "right" }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
