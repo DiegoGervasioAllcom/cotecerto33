@@ -954,8 +954,8 @@ function ModeloCltPanel({
             </div>
             <div className="field-group">
               <label>IOF</label>
-              <input className="input" value={clt.regras.iof}
-                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, iof: e.target.value } })} />
+              <input className="input" value={clt.regras.iof} placeholder="0%"
+                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, iof: maskPct(e.target.value) } })} />
             </div>
           </div>
           <div style={{ marginTop: 14 }}>
