@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_authenticated/venda/cotacoes")({
+export const Route = createFileRoute("/_authenticated/venda/cotacoes/")({
   head: () => ({ meta: [{ title: "Cotações · CoteCerto" }] }),
   component: Page,
 });
