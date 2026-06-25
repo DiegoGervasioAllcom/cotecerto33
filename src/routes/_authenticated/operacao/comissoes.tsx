@@ -26,6 +26,19 @@ type Proposta = {
 };
 type Empresa = { id: string; nome: string };
 type Profile = { id: string; nome: string };
+type Lanc = {
+  id: string;
+  vendedor_id: string;
+  empresa_id: string | null;
+  proposta_id: string | null;
+  tipo: "credito" | "debito";
+  valor: number;
+  descricao: string;
+  referencia: string | null;
+  seguradora: string | null;
+  origem: string;
+  criado_em: string;
+};
 
 const fmtBRL = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
