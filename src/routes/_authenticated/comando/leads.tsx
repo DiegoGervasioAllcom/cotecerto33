@@ -195,9 +195,10 @@ function Page() {
     const pendentes = enriched.filter((l) => !l.distribuido && l.status_pipeline === "novo" && !l.arquivado);
     const distribuidos = enriched.filter((l) => l.distribuido && l.distribuido_em);
     const oldest = pendentes.reduce((a, l) => Math.max(a, l.ageSec), 0);
-    const avgDist = distribuidos.length ? Math.round(distribuidos.reduce((a, l) => a + l.slaSec, 0) / distribuidos.length) : 0;
-    const okDist = distribuidos.filter((l) => l.slaSec <= SLA_SECONDS).length;
-    const pctDist = distribuidos.length ? Math.round((okDist / distribuidos.length) * 100) : 0;
+    const distDurations = distribuidos.map((l) => Math.max(0, (new Date(l.distribuido_em!).getTime() - new Date(l.criado_em).getTime()) / 1000));
+    const avgDist = distDurations.length ? Math.round(distDurations.reduce((a, s) => a + s, 0) / distDurations.length) : 0;
+    const okDist = distDurations.filter((s) => s <= SLA_SECONDS).length;
+    const pctDist = distDurations.length ? Math.round((okDist / distDurations.length) * 100) : 0;
     const atend = enriched.filter((l) => l.ultimo_atendimento_em);
     const avgAtend = atend.length ? Math.round(atend.reduce((a, l) => a + Math.max(0, (new Date(l.ultimo_atendimento_em!).getTime() - new Date(l.criado_em).getTime()) / 1000), 0) / atend.length) : 0;
     return { oldest, avgDist, pctDist, avgAtend, pendentes: pendentes.length };
