@@ -149,7 +149,7 @@ function Page() {
     const ageSec = Math.floor((now - new Date(l.criado_em).getTime()) / 1000);
     const distribuido = !!(l.empresa_id || l.responsavel_id || l.distribuido_em);
     const slaSec = distribuido && l.distribuido_em
-      ? Math.max(0, Math.floor((new Date(l.distribuido_em).getTime() - new Date(l.criado_em).getTime()) / 1000))
+      ? Math.max(0, Math.floor((now - new Date(l.distribuido_em).getTime()) / 1000))
       : ageSec;
     return { ...l, uf, cidade, ageSec, distribuido, slaSec };
   }), [leads, now]);
