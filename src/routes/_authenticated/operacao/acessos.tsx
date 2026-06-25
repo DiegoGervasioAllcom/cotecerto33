@@ -631,3 +631,416 @@ function AnalisarModal({
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Personalização geral — sub-tabs Modelo Franquia / Modelo CLT
+// ---------------------------------------------------------------------------
+
+function PersoGeral({
+  sub, setSub, modelos, setModelos, clt, setClt, onToast, onError, reload,
+}: {
+  sub: PersoSub;
+  setSub: (s: PersoSub) => void;
+  modelos: Modelo[];
+  setModelos: (updater: (prev: Modelo[]) => Modelo[]) => void;
+  clt: CltConfig;
+  setClt: (c: CltConfig) => void;
+  onToast: (msg: string, kind: "ok" | "alert") => void;
+  onError: (e: string) => void;
+  reload: () => Promise<void>;
+}) {
+  return (
+    <>
+      <div className="toggle toggle-sub" style={{ marginBottom: 16 }}>
+        <button className={sub === "franquia" ? "on" : ""} onClick={() => setSub("franquia")}>
+          Modelo Franquia
+        </button>
+        <button className={sub === "clt" ? "on" : ""} onClick={() => setSub("clt")}>
+          Modelo CLT
+        </button>
+      </div>
+      {sub === "franquia" ? (
+        <ModeloFranquiaPanel
+          modelos={modelos}
+          setModelos={setModelos}
+          onToast={onToast}
+          onError={onError}
+          reload={reload}
+        />
+      ) : (
+        <ModeloCltPanel clt={clt} setClt={setClt} onToast={onToast} onError={onError} />
+      )}
+    </>
+  );
+}
+
+function ModeloFranquiaPanel({
+  modelos, setModelos, onToast, onError, reload,
+}: {
+  modelos: Modelo[];
+  setModelos: (updater: (prev: Modelo[]) => Modelo[]) => void;
+  onToast: (msg: string, kind: "ok" | "alert") => void;
+  onError: (e: string) => void;
+  reload: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [novoNome, setNovoNome] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+
+  function patchModelo(id: string, patch: Partial<Modelo> & { params?: ModeloParams }) {
+    setModelos((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...patch, params: { ...m.params, ...(patch.params ?? {}) } } : m)),
+    );
+  }
+  function patchParam(id: string, key: string, value: string) {
+    setModelos((prev) => prev.map((m) => (m.id === id ? { ...m, params: { ...m.params, [key]: value } } : m)));
+  }
+
+  async function salvar() {
+    setBusy(true);
+    const updates = modelos.map((m) =>
+      supabase
+        .from("modelos_franquia")
+        .update({ nome: m.nome, params: m.params, ordem: m.ordem })
+        .eq("id", m.id),
+    );
+    const res = await Promise.all(updates);
+    setBusy(false);
+    const erro = res.find((r) => r.error);
+    if (erro?.error) { onError(erro.error.message); return; }
+    onToast("Parâmetros dos modelos atualizados", "ok");
+  }
+
+  async function adicionar() {
+    if (!novoNome.trim()) return;
+    setBusy(true);
+    const ordem = (modelos.reduce((a, m) => Math.max(a, m.ordem), 0) ?? 0) + 1;
+    const { error } = await supabase.from("modelos_franquia").insert({
+      nome: novoNome.trim(),
+      tipo: "franqueada",
+      perc_comissao_padrao: 0,
+      ordem,
+      params: {
+        leads: "—", comVenda: "—", comRenov: "—", incentivo: "—",
+        software: "—", franquia: "—", royalties: "—",
+      },
+    });
+    setBusy(false);
+    if (error) { onError(error.message); return; }
+    setNovoNome("");
+    setAddOpen(false);
+    onToast(`Modelo "${novoNome.trim()}" adicionado`, "ok");
+    await reload();
+  }
+
+  async function remover(m: Modelo) {
+    if (!confirm(`Remover o modelo "${m.nome}"?`)) return;
+    setBusy(true);
+    const { error } = await supabase.from("modelos_franquia").delete().eq("id", m.id);
+    setBusy(false);
+    if (error) { onError(error.message); return; }
+    onToast(`Modelo "${m.nome}" removido`, "alert");
+    await reload();
+  }
+
+  return (
+    <div className="card">
+      <div className="card-h">
+        <h3><Icon id="building" size={16} /> Modelo Franquia</h3>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setAddOpen((v) => !v)}>
+            <Icon id="plus" size={13} /> Adicionar modelo
+          </button>
+          <button className="btn btn-slate btn-sm" disabled={busy} onClick={salvar}>
+            <Icon id="check" size={13} /> Salvar parâmetros
+          </button>
+        </div>
+      </div>
+      {addOpen && (
+        <div className="card-b" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            className="input"
+            placeholder="Nome do novo modelo"
+            value={novoNome}
+            onChange={(e) => setNovoNome(e.target.value)}
+            style={{ maxWidth: 320 }}
+          />
+          <button className="btn btn-yellow btn-sm" disabled={busy || !novoNome.trim()} onClick={adicionar}>
+            <Icon id="check" size={13} /> Criar
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setAddOpen(false); setNovoNome(""); }}>
+            Cancelar
+          </button>
+        </div>
+      )}
+      <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
+        <table className="table-pipe acc-modelos">
+          <thead>
+            <tr>
+              <th>Modelo</th>
+              {PARAMS.map((p) => <th key={p.k}>{p.l}</th>)}
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {modelos.length === 0 && (
+              <tr>
+                <td colSpan={PARAMS.length + 2} style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}>
+                  Nenhum modelo cadastrado. Use “Adicionar modelo”.
+                </td>
+              </tr>
+            )}
+            {modelos.map((m) => (
+              <tr key={m.id}>
+                <td>
+                  <input
+                    className="input input-mini"
+                    value={m.nome}
+                    onChange={(e) => patchModelo(m.id, { nome: e.target.value })}
+                    style={{ fontWeight: 700, minWidth: 110 }}
+                  />
+                </td>
+                {PARAMS.map((p) => (
+                  <td key={p.k}>
+                    <input
+                      className="input input-mini"
+                      value={m.params[p.k] ?? ""}
+                      onChange={(e) => patchParam(m.id, p.k, e.target.value)}
+                    />
+                  </td>
+                ))}
+                <td style={{ textAlign: "right" }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => remover(m)} title="Remover">
+                    <Icon id="trash" size={13} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="card-b">
+        <div className="muted small">
+          <Icon id="info" size={13} /> Valores padrão aplicados ao classificar um franqueado (PJ) neste modelo — a matriz pode sobrescrever caso a caso na aprovação.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ModeloCltPanel({
+  clt, setClt, onToast, onError,
+}: {
+  clt: CltConfig;
+  setClt: (c: CltConfig) => void;
+  onToast: (msg: string, kind: "ok" | "alert") => void;
+  onError: (e: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function salvar() {
+    setBusy(true);
+    const { error } = await supabase
+      .from("clt_config")
+      .update({
+        progressiva: clt.progressiva,
+        fator_novas: clt.fator_novas,
+        fator_remalho: clt.fator_remalho,
+        regras: clt.regras,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq("id", "default");
+    setBusy(false);
+    if (error) { onError(error.message); return; }
+    onToast("Modelo CLT atualizado", "ok");
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="muted small">
+          <Icon id="info" size={13} /> Regras de remuneração do vendedor CLT (equipe interna), com base nas políticas SUP_POL_01 e SUP_POL_04.
+        </div>
+        <button className="btn btn-slate btn-sm" disabled={busy} onClick={salvar}>
+          <Icon id="check" size={13} /> Salvar Modelo CLT
+        </button>
+      </div>
+
+      <DynamicPairCard
+        title="Comissão de seguros — progressiva"
+        icon="percent"
+        lh="Faturamento comissão (R$)"
+        vh="% comissionado"
+        rows={clt.progressiva}
+        onChange={(rows) => setClt({ ...clt, progressiva: rows })}
+        footer={
+          <div className="muted small">
+            <Icon id="info" size={13} /> Base: prêmio líquido = prêmio bruto − juros − IOF (7,38%). O % vem da faixa do faturamento mensal de comissão.
+          </div>
+        }
+      />
+
+      <div className="acc-two">
+        <DynamicPairCard
+          title="Fator comissão média · Novas Vendas"
+          icon="users"
+          lh="Comissão média"
+          vh="Fator"
+          rows={clt.fator_novas}
+          onChange={(rows) => setClt({ ...clt, fator_novas: rows })}
+        />
+        <DynamicPairCard
+          title="Fator comissão média · Remalho"
+          icon="users"
+          lh="Comissão média"
+          vh="Fator"
+          rows={clt.fator_remalho}
+          onChange={(rows) => setClt({ ...clt, fator_remalho: rows })}
+        />
+      </div>
+
+      <StaticPairCard
+        title="Ituran — comissão por plano (R$)"
+        icon="car"
+        lh="Plano"
+        vh="Comissão (R$)"
+        rows={clt.ituran_planos}
+        note="Em definição: validar se permanece exclusivo desta operadora ou se será dinâmico."
+      />
+      <StaticPairCard
+        title="Ituran — serviços adicionais (R$)"
+        icon="shield"
+        lh="Adicional"
+        vh="Comissão (R$)"
+        rows={clt.ituran_adic}
+        note="Em definição: validar se permanece exclusivo desta operadora ou se será dinâmico."
+      />
+
+      <div className="card">
+        <div className="card-h"><h3><Icon id="info" size={16} /> Regras gerais de remuneração</h3></div>
+        <div className="card-b">
+          <div className="acc-grid">
+            <div className="field-group">
+              <label>Apuração — do dia</label>
+              <input className="input" value={clt.regras.apuracao_ini}
+                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, apuracao_ini: e.target.value } })} />
+            </div>
+            <div className="field-group">
+              <label>…até o dia</label>
+              <input className="input" value={clt.regras.apuracao_fim}
+                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, apuracao_fim: e.target.value } })} />
+            </div>
+            <div className="field-group">
+              <label>Pagamento</label>
+              <input className="input" value={clt.regras.pagamento}
+                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, pagamento: e.target.value } })} />
+            </div>
+            <div className="field-group">
+              <label>IOF</label>
+              <input className="input" value={clt.regras.iof}
+                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, iof: e.target.value } })} />
+            </div>
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <div className="acc-sec-t" style={{ marginTop: 0 }}>Regras adicionais</div>
+            {clt.regras.rules.map((r, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                <input
+                  className="input"
+                  value={r}
+                  onChange={(e) => {
+                    const next = [...clt.regras.rules];
+                    next[i] = e.target.value;
+                    setClt({ ...clt, regras: { ...clt.regras, rules: next } });
+                  }}
+                />
+                <button className="btn btn-ghost btn-sm" onClick={() => {
+                  const next = clt.regras.rules.filter((_, j) => j !== i);
+                  setClt({ ...clt, regras: { ...clt.regras, rules: next } });
+                }}>
+                  <Icon id="trash" size={13} />
+                </button>
+              </div>
+            ))}
+            <button className="btn btn-ghost btn-sm" onClick={() => {
+              setClt({ ...clt, regras: { ...clt.regras, rules: [...clt.regras.rules, ""] } });
+            }}>
+              <Icon id="plus" size={13} /> Adicionar regra
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DynamicPairCard({
+  title, icon, lh, vh, rows, onChange, footer,
+}: {
+  title: string; icon: string; lh: string; vh: string;
+  rows: Pair[]; onChange: (rows: Pair[]) => void;
+  footer?: React.ReactNode;
+}) {
+  return (
+    <div className="card">
+      <div className="card-h">
+        <h3><Icon id={icon} size={16} /> {title}</h3>
+        <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={() => onChange([...rows, ["", ""]])}>
+          <Icon id="plus" size={13} /> Adicionar linha
+        </button>
+      </div>
+      <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
+        <table className="table-pipe acc-modelos">
+          <thead><tr><th>{lh}</th><th>{vh}</th><th style={{ width: 60 }}></th></tr></thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr><td colSpan={3} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Sem linhas.</td></tr>
+            )}
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td>
+                  <input className="input input-mini" value={r[0]}
+                    onChange={(e) => { const next = rows.map((x, j) => j === i ? [e.target.value, x[1]] as Pair : x); onChange(next); }} />
+                </td>
+                <td>
+                  <input className="input input-mini" value={r[1]}
+                    onChange={(e) => { const next = rows.map((x, j) => j === i ? [x[0], e.target.value] as Pair : x); onChange(next); }} />
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
+                    <Icon id="trash" size={13} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {footer && <div className="card-b">{footer}</div>}
+    </div>
+  );
+}
+
+function StaticPairCard({
+  title, icon, lh, vh, rows, note,
+}: { title: string; icon: string; lh: string; vh: string; rows: Pair[]; note?: string }) {
+  return (
+    <div className="card">
+      <div className="card-h">
+        <h3><Icon id={icon} size={16} /> {title}</h3>
+        <span className="chip chip-outline" style={{ marginLeft: "auto" }}>Em formulação</span>
+      </div>
+      <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
+        <table className="table-pipe acc-modelos">
+          <thead><tr><th>{lh}</th><th>{vh}</th></tr></thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}><td>{r[0]}</td><td>{r[1]}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {note && <div className="card-b"><div className="muted small"><Icon id="info" size={13} /> {note}</div></div>}
+    </div>
+  );
+}
