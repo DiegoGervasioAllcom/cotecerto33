@@ -62,10 +62,12 @@ function Page() {
   const period = useMemo(() => monthRange(periodOffset), [periodOffset]);
   const [emitidas, setEmitidas] = useState<Proposta[]>([]);
   const [estornadas, setEstornadas] = useState<Proposta[]>([]);
+  const [lancs, setLancs] = useState<Lanc[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [vendedorSel, setVendedorSel] = useState<string>("");
 
   useEffect(() => {
     (async () => {
