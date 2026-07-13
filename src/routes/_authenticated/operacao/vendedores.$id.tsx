@@ -71,11 +71,11 @@ function Page() {
 
         const [kRes, lRes, pRes, oRes] = await Promise.all([
           supabase.from("v_vendedor_kpis").select("*").eq("user_id", id).maybeSingle(),
-          supabase.from("leads").select("status_pipeline,criado_em,assumido_em").eq("responsavel_id", id)
+          supabase.from("leads").select("status_pipeline,criado_em,ultimo_atendimento_em").eq("responsavel_id", id)
             .gte("criado_em", start.toISOString()).lt("criado_em", end.toISOString()),
           supabase.from("propostas").select("seguradora,status,premio,valor").eq("responsavel_id", id)
             .gte("criado_em", start.toISOString()).lt("criado_em", end.toISOString()),
-          supabase.from("oportunidades").select("status,valor").eq("responsavel_id", id)
+          supabase.from("oportunidades").select("valor").eq("responsavel_id", id)
             .gte("criado_em", start.toISOString()).lt("criado_em", end.toISOString()),
         ]);
         if (!alive) return;
@@ -84,7 +84,7 @@ function Page() {
         const k = kRes.data as Kpi | null;
         setKpi(k);
 
-        const leadsArr = (lRes.data ?? []) as { status_pipeline: string | null; criado_em: string | null; assumido_em: string | null }[];
+        const leadsArr = (lRes.data ?? []) as { status_pipeline: string | null; criado_em: string | null; ultimo_atendimento_em: string | null }[];
         let cot = 0, prop = 0, vend = 0;
         const tempos: number[] = [];
         leadsArr.forEach((l) => {
@@ -92,8 +92,8 @@ function Page() {
           if (["cotando", "cotacao", "proposta_enviada", "em_negociacao", "proposta", "negociacao", "ganho", "fechado"].includes(sp)) cot++;
           if (["proposta_enviada", "em_negociacao", "proposta", "negociacao", "ganho", "fechado"].includes(sp)) prop++;
           if (["ganho", "fechado"].includes(sp)) vend++;
-          if (l.criado_em && l.assumido_em) {
-            const m = (new Date(l.assumido_em).getTime() - new Date(l.criado_em).getTime()) / 60000;
+          if (l.criado_em && l.ultimo_atendimento_em) {
+            const m = (new Date(l.ultimo_atendimento_em).getTime() - new Date(l.criado_em).getTime()) / 60000;
             if (m >= 0 && m < 60 * 24) tempos.push(m);
           }
         });
@@ -114,8 +114,8 @@ function Page() {
         setPorSeguradora(arr);
         setPremioTotal(premio);
 
-        const opps = (oRes.data ?? []) as { status: string | null }[];
-        setCancelamentos(opps.filter((o) => ["cancelada", "estornada", "cancelado", "estornado"].includes((o.status || "").toLowerCase())).length);
+        // cancelamentos: oportunidades não tem coluna status — a fonte correta é propostas (bug pego pelo typegen)
+        setCancelamentos(propostas.filter((p) => ["cancelada", "estornada", "cancelado", "estornado"].includes((p.status || "").toLowerCase())).length);
 
         const realVendas = k?.vendas_mes ?? vend;
         setCounts({ leads: k?.leads_mes ?? leadsArr.length, cotacoes: cot, propostas: prop, vendas: realVendas });

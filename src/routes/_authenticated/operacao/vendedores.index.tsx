@@ -30,7 +30,7 @@ type LeadRow = {
   responsavel_id: string | null;
   status_pipeline: string | null;
   criado_em: string | null;
-  assumido_em: string | null;
+  ultimo_atendimento_em: string | null;
 };
 
 type Extra = { cotacoes: number; propostas: number; primeiroMin: number | null };
@@ -129,7 +129,7 @@ function Page() {
         supabase.from("v_user_presence").select("user_id,status_efetivo,last_seen_at"),
         supabase
           .from("leads")
-          .select("responsavel_id,status_pipeline,criado_em,assumido_em")
+          .select("responsavel_id,status_pipeline,criado_em,ultimo_atendimento_em")
           .gte("criado_em", periodo.start.toISOString())
           .lt("criado_em", periodo.end.toISOString()),
       ]);
@@ -155,8 +155,8 @@ function Page() {
           cur.propostas += 1;
         }
         ex[l.responsavel_id] = cur;
-        if (l.criado_em && l.assumido_em) {
-          const min = (new Date(l.assumido_em).getTime() - new Date(l.criado_em).getTime()) / 60000;
+        if (l.criado_em && l.ultimo_atendimento_em) {
+          const min = (new Date(l.ultimo_atendimento_em).getTime() - new Date(l.criado_em).getTime()) / 60000;
           if (min >= 0 && min < 60 * 24) {
             (acumulaTempo[l.responsavel_id] ??= []).push(min);
           }

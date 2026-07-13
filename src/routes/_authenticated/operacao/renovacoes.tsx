@@ -96,7 +96,7 @@ function Page() {
           .from("leads")
           .select("id", { count: "exact", head: true })
           .eq("origem", "renovacao")
-          .eq("status", "perdido")
+          .eq("status_pipeline", "perdido")
           .gte("atualizado_em", retro.toISOString()),
         supabase.from("empresas").select("id,nome"),
         supabase.from("profiles").select("id,nome"),

@@ -98,13 +98,13 @@ function Page() {
       start.setHours(0, 0, 0, 0);
       const { data: leads } = await supabase
         .from("leads")
-        .select("status_pipeline,assumido_em,criado_em")
+        .select("status_pipeline,ultimo_atendimento_em,criado_em")
         .eq("empresa_id", id)
         .gte("criado_em", start.toISOString());
-      const ll = (leads ?? []) as { status_pipeline: string | null; assumido_em: string | null }[];
+      const ll = (leads ?? []) as { status_pipeline: string | null; ultimo_atendimento_em: string | null }[];
       const has = (s: string) => ll.filter((x) => x.status_pipeline === s).length;
       const recebidos = ll.length;
-      const atendidos = ll.filter((x) => x.assumido_em || (x.status_pipeline && x.status_pipeline !== "novo")).length;
+      const atendidos = ll.filter((x) => x.ultimo_atendimento_em || (x.status_pipeline && x.status_pipeline !== "novo")).length;
       const cotando = has("cotando") + has("cotacao");
       const proposta = has("proposta_enviada") + has("em_negociacao") + has("proposta") + has("negociacao");
       const fechado = has("ganho") + has("fechado");
@@ -112,7 +112,7 @@ function Page() {
 
       // estornos & pendências financeiras
       const { count: estCount } = await supabase
-        .from("oportunidades")
+        .from("propostas")
         .select("id", { count: "exact", head: true })
         .eq("empresa_id", id)
         .eq("status", "estornada")
@@ -123,7 +123,7 @@ function Page() {
         .from("oportunidades")
         .select("id", { count: "exact", head: true })
         .eq("empresa_id", id)
-        .eq("pago", false);
+        .eq("comissao_paga", false);
       setPendNaoPagas(pendCount ?? 0);
 
       // vendas mês anterior

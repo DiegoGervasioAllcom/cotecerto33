@@ -1,20 +1,17 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "./database.types";
 
 const FALLBACK_SUPABASE_URL = "https://missing-supabase-url.invalid";
 const FALLBACK_SUPABASE_KEY = "missing-supabase-anon-key";
 
-// Self-hosted Supabase — anon key é publishable, ok no bundle do cliente.
-const DEFAULT_SUPABASE_URL = "https://supabase-cotecerto.sandboxallcom.com";
-const DEFAULT_SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzc2NzE2MjYyLCJleHAiOjE5MzQzOTYyNjJ9.6DLaG_KS4JoehbSWS4NcLBJqd7UiAD3IE2oyHqhv5rQ";
-
-const SUPABASE_URL = String(
-  import.meta.env.VITE_SUPABASE_URL ?? DEFAULT_SUPABASE_URL,
-).trim();
+// Configuração SOMENTE via variáveis de ambiente (.env — ver .env.example).
+// Sem defaults hardcoded: ambiente não configurado entra em modo seguro,
+// em vez de apontar silenciosamente para a produção.
+const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? "").trim();
 const SUPABASE_ANON_KEY = String(
   import.meta.env.VITE_SUPABASE_ANON_KEY ??
     import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-    DEFAULT_SUPABASE_ANON_KEY,
+    "",
 ).trim();
 
 function isHttpUrl(value: string) {
@@ -45,7 +42,7 @@ if (!isSupabaseConfigured) {
   );
 }
 
-export const supabase: SupabaseClient = createClient(
+export const supabase: SupabaseClient<Database> = createClient<Database>(
   isSupabaseConfigured ? SUPABASE_URL : FALLBACK_SUPABASE_URL,
   isSupabaseConfigured ? SUPABASE_ANON_KEY : FALLBACK_SUPABASE_KEY,
   {
@@ -58,23 +55,9 @@ export const supabase: SupabaseClient = createClient(
   },
 );
 
-export type Perfil = "matriz" | "master" | "vendedor";
-export type EmpresaStatus = "pendente" | "aprovada" | "recusada" | "suspensa";
-
-export interface Profile {
-  id: string;
-  empresa_id: string | null;
-  nome: string;
-  email: string;
-  avatar_url: string | null;
-  status: EmpresaStatus;
-}
-
-export interface Empresa {
-  id: string;
-  nome: string;
-  tipo: "pj" | "pf";
-  documento: string;
-  status: EmpresaStatus;
-  parent_id: string | null;
-}
+// Aliases derivados do schema gerado (bun run db:types) — mesmos nomes
+// exportados de antes, para não mudar nenhum import nos consumidores.
+export type Perfil = Database["public"]["Enums"]["perfil"];
+export type EmpresaStatus = Database["public"]["Enums"]["empresa_status"];
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type Empresa = Database["public"]["Tables"]["empresas"]["Row"];

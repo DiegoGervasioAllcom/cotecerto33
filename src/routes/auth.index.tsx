@@ -34,13 +34,13 @@ function AuthPage() {
     }
     setSubmitting(true);
     setError(null);
-    const ua = typeof navigator !== "undefined" ? navigator.userAgent : null;
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : undefined;
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     try {
       await supabase.rpc("registrar_tentativa_login", {
         p_email: email,
         p_sucesso: !error,
-        p_motivo: error?.message ?? null,
+        p_motivo: error?.message ?? undefined,
         p_user_agent: ua,
       });
     } catch {

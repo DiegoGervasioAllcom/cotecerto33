@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/propostas")({
   head: () => ({ meta: [{ title: "Propostas · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
     selected: typeof s.selected === "string" ? s.selected : undefined,
   }),
   component: Page,

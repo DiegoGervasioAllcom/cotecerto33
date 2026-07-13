@@ -134,7 +134,7 @@ function Page() {
     setBusyId(leadId); setErr(null);
     const obs = (obsDecisao[leadId] || "").trim() || null;
     const { error } = await supabase.rpc("avaliar_perda_lead", {
-      p_lead_id: leadId, p_decisao: decisao, p_observacao: obs,
+      p_lead_id: leadId, p_decisao: decisao, p_observacao: obs ?? undefined,
     });
     setBusyId(null);
     if (error) { setErr(error.message); return; }

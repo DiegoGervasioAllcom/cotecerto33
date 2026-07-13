@@ -1,0 +1,16 @@
+# Supabase CLI — CoteCerto
+# Config mínima; campos ausentes usam defaults do CLI.
+# Dev local: `supabase start` → API em http://127.0.0.1:54321
+project_id = "cotecerto33"
+
+[db]
+port = 54322
+major_version = 15
+
+[api]
+port = 54321
+schemas = ["public"]
+
+[auth]
+site_url = "http://localhost:3000"
+enable_signup = true

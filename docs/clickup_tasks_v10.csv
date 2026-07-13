@@ -1,0 +1,79 @@
+Task Name,Description,List,Priority,Time Estimate,Tags
+Revogar acessos do dev anterior,"Trocar senha do admin seed (desenvolvimento@suppercerto.com.br), revisar acessos ao GitHub, Lovable e servidor supabase-cotecerto.sandboxallcom.com",0 - Pré-obra,Urgent,4h,"seguranca,infra"
+Rotacionar credenciais do Supabase,"Gerar novas service_role key e anon key, trocar senha do banco Postgres, atualizar variáveis de ambiente do deploy",0 - Pré-obra,Urgent,4h,"seguranca,infra"
+Configurar e testar backup do banco,"Rotina de backup automático do Supabase self-hosted (pg_dump/wal-g) + executar um restore de teste documentado",0 - Pré-obra,Urgent,8h,infra
+Auditar drift banco vs migrations,"pg_dump --schema-only do banco de produção e comparar com as migrations 000–039 do repositório; documentar divergências e reconciliar",0 - Pré-obra,High,8h,banco
+Levantar dados reais em produção,"Contar usuários/leads/cotações reais; identificar dados que violariam as novas constraints (textos gigantes, documentos duplicados) e planejar limpeza",0 - Pré-obra,High,4h,banco
+Documentar deploy atual do front,"Descobrir onde o app roda (não há config no repo), documentar processo de publicação e onde vivem as env vars (SELF_SUPABASE_SERVICE_ROLE_KEY etc.)",0 - Pré-obra,High,4h,infra
+Definir fluxo git e destino do Lovable,"Decidir: manter sincronização com Lovable ou desconectar; definir branches, PRs e proteção da main",0 - Pré-obra,High,4h,processo
+Validar escopo V10 com a diretoria,"Confirmar percentuais (20% Master), faixas Elite, alçadas de desconto e prioridades antes de codificar",0 - Pré-obra,High,4h,processo
+Definir política LGPD e retenção,"Retenção de login_audit (IP/user_agent), tratamento de CPF/CNPJ, quem acessa o quê",0 - Pré-obra,Normal,4h,processo
+Adotar Supabase CLI para migrations,"Substituir aplicação manual no SQL Editor por migrations versionadas via CLI; baseline do estado atual",0 - Pré-obra,High,8h,"banco,infra"
+Criar ambiente de staging,"Instância Supabase de staging + deploy de front de homologação com dados de teste",0 - Pré-obra,High,12h,infra
+Gerar tipos TypeScript do banco,"supabase gen types typescript + integrar no client.ts; eliminar any nas queries",0 - Pré-obra,Normal,8h,front
+Configurar CI (GitHub Actions),"Pipeline com lint, typecheck, build e testes em cada PR",0 - Pré-obra,Normal,8h,infra
+Setup Vitest + primeiros testes,"Instalar Vitest, estrutura de testes, primeiros testes das RPCs críticas existentes (aprovar_empresa, distribuição)",0 - Pré-obra,High,16h,testes
+S1 - Corrigir views que ignoram RLS,"alter view com security_invoker=true em vendedor_conta_corrente_saldo, v_franquia_kpis, v_vendedor_kpis, v_user_presence + revisar policies das tabelas-base; hoje qualquer vendedor lê saldo de todos",S - Segurança,Urgent,8h,"seguranca,banco"
+S2 - Fechar insert aberto em empresas,"Remover policy with check(true); insert só via RPC cadastrar_franquia/service_role",S - Segurança,Urgent,4h,"seguranca,banco"
+S3 - Escopar comissao_lancamentos,"Select recortado pela rede do usuário (não todos); insert movido para RPC com validação de valor e origem",S - Segurança,Urgent,12h,"seguranca,banco"
+S4 - Restringir insert em lead_eventos,"Trocar with check(true) por escopo de empresa visível; escrita preferencialmente via RPCs existentes",S - Segurança,High,4h,"seguranca,banco"
+S5 - Rate limiting e CAPTCHA,"Configurar limites no proxy (nginx/Cloudflare) e GoTrue; throttle na RPC registrar_tentativa_login; CAPTCHA em login/cadastro",S - Segurança,High,16h,"seguranca,infra"
+S6 - Remover grants anon dos catálogos,"Tirar leitura anônima de seguradoras, planos (contêm % comissão) e pipeline_stages",S - Segurança,Normal,4h,"seguranca,banco"
+D1 - Limites de tamanho nos campos texto,"check char_length() nas 68 colunas text: nomes 150, e-mails 254, descrições 2000, mensagens 5000, user_agent 500",D - Integridade,High,12h,banco
+D2 - Faixas em valores monetários,"check valor>0 em comissao_lancamentos, leads, propostas, cotacao_premios; check 0–100 em percentuais",D - Integridade,High,4h,banco
+D3 - Normalizar e unificar documentos,"Trigger de normalização por dígitos de CPF/CNPJ/CEP/telefone; check de formato; unique em empresas.documento, clientes.documento, profiles.email (limpar duplicatas antes)",D - Integridade,High,16h,banco
+D4 - Validar schema dos jsonb,"Validação de estrutura em clt_config.progressiva, condições de modelos, distribuicao_config (check jsonb_typeof ou RPC)",D - Integridade,High,8h,banco
+D5 - Schemas zod nos formulários,"Espelhar as constraints do banco em zod nos formulários (cadastro, novo lead, configurações); maxLength nos inputs",D - Integridade,Normal,20h,front
+G1.1 - Migration hierarquia,"Adicionar 'supervisor' ao enum perfil; criar superior_id em profiles; índices",1 - Hierarquia,High,8h,banco
+G1.2 - Reescrever empresas_visiveis(),"Suportar cadeia multinível (vendedor de franquia > franquia > master/supervisor > matriz) com testes de visibilidade",1 - Hierarquia,High,16h,banco
+G1.3 - Revisar policies RLS afetadas,"Todas as policies que usam empresas_visiveis/has_role revisadas para a nova cadeia",1 - Hierarquia,High,12h,"banco,seguranca"
+G1.4 - Classificação ao liberar acesso,"Modal com 5 tipos e campos condicionais por ramo: PJ→Franquia|Master; PF→Vendedor CLT|Vendedor de franquia|Supervisor. CLT inclui salário, bônus, dia de pagamento e faixa Elite; Supervisor inclui franquias supervisionadas (ver MAPA_PROTOTIPO_PERFIS.md §5)",1 - Hierarquia,High,12h,front
+G1.5 - Lista central Perfis e usuários,"Em Configurações: lista de todos os usuários com colunas usuário · tipo · supervisão · status, refletindo a hierarquia (modal 'Usuários do sistema' do protótipo)",1 - Hierarquia,High,12h,front
+G1.6 - Área Master/Supervisor,"Grupos de navegação e dashboards escopados (xdash, xacessos do protótipo): Master vê operação própria + franquias; Supervisor vê CLT + franquias diretas",1 - Hierarquia,High,16h,front
+G1.7 - Testes de visibilidade por perfil,"Testes automatizados: cada perfil enxerga exatamente o que a V10 define",1 - Hierarquia,High,12h,testes
+G2.1 - Migration Individual/Full,"Adicionar tipo individual/full em modelos_franquia (Smart/Conecta/Light/Link/Flex=individual; Full=full); migrar dados existentes",2 - Franquia Ind/Full,High,8h,banco
+G2.2 - Bifurcação de área no login,"Equivalente ao isFranqIndividual() do protótipo: franquia Individual entra no cockpit de vendedor; Full na área de franqueado",2 - Franquia Ind/Full,High,12h,front
+G2.3 - Área franquia Full com equipe,"Cadastro de vendedores da franquia, ranking e acompanhamento da equipe",2 - Franquia Ind/Full,High,20h,front
+G2.4 - Cockpit vendedor para Individual,"Garantir área enxuta (sem cadastro de vendedores nem ranking de equipe) para os 5 modelos Individual",2 - Franquia Ind/Full,Normal,8h,front
+G2.5 - Classificação na aprovação,"Modal de classificação em Acessos refletindo Individual/Full",2 - Franquia Ind/Full,Normal,8h,front
+G3.1 - Migrations de desconto,"Tabelas desconto_politicas, desconto_solicitacoes, desconto_trilha, respostas_padrao + RLS por nível (já com checks de tamanho/faixa)",3 - Desconto multinível,High,16h,banco
+G3.2 - RPCs de desconto,"solicitar_desconto, aprovar, contrapropor, negar, escalar — regra 'dentro da alçada vs escalar' validada no servidor; trilha com autor+timestamp",3 - Desconto multinível,High,20h,banco
+G3.3 - Solicitar desconto na cotação,"UI do vendedor/franquia dentro da cotação para pedir desconto adicional ao superior",3 - Desconto multinível,High,12h,front
+G3.4 - Tela Aprovações (inbox por nível),"Fila de pedidos endereçados ao usuário logado (Matriz, Master, Supervisor, Franqueado Full) com aprovar/contrapropor/negar/escalar — render_maprov do protótipo",3 - Desconto multinível,High,20h,front
+G3.5 - Política de alçada na Personalização,"Acessos › Personalização geral: % máximo por modelo (Franquia Ind/Full, Master, Supervisor) × 7 seguradoras (Porto, Azul, Itaú, Tokio, HDI, Suhai, Demais) + condições; vendedores não têm política",3 - Desconto multinível,High,16h,front
+G3.6 - Respostas-padrão,"CRUD de respostas-padrão por seguradora e por solicitante + uso na tela Aprovações",3 - Desconto multinível,Normal,8h,front
+G3.7 - Abrir cotação para conferência,"Visão somente leitura da cotação completa (coberturas, prêmio, comissões) a partir do pedido de desconto",3 - Desconto multinível,Normal,8h,front
+G3.8 - Testes de alçada e escalonamento,"Testes das regras: roteamento ao superior imediato, escalonamento até a Matriz, trilha preservada",3 - Desconto multinível,High,12h,testes
+G4.1 - Migrations de comissão,"Tabelas de regras de comissão e campanhas_elite (faixas) + RLS",4 - Comissão,High,12h,banco
+G4.2 - Motor 20% do Master,"Cálculo de 20% sobre comissão líquida da equipe do Master, incluindo renovações — no servidor (RPC/trigger)",4 - Comissão,High,16h,banco
+G4.3 - Motor CLT progressiva,"Cálculo consumindo clt_config (progressiva + fator_novas) — hoje a tabela existe mas nada a usa",4 - Comissão,High,12h,banco
+G4.4 - Campanhas Elite,"Configuração por faixa (Elite Master / Elite Franqueado) + cálculo",4 - Comissão,High,16h,"banco,front"
+G4.5 - Finalizar tela Comissões,"Tirar o 'EM FORMULAÇÃO': conta-corrente com os novos cálculos, filtros por rede",4 - Comissão,High,12h,front
+G4.6 - Testes de cálculo de comissão,"Golden tests: cenários fechados de comissão (CLT, Master 20%, Elite) com valores esperados",4 - Comissão,High,12h,testes
+G5.1 - Premiações: modelo + tela,"Substituir stub de 16 linhas: modelo de dados de premiações + tela real conforme protótipo",5 - Telas pendentes,Normal,20h,"banco,front"
+G5.2 - Premiações: integração metas/ranking,"Ligar premiações às metas e ranking existentes",5 - Telas pendentes,Normal,12h,front
+G5.3 - Relatórios: tela real,"Substituir stub: relatórios com filtros e export (PDF/xlsx) conforme protótipo",5 - Telas pendentes,Normal,20h,front
+G5.4 - Remover resíduo do protótipo,"Excluir proto-pages.json (279KB) e ProtoPage quando as telas ficarem prontas",5 - Telas pendentes,Low,4h,front
+G6.1 - Renovações: avisos automáticos,"Job pg_cron de aviso ao vendedor sobre renovações próximas + notificação na UI",6 - Renovações e tutoriais,Normal,12h,"banco,front"
+G6.2 - Renovações: comissão do Master,"Garantir que renovações alimentam o cálculo dos 20% do Master (depende de G4.2)",6 - Renovações e tutoriais,Normal,8h,banco
+G6.3 - Engine de tutorial (tour),"Mecanismo de tour com spotlight por página/alvo, como no protótipo",6 - Renovações e tutoriais,Normal,16h,front
+G6.4 - Conteúdo dos tutoriais (3 roteiros),"São 3 roteiros, não 6: vendedor+franquia Individual (~73 passos), Matriz (~54), grupo Master/Supervisor/Full (~21) — ~148 passos e ~111 spotlights no total; abertura personalizada por persona (ver MAPA_PROTOTIPO_PERFIS.md §6)",6 - Renovações e tutoriais,Normal,16h,front
+Q1 - Refatorar novo-lead.tsx,"Quebrar as 1.339 linhas em componentes/hooks antes de mexer no fluxo de cotação",7 - Qualidade final,Normal,16h,front
+Q2 - Refatorar acessos.tsx e configuracoes.tsx,"Quebrar 1.205 + 714 linhas em componentes — essas telas recebem a classificação e a política de alçada",7 - Qualidade final,Normal,16h,front
+Q3 - Varredura UI/UX vs protótipo,"Comparação tela a tela com o cotecerto_prototipo_v10.html e ajustes finos de layout/textos",7 - Qualidade final,Normal,24h,front
+Q4 - QA final e regressão por perfil,"Passada completa nos 6 perfis em staging antes do go-live",7 - Qualidade final,High,16h,testes
+T1 - Setup E2E (Playwright),"Instalar Playwright, estrutura de testes E2E, execução em staging com dados seed; integrar ao CI",T - Testes,High,8h,testes
+T2 - E2E: fluxo de venda completo,"Teste ponta a ponta: login vendedor → atender lead → nova cotação → comparar → proposta → aceite → extrato",T - Testes,High,12h,testes
+T3 - E2E: navegação por perfil,"Para cada uma das 6 personas: login → tela inicial correta → menu correto → acesso negado ao que não pode ver (inclui bifurcação franquia Individual/Full)",T - Testes,High,12h,testes
+T4 - Testes de RLS e segurança,"Suíte automatizada de policies: cada perfil enxerga só sua rede (empresas_visiveis multinível), views com security_invoker, inserts bloqueados (S1–S4); rodar a cada migration",T - Testes,Urgent,12h,"testes,seguranca"
+T5 - Testes de constraints de dados,"Verificar que o banco rejeita: textos acima do limite, valores negativos, percentuais fora de 0–100, documentos duplicados/malformados, jsonb inválido (D1–D4)",T - Testes,High,8h,"testes,banco"
+T6 - Testes unitários do front,"Componentes e hooks críticos: máscaras (CPF/CNPJ/placa), schemas zod, canSee por perfil, cálculos exibidos (kpis, ranking)",T - Testes,Normal,16h,"testes,front"
+T7 - Testes de integração das RPCs,"Todas as RPCs de negócio contra banco real de teste: cadastrar/aprovar empresa, distribuição, solicitar/aprovar/escalar desconto, lançamentos de comissão",T - Testes,High,12h,"testes,banco"
+T8 - Testes de carga básicos,"k6 ou similar nos endpoints críticos: login, listagem de leads, criação de cotação, fila de aprovações — validar rate limiting configurado em S5",T - Testes,Normal,8h,"testes,infra"
+T9 - Gate de cobertura no CI,"Definir cobertura mínima (ex.: 80% nas regras de negócio), bloquear merge sem testes passando, relatório de cobertura no PR",T - Testes,Normal,4h,"testes,infra"
+K1 - Dockerfile do front,"Containerizar o app TanStack Start (build multi-stage: bun build + node server), .dockerignore, healthcheck e variáveis de ambiente documentadas",K - Docker e deploy,High,8h,infra
+K2 - docker-compose de desenvolvimento,"Ambiente local completo: front + Supabase local (CLI) com seed de dados de teste — qualquer dev sobe o sistema com um comando",K - Docker e deploy,High,8h,infra
+K3 - Stack de produção,"docker-compose/stack de produção: front + proxy reverso (nginx/Caddy) com TLS e rate limiting (integra com S5); volumes e restart policies",K - Docker e deploy,High,8h,"infra,seguranca"
+K4 - Versionar o Supabase self-hosted,"Trazer o docker-compose do Supabase do servidor para o repositório (versões pinadas, .env.example), alinhado ao levantamento C5",K - Docker e deploy,Normal,8h,"infra,banco"
+K5 - Build e push de imagem no CI,"GitHub Actions: build da imagem a cada merge, push para registry (GHCR), tag por versão",K - Docker e deploy,Normal,4h,infra
+K6 - Migrar deploy para Docker (staging e produção),"Substituir o deploy atual: staging primeiro, depois produção, com runbook de deploy/rollback documentado",K - Docker e deploy,High,8h,infra

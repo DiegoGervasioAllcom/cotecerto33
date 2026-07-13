@@ -16,7 +16,7 @@ export function usePresence() {
 
   useEffect(() => {
     if (!userId) return;
-    const ua = typeof navigator !== "undefined" ? navigator.userAgent : null;
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : undefined;
 
     const set = async (status: "online" | "ausente" | "offline") => {
       if (lastStatus.current === status) {

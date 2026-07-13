@@ -7,7 +7,7 @@ import { printHtml, escapeHtml, fmtBRL } from "@/lib/print";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { id?: string; step?: number } => ({
     id: typeof s.id === "string" ? s.id : undefined,
     step: typeof s.step === "number" ? s.step : (typeof s.step === "string" ? Number(s.step) : undefined),
   }),
@@ -147,10 +147,10 @@ function Page() {
     if (!cotacaoId || !perdaForm.motivo || !perdaForm.sub) return;
     setPerdaSaving(true);
     const { error } = await supabase.rpc("classificar_perda_cotacao", {
-      p_cotacao_id: cotacaoId,
+      p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
       p_motivo: perdaForm.motivo,
       p_submotivo: perdaForm.sub,
-      p_observacao: perdaForm.obs || null,
+      p_observacao: perdaForm.obs || undefined,
     });
     setPerdaSaving(false);
     if (error) { alert("Erro ao classificar perda: " + error.message); return; }
@@ -251,7 +251,7 @@ function Page() {
     if (!f.cpf && !f.nome && !cotacaoId) return;
     setSaveState("saving");
     const { data, error } = await supabase.rpc("salvar_cotacao_rascunho", {
-      p_cotacao_id: cotacaoId,
+      p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
       p_payload: buildPayload(extra) as never,
     });
     if (error) {

@@ -482,7 +482,7 @@ function UsuariosModal({ role, title, onClose }: { role: "matriz" | "franqueado"
   const createFn = useServerFn(adminCreateUser);
   const deleteFn = useServerFn(adminDeleteUser);
 
-  const targetRoles = role === "franqueado" ? ["franqueado", "master"] : [role];
+  const targetRoles: ("matriz" | "master" | "vendedor" | "franqueado")[] = role === "franqueado" ? ["franqueado", "master"] : [role];
 
   async function load() {
     setLoading(true); setErr(null);
@@ -515,7 +515,7 @@ function UsuariosModal({ role, title, onClose }: { role: "matriz" | "franqueado"
     const ativo = !!u.desligado_em; // se já está desligado → reativar
     const motivo = !ativo ? (prompt("Motivo da desativação (opcional):") ?? null) : null;
     const { error } = await supabase.rpc("admin_set_usuario_status", {
-      p_user_id: u.id, p_ativo: ativo, p_motivo: motivo,
+      p_user_id: u.id, p_ativo: ativo, p_motivo: motivo ?? undefined,
     });
     if (error) setErr(error.message);
     void load();
@@ -617,7 +617,7 @@ function EditUserModal({ user, empresas, role, onClose, onSaved }: {
   async function save() {
     setBusy(true); setErr(null);
     const { error } = await supabase.rpc("admin_atualizar_usuario", {
-      p_user_id: user.id, p_nome: nome, p_empresa_id: empresaId || null,
+      p_user_id: user.id, p_nome: nome ?? "", p_empresa_id: (empresaId || null) as unknown as string, // SQL aceita null (remove vínculo); tipo gerado exige string
     });
     setBusy(false);
     if (error) { setErr(error.message); return; }

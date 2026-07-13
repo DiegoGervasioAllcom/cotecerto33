@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/aceite")({
   head: () => ({ meta: [{ title: "Aceite & transmissão · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
     selected: typeof s.selected === "string" ? s.selected : undefined,
   }),
   component: Page,
@@ -66,7 +66,7 @@ function Page() {
     setBusy(id);
     const { error } = await supabase.rpc("transmitir_proposta", {
       p_proposta_id: id,
-      p_obs: obs[id] || null,
+      p_obs: obs[id] || undefined,
     });
     setBusy(null);
     if (error) {

@@ -54,7 +54,7 @@ function Page() {
     const { error } = await supabase.rpc("avaliar_perda_lead", {
       p_lead_id: id,
       p_decisao: decisao,
-      p_observacao: obs[id] || null,
+      p_observacao: obs[id] || undefined,
     });
     setBusy(null);
     if (error) {

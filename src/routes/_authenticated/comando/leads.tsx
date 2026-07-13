@@ -606,7 +606,7 @@ function RedistModal({ lead, empresas, profiles, onClose, onDone }: { lead: Lead
     if (!empresaId) { alert("Selecione a franquia"); return; }
     setSaving(true);
     const { error } = await supabase.rpc("redistribuir_lead", {
-      p_lead: lead.id, p_empresa: empresaId, p_responsavel: responsavelId || null,
+      p_lead: lead.id, p_empresa: empresaId, p_responsavel: responsavelId || undefined,
     });
     setSaving(false);
     if (error) alert(error.message); else onDone();

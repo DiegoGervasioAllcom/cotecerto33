@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/database.types";
 
 export const Route = createFileRoute("/_authenticated/venda/pipeline")({
   head: () => ({ meta: [{ title: "Pipeline · CoteCerto" }] }),
@@ -111,7 +112,7 @@ function Page() {
     );
     const { error } = await supabase
       .from("leads")
-      .update({ status_pipeline: novo, atualizado_em: new Date().toISOString() })
+      .update({ status_pipeline: novo as Database["public"]["Enums"]["lead_status"], atualizado_em: new Date().toISOString() })
       .eq("id", lead.id);
     if (error) {
       setErr(error.message);
