@@ -105,7 +105,7 @@ function Page() {
       if (vencendo.error) setErr(vencendo.error.message);
       setRows((vencendo.data ?? []) as unknown as Proposta[]);
       setRenovadas(renov.count ?? 0);
-      setPerdidas(perd.error ? 0 : perd.count ?? 0);
+      setPerdidas(perd.error ? 0 : (perd.count ?? 0));
       const em: Record<string, Empresa> = {};
       for (const e of (emps.data ?? []) as Empresa[]) em[e.id] = e;
       setEmpresas(em);
@@ -168,9 +168,7 @@ function Page() {
       <div className="page-head">
         <div>
           <h1>Renovações</h1>
-          <div className="sub">
-            CRM de renovação — algo que hoje a Supper não tem estruturado
-          </div>
+          <div className="sub">CRM de renovação — algo que hoje a Supper não tem estruturado</div>
         </div>
         <div className="tools">
           <select
@@ -195,11 +193,9 @@ function Page() {
         <svg width="16" height="16">
           <use href="#i-refresh" />
         </svg>{" "}
-        <strong style={{ marginRight: 4 }}>Gatilho automático.</strong> 60 dias
-        antes do vencimento, o sistema cria um lead{" "}
-        <strong style={{ margin: "0 4px" }}>"Renovação"</strong> na coluna
-        "Novo" do pipeline e atribui ao vendedor da apólice — sem ninguém
-        precisar lembrar.
+        <strong style={{ marginRight: 4 }}>Gatilho automático.</strong> 60 dias antes do vencimento,
+        o sistema cria um lead <strong style={{ margin: "0 4px" }}>"Renovação"</strong> na coluna
+        "Novo" do pipeline e atribui ao vendedor da apólice — sem ninguém precisar lembrar.
       </div>
 
       <div className="mkpi-grid">
@@ -278,10 +274,7 @@ function Page() {
             )}
             {!loading && err && (
               <tr>
-                <td
-                  colSpan={9}
-                  style={{ color: "var(--alert)", padding: 16 }}
-                >
+                <td colSpan={9} style={{ color: "var(--alert)", padding: 16 }}>
                   {err}
                 </td>
               </tr>
@@ -296,14 +289,7 @@ function Page() {
             {rows.map((r) => {
               const cliente = r.cotacoes?.segurado?.[0]?.nome || "—";
               const dias = daysUntil(r.vencimento);
-              const sla =
-                dias === null
-                  ? ""
-                  : dias <= 15
-                  ? "alert"
-                  : dias <= 45
-                  ? "warn"
-                  : "ok";
+              const sla = dias === null ? "" : dias <= 15 ? "alert" : dias <= 45 ? "warn" : "ok";
               const chip = dias !== null && dias <= 60 ? "Lead criado" : "Monitorando";
               return (
                 <tr key={r.id}>
@@ -322,18 +308,14 @@ function Page() {
                   </td>
                   <td>{fmtBRL(Number(r.premio ?? r.valor ?? 0))}</td>
                   <td>
-                    <small>
-                      {profiles[r.responsavel_id || ""]?.nome || "—"}
-                    </small>
+                    <small>{profiles[r.responsavel_id || ""]?.nome || "—"}</small>
                   </td>
                   <td>
                     <small>{empresas[r.empresa_id || ""]?.nome || "—"}</small>
                   </td>
                   <td>
                     <span
-                      className={`chip ${
-                        chip === "Lead criado" ? "chip-yellow" : "chip-info"
-                      }`}
+                      className={`chip ${chip === "Lead criado" ? "chip-yellow" : "chip-info"}`}
                     >
                       {chip}
                     </span>

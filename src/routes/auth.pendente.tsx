@@ -21,8 +21,8 @@ function PendentePage() {
         <h3>Cadastro recebido</h3>
         <p className="lead">
           {profile?.nome ? `Olá, ${profile.nome}. ` : ""}
-          Sua franquia está aguardando aprovação pela Matriz. Você receberá um aviso assim que
-          for liberada para uso.
+          Sua franquia está aguardando aprovação pela Matriz. Você receberá um aviso assim que for
+          liberada para uso.
         </p>
         <button
           className="auth-btn"

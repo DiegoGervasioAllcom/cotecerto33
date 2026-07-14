@@ -20,7 +20,7 @@ type Lead = {
   empresa_id: string | null;
   responsavel_id: string | null;
   criado_em: string;
-  dados: any;
+  dados: Record<string, unknown> | null;
 };
 type Empresa = { id: string; nome: string | null };
 type Profile = { id: string; nome: string | null };
@@ -36,7 +36,11 @@ const STAGE_KEY: Record<string, string> = {
 };
 
 function brl(v: number | null | undefined) {
-  return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  return Number(v || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  });
 }
 function age(d: string) {
   const diff = Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
@@ -65,11 +69,19 @@ function Page() {
     (async () => {
       setLoading(true);
       try {
-        const [{ data: st }, { data: lds, error }, { data: emps }, { data: profs }, { data: segs }] = await Promise.all([
+        const [
+          { data: st },
+          { data: lds, error },
+          { data: emps },
+          { data: profs },
+          { data: segs },
+        ] = await Promise.all([
           supabase.from("pipeline_stages").select("*").order("ordem"),
           supabase
             .from("leads")
-            .select("id,nome,contato,status_pipeline,valor,origem,empresa_id,responsavel_id,criado_em,dados")
+            .select(
+              "id,nome,contato,status_pipeline,valor,origem,empresa_id,responsavel_id,criado_em,dados",
+            )
             .neq("status_pipeline", "perdido")
             .or("arquivado.is.null,arquivado.eq.false")
             .order("atualizado_em", { ascending: false })
@@ -95,8 +107,12 @@ function Page() {
   }, []);
 
   const filterOptions = useMemo(() => {
-    const fr = Object.values(empresas).filter((e) => e.nome).sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-    const vd = Object.values(profiles).filter((p) => p.nome).sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    const fr = Object.values(empresas)
+      .filter((e) => e.nome)
+      .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    const vd = Object.values(profiles)
+      .filter((p) => p.nome)
+      .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     const og = new Set<string>();
     for (const l of leads) {
       if (l.origem) og.add(l.origem);
@@ -146,7 +162,10 @@ function Page() {
           .limit(1)
           .maybeSingle();
         if (cot?.id) {
-          navigate({ to: "/venda/novo-lead", search: { id: cot.id, step: Math.max(0, Number(cot.step_atual ?? 0)) } });
+          navigate({
+            to: "/venda/novo-lead",
+            search: { id: cot.id, step: Math.max(0, Number(cot.step_atual ?? 0)) },
+          });
         } else {
           navigate({ to: "/venda/novo-lead", search: {} });
         }
@@ -174,7 +193,9 @@ function Page() {
       <div className="page-head">
         <div>
           <h1>Pipeline geral</h1>
-          <div className="sub">Todos os leads da operação num só funil — a Matriz vê tudo e age onde precisa</div>
+          <div className="sub">
+            Todos os leads da operação num só funil — a Matriz vê tudo e age onde precisa
+          </div>
         </div>
       </div>
 
@@ -182,22 +203,44 @@ function Page() {
         <span className="label">FILTRAR</span>
         <select className="select-mini" value={fFranq} onChange={(e) => setFFranq(e.target.value)}>
           <option value="">Franquia</option>
-          {filterOptions.franquias.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+          {filterOptions.franquias.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.nome}
+            </option>
+          ))}
         </select>
         <select className="select-mini" value={fVend} onChange={(e) => setFVend(e.target.value)}>
           <option value="">Vendedor</option>
-          {filterOptions.vendedores.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+          {filterOptions.vendedores.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.nome}
+            </option>
+          ))}
         </select>
-        <select className="select-mini" value={fOrigem} onChange={(e) => setFOrigem(e.target.value)}>
+        <select
+          className="select-mini"
+          value={fOrigem}
+          onChange={(e) => setFOrigem(e.target.value)}
+        >
           <option value="">Origem</option>
-          {filterOptions.origens.map((x) => <option key={x} value={x}>{x}</option>)}
+          {filterOptions.origens.map((x) => (
+            <option key={x} value={x}>
+              {x}
+            </option>
+          ))}
         </select>
         <select className="select-mini" value={fSeg} onChange={(e) => setFSeg(e.target.value)}>
           <option value="">Seguradora</option>
-          {filterOptions.seguradoras.map((x) => <option key={x.id} value={x.nome}>{x.nome}</option>)}
+          {filterOptions.seguradoras.map((x) => (
+            <option key={x.id} value={x.nome}>
+              {x.nome}
+            </option>
+          ))}
         </select>
         <div className="spacer"></div>
-        <span className="small muted">{filtered.length} de {leads.length} leads</span>
+        <span className="small muted">
+          {filtered.length} de {leads.length} leads
+        </span>
       </div>
 
       {err && <div className="alert alert-err">{err}</div>}
@@ -210,14 +253,28 @@ function Page() {
           const total = list.reduce((a, l) => a + Number(l.valor || 0), 0);
           return (
             <div className="kcol" key={s.id}>
-              <div className="kcol-h"><span className="name">{s.nome}</span><span className="count">{list.length}</span></div>
-              <div className="kcol-h" style={{ marginTop: -6, paddingTop: 0 }}><span className="value">{brl(total)}</span></div>
-              {list.length === 0 && <div className="small muted" style={{ padding: 8 }}>Vazio</div>}
+              <div className="kcol-h">
+                <span className="name">{s.nome}</span>
+                <span className="count">{list.length}</span>
+              </div>
+              <div className="kcol-h" style={{ marginTop: -6, paddingTop: 0 }}>
+                <span className="value">{brl(total)}</span>
+              </div>
+              {list.length === 0 && (
+                <div className="small muted" style={{ padding: 8 }}>
+                  Vazio
+                </div>
+              )}
               {list.map((l) => {
                 const e = l.empresa_id ? empresas[l.empresa_id] : null;
                 const v = l.responsavel_id ? profiles[l.responsavel_id] : null;
                 const fr = e?.nome || "—";
-                const car = [l.dados?.veiculo_marca, l.dados?.veiculo_modelo, l.dados?.veiculo_ano].filter(Boolean).join(" ") || (l.dados?.veiculo as string | undefined) || "";
+                const car =
+                  [l.dados?.veiculo_marca, l.dados?.veiculo_modelo, l.dados?.veiculo_ano]
+                    .filter(Boolean)
+                    .join(" ") ||
+                  (l.dados?.veiculo as string | undefined) ||
+                  "";
                 const segs: string[] = (l.dados?.seguradoras_sel as string[] | undefined) ?? [];
                 return (
                   <div
@@ -226,18 +283,36 @@ function Page() {
                     role="button"
                     tabIndex={0}
                     onClick={() => openLead(l)}
-                    onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); openLead(l); } }}
-                    style={{ cursor: opening === l.id ? "wait" : "pointer", opacity: opening === l.id ? 0.6 : 1 }}
+                    onKeyDown={(ev) => {
+                      if (ev.key === "Enter" || ev.key === " ") {
+                        ev.preventDefault();
+                        openLead(l);
+                      }
+                    }}
+                    style={{
+                      cursor: opening === l.id ? "wait" : "pointer",
+                      opacity: opening === l.id ? 0.6 : 1,
+                    }}
                   >
-                    <div className="top"><span className="name">{l.nome || "Sem nome"}</span></div>
+                    <div className="top">
+                      <span className="name">{l.nome || "Sem nome"}</span>
+                    </div>
                     {car && <div className="car">{car}</div>}
                     {segs.length > 0 && (
                       <div className="kcard-sub" style={{ marginTop: 6 }}>
-                        {segs.slice(0, 3).map((sg) => <span key={sg} className="chip chip-outline">{sg}</span>)}
+                        {segs.slice(0, 3).map((sg) => (
+                          <span key={sg} className="chip chip-outline">
+                            {sg}
+                          </span>
+                        ))}
                       </div>
                     )}
                     <div className="next">
-                      <svg width="11" height="11"><use href="#i-building"></use></svg> {fr}{v?.nome ? ` · ${v.nome}` : ""}
+                      <svg width="11" height="11">
+                        <use href="#i-building"></use>
+                      </svg>{" "}
+                      {fr}
+                      {v?.nome ? ` · ${v.nome}` : ""}
                     </div>
                     <div className="footer">
                       <span className="val">{brl(l.valor)}</span>

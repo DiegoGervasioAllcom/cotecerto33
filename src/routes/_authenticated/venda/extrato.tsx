@@ -47,7 +47,7 @@ function Page() {
       .from("propostas")
       .select(
         "id,numero,seguradora,premio,valor,transmitida_em," +
-          "cotacoes(segurado:cotacao_segurado(nome))"
+          "cotacoes(segurado:cotacao_segurado(nome))",
       )
       .eq("status", "transmitida")
       .gte("transmitida_em", ini)
@@ -64,7 +64,7 @@ function Page() {
 
   const total = useMemo(
     () => rows.reduce((s, r) => s + Number(r.premio ?? r.valor ?? 0), 0),
-    [rows]
+    [rows],
   );
 
   return (
@@ -110,7 +110,10 @@ function Page() {
 
       {!loading && rows.length === 0 && (
         <div className="card">
-          <div className="card-b" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+          <div
+            className="card-b"
+            style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
+          >
             Nenhuma venda transmitida no período.
           </div>
         </div>

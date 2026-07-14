@@ -6,7 +6,6 @@ import { MaskedInput } from "@/components/masked-input";
 import { applyMask, maskPct, type Mask } from "@/lib/masks";
 import { supabase } from "@/integrations/supabase/client";
 
-
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
   head: () => ({ meta: [{ title: "Acessos e permissões · CoteCerto" }] }),
   component: Page,
@@ -66,14 +65,33 @@ type CltConfig = {
 };
 
 const SEGURADORAS = [
-  "Ituran", "Porto Seguro", "Azul Seguros", "Bradesco Seguros", "SulAmérica",
-  "HDI", "Allianz", "Mapfre", "Tokio Marine", "Liberty", "Itaú", "Zurich",
+  "Ituran",
+  "Porto Seguro",
+  "Azul Seguros",
+  "Bradesco Seguros",
+  "SulAmérica",
+  "HDI",
+  "Allianz",
+  "Mapfre",
+  "Tokio Marine",
+  "Liberty",
+  "Itaú",
+  "Zurich",
 ];
 
 const CLT_DEFAULT: CltConfig = {
-  progressiva: [], fator_novas: [], fator_remalho: [],
-  seguradora_planos: [], seguradora_adic: [],
-  regras: { apuracao_ini: "26", apuracao_fim: "25", pagamento: "5º dia útil", iof: "7,38%", rules: [] },
+  progressiva: [],
+  fator_novas: [],
+  fator_remalho: [],
+  seguradora_planos: [],
+  seguradora_adic: [],
+  regras: {
+    apuracao_ini: "26",
+    apuracao_fim: "25",
+    pagamento: "5º dia útil",
+    iof: "7,38%",
+    rules: [],
+  },
 };
 
 type Tab = "pend" | "deslig" | "modelos";
@@ -142,9 +160,7 @@ function Page() {
     const [p, d, m, c] = await Promise.all([
       supabase
         .from("empresas")
-        .select(
-          "id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro",
-        )
+        .select("id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro")
         .eq("status", "pendente")
         .order("created_at", { ascending: false }),
       supabase
@@ -158,7 +174,9 @@ function Page() {
     if (p.error) setErr(p.error.message);
     setPendentes((p.data ?? []) as Pendente[]);
     setDeslig((d.data ?? []) as Deslig[]);
-    setModelos(((m.data ?? []) as Modelo[]).map((x) => ({ ...x, params: (x.params ?? {}) as ModeloParams })));
+    setModelos(
+      ((m.data ?? []) as Modelo[]).map((x) => ({ ...x, params: (x.params ?? {}) as ModeloParams })),
+    );
     if (c.data) {
       setClt({
         progressiva: (c.data.progressiva ?? []) as Pair[],
@@ -185,7 +203,7 @@ function Page() {
     setAnalisando(p);
     setFullForm(false);
     const franquia = modelos.filter((m) => m.tipo === "franqueada");
-    setModelSel(p.tipo === "pj" && franquia[0] ? franquia[0].id : modelos[0]?.id ?? "");
+    setModelSel(p.tipo === "pj" && franquia[0] ? franquia[0].id : (modelos[0]?.id ?? ""));
   }
 
   function closeModal() {
@@ -219,7 +237,9 @@ function Page() {
     setBusy(false);
     if (error) {
       console.error("aprovar_empresa error", error);
-      setErr(`${error.message}${error.details ? ` · ${error.details}` : ""}${error.hint ? ` · ${error.hint}` : ""}`);
+      setErr(
+        `${error.message}${error.details ? ` · ${error.details}` : ""}${error.hint ? ` · ${error.hint}` : ""}`,
+      );
       return;
     }
     const m = modelos.find((x) => x.id === modelSel);
@@ -256,7 +276,11 @@ function Page() {
         </button>
       </div>
 
-      {err && <div className="banner alert" style={{ marginBottom: 14 }}>{err}</div>}
+      {err && (
+        <div className="banner alert" style={{ marginBottom: 14 }}>
+          {err}
+        </div>
+      )}
 
       {tab === "pend" && (
         <>
@@ -311,10 +335,7 @@ function Page() {
                         </td>
                         <td>{new Date(p.created_at).toLocaleDateString("pt-BR")}</td>
                         <td style={{ textAlign: "right" }}>
-                          <button
-                            className="btn btn-yellow btn-sm"
-                            onClick={() => openAnalisar(p)}
-                          >
+                          <button className="btn btn-yellow btn-sm" onClick={() => openAnalisar(p)}>
                             <Icon id="shield" size={13} /> Analisar
                           </button>
                         </td>
@@ -343,14 +364,19 @@ function Page() {
               <tbody>
                 {deslig.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}>
+                    <td
+                      colSpan={4}
+                      style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}
+                    >
                       Nenhum desligamento registrado.
                     </td>
                   </tr>
                 )}
                 {deslig.map((d) => (
                   <tr key={d.id}>
-                    <td><strong>{d.nome}</strong></td>
+                    <td>
+                      <strong>{d.nome}</strong>
+                    </td>
                     <td>{d.email}</td>
                     <td>{d.desligado_motivo ?? "—"}</td>
                     <td>{new Date(d.desligado_em).toLocaleDateString("pt-BR")}</td>
@@ -477,7 +503,12 @@ function AnalisarModal({
         <div className="modal-b">
           <div
             className="acc-sol"
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
           >
             <div>
               <div>
@@ -485,7 +516,9 @@ function AnalisarModal({
               </div>
               <div className="small muted" style={{ marginTop: 4 }}>
                 {pendente.email ?? "—"} · {pendente.celular ?? pendente.telefone ?? "—"}
-                {pendente.cidade ? ` · ${pendente.cidade}${pendente.uf ? "/" + pendente.uf : ""}` : ""}
+                {pendente.cidade
+                  ? ` · ${pendente.cidade}${pendente.uf ? "/" + pendente.uf : ""}`
+                  : ""}
               </div>
             </div>
             {!fullForm && (
@@ -529,7 +562,9 @@ function AnalisarModal({
                   <label>Leads · média/dia útil</label>
                   <select className="input" defaultValue={FAIXAS[1][1]}>
                     {FAIXAS.map(([nome, qtd]) => (
-                      <option key={nome} value={qtd}>{nome} — {qtd}/dia</option>
+                      <option key={nome} value={qtd}>
+                        {nome} — {qtd}/dia
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -558,7 +593,9 @@ function AnalisarModal({
               <div className="acc-sec-t">Modelo de franquia</div>
               <div className="acc-pills">
                 {modelos.length === 0 && (
-                  <span className="muted small">Nenhum modelo cadastrado em Personalização geral.</span>
+                  <span className="muted small">
+                    Nenhum modelo cadastrado em Personalização geral.
+                  </span>
                 )}
                 {modelos.map((m) => (
                   <button
@@ -583,14 +620,18 @@ function AnalisarModal({
                     {p.k === "leads" ? (
                       <select className="input" defaultValue={FAIXAS[1][1]}>
                         {FAIXAS.map(([nome, qtd]) => (
-                          <option key={nome} value={qtd}>{nome} — {qtd}/dia</option>
+                          <option key={nome} value={qtd}>
+                            {nome} — {qtd}/dia
+                          </option>
                         ))}
                       </select>
                     ) : p.k === "comVenda" ? (
                       <MaskedInput
                         mask="pct"
                         className="input"
-                        defaultValue={String(modelos.find((m) => m.id === modelSel)?.perc_comissao_padrao ?? 0)}
+                        defaultValue={String(
+                          modelos.find((m) => m.id === modelSel)?.perc_comissao_padrao ?? 0,
+                        )}
                       />
                     ) : (
                       <input className="input" defaultValue="—" />
@@ -646,7 +687,15 @@ function AnalisarModal({
 // ---------------------------------------------------------------------------
 
 function PersoGeral({
-  sub, setSub, modelos, setModelos, clt, setClt, onToast, onError, reload,
+  sub,
+  setSub,
+  modelos,
+  setModelos,
+  clt,
+  setClt,
+  onToast,
+  onError,
+  reload,
 }: {
   sub: PersoSub;
   setSub: (s: PersoSub) => void;
@@ -684,7 +733,11 @@ function PersoGeral({
 }
 
 function ModeloFranquiaPanel({
-  modelos, setModelos, onToast, onError, reload,
+  modelos,
+  setModelos,
+  onToast,
+  onError,
+  reload,
 }: {
   modelos: Modelo[];
   setModelos: (updater: (prev: Modelo[]) => Modelo[]) => void;
@@ -698,11 +751,15 @@ function ModeloFranquiaPanel({
 
   function patchModelo(id: string, patch: Partial<Modelo> & { params?: ModeloParams }) {
     setModelos((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...patch, params: { ...m.params, ...(patch.params ?? {}) } } : m)),
+      prev.map((m) =>
+        m.id === id ? { ...m, ...patch, params: { ...m.params, ...(patch.params ?? {}) } } : m,
+      ),
     );
   }
   function patchParam(id: string, key: string, value: string) {
-    setModelos((prev) => prev.map((m) => (m.id === id ? { ...m, params: { ...m.params, [key]: value } } : m)));
+    setModelos((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, params: { ...m.params, [key]: value } } : m)),
+    );
   }
 
   async function salvar() {
@@ -716,7 +773,10 @@ function ModeloFranquiaPanel({
     const res = await Promise.all(updates);
     setBusy(false);
     const erro = res.find((r) => r.error);
-    if (erro?.error) { onError(erro.error.message); return; }
+    if (erro?.error) {
+      onError(erro.error.message);
+      return;
+    }
     onToast("Parâmetros dos modelos atualizados", "ok");
   }
 
@@ -730,12 +790,20 @@ function ModeloFranquiaPanel({
       perc_comissao_padrao: 0,
       ordem,
       params: {
-        leads: "—", comVenda: "—", comRenov: "—", incentivo: "—",
-        software: "—", franquia: "—", royalties: "—",
+        leads: "—",
+        comVenda: "—",
+        comRenov: "—",
+        incentivo: "—",
+        software: "—",
+        franquia: "—",
+        royalties: "—",
       },
     });
     setBusy(false);
-    if (error) { onError(error.message); return; }
+    if (error) {
+      onError(error.message);
+      return;
+    }
     setNovoNome("");
     setAddOpen(false);
     onToast(`Modelo "${novoNome.trim()}" adicionado`, "ok");
@@ -747,7 +815,10 @@ function ModeloFranquiaPanel({
     setBusy(true);
     const { error } = await supabase.from("modelos_franquia").delete().eq("id", m.id);
     setBusy(false);
-    if (error) { onError(error.message); return; }
+    if (error) {
+      onError(error.message);
+      return;
+    }
     onToast(`Modelo "${m.nome}" removido`, "alert");
     await reload();
   }
@@ -755,7 +826,9 @@ function ModeloFranquiaPanel({
   return (
     <div className="card">
       <div className="card-h">
-        <h3><Icon id="building" size={16} /> Modelo Franquia</h3>
+        <h3>
+          <Icon id="building" size={16} /> Modelo Franquia
+        </h3>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setAddOpen((v) => !v)}>
             <Icon id="plus" size={13} /> Adicionar modelo
@@ -774,10 +847,20 @@ function ModeloFranquiaPanel({
             onChange={(e) => setNovoNome(e.target.value)}
             style={{ maxWidth: 320 }}
           />
-          <button className="btn btn-yellow btn-sm" disabled={busy || !novoNome.trim()} onClick={adicionar}>
+          <button
+            className="btn btn-yellow btn-sm"
+            disabled={busy || !novoNome.trim()}
+            onClick={adicionar}
+          >
             <Icon id="check" size={13} /> Criar
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => { setAddOpen(false); setNovoNome(""); }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              setAddOpen(false);
+              setNovoNome("");
+            }}
+          >
             Cancelar
           </button>
         </div>
@@ -787,14 +870,19 @@ function ModeloFranquiaPanel({
           <thead>
             <tr>
               <th>Modelo</th>
-              {PARAMS.map((p) => <th key={p.k}>{p.l}</th>)}
+              {PARAMS.map((p) => (
+                <th key={p.k}>{p.l}</th>
+              ))}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {modelos.length === 0 && (
               <tr>
-                <td colSpan={PARAMS.length + 2} style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}>
+                <td
+                  colSpan={PARAMS.length + 2}
+                  style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}
+                >
                   Nenhum modelo cadastrado. Use “Adicionar modelo”.
                 </td>
               </tr>
@@ -819,7 +907,11 @@ function ModeloFranquiaPanel({
                   </td>
                 ))}
                 <td style={{ textAlign: "right" }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => remover(m)} title="Remover">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => remover(m)}
+                    title="Remover"
+                  >
                     <Icon id="trash" size={13} />
                   </button>
                 </td>
@@ -830,7 +922,8 @@ function ModeloFranquiaPanel({
       </div>
       <div className="card-b">
         <div className="muted small">
-          <Icon id="info" size={13} /> Valores padrão aplicados ao classificar um franqueado (PJ) neste modelo — a matriz pode sobrescrever caso a caso na aprovação.
+          <Icon id="info" size={13} /> Valores padrão aplicados ao classificar um franqueado (PJ)
+          neste modelo — a matriz pode sobrescrever caso a caso na aprovação.
         </div>
       </div>
     </div>
@@ -838,7 +931,10 @@ function ModeloFranquiaPanel({
 }
 
 function ModeloCltPanel({
-  clt, setClt, onToast, onError,
+  clt,
+  setClt,
+  onToast,
+  onError,
 }: {
   clt: CltConfig;
   setClt: (c: CltConfig) => void;
@@ -862,7 +958,10 @@ function ModeloCltPanel({
       })
       .eq("id", "default");
     setBusy(false);
-    if (error) { onError(error.message); return; }
+    if (error) {
+      onError(error.message);
+      return;
+    }
     onToast("Modelo CLT atualizado", "ok");
   }
 
@@ -870,7 +969,8 @@ function ModeloCltPanel({
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div className="muted small">
-          <Icon id="info" size={13} /> Regras de remuneração do vendedor CLT (equipe interna), com base nas políticas SUP_POL_01 e SUP_POL_04.
+          <Icon id="info" size={13} /> Regras de remuneração do vendedor CLT (equipe interna), com
+          base nas políticas SUP_POL_01 e SUP_POL_04.
         </div>
         <button className="btn btn-slate btn-sm" disabled={busy} onClick={salvar}>
           <Icon id="check" size={13} /> Salvar Modelo CLT
@@ -888,7 +988,8 @@ function ModeloCltPanel({
         valueMask="pct"
         footer={
           <div className="muted small">
-            <Icon id="info" size={13} /> Base: prêmio líquido = prêmio bruto − juros − IOF (7,38%). O % vem da faixa do faturamento mensal de comissão.
+            <Icon id="info" size={13} /> Base: prêmio líquido = prêmio bruto − juros − IOF (7,38%).
+            O % vem da faixa do faturamento mensal de comissão.
           </div>
         }
       />
@@ -935,34 +1036,60 @@ function ModeloCltPanel({
         valueMask="brl"
       />
 
-
       <div className="card">
-        <div className="card-h"><h3><Icon id="info" size={16} /> Regras gerais de remuneração</h3></div>
+        <div className="card-h">
+          <h3>
+            <Icon id="info" size={16} /> Regras gerais de remuneração
+          </h3>
+        </div>
         <div className="card-b">
           <div className="acc-grid">
             <div className="field-group">
               <label>Apuração — do dia</label>
-              <input className="input" value={clt.regras.apuracao_ini}
-                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, apuracao_ini: e.target.value } })} />
+              <input
+                className="input"
+                value={clt.regras.apuracao_ini}
+                onChange={(e) =>
+                  setClt({ ...clt, regras: { ...clt.regras, apuracao_ini: e.target.value } })
+                }
+              />
             </div>
             <div className="field-group">
               <label>…até o dia</label>
-              <input className="input" value={clt.regras.apuracao_fim}
-                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, apuracao_fim: e.target.value } })} />
+              <input
+                className="input"
+                value={clt.regras.apuracao_fim}
+                onChange={(e) =>
+                  setClt({ ...clt, regras: { ...clt.regras, apuracao_fim: e.target.value } })
+                }
+              />
             </div>
             <div className="field-group">
               <label>Pagamento</label>
-              <input className="input" value={clt.regras.pagamento}
-                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, pagamento: e.target.value } })} />
+              <input
+                className="input"
+                value={clt.regras.pagamento}
+                onChange={(e) =>
+                  setClt({ ...clt, regras: { ...clt.regras, pagamento: e.target.value } })
+                }
+              />
             </div>
             <div className="field-group">
               <label>IOF</label>
-              <input className="input" value={clt.regras.iof} placeholder="0%"
-                onChange={(e) => setClt({ ...clt, regras: { ...clt.regras, iof: maskPct(e.target.value) } })} />
+              <input
+                className="input"
+                value={clt.regras.iof}
+                placeholder="0%"
+                onChange={(e) =>
+                  setClt({ ...clt, regras: { ...clt.regras, iof: maskPct(e.target.value) } })
+                }
+              />
             </div>
           </div>
           <div style={{ marginTop: 14 }}>
-            <div className="acc-sec-t" style={{ marginTop: 0 }}>Regras adicionais</div>
+            <div className="acc-sec-t" style={{ marginTop: 0 }}>
+              Regras adicionais
+            </div>
             {clt.regras.rules.map((r, i) => (
               <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
                 <input
@@ -974,17 +1101,23 @@ function ModeloCltPanel({
                     setClt({ ...clt, regras: { ...clt.regras, rules: next } });
                   }}
                 />
-                <button className="btn btn-ghost btn-sm" onClick={() => {
-                  const next = clt.regras.rules.filter((_, j) => j !== i);
-                  setClt({ ...clt, regras: { ...clt.regras, rules: next } });
-                }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    const next = clt.regras.rules.filter((_, j) => j !== i);
+                    setClt({ ...clt, regras: { ...clt.regras, rules: next } });
+                  }}
+                >
                   <Icon id="trash" size={13} />
                 </button>
               </div>
             ))}
-            <button className="btn btn-ghost btn-sm" onClick={() => {
-              setClt({ ...clt, regras: { ...clt.regras, rules: [...clt.regras.rules, ""] } });
-            }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                setClt({ ...clt, regras: { ...clt.regras, rules: [...clt.regras.rules, ""] } });
+              }}
+            >
               <Icon id="plus" size={13} /> Adicionar regra
             </button>
           </div>
@@ -995,39 +1128,84 @@ function ModeloCltPanel({
 }
 
 function DynamicPairCard({
-  title, icon, lh, vh, rows, onChange, footer,
+  title,
+  icon,
+  lh,
+  vh,
+  rows,
+  onChange,
+  footer,
 }: {
-  title: string; icon: string; lh: string; vh: string;
-  rows: Pair[]; onChange: (rows: Pair[]) => void;
+  title: string;
+  icon: string;
+  lh: string;
+  vh: string;
+  rows: Pair[];
+  onChange: (rows: Pair[]) => void;
   footer?: React.ReactNode;
 }) {
   return (
     <div className="card">
       <div className="card-h">
-        <h3><Icon id={icon} size={16} /> {title}</h3>
-        <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={() => onChange([...rows, ["", ""]])}>
+        <h3>
+          <Icon id={icon} size={16} /> {title}
+        </h3>
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ marginLeft: "auto" }}
+          onClick={() => onChange([...rows, ["", ""]])}
+        >
           <Icon id="plus" size={13} /> Adicionar linha
         </button>
       </div>
       <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
         <table className="table-pipe acc-modelos">
-          <thead><tr><th>{lh}</th><th>{vh}</th><th style={{ width: 60 }}></th></tr></thead>
+          <thead>
+            <tr>
+              <th>{lh}</th>
+              <th>{vh}</th>
+              <th style={{ width: 60 }}></th>
+            </tr>
+          </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={3} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Sem linhas.</td></tr>
+              <tr>
+                <td colSpan={3} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>
+                  Sem linhas.
+                </td>
+              </tr>
             )}
             {rows.map((r, i) => (
               <tr key={i}>
                 <td>
-                  <input className="input input-mini" value={r[0]}
-                    onChange={(e) => { const next = rows.map((x, j) => j === i ? [e.target.value, x[1]] as Pair : x); onChange(next); }} />
+                  <input
+                    className="input input-mini"
+                    value={r[0]}
+                    onChange={(e) => {
+                      const next = rows.map((x, j) =>
+                        j === i ? ([e.target.value, x[1]] as Pair) : x,
+                      );
+                      onChange(next);
+                    }}
+                  />
                 </td>
                 <td>
-                  <input className="input input-mini" value={r[1]}
-                    onChange={(e) => { const next = rows.map((x, j) => j === i ? [x[0], e.target.value] as Pair : x); onChange(next); }} />
+                  <input
+                    className="input input-mini"
+                    value={r[1]}
+                    onChange={(e) => {
+                      const next = rows.map((x, j) =>
+                        j === i ? ([x[0], e.target.value] as Pair) : x,
+                      );
+                      onChange(next);
+                    }}
+                  />
                 </td>
                 <td style={{ textAlign: "right" }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => onChange(rows.filter((_, j) => j !== i))}
+                  >
                     <Icon id="trash" size={13} />
                   </button>
                 </td>
@@ -1053,34 +1231,50 @@ function parseRange(label: string): [string, string] {
   return [label, ""];
 }
 function formatRange(de: string, ate: string): string {
-  const d = de.trim(), a = ate.trim();
+  const d = de.trim(),
+    a = ate.trim();
   if (!d && !a) return "";
   if (!d) return `< ${a}`;
   if (!a) return `${d}+`;
   return `${d} – ${a}`;
 }
 
-
-
-
-
 function DynamicRangeCard({
-  title, icon, lh, vh, rows, onChange, footer, rangeMask, valueMask,
+  title,
+  icon,
+  lh,
+  vh,
+  rows,
+  onChange,
+  footer,
+  rangeMask,
+  valueMask,
 }: {
-  title: string; icon: string; lh: string; vh: string;
-  rows: Pair[]; onChange: (rows: Pair[]) => void;
+  title: string;
+  icon: string;
+  lh: string;
+  vh: string;
+  rows: Pair[];
+  onChange: (rows: Pair[]) => void;
   footer?: React.ReactNode;
-  rangeMask?: Mask; valueMask?: Mask;
+  rangeMask?: Mask;
+  valueMask?: Mask;
 }) {
   function update(i: number, de: string, ate: string, val: string) {
-    const next = rows.map((x, j) => j === i ? [formatRange(de, ate), val] as Pair : x);
+    const next = rows.map((x, j) => (j === i ? ([formatRange(de, ate), val] as Pair) : x));
     onChange(next);
   }
   return (
     <div className="card">
       <div className="card-h">
-        <h3><Icon id={icon} size={16} /> {title}</h3>
-        <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={() => onChange([...rows, ["", ""]])}>
+        <h3>
+          <Icon id={icon} size={16} /> {title}
+        </h3>
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ marginLeft: "auto" }}
+          onClick={() => onChange([...rows, ["", ""]])}
+        >
           <Icon id="plus" size={13} /> Adicionar faixa
         </button>
       </div>
@@ -1101,26 +1295,53 @@ function DynamicRangeCard({
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Sem faixas.</td></tr>
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>
+                  Sem faixas.
+                </td>
+              </tr>
             )}
             {rows.map((r, i) => {
               const [de, ate] = parseRange(r[0]);
               return (
                 <tr key={i}>
                   <td>
-                    <input className="input input-mini" placeholder={rangeMask === "brl" ? "R$ 0,00" : rangeMask === "pct" ? "0%" : "0"} value={de}
-                      onChange={(e) => update(i, applyMask(e.target.value, rangeMask), ate, r[1])} />
+                    <input
+                      className="input input-mini"
+                      placeholder={
+                        rangeMask === "brl" ? "R$ 0,00" : rangeMask === "pct" ? "0%" : "0"
+                      }
+                      value={de}
+                      onChange={(e) => update(i, applyMask(e.target.value, rangeMask), ate, r[1])}
+                    />
                   </td>
                   <td>
-                    <input className="input input-mini" placeholder={rangeMask === "brl" ? "R$ ∞" : rangeMask === "pct" ? "∞%" : "∞"} value={ate}
-                      onChange={(e) => update(i, de, applyMask(e.target.value, rangeMask), r[1])} />
+                    <input
+                      className="input input-mini"
+                      placeholder={rangeMask === "brl" ? "R$ ∞" : rangeMask === "pct" ? "∞%" : "∞"}
+                      value={ate}
+                      onChange={(e) => update(i, de, applyMask(e.target.value, rangeMask), r[1])}
+                    />
                   </td>
                   <td>
-                    <input className="input input-mini" placeholder={valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""} value={r[1]}
-                      onChange={(e) => { const v = applyMask(e.target.value, valueMask); const next = rows.map((x, j) => j === i ? [x[0], v] as Pair : x); onChange(next); }} />
+                    <input
+                      className="input input-mini"
+                      placeholder={
+                        valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""
+                      }
+                      value={r[1]}
+                      onChange={(e) => {
+                        const v = applyMask(e.target.value, valueMask);
+                        const next = rows.map((x, j) => (j === i ? ([x[0], v] as Pair) : x));
+                        onChange(next);
+                      }}
+                    />
                   </td>
                   <td style={{ textAlign: "right" }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => onChange(rows.filter((_, j) => j !== i))}
+                    >
                       <Icon id="trash" size={13} />
                     </button>
                   </td>
@@ -1135,7 +1356,6 @@ function DynamicRangeCard({
   );
 }
 
-
 function toTrio(x: unknown): Trio {
   if (Array.isArray(x)) {
     if (x.length >= 3) return [String(x[0] ?? ""), String(x[1] ?? ""), String(x[2] ?? "")];
@@ -1145,53 +1365,103 @@ function toTrio(x: unknown): Trio {
 }
 
 function DynamicTrioCard({
-  title, icon, lh, vh, rows, onChange, valueMask,
+  title,
+  icon,
+  lh,
+  vh,
+  rows,
+  onChange,
+  valueMask,
 }: {
-  title: string; icon: string; lh: string; vh: string;
-  rows: Trio[]; onChange: (rows: Trio[]) => void;
+  title: string;
+  icon: string;
+  lh: string;
+  vh: string;
+  rows: Trio[];
+  onChange: (rows: Trio[]) => void;
   valueMask?: Mask;
 }) {
   function patch(i: number, k: 0 | 1 | 2, v: string) {
     const masked = k === 2 ? applyMask(v, valueMask) : v;
-    onChange(rows.map((x, j) => {
-      if (j !== i) return x;
-      const n: Trio = [x[0], x[1], x[2]];
-      n[k] = masked;
-      return n;
-    }));
+    onChange(
+      rows.map((x, j) => {
+        if (j !== i) return x;
+        const n: Trio = [x[0], x[1], x[2]];
+        n[k] = masked;
+        return n;
+      }),
+    );
   }
   return (
     <div className="card">
       <div className="card-h">
-        <h3><Icon id={icon} size={16} /> {title}</h3>
-        <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={() => onChange([...rows, ["", "", ""]])}>
+        <h3>
+          <Icon id={icon} size={16} /> {title}
+        </h3>
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ marginLeft: "auto" }}
+          onClick={() => onChange([...rows, ["", "", ""]])}
+        >
           <Icon id="plus" size={13} /> Adicionar linha
         </button>
       </div>
       <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
         <table className="table-pipe acc-modelos">
-          <thead><tr><th style={{ width: 200 }}>Seguradora</th><th>{lh}</th><th style={{ width: 160 }}>{vh}</th><th style={{ width: 60 }}></th></tr></thead>
+          <thead>
+            <tr>
+              <th style={{ width: 200 }}>Seguradora</th>
+              <th>{lh}</th>
+              <th style={{ width: 160 }}>{vh}</th>
+              <th style={{ width: 60 }}></th>
+            </tr>
+          </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>Sem linhas.</td></tr>
+              <tr>
+                <td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>
+                  Sem linhas.
+                </td>
+              </tr>
             )}
             {rows.map((r, i) => (
               <tr key={i}>
                 <td>
-                  <select className="input input-mini" value={r[0]} onChange={(e) => patch(i, 0, e.target.value)} style={{ fontSize: 11 }}>
+                  <select
+                    className="input input-mini"
+                    value={r[0]}
+                    onChange={(e) => patch(i, 0, e.target.value)}
+                    style={{ fontSize: 11 }}
+                  >
                     <option value="">— Seguradora —</option>
-                    {SEGURADORAS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    {SEGURADORAS.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
                     {r[0] && !SEGURADORAS.includes(r[0]) && <option value={r[0]}>{r[0]}</option>}
                   </select>
                 </td>
                 <td>
-                  <input className="input input-mini" value={r[1]} onChange={(e) => patch(i, 1, e.target.value)} />
+                  <input
+                    className="input input-mini"
+                    value={r[1]}
+                    onChange={(e) => patch(i, 1, e.target.value)}
+                  />
                 </td>
                 <td>
-                  <input className="input input-mini" placeholder={valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""} value={r[2]} onChange={(e) => patch(i, 2, e.target.value)} />
+                  <input
+                    className="input input-mini"
+                    placeholder={valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""}
+                    value={r[2]}
+                    onChange={(e) => patch(i, 2, e.target.value)}
+                  />
                 </td>
                 <td style={{ textAlign: "right" }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => onChange(rows.filter((_, j) => j !== i))}>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => onChange(rows.filter((_, j) => j !== i))}
+                  >
                     <Icon id="trash" size={13} />
                   </button>
                 </td>

@@ -24,7 +24,11 @@ type Row = {
   meta_vendas: number | null;
 };
 
-type Presence = { user_id: string; status_efetivo: "online" | "ausente" | "offline"; last_seen_at: string };
+type Presence = {
+  user_id: string;
+  status_efetivo: "online" | "ausente" | "offline";
+  last_seen_at: string;
+};
 
 type LeadRow = {
   responsavel_id: string | null;
@@ -60,13 +64,37 @@ function timeAgo(iso?: string | null) {
 
 function presenceDot(p?: Presence) {
   const s = p?.status_efetivo ?? "offline";
-  const color = s === "online" ? "var(--ok, #16a34a)" : s === "ausente" ? "var(--yellow, #ca8a04)" : "var(--muted, #94a3b8)";
+  const color =
+    s === "online"
+      ? "var(--ok, #16a34a)"
+      : s === "ausente"
+        ? "var(--yellow, #ca8a04)"
+        : "var(--muted, #94a3b8)";
   const label = s === "online" ? "Online" : s === "ausente" ? "Ausente" : "Offline";
-  const title = s === "online" ? "Online agora" : s === "ausente" ? `Ausente · visto há ${timeAgo(p?.last_seen_at)}` : p?.last_seen_at ? `Offline · visto há ${timeAgo(p?.last_seen_at)}` : "Nunca conectou";
+  const title =
+    s === "online"
+      ? "Online agora"
+      : s === "ausente"
+        ? `Ausente · visto há ${timeAgo(p?.last_seen_at)}`
+        : p?.last_seen_at
+          ? `Offline · visto há ${timeAgo(p?.last_seen_at)}`
+          : "Nunca conectou";
   return (
     <span className="row" style={{ gap: 6, alignItems: "center" }} title={title}>
-      <span style={{ width: 8, height: 8, borderRadius: 999, background: color, display: "inline-block", boxShadow: s === "online" ? `0 0 0 3px color-mix(in srgb, ${color} 25%, transparent)` : "none" }} />
-      <span className="small" style={{ fontWeight: 600 }}>{label}</span>
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 999,
+          background: color,
+          display: "inline-block",
+          boxShadow:
+            s === "online" ? `0 0 0 3px color-mix(in srgb, ${color} 25%, transparent)` : "none",
+        }}
+      />
+      <span className="small" style={{ fontWeight: 600 }}>
+        {label}
+      </span>
     </span>
   );
 }
@@ -88,7 +116,20 @@ function metaBar(vendas: number, meta: number | null) {
 }
 
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const MESES_LONG = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const MESES_LONG = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
 
 function Page() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -138,7 +179,9 @@ function Page() {
       else setRows((data ?? []) as Row[]);
 
       const map: Record<string, Presence> = {};
-      ((pres.data ?? []) as Presence[]).forEach((p) => { map[p.user_id] = p; });
+      ((pres.data ?? []) as Presence[]).forEach((p) => {
+        map[p.user_id] = p;
+      });
       setPresence(map);
 
       // métricas por vendedor a partir dos leads
@@ -148,15 +191,36 @@ function Page() {
         if (!l.responsavel_id) return;
         const cur = ex[l.responsavel_id] ?? { cotacoes: 0, propostas: 0, primeiroMin: null };
         const sp = l.status_pipeline ?? "";
-        if (["cotando", "cotacao", "proposta_enviada", "em_negociacao", "proposta", "negociacao", "ganho", "fechado"].includes(sp)) {
+        if (
+          [
+            "cotando",
+            "cotacao",
+            "proposta_enviada",
+            "em_negociacao",
+            "proposta",
+            "negociacao",
+            "ganho",
+            "fechado",
+          ].includes(sp)
+        ) {
           cur.cotacoes += 1;
         }
-        if (["proposta_enviada", "em_negociacao", "proposta", "negociacao", "ganho", "fechado"].includes(sp)) {
+        if (
+          [
+            "proposta_enviada",
+            "em_negociacao",
+            "proposta",
+            "negociacao",
+            "ganho",
+            "fechado",
+          ].includes(sp)
+        ) {
           cur.propostas += 1;
         }
         ex[l.responsavel_id] = cur;
         if (l.criado_em && l.ultimo_atendimento_em) {
-          const min = (new Date(l.ultimo_atendimento_em).getTime() - new Date(l.criado_em).getTime()) / 60000;
+          const min =
+            (new Date(l.ultimo_atendimento_em).getTime() - new Date(l.criado_em).getTime()) / 60000;
           if (min >= 0 && min < 60 * 24) {
             (acumulaTempo[l.responsavel_id] ??= []).push(min);
           }
@@ -166,7 +230,10 @@ function Page() {
         if (!arr.length) return;
         arr.sort((a, b) => a - b);
         const median = arr[Math.floor(arr.length / 2)];
-        ex[uid] = { ...(ex[uid] ?? { cotacoes: 0, propostas: 0, primeiroMin: null }), primeiroMin: Math.round(median) };
+        ex[uid] = {
+          ...(ex[uid] ?? { cotacoes: 0, propostas: 0, primeiroMin: null }),
+          primeiroMin: Math.round(median),
+        };
       });
       setExtras(ex);
 
@@ -174,11 +241,27 @@ function Page() {
     };
     void load();
     const t = window.setInterval(load, 30_000);
-    return () => { alive = false; window.clearInterval(t); };
+    return () => {
+      alive = false;
+      window.clearInterval(t);
+    };
   }, [periodo.start, periodo.end]);
 
   function exportar() {
-    const head = ["Vendedor", "Franquia", "Presença", "Leads", "1º contato", "Cotações", "Propostas", "Vendas", "Conv.", "Comissão", "Meta", "Status"];
+    const head = [
+      "Vendedor",
+      "Franquia",
+      "Presença",
+      "Leads",
+      "1º contato",
+      "Cotações",
+      "Propostas",
+      "Vendas",
+      "Conv.",
+      "Comissão",
+      "Meta",
+      "Status",
+    ];
     const lines = rows.map((r) => {
       const ex = extras[r.user_id] ?? { cotacoes: 0, propostas: 0, primeiroMin: null };
       const conv = r.leads_mes > 0 ? Math.round((r.vendas_mes / r.leads_mes) * 100) : 0;
@@ -196,7 +279,9 @@ function Page() {
         fmtBRL(Number(r.comissao_mes) || 0),
         r.meta_vendas ? `${r.vendas_mes}/${r.meta_vendas}` : "—",
         r.status,
-      ].map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",");
+      ]
+        .map((v) => `"${String(v).replaceAll('"', '""')}"`)
+        .join(",");
     });
     const csv = [head.join(","), ...lines].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -227,11 +312,16 @@ function Page() {
             }}
           >
             {opcoes.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
           <button className="btn btn-ghost" onClick={exportar}>
-            <svg width="14" height="14"><use href="#i-download"></use></svg> Exportar
+            <svg width="14" height="14">
+              <use href="#i-download"></use>
+            </svg>{" "}
+            Exportar
           </button>
         </div>
       </div>
@@ -240,7 +330,10 @@ function Page() {
 
       {!loading && rows.length === 0 && (
         <div className="card">
-          <div className="card-b" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+          <div
+            className="card-b"
+            style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
+          >
             Nenhum vendedor cadastrado.
           </div>
         </div>
@@ -272,17 +365,27 @@ function Page() {
                 return (
                   <tr key={r.user_id} style={{ cursor: "pointer" }}>
                     <td>
-                      <Link to="/operacao/vendedores/$id" params={{ id: r.user_id }} style={{ color: "inherit", textDecoration: "none" }}>
-                        <strong style={{ color: "var(--primary, #0f172a)" }}>{r.nome || r.email}</strong>
+                      <Link
+                        to="/operacao/vendedores/$id"
+                        params={{ id: r.user_id }}
+                        style={{ color: "inherit", textDecoration: "none" }}
+                      >
+                        <strong style={{ color: "var(--primary, #0f172a)" }}>
+                          {r.nome || r.email}
+                        </strong>
                       </Link>
                     </td>
-                    <td><small>{r.empresa_nome ?? "—"}</small></td>
+                    <td>
+                      <small>{r.empresa_nome ?? "—"}</small>
+                    </td>
                     <td>{presenceDot(presence[r.user_id])}</td>
                     <td>{r.leads_mes}</td>
                     <td>{ex.primeiroMin != null ? `${ex.primeiroMin} min` : "—"}</td>
                     <td>{ex.cotacoes}</td>
                     <td>{ex.propostas}</td>
-                    <td><strong>{r.vendas_mes}</strong></td>
+                    <td>
+                      <strong>{r.vendas_mes}</strong>
+                    </td>
                     <td>{conv}%</td>
                     <td>{fmtBRL(Number(r.comissao_mes) || 0)}</td>
                     <td>{metaBar(r.vendas_mes, r.meta_vendas)}</td>

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +36,11 @@ function monthRange(offset = 0) {
   const now = new Date();
   const ini = new Date(now.getFullYear(), now.getMonth() - offset, 1);
   const fim = new Date(now.getFullYear(), now.getMonth() - offset + 1, 1);
-  return { ini: ini.toISOString(), fim: fim.toISOString(), label: ini.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) };
+  return {
+    ini: ini.toISOString(),
+    fim: fim.toISOString(),
+    label: ini.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+  };
 }
 
 function fmtDuracao(ms: number | null) {
@@ -106,8 +110,8 @@ function Page() {
         setEvts((ev.data ?? []) as Evt[]);
         setProfs((pf.data ?? []) as Prof[]);
         setEmps((em.data ?? []) as Emp[]);
-      } catch (e: any) {
-        setErr(e.message ?? String(e));
+      } catch (e: unknown) {
+        setErr(e instanceof Error ? e.message : String(e));
       } finally {
         setLoading(false);
       }
@@ -134,7 +138,9 @@ function Page() {
     const cotado = leads.filter((l) => has(l.status_pipeline, adv.cotado)).length;
     const proposta = leads.filter((l) => has(l.status_pipeline, adv.proposta)).length;
     const fechado = leads.filter((l) => has(l.status_pipeline, adv.fechado)).length;
-    const emitido = props.filter((p) => ["emitida", "aceita", "transmitida"].includes((p.status ?? "").toLowerCase())).length;
+    const emitido = props.filter((p) =>
+      ["emitida", "aceita", "transmitida"].includes((p.status ?? "").toLowerCase()),
+    ).length;
 
     // tempo médio entre eventos por lead
     const byLead = new Map<string, Evt[]>();
@@ -146,10 +152,10 @@ function Page() {
     function avgDelta(fromTipo: string[] | null, toTipo: string[]) {
       const deltas: number[] = [];
       for (const l of leads) {
-        const arr = (byLead.get(l.id) ?? []).slice().sort((a, b) => a.criado_em.localeCompare(b.criado_em));
-        const from = fromTipo
-          ? arr.find((e) => fromTipo.includes(e.tipo))?.criado_em
-          : l.criado_em;
+        const arr = (byLead.get(l.id) ?? [])
+          .slice()
+          .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+        const from = fromTipo ? arr.find((e) => fromTipo.includes(e.tipo))?.criado_em : l.criado_em;
         const to = arr.find((e) => toTipo.includes(e.tipo))?.criado_em;
         if (from && to) {
           const d = new Date(to).getTime() - new Date(from).getTime();
@@ -182,7 +188,8 @@ function Page() {
     });
     let worstIdx = 0;
     for (let i = 1; i < rows.length; i++) {
-      if (rows[i].den > 0 && (rows[i].pct < rows[worstIdx].pct || rows[worstIdx].den === 0)) worstIdx = i;
+      if (rows[i].den > 0 && (rows[i].pct < rows[worstIdx].pct || rows[worstIdx].den === 0))
+        worstIdx = i;
     }
     return { rows, worstIdx };
   }, [leads, props, evts]);
@@ -211,18 +218,24 @@ function Page() {
     const rows = Array.from(byVend.entries()).map(([uid, e]) => {
       const prof = profs.find((p) => p.id === uid);
       const nome = prof?.nome ?? uid.slice(0, 6);
-      const unidade = prof?.empresa_id ? empMap.get(prof.empresa_id) ?? "" : "";
+      const unidade = prof?.empresa_id ? (empMap.get(prof.empresa_id) ?? "") : "";
       const volume = e.leads.length;
       const ganhos = e.leads.filter((l) => l.status_pipeline === "ganho").length;
-      const propostas = e.leads.filter((l) => ["proposta", "negociacao", "ganho"].includes(l.status_pipeline)).length;
+      const propostas = e.leads.filter((l) =>
+        ["proposta", "negociacao", "ganho"].includes(l.status_pipeline),
+      ).length;
       const cotacoes = e.cots.length;
       const contatos = e.leads.filter((l) =>
-        ["contato", "qualificando", "cotacao", "proposta", "negociacao", "ganho"].includes(l.status_pipeline),
+        ["contato", "qualificando", "cotacao", "proposta", "negociacao", "ganho"].includes(
+          l.status_pipeline,
+        ),
       ).length;
       // tempo médio 1º contato (lead.criado_em -> evento contato/qualificando)
       const tempos: number[] = [];
       for (const l of e.leads) {
-        const arr = (evtByLead.get(l.id) ?? []).slice().sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+        const arr = (evtByLead.get(l.id) ?? [])
+          .slice()
+          .sort((a, b) => a.criado_em.localeCompare(b.criado_em));
         const ev = arr.find((x) => ["contato", "qualificando", "cotacao"].includes(x.tipo));
         if (ev) {
           const d = new Date(ev.criado_em).getTime() - new Date(l.criado_em).getTime();
@@ -231,7 +244,18 @@ function Page() {
       }
       const tempoContato = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : null;
       const conv = volume > 0 ? Math.round((ganhos / volume) * 100) : 0;
-      return { uid, nome, unidade, volume, contatos, cotacoes, propostas, ganhos, conv, tempoContato };
+      return {
+        uid,
+        nome,
+        unidade,
+        volume,
+        contatos,
+        cotacoes,
+        propostas,
+        ganhos,
+        conv,
+        tempoContato,
+      };
     });
     rows.sort((a, b) => b.volume - a.volume);
     return rows.slice(0, 5);
@@ -263,7 +287,9 @@ function Page() {
       <div className="page-head">
         <div>
           <h1>Supervisão</h1>
-          <div className="sub">Onde a operação perde tempo e leads — e como está cada vendedor, para agir rápido</div>
+          <div className="sub">
+            Onde a operação perde tempo e leads — e como está cada vendedor, para agir rápido
+          </div>
         </div>
         <div className="row" style={{ gap: 8 }}>
           <select
@@ -292,7 +318,8 @@ function Page() {
         </div>
         <div className="card-b">
           <p className="small muted" style={{ marginTop: 0 }}>
-            Cada barra é a <strong>conversão</strong> da etapa; à direita, o <strong>tempo médio</strong> gasto nela.
+            Cada barra é a <strong>conversão</strong> da etapa; à direita, o{" "}
+            <strong>tempo médio</strong> gasto nela.
           </p>
           {funil.rows.map((r, i) => (
             <div
@@ -307,7 +334,15 @@ function Page() {
               }}
             >
               <div style={{ width: 220, fontWeight: 600 }}>{r.etapa}</div>
-              <div style={{ flex: 1, background: "#f1f5f9", borderRadius: 6, height: 22, position: "relative" }}>
+              <div
+                style={{
+                  flex: 1,
+                  background: "#f1f5f9",
+                  borderRadius: 6,
+                  height: 22,
+                  position: "relative",
+                }}
+              >
                 <div
                   style={{
                     width: `${Math.max(2, r.pct)}%`,
@@ -323,7 +358,13 @@ function Page() {
                   {r.pct}%
                 </div>
               </div>
-              <div style={{ width: 100, textAlign: "right", color: r.over ? "#ef4444" : "var(--muted)" }}>
+              <div
+                style={{
+                  width: 100,
+                  textAlign: "right",
+                  color: r.over ? "#ef4444" : "var(--muted)",
+                }}
+              >
                 {fmtDuracao(r.tempo)} {r.over ? "⚠" : ""}
               </div>
             </div>
@@ -350,24 +391,56 @@ function Page() {
                     <th key={c.uid} style={{ textAlign: "left" }}>
                       {c.nome}
                       <br />
-                      <span style={{ fontWeight: 400, opacity: 0.7, fontSize: 11 }}>{c.unidade || "—"}</span>
+                      <span style={{ fontWeight: 400, opacity: 0.7, fontSize: 11 }}>
+                        {c.unidade || "—"}
+                      </span>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                <Row label="Volume de leads" values={comp.map((c) => c.volume)} render={(v) => v} cls={(v) => bestWorstClass(kpiVolume, v, true)} />
+                <Row
+                  label="Volume de leads"
+                  values={comp.map((c) => c.volume)}
+                  render={(v) => v}
+                  cls={(v) => bestWorstClass(kpiVolume, v, true)}
+                />
                 <Row
                   label="Tempo 1º contato"
                   values={comp.map((c) => c.tempoContato)}
                   render={(v) => fmtDuracao(v)}
                   cls={(v) => bestWorstClass(kpiContato as number[], v ?? Infinity, false)}
                 />
-                <Row label="Contatos efetivos" values={comp.map((c) => c.contatos)} render={(v) => v} cls={(v) => bestWorstClass(kpiContatos, v, true)} />
-                <Row label="Cotações enviadas" values={comp.map((c) => c.cotacoes)} render={(v) => v} cls={(v) => bestWorstClass(kpiCot, v, true)} />
-                <Row label="Propostas" values={comp.map((c) => c.propostas)} render={(v) => v} cls={(v) => bestWorstClass(kpiProp, v, true)} />
-                <Row label="Apólices emitidas" values={comp.map((c) => c.ganhos)} render={(v) => v} cls={(v) => bestWorstClass(kpiGanhos, v, true)} />
-                <Row label="Taxa de conversão" values={comp.map((c) => c.conv)} render={(v) => `${v}%`} cls={(v) => bestWorstClass(kpiConv, v, true)} />
+                <Row
+                  label="Contatos efetivos"
+                  values={comp.map((c) => c.contatos)}
+                  render={(v) => v}
+                  cls={(v) => bestWorstClass(kpiContatos, v, true)}
+                />
+                <Row
+                  label="Cotações enviadas"
+                  values={comp.map((c) => c.cotacoes)}
+                  render={(v) => v}
+                  cls={(v) => bestWorstClass(kpiCot, v, true)}
+                />
+                <Row
+                  label="Propostas"
+                  values={comp.map((c) => c.propostas)}
+                  render={(v) => v}
+                  cls={(v) => bestWorstClass(kpiProp, v, true)}
+                />
+                <Row
+                  label="Apólices emitidas"
+                  values={comp.map((c) => c.ganhos)}
+                  render={(v) => v}
+                  cls={(v) => bestWorstClass(kpiGanhos, v, true)}
+                />
+                <Row
+                  label="Taxa de conversão"
+                  values={comp.map((c) => c.conv)}
+                  render={(v) => `${v}%`}
+                  cls={(v) => bestWorstClass(kpiConv, v, true)}
+                />
               </tbody>
             </table>
           )}
@@ -385,7 +458,7 @@ function Row<T>({
 }: {
   label: string;
   values: T[];
-  render: (v: T) => any;
+  render: (v: T) => ReactNode;
   cls: (v: T) => string;
 }) {
   return (
@@ -393,7 +466,8 @@ function Row<T>({
       <th style={{ textAlign: "left" }}>{label}</th>
       {values.map((v, i) => {
         const c = cls(v);
-        const bg = c === "best" ? "rgba(22,163,74,.10)" : c === "weak" ? "rgba(239,68,68,.10)" : undefined;
+        const bg =
+          c === "best" ? "rgba(22,163,74,.10)" : c === "weak" ? "rgba(239,68,68,.10)" : undefined;
         const color = c === "best" ? "#16a34a" : c === "weak" ? "#ef4444" : undefined;
         return (
           <td key={i} style={{ background: bg, color, fontWeight: c ? 700 : undefined }}>

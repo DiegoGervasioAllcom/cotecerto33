@@ -17,7 +17,12 @@ type Data = {
   status: string;
   criado_em: string;
   segurado: { nome: string | null; cpf_cnpj: string | null } | null;
-  veiculo: { marca_nome: string | null; modelo_nome: string | null; ano_modelo: string | null; placa: string | null } | null;
+  veiculo: {
+    marca_nome: string | null;
+    modelo_nome: string | null;
+    ano_modelo: string | null;
+    placa: string | null;
+  } | null;
   coberturas: {
     casco_valor: string | null;
     franquia: string | null;
@@ -33,7 +38,11 @@ type Data = {
 
 const money = (n: number | null) =>
   n != null
-    ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
+    ? Number(n).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+        maximumFractionDigits: 0,
+      })
     : "—";
 const pad = (n: number) => String(n).padStart(5, "0");
 const cotNum = (numero: number, criado: string) =>
@@ -55,7 +64,7 @@ function Page() {
             "segurado:cotacao_segurado(nome,cpf_cnpj)," +
             "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa)," +
             "coberturas:cotacao_coberturas(casco_valor,franquia,rcf_dm,rcf_dc,app_morte,carro_reserva,vidros,assist_24)," +
-            "premios:cotacao_premios(id,seguradora,cobertura,premio)"
+            "premios:cotacao_premios(id,seguradora,cobertura,premio)",
         )
         .eq("id", id)
         .maybeSingle();
@@ -65,14 +74,22 @@ function Page() {
     })();
   }, [id]);
 
-  if (loading) return <AppShell title="Comparativo"><div className="muted">Carregando…</div></AppShell>;
-  if (err || !data) return (
-    <AppShell title="Comparativo">
-      <ProtoIcons />
-      <div className="alert alert-err">{err || "Cotação não encontrada."}</div>
-      <Link to="/venda/cotacoes" className="btn">Voltar para lista</Link>
-    </AppShell>
-  );
+  if (loading)
+    return (
+      <AppShell title="Comparativo">
+        <div className="muted">Carregando…</div>
+      </AppShell>
+    );
+  if (err || !data)
+    return (
+      <AppShell title="Comparativo">
+        <ProtoIcons />
+        <div className="alert alert-err">{err || "Cotação não encontrada."}</div>
+        <Link to="/venda/cotacoes" className="btn">
+          Voltar para lista
+        </Link>
+      </AppShell>
+    );
 
   const headName = data.segurado?.nome || "—";
   const v = data.veiculo;
@@ -87,13 +104,21 @@ function Page() {
   if (offers[2]) seals[offers[2].seguradora] = "best";
 
   const rows: Array<[string, string, (o: Premio) => string]> = [
-    ["Cobertura compreensiva", "Casco + roubo/furto + incêndio", () => cobs?.casco_valor || "100% FIPE"],
+    [
+      "Cobertura compreensiva",
+      "Casco + roubo/furto + incêndio",
+      () => cobs?.casco_valor || "100% FIPE",
+    ],
     ["Franquia · casco", "Valor pago pelo cliente em sinistro", () => cobs?.franquia || "—"],
     ["RCF · danos materiais", "Cobre danos a terceiros", () => cobs?.rcf_dm || "—"],
     ["RCF · danos corporais", "Lesões a terceiros", () => cobs?.rcf_dc || "—"],
     ["APP por passageiro", "Acidentes pessoais", () => cobs?.app_morte || "—"],
     ["Carro reserva", "Em sinistro de média/grande monta", () => cobs?.carro_reserva || "—"],
-    ["Vidros · faróis · retrovisores", "Cobertura específica", () => (cobs?.vidros ? "incluído" : "opcional")],
+    [
+      "Vidros · faróis · retrovisores",
+      "Cobertura específica",
+      () => (cobs?.vidros ? "incluído" : "opcional"),
+    ],
     ["Assistência 24h", "Guincho, chaveiro, pane", () => cobs?.assist_24 || "Padrão"],
   ];
 
@@ -115,16 +140,16 @@ function Page() {
       .map(
         ([t, s, fn]) =>
           `<tr><td><strong>${escapeHtml(t)}</strong><br/><small style="color:#64748b">${escapeHtml(
-            s
-          )}</small></td>${list.map((o) => `<td>${escapeHtml(fn(o))}</td>`).join("")}</tr>`
+            s,
+          )}</small></td>${list.map((o) => `<td>${escapeHtml(fn(o))}</td>`).join("")}</tr>`,
       )
       .join("");
     const totals = `<tr><td><strong>Prêmio total</strong><br/><small style="color:#64748b">à vista ou 12x</small></td>${list
       .map(
         (o) =>
           `<td class="num"><div class="price">${fmtBRL(Number(o.premio))}</div><small style="color:#64748b">12x ${fmtBRL(
-            Number(o.premio) / 12
-          )}</small></td>`
+            Number(o.premio) / 12,
+          )}</small></td>`,
       )
       .join("")}</tr>`;
     const body = `
@@ -139,9 +164,14 @@ function Page() {
 
   const rowCmp = (title: string, sub: string, fn: (o: Premio) => string) => (
     <tr>
-      <td className="cov-name">{title}<small>{sub}</small></td>
+      <td className="cov-name">
+        {title}
+        <small>{sub}</small>
+      </td>
       {offers.map((o) => (
-        <td key={o.id} className="cell"><span className="v-lmi">{fn(o)}</span></td>
+        <td key={o.id} className="cell">
+          <span className="v-lmi">{fn(o)}</span>
+        </td>
       ))}
     </tr>
   );
@@ -153,11 +183,14 @@ function Page() {
         <div>
           <h1>Comparativo · {headName}</h1>
           <div className="sub">
-            {headCar} {v?.placa ? `· ${v.placa}` : ""} · cotação <strong>#{cotNum(data.numero, data.criado_em)}</strong>
+            {headCar} {v?.placa ? `· ${v.placa}` : ""} · cotação{" "}
+            <strong>#{cotNum(data.numero, data.criado_em)}</strong>
           </div>
         </div>
         <div className="tools">
-          <button className="btn btn-ghost" onClick={() => nav({ to: "/venda/cotacoes" })}>‹ Voltar para lista</button>
+          <button className="btn btn-ghost" onClick={() => nav({ to: "/venda/cotacoes" })}>
+            ‹ Voltar para lista
+          </button>
           <Link to="/venda/novo-lead" search={{ id: data.id }} className="btn btn-ghost">
             + Comparar com mais seguradoras
           </Link>
@@ -165,18 +198,21 @@ function Page() {
       </div>
 
       <div className="compare-bar">
-        <label
-          className="switch on"
-          onClick={(e) => e.currentTarget.classList.toggle("on")}
-        >
+        <label className="switch on" onClick={(e) => e.currentTarget.classList.toggle("on")}>
           <span className="track" />
           <span className="label">Aplicar alterações em todas as seguradoras</span>
         </label>
         <span className="muted small">(desligado: edição valida apenas a coluna)</span>
         <span className="spacer" style={{ flex: 1 }} />
-        <span className="chip chip-yellow">Última atualização {new Date(data.criado_em).toLocaleString("pt-BR")}</span>
-        <button className="btn btn-slate btn-sm" onClick={() => window.location.reload()}>Recalcular tudo</button>
-        <button className="btn btn-ghost btn-sm" onClick={() => doPrint()}>Imprimir comparativo</button>
+        <span className="chip chip-yellow">
+          Última atualização {new Date(data.criado_em).toLocaleString("pt-BR")}
+        </span>
+        <button className="btn btn-slate btn-sm" onClick={() => window.location.reload()}>
+          Recalcular tudo
+        </button>
+        <button className="btn btn-ghost btn-sm" onClick={() => doPrint()}>
+          Imprimir comparativo
+        </button>
       </div>
 
       {offers.length === 0 ? (
@@ -187,92 +223,165 @@ function Page() {
         </div>
       ) : (
         <>
-        <div className="compare-table">
-          <table className="ctable">
-            <thead>
-              <tr>
-                <th style={{ width: "30%" }}>COBERTURA</th>
-                {offers.map((o) => (
-                  <th key={o.id} className="col-ins">
-                    {o.seguradora}
-                    {seals[o.seguradora] && (
-                      <>
-                        <br />
-                        <span className={`seal ${seals[o.seguradora]}`}>
-                          {seals[o.seguradora] === "cheap" ? "Menor preço" : seals[o.seguradora] === "best" ? "Melhor cobertura" : "Mais escolhido"}
-                        </span>
-                      </>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rowCmp("Cobertura compreensiva", "Casco + roubo/furto + incêndio", () => cobs?.casco_valor || "100% FIPE")}
-              {rowCmp("Franquia · casco", "Valor pago pelo cliente em sinistro", () => cobs?.franquia || "—")}
-              {rowCmp("RCF · danos materiais", "Cobre danos a terceiros", () => cobs?.rcf_dm || "—")}
-              {rowCmp("RCF · danos corporais", "Lesões a terceiros", () => cobs?.rcf_dc || "—")}
-              {rowCmp("APP por passageiro", "Acidentes pessoais", () => cobs?.app_morte || "—")}
-              {rowCmp("Carro reserva", "Em sinistro de média/grande monta", () => cobs?.carro_reserva || "—")}
-              {rowCmp("Vidros · faróis · retrovisores", "Cobertura específica", () =>
-                cobs?.vidros ? "incluído" : "opcional"
-              )}
-              {rowCmp("Assistência 24h", "Guincho, chaveiro, pane", () => cobs?.assist_24 || "Padrão")}
-              <tr className="total-row">
-                <td className="cov-name">PRÊMIO TOTAL <small style={{ textTransform: "none", letterSpacing: 0 }}>à vista ou parcelado</small></td>
-                {offers.map((o) => (
-                  <td key={o.id} className="cell">
-                    {money(Number(o.premio))}
-                    <span className="parc">12x {money(Number(o.premio) / 12)}</span>
+          <div className="compare-table">
+            <table className="ctable">
+              <thead>
+                <tr>
+                  <th style={{ width: "30%" }}>COBERTURA</th>
+                  {offers.map((o) => (
+                    <th key={o.id} className="col-ins">
+                      {o.seguradora}
+                      {seals[o.seguradora] && (
+                        <>
+                          <br />
+                          <span className={`seal ${seals[o.seguradora]}`}>
+                            {seals[o.seguradora] === "cheap"
+                              ? "Menor preço"
+                              : seals[o.seguradora] === "best"
+                                ? "Melhor cobertura"
+                                : "Mais escolhido"}
+                          </span>
+                        </>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rowCmp(
+                  "Cobertura compreensiva",
+                  "Casco + roubo/furto + incêndio",
+                  () => cobs?.casco_valor || "100% FIPE",
+                )}
+                {rowCmp(
+                  "Franquia · casco",
+                  "Valor pago pelo cliente em sinistro",
+                  () => cobs?.franquia || "—",
+                )}
+                {rowCmp(
+                  "RCF · danos materiais",
+                  "Cobre danos a terceiros",
+                  () => cobs?.rcf_dm || "—",
+                )}
+                {rowCmp("RCF · danos corporais", "Lesões a terceiros", () => cobs?.rcf_dc || "—")}
+                {rowCmp("APP por passageiro", "Acidentes pessoais", () => cobs?.app_morte || "—")}
+                {rowCmp(
+                  "Carro reserva",
+                  "Em sinistro de média/grande monta",
+                  () => cobs?.carro_reserva || "—",
+                )}
+                {rowCmp("Vidros · faróis · retrovisores", "Cobertura específica", () =>
+                  cobs?.vidros ? "incluído" : "opcional",
+                )}
+                {rowCmp(
+                  "Assistência 24h",
+                  "Guincho, chaveiro, pane",
+                  () => cobs?.assist_24 || "Padrão",
+                )}
+                <tr className="total-row">
+                  <td className="cov-name">
+                    PRÊMIO TOTAL{" "}
+                    <small style={{ textTransform: "none", letterSpacing: 0 }}>
+                      à vista ou parcelado
+                    </small>
                   </td>
-                ))}
-              </tr>
-              <tr className="actions-row">
-                <td></td>
-                {offers.map((o) => (
-                  <td key={o.id}>
-                    <div className="ins-actions">
-                      <Link to="/venda/propostas" className="btn btn-yellow">Gerar proposta</Link>
-                      <button className="btn btn-ghost" type="button">Enviar</button>
-                      <button className="btn btn-ghost" type="button" onClick={() => doPrint(o.seguradora)}>Imprimir</button>
-                    </div>
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-          <div className="compare-foot">
-            <span>Coberturas editáveis: clique em qualquer valor (LMI, franquia) para ajustar inline.</span>
-            <span>Cotação válida por <strong>5 dias</strong></span>
+                  {offers.map((o) => (
+                    <td key={o.id} className="cell">
+                      {money(Number(o.premio))}
+                      <span className="parc">12x {money(Number(o.premio) / 12)}</span>
+                    </td>
+                  ))}
+                </tr>
+                <tr className="actions-row">
+                  <td></td>
+                  {offers.map((o) => (
+                    <td key={o.id}>
+                      <div className="ins-actions">
+                        <Link to="/venda/propostas" className="btn btn-yellow">
+                          Gerar proposta
+                        </Link>
+                        <button className="btn btn-ghost" type="button">
+                          Enviar
+                        </button>
+                        <button
+                          className="btn btn-ghost"
+                          type="button"
+                          onClick={() => doPrint(o.seguradora)}
+                        >
+                          Imprimir
+                        </button>
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+            <div className="compare-foot">
+              <span>
+                Coberturas editáveis: clique em qualquer valor (LMI, franquia) para ajustar inline.
+              </span>
+              <span>
+                Cotação válida por <strong>5 dias</strong>
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
-          <div className="card card-yellow" style={{ padding: "14px 18px" }}>
-            <div className="row" style={{ gap: 10, marginBottom: 4 }}>
-              <strong style={{ color: "var(--slate)", fontSize: 13 }}>Recomendação CoteCerto</strong>
+          <div
+            style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}
+          >
+            <div className="card card-yellow" style={{ padding: "14px 18px" }}>
+              <div className="row" style={{ gap: 10, marginBottom: 4 }}>
+                <strong style={{ color: "var(--slate)", fontSize: 13 }}>
+                  Recomendação CoteCerto
+                </strong>
+              </div>
+              <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.5 }}>
+                {offers[0] ? (
+                  <>
+                    A <strong>{offers[0].seguradora}</strong> apresenta o menor prêmio (
+                    {money(Number(offers[0].premio))}) entre as seguradoras cotadas.
+                  </>
+                ) : (
+                  "Sem recomendação."
+                )}
+              </p>
             </div>
-            <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.5 }}>
-              {offers[0] ? <>A <strong>{offers[0].seguradora}</strong> apresenta o menor prêmio ({money(Number(offers[0].premio))}) entre as seguradoras cotadas.</> : "Sem recomendação."}
-            </p>
-          </div>
-          <div className="card" style={{ padding: "14px 18px" }}>
-            <div className="row" style={{ gap: 10, marginBottom: 4, color: "var(--slate)" }}>
-              <strong style={{ fontSize: 13 }}>Por que só {offers.length} seguradora{offers.length === 1 ? "" : "s"}?</strong>
+            <div className="card" style={{ padding: "14px 18px" }}>
+              <div className="row" style={{ gap: 10, marginBottom: 4, color: "var(--slate)" }}>
+                <strong style={{ fontSize: 13 }}>
+                  Por que só {offers.length} seguradora{offers.length === 1 ? "" : "s"}?
+                </strong>
+              </div>
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                  color: "var(--muted)",
+                }}
+              >
+                As demais não cobrem este perfil específico (veículo / faixa etária / região). Use{" "}
+                <strong>Comparar com mais seguradoras</strong> para forçar.
+              </p>
             </div>
-            <p style={{ margin: "4px 0 0", fontSize: 12.5, lineHeight: 1.5, color: "var(--muted)" }}>
-              As demais não cobrem este perfil específico (veículo / faixa etária / região). Use <strong>Comparar com mais seguradoras</strong> para forçar.
-            </p>
-          </div>
-          <div className="card" style={{ padding: "14px 18px" }}>
-            <div className="row" style={{ gap: 10, marginBottom: 4, color: "var(--slate)" }}>
-              <strong style={{ fontSize: 13 }}>Histórico do cliente</strong>
+            <div className="card" style={{ padding: "14px 18px" }}>
+              <div className="row" style={{ gap: 10, marginBottom: 4, color: "var(--slate)" }}>
+                <strong style={{ fontSize: 13 }}>Histórico do cliente</strong>
+              </div>
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                  color: "var(--muted)",
+                }}
+              >
+                {data.segurado?.cpf_cnpj
+                  ? `CPF/CNPJ ${data.segurado.cpf_cnpj}.`
+                  : "Sem histórico anterior registrado."}
+              </p>
             </div>
-            <p style={{ margin: "4px 0 0", fontSize: 12.5, lineHeight: 1.5, color: "var(--muted)" }}>
-              {data.segurado?.cpf_cnpj ? `CPF/CNPJ ${data.segurado.cpf_cnpj}.` : "Sem histórico anterior registrado."}
-            </p>
           </div>
-        </div>
         </>
       )}
     </AppShell>

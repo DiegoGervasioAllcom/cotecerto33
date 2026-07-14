@@ -9,9 +9,7 @@ const FALLBACK_SUPABASE_KEY = "missing-supabase-anon-key";
 // em vez de apontar silenciosamente para a produção.
 const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? "").trim();
 const SUPABASE_ANON_KEY = String(
-  import.meta.env.VITE_SUPABASE_ANON_KEY ??
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-    "",
+  import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
 ).trim();
 
 function isHttpUrl(value: string) {

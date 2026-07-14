@@ -12,12 +12,14 @@ type CreateUserPayload = {
 
 function getAdmin() {
   const url =
-    (import.meta as any).env?.VITE_SUPABASE_URL ||
+    import.meta.env?.VITE_SUPABASE_URL ||
     process.env.VITE_SUPABASE_URL ||
     process.env.SELF_SUPABASE_URL;
   const serviceKey = process.env.SELF_SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) throw new Error("Configuração do servidor ausente.");
-  return createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 async function assertMatriz(admin: ReturnType<typeof getAdmin>, token: string) {

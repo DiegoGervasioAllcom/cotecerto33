@@ -18,12 +18,20 @@ type Row = {
   criado_em: string;
   atualizado_em: string;
   segurado: { nome: string | null } | null;
-  veiculo: { marca_nome: string | null; modelo_nome: string | null; ano_modelo: string | null } | null;
+  veiculo: {
+    marca_nome: string | null;
+    modelo_nome: string | null;
+    ano_modelo: string | null;
+  } | null;
   premios: Premio[];
 };
 
 const money = (n: number) =>
-  Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  Number(n || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  });
 
 const pad = (n: number) => String(n).padStart(5, "0");
 const cotNum = (numero: number) => `COT-${new Date().getFullYear()}-${pad(numero)}`;
@@ -37,10 +45,29 @@ function expiraChip(criadoEm: string) {
   const created = new Date(criadoEm).getTime();
   const exp = created + 5 * 24 * 60 * 60 * 1000;
   const d = Math.ceil((exp - Date.now()) / (24 * 60 * 60 * 1000));
-  if (d <= 0) return <span className="chip chip-alert" style={{ minWidth: 72 }}>Hoje</span>;
-  if (d <= 3) return <span className="chip chip-alert" style={{ minWidth: 72 }}>{d}d</span>;
-  if (d <= 5) return <span className="chip chip-yellow" style={{ minWidth: 72 }}>{d}d</span>;
-  return <span className="chip chip-outline" style={{ minWidth: 72 }}>{d}d</span>;
+  if (d <= 0)
+    return (
+      <span className="chip chip-alert" style={{ minWidth: 72 }}>
+        Hoje
+      </span>
+    );
+  if (d <= 3)
+    return (
+      <span className="chip chip-alert" style={{ minWidth: 72 }}>
+        {d}d
+      </span>
+    );
+  if (d <= 5)
+    return (
+      <span className="chip chip-yellow" style={{ minWidth: 72 }}>
+        {d}d
+      </span>
+    );
+  return (
+    <span className="chip chip-outline" style={{ minWidth: 72 }}>
+      {d}d
+    </span>
+  );
 }
 
 function Page() {
@@ -58,7 +85,7 @@ function Page() {
           "id,numero,status,ramo,criado_em,atualizado_em," +
             "segurado:cotacao_segurado(nome)," +
             "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
-            "premios:cotacao_premios(seguradora,premio)"
+            "premios:cotacao_premios(seguradora,premio)",
         )
         .in("status", ["calculada", "proposta"])
         .order("atualizado_em", { ascending: false })
@@ -72,10 +99,11 @@ function Page() {
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        const t = `${cotNum(r.numero)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
+        const t =
+          `${cotNum(r.numero)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
         return !q || t.includes(q.toLowerCase());
       }),
-    [rows, q]
+    [rows, q],
   );
 
   const totVal = filtered.reduce((a, r) => {
@@ -90,7 +118,8 @@ function Page() {
         <div>
           <h1>Cotações</h1>
           <div className="sub">
-            {filtered.length} cotações ativas · valor total estimado <strong>{money(totVal)}/ano</strong>
+            {filtered.length} cotações ativas · valor total estimado{" "}
+            <strong>{money(totVal)}/ano</strong>
           </div>
         </div>
         <div className="tools">
@@ -118,7 +147,9 @@ function Page() {
           onChange={(e) => setQ(e.target.value)}
           style={{ flex: 1, minWidth: 220 }}
         />
-        <button className="btn-link btn-sm" onClick={() => setQ("")}>Limpar</button>
+        <button className="btn-link btn-sm" onClick={() => setQ("")}>
+          Limpar
+        </button>
       </div>
 
       {err && <div className="alert alert-err">{err}</div>}
@@ -159,15 +190,18 @@ function Page() {
                 return (
                   <tr
                     key={r.id}
-                    onClick={() =>
-                      nav({ to: "/venda/novo-lead", search: { id: r.id, step: 5 } })
-                    }
+                    onClick={() => nav({ to: "/venda/novo-lead", search: { id: r.id, step: 5 } })}
                     style={{ cursor: "pointer" }}
                   >
-                    <td className="small muted" style={{ fontFamily: "ui-monospace,Menlo,monospace" }}>
+                    <td
+                      className="small muted"
+                      style={{ fontFamily: "ui-monospace,Menlo,monospace" }}
+                    >
                       #{cotNum(r.numero)}
                     </td>
-                    <td><strong>{r.segurado?.nome || "—"}</strong></td>
+                    <td>
+                      <strong>{r.segurado?.nome || "—"}</strong>
+                    </td>
                     <td>{veic}</td>
                     <td style={{ textAlign: "center" }}>
                       <span className="chip chip-outline">{r.premios?.length || 0} cotadas</span>
@@ -185,7 +219,10 @@ function Page() {
                     </td>
                     <td>{statusChip(r.status)}</td>
                     <td className="small muted">
-                      {new Date(r.criado_em).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                      {new Date(r.criado_em).toLocaleDateString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                      })}
                     </td>
                     <td>{expiraChip(r.criado_em)}</td>
                     <td>›</td>

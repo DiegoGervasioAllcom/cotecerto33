@@ -101,12 +101,18 @@ function Page() {
         .select("status_pipeline,ultimo_atendimento_em,criado_em")
         .eq("empresa_id", id)
         .gte("criado_em", start.toISOString());
-      const ll = (leads ?? []) as { status_pipeline: string | null; ultimo_atendimento_em: string | null }[];
+      const ll = (leads ?? []) as {
+        status_pipeline: string | null;
+        ultimo_atendimento_em: string | null;
+      }[];
       const has = (s: string) => ll.filter((x) => x.status_pipeline === s).length;
       const recebidos = ll.length;
-      const atendidos = ll.filter((x) => x.ultimo_atendimento_em || (x.status_pipeline && x.status_pipeline !== "novo")).length;
+      const atendidos = ll.filter(
+        (x) => x.ultimo_atendimento_em || (x.status_pipeline && x.status_pipeline !== "novo"),
+      ).length;
       const cotando = has("cotando") + has("cotacao");
-      const proposta = has("proposta_enviada") + has("em_negociacao") + has("proposta") + has("negociacao");
+      const proposta =
+        has("proposta_enviada") + has("em_negociacao") + has("proposta") + has("negociacao");
       const fechado = has("ganho") + has("fechado");
       setFunil({ recebidos, atendidos, cotando, proposta, fechado });
 
@@ -143,7 +149,8 @@ function Page() {
   }, [id]);
 
   const max = useMemo(
-    () => Math.max(1, funil.recebidos, funil.atendidos, funil.cotando, funil.proposta, funil.fechado),
+    () =>
+      Math.max(1, funil.recebidos, funil.atendidos, funil.cotando, funil.proposta, funil.fechado),
     [funil],
   );
 
@@ -160,7 +167,15 @@ function Page() {
         <div className="small muted" style={{ width: 130, textAlign: "right" }}>
           {label}
         </div>
-        <div style={{ flex: 1, background: "#f1f3f6", borderRadius: 6, height: 28, position: "relative" }}>
+        <div
+          style={{
+            flex: 1,
+            background: "#f1f3f6",
+            borderRadius: 6,
+            height: 28,
+            position: "relative",
+          }}
+        >
           <div
             style={{
               width: `${w}%`,
@@ -194,12 +209,18 @@ function Page() {
           className="row"
           style={{ gap: 6, color: "var(--muted)", textDecoration: "none", fontSize: 13 }}
         >
-          <svg width="14" height="14"><use href="#i-chevron-left"></use></svg> Todas as franquias
+          <svg width="14" height="14">
+            <use href="#i-chevron-left"></use>
+          </svg>{" "}
+          Todas as franquias
         </Link>
       </div>
 
       {/* título + ações */}
-      <div className="row" style={{ alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
+      <div
+        className="row"
+        style={{ alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}
+      >
         <div>
           <h1 style={{ margin: 0 }}>{k?.nome ?? (loading ? "Carregando…" : "Franquia")}</h1>
           <div className="sub" style={{ marginTop: 4 }}>
@@ -211,7 +232,10 @@ function Page() {
         <div className="row" style={{ gap: 10 }}>
           {k && statusChip(k.vendas_mes, k.meta_vendas)}
           <button className="btn btn-ghost" onClick={() => window.print()}>
-            <svg width="14" height="14"><use href="#i-download"></use></svg> Exportar
+            <svg width="14" height="14">
+              <use href="#i-download"></use>
+            </svg>{" "}
+            Exportar
           </button>
         </div>
       </div>
@@ -224,13 +248,21 @@ function Page() {
           <div className="meta">
             {k?.em_aberto ?? 0} em aberto · {k?.perdidos_mes ?? 0} perdidos
           </div>
-          <div className="ic-wrap"><svg><use href="#i-layers"></use></svg></div>
+          <div className="ic-wrap">
+            <svg>
+              <use href="#i-layers"></use>
+            </svg>
+          </div>
         </div>
         <div className="kpi">
           <div className="lbl">CONVERSÃO</div>
           <div className="val">{conv}%</div>
           <div className="meta">lead → apólice</div>
-          <div className="ic-wrap"><svg><use href="#i-percent"></use></svg></div>
+          <div className="ic-wrap">
+            <svg>
+              <use href="#i-percent"></use>
+            </svg>
+          </div>
         </div>
         <div className="kpi">
           <div className="lbl">VENDAS</div>
@@ -239,29 +271,48 @@ function Page() {
             meta {vendasMeta || 0}
             {mesAntVendas > 0 && (
               <>
-                {" "}· {diff >= 0 ? "▲" : "▼"} {Math.abs(diff)} vs. mês ant.
+                {" "}
+                · {diff >= 0 ? "▲" : "▼"} {Math.abs(diff)} vs. mês ant.
               </>
             )}
           </div>
-          <div className="ic-wrap"><svg><use href="#i-check"></use></svg></div>
+          <div className="ic-wrap">
+            <svg>
+              <use href="#i-check"></use>
+            </svg>
+          </div>
         </div>
         <div className="kpi">
           <div className="lbl">FATURAMENTO</div>
           <div className="val">{fmtBRL(Number(k?.faturamento_mes) || 0)}</div>
           <div className="meta">prêmio emitido</div>
-          <div className="ic-wrap"><svg><use href="#i-dollar"></use></svg></div>
+          <div className="ic-wrap">
+            <svg>
+              <use href="#i-dollar"></use>
+            </svg>
+          </div>
         </div>
         <div className="kpi">
           <div className="lbl">COMISSÃO</div>
           <div className="val">{fmtBRL(Number(k?.comissao_mes) || 0)}</div>
-          <div className="meta">{estornos} estorno{estornos === 1 ? "" : "s"}</div>
-          <div className="ic-wrap"><svg><use href="#i-tag"></use></svg></div>
+          <div className="meta">
+            {estornos} estorno{estornos === 1 ? "" : "s"}
+          </div>
+          <div className="ic-wrap">
+            <svg>
+              <use href="#i-tag"></use>
+            </svg>
+          </div>
         </div>
         <div className="kpi">
           <div className="lbl">PENDÊNCIAS FIN.</div>
           <div className="val">{pendNaoPagas}</div>
           <div className="meta">vendas não pagas</div>
-          <div className="ic-wrap"><svg><use href="#i-alert-triangle"></use></svg></div>
+          <div className="ic-wrap">
+            <svg>
+              <use href="#i-alert-triangle"></use>
+            </svg>
+          </div>
         </div>
       </div>
 
@@ -379,7 +430,8 @@ function Page() {
               Mês anterior: {mesAntVendas} apólices
               {diff !== 0 && (
                 <>
-                  {" "}· {diff > 0 ? "crescimento" : "queda"} de {Math.abs(diff)}.
+                  {" "}
+                  · {diff > 0 ? "crescimento" : "queda"} de {Math.abs(diff)}.
                 </>
               )}
             </div>
@@ -422,7 +474,9 @@ function Page() {
                     justifyContent: "center",
                   }}
                 >
-                  <svg width="14" height="14"><use href="#i-dollar"></use></svg>
+                  <svg width="14" height="14">
+                    <use href="#i-dollar"></use>
+                  </svg>
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>
@@ -450,7 +504,9 @@ function Page() {
                     justifyContent: "center",
                   }}
                 >
-                  <svg width="14" height="14"><use href="#i-refresh"></use></svg>
+                  <svg width="14" height="14">
+                    <use href="#i-refresh"></use>
+                  </svg>
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>

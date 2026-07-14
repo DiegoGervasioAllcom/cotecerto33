@@ -1,4 +1,5 @@
 <!-- LOVABLE:BEGIN -->
+
 > [!IMPORTANT]
 > This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
 > published git history — force pushing, or rebasing/amending/squashing commits
@@ -7,6 +8,7 @@
 >
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
+
 <!-- LOVABLE:END -->
 
 # CoteCerto — instruções para agentes
@@ -15,13 +17,13 @@ Sistema da Supper para o ciclo do corretor de seguros (lead → cotação → pr
 
 ## Fontes da verdade (ler antes de qualquer task)
 
-| Documento | O que contém |
-|---|---|
-| `docs/ANALISE_LACUNAS_V10.md` | O que está pronto, o que falta (GAPs), status por perfil, segurança, integridade, cronograma |
-| `docs/DOC_TECNICA_V10.md` | ER atual e alvo, plano de migrations 040–049, fluxo do desconto, arquitetura do front, convenções |
-| `docs/MAPA_PROTOTIPO_PERFIS.md` | Comportamento exato por perfil: navegação, escopo de dados, campos condicionais, tutoriais |
-| `docs/PLANO_TASKS_V10.md` + `docs/clickup_tasks_v10.csv` | As 78 tasks com dependências e estimativas |
-| Protótipo `cotecerto_prototipo_v10.html` | Especificação viva de UX — abrir no navegador; personas de teste no Handoff TI |
+| Documento                                                | O que contém                                                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `docs/ANALISE_LACUNAS_V10.md`                            | O que está pronto, o que falta (GAPs), status por perfil, segurança, integridade, cronograma      |
+| `docs/DOC_TECNICA_V10.md`                                | ER atual e alvo, plano de migrations 040–049, fluxo do desconto, arquitetura do front, convenções |
+| `docs/MAPA_PROTOTIPO_PERFIS.md`                          | Comportamento exato por perfil: navegação, escopo de dados, campos condicionais, tutoriais        |
+| `docs/PLANO_TASKS_V10.md` + `docs/clickup_tasks_v10.csv` | As 78 tasks com dependências e estimativas                                                        |
+| Protótipo `cotecerto_prototipo_v10.html`                 | Especificação viva de UX — abrir no navegador; personas de teste no Handoff TI                    |
 
 ## Ambientes (decisões de 13/07/2026)
 

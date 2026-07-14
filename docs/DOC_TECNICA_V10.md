@@ -147,18 +147,18 @@ erDiagram
 
 > Desde 13/07/2026 as migrations são gerenciadas pela Supabase CLI em `supabase/migrations/` (as 000–039 foram importadas como baseline; `/migrations` é histórico read-only). Criar novas com `bun run db:new <nome>`; a numeração 040+ abaixo é a referência lógica de conteúdo.
 
-| Migration | Conteúdo | Task |
-|---|---|---|
-| 040 | `security_invoker` nas views + fechar policies permissivas | S1–S4 |
-| 041 | Checks de tamanho/faixa + normalização e unique de documentos | D1–D3 |
-| 042 | Enum `perfil` + `'supervisor'`; `profiles.superior_id`; índices | G1.1 |
-| 043 | `empresas_visiveis()` multinível + policies revisadas | G1.2–G1.3 |
-| 044 | `modelos_franquia.tipo` → `individual|full` + migração de dados | G2.1 |
-| 045 | Tabelas de desconto (4) + RLS por nível | G3.1 |
-| 046 | RPCs de desconto (solicitar/aprovar/contrapropor/negar/escalar) | G3.2 |
-| 047 | `comissao_regras` + `campanhas_elite` + motores (RPC/trigger) | G4.1–G4.4 |
-| 048 | Premiações (modelo de dados) | G5.1 |
-| 049 | Renovações: cron de avisos | G6.1 |
+| Migration | Conteúdo                                                        | Task                      |
+| --------- | --------------------------------------------------------------- | ------------------------- | ---- |
+| 040       | `security_invoker` nas views + fechar policies permissivas      | S1–S4                     |
+| 041       | Checks de tamanho/faixa + normalização e unique de documentos   | D1–D3                     |
+| 042       | Enum `perfil` + `'supervisor'`; `profiles.superior_id`; índices | G1.1                      |
+| 043       | `empresas_visiveis()` multinível + policies revisadas           | G1.2–G1.3                 |
+| 044       | `modelos_franquia.tipo` → `individual                           | full` + migração de dados | G2.1 |
+| 045       | Tabelas de desconto (4) + RLS por nível                         | G3.1                      |
+| 046       | RPCs de desconto (solicitar/aprovar/contrapropor/negar/escalar) | G3.2                      |
+| 047       | `comissao_regras` + `campanhas_elite` + motores (RPC/trigger)   | G4.1–G4.4                 |
+| 048       | Premiações (modelo de dados)                                    | G5.1                      |
+| 049       | Renovações: cron de avisos                                      | G6.1                      |
 
 ---
 
@@ -222,14 +222,14 @@ flowchart LR
 
 ### Regras de navegação por perfil (alvo)
 
-| Perfil | Grupos de menu | Observação |
-|---|---|---|
-| Matriz | comando + operacao + aprovacoes | vê tudo; última instância |
-| Master | venda própria + comando (rede dele) + aprovacoes | dashboards escopados (xdash) |
-| Supervisor 🆕 | comando (CLT + franquias diretas) + aprovacoes | role novo |
-| Franquia Full | venda + equipe própria + aprovacoes | com ranking de equipe |
-| Franquia Individual | **só venda (cockpit vendedor)** | bifurcação `isFranqIndividual` |
-| Vendedor (CLT/franquia) | venda | solicita desconto, não aprova |
+| Perfil                  | Grupos de menu                                   | Observação                     |
+| ----------------------- | ------------------------------------------------ | ------------------------------ |
+| Matriz                  | comando + operacao + aprovacoes                  | vê tudo; última instância      |
+| Master                  | venda própria + comando (rede dele) + aprovacoes | dashboards escopados (xdash)   |
+| Supervisor 🆕           | comando (CLT + franquias diretas) + aprovacoes   | role novo                      |
+| Franquia Full           | venda + equipe própria + aprovacoes              | com ranking de equipe          |
+| Franquia Individual     | **só venda (cockpit vendedor)**                  | bifurcação `isFranqIndividual` |
+| Vendedor (CLT/franquia) | venda                                            | solicita desconto, não aprova  |
 
 ### Convenções de implementação
 

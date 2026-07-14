@@ -4,20 +4,20 @@
 
 ## Estrutura de listas (fases)
 
-| Lista | Tasks | Esforço | Depende de |
-|---|---:|---:|---|
-| 0 · Pré-obra | 14 | ~13 d | — |
-| S · Segurança | 6 | ~6 d | — (paralelo à pré-obra) |
-| D · Integridade | 5 | ~7,5 d | C3/C4 (drift e limpeza de dados) |
-| 1 · Hierarquia | 7 | ~11 d | Pré-obra (staging, migrations CLI) |
-| 2 · Franquia Ind/Full | 5 | ~7 d | Lista 1 |
-| 3 · Desconto multinível | 8 | ~14 d | Listas 1–2 |
-| 4 · Comissão | 6 | ~10 d | Lista 1 |
-| 5 · Telas pendentes | 4 | ~7 d | — (paralelo às listas 3–4) |
-| 6 · Renovações e tutoriais | 4 | ~6,5 d | G6.2 depende de G4.2 |
-| 7 · Qualidade final | 4 | ~9 d | Todas |
-| T · Testes (todos os tipos) | 9 | ~11,5 d | T1/T4 cedo; T2–T3 após listas 1–3; T8 após S5 |
-| K · Docker e deploy | 6 | ~5,5 d | junto com a pré-obra (staging já nasce em Docker); K3 integra com S5 |
+| Lista                       | Tasks | Esforço | Depende de                                                           |
+| --------------------------- | ----: | ------: | -------------------------------------------------------------------- |
+| 0 · Pré-obra                |    14 |   ~13 d | —                                                                    |
+| S · Segurança               |     6 |    ~6 d | — (paralelo à pré-obra)                                              |
+| D · Integridade             |     5 |  ~7,5 d | C3/C4 (drift e limpeza de dados)                                     |
+| 1 · Hierarquia              |     7 |   ~11 d | Pré-obra (staging, migrations CLI)                                   |
+| 2 · Franquia Ind/Full       |     5 |    ~7 d | Lista 1                                                              |
+| 3 · Desconto multinível     |     8 |   ~14 d | Listas 1–2                                                           |
+| 4 · Comissão                |     6 |   ~10 d | Lista 1                                                              |
+| 5 · Telas pendentes         |     4 |    ~7 d | — (paralelo às listas 3–4)                                           |
+| 6 · Renovações e tutoriais  |     4 |  ~6,5 d | G6.2 depende de G4.2                                                 |
+| 7 · Qualidade final         |     4 |    ~9 d | Todas                                                                |
+| T · Testes (todos os tipos) |     9 | ~11,5 d | T1/T4 cedo; T2–T3 após listas 1–3; T8 após S5                        |
+| K · Docker e deploy         |     6 |  ~5,5 d | junto com a pré-obra (staging já nasce em Docker); K3 integra com S5 |
 
 Total ≈ **108 dias-tarefa** (com paralelismo real: 87–129 dias úteis p/ 1 dev · 9,5–14 semanas p/ 2 devs).
 
@@ -27,16 +27,16 @@ O deploy atual é desconhecido (task C5 da pré-obra o documenta) e o front não
 
 ## Estratégia de testes (lista T — pirâmide completa)
 
-| Tipo | Task | Quando |
-|---|---|---|
-| Unitário (regras de negócio) | Setup Vitest (pré-obra) + G4.6 golden tests de comissão | desde a pré-obra |
-| Unitário (front) | T6 — máscaras, zod, canSee, KPIs | paralelo às listas 1–4 |
-| Integração (RPCs × banco) | T7 + G3.8 (alçada/escalonamento) | junto com listas 3–4 |
-| Segurança (RLS) | T4 + G1.7 (visibilidade por perfil) — **rodar a cada migration** | começa na lista S |
-| Integridade (constraints) | T5 — banco rejeita dado inválido | junto com lista D |
-| E2E (Playwright) | T1 setup → T2 fluxo de venda → T3 navegação das 6 personas | após lista 1 |
-| Carga | T8 — endpoints críticos + valida rate limiting | após S5 |
-| Processo | T9 — gate de cobertura no CI + Q4 QA manual final | T9 cedo; Q4 no fim |
+| Tipo                         | Task                                                             | Quando                 |
+| ---------------------------- | ---------------------------------------------------------------- | ---------------------- |
+| Unitário (regras de negócio) | Setup Vitest (pré-obra) + G4.6 golden tests de comissão          | desde a pré-obra       |
+| Unitário (front)             | T6 — máscaras, zod, canSee, KPIs                                 | paralelo às listas 1–4 |
+| Integração (RPCs × banco)    | T7 + G3.8 (alçada/escalonamento)                                 | junto com listas 3–4   |
+| Segurança (RLS)              | T4 + G1.7 (visibilidade por perfil) — **rodar a cada migration** | começa na lista S      |
+| Integridade (constraints)    | T5 — banco rejeita dado inválido                                 | junto com lista D      |
+| E2E (Playwright)             | T1 setup → T2 fluxo de venda → T3 navegação das 6 personas       | após lista 1           |
+| Carga                        | T8 — endpoints críticos + valida rate limiting                   | após S5                |
+| Processo                     | T9 — gate de cobertura no CI + Q4 QA manual final                | T9 cedo; Q4 no fim     |
 
 ## Regras de dependência (ordem de execução)
 

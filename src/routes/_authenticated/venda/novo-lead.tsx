@@ -9,7 +9,8 @@ export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
   validateSearch: (s: Record<string, unknown>): { id?: string; step?: number } => ({
     id: typeof s.id === "string" ? s.id : undefined,
-    step: typeof s.step === "number" ? s.step : (typeof s.step === "string" ? Number(s.step) : undefined),
+    step:
+      typeof s.step === "number" ? s.step : typeof s.step === "string" ? Number(s.step) : undefined,
   }),
   component: Page,
 });
@@ -33,7 +34,8 @@ function maskCpfCnpj(raw: string) {
 }
 function maskCel(raw: string) {
   const d = onlyDigits(raw).slice(0, 11);
-  if (d.length <= 10) return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
+  if (d.length <= 10)
+    return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
   return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{1,4})$/, "$1-$2");
 }
 function maskFixo(raw: string) {
@@ -41,11 +43,16 @@ function maskFixo(raw: string) {
   return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
 }
 function maskCep(raw: string) {
-  return onlyDigits(raw).slice(0, 8).replace(/^(\d{5})(\d)/, "$1-$2");
+  return onlyDigits(raw)
+    .slice(0, 8)
+    .replace(/^(\d{5})(\d)/, "$1-$2");
 }
 function maskPlaca(raw: string) {
   // Mercosul: AAA0A00 | Antigo: AAA0000
-  const v = (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
+  const v = (raw || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 7);
   if (v.length <= 3) return v;
   return v.slice(0, 3) + "-" + v.slice(3);
 }
@@ -56,7 +63,9 @@ function maskBRL(raw: string) {
   const d = onlyDigits(raw);
   if (!d) return "";
   const n = parseInt(d, 10);
-  return "R$ " + (Math.floor(n / 100)).toLocaleString("pt-BR") + "," + String(n % 100).padStart(2, "0");
+  return (
+    "R$ " + Math.floor(n / 100).toLocaleString("pt-BR") + "," + String(n % 100).padStart(2, "0")
+  );
 }
 function maskKm(raw: string) {
   const d = onlyDigits(raw);
@@ -65,39 +74,115 @@ function maskKm(raw: string) {
 
 type Form = {
   // Segurado
-  cpf: string; pessoa: string; nome: string; nomeSocial: string; nasc: string;
-  sexo: string; estadoCivil: string; celular: string; telRes: string; email: string;
-  cep: string; logradouro: string; bairro: string; cidade: string; uf: string;
+  cpf: string;
+  pessoa: string;
+  nome: string;
+  nomeSocial: string;
+  nasc: string;
+  sexo: string;
+  estadoCivil: string;
+  celular: string;
+  telRes: string;
+  email: string;
+  cep: string;
+  logradouro: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
   sms: "sim" | "nao";
   // Seguro
-  tipoSeguro: string; ramo: string; categoria: string; vigIni: string; vigFim: string;
-  ciaAtual: string; apoliceAtual: string; ciAtual: string; classeBonus: string;
-  seguradorasSel: string[]; tipoCalculo: string; grupoProducao: string; campanha: string; observacoesCot: string;
+  tipoSeguro: string;
+  ramo: string;
+  categoria: string;
+  vigIni: string;
+  vigFim: string;
+  ciaAtual: string;
+  apoliceAtual: string;
+  ciAtual: string;
+  classeBonus: string;
+  seguradorasSel: string[];
+  tipoCalculo: string;
+  grupoProducao: string;
+  campanha: string;
+  observacoesCot: string;
   // Renovação (conditional)
-  seguradoraAnterior: string; sucursalAnterior: string; apoliceAnterior: string;
-  coberturaAnterior: string; statusApoliceAnterior: string; itemApoliceAnterior: string;
-  inicioVigenciaAnterior: string; fimVigenciaAnterior: string;
-  renovacaoMesmoVeiculo: string; renovacaoInclusaoCasco: string;
-  qtdSinistrosParcialAnterior: string; ciApoliceAnterior: string;
-  classeBonusAnterior: string; comissaoApoliceAnterior: string;
+  seguradoraAnterior: string;
+  sucursalAnterior: string;
+  apoliceAnterior: string;
+  coberturaAnterior: string;
+  statusApoliceAnterior: string;
+  itemApoliceAnterior: string;
+  inicioVigenciaAnterior: string;
+  fimVigenciaAnterior: string;
+  renovacaoMesmoVeiculo: string;
+  renovacaoInclusaoCasco: string;
+  qtdSinistrosParcialAnterior: string;
+  ciApoliceAnterior: string;
+  classeBonusAnterior: string;
+  comissaoApoliceAnterior: string;
   bonusRenovacaoTodasSeguradoras: string;
-  bonusAllianz: string; bonusSuhai: string; bonusPortoAzulItau: string;
-  bonusMapfre: string; bonusTokio: string; bonusHdi: string;
-  bonusBradesco: string; bonusYelumAliroIndiana: string;
+  bonusAllianz: string;
+  bonusSuhai: string;
+  bonusPortoAzulItau: string;
+  bonusMapfre: string;
+  bonusTokio: string;
+  bonusHdi: string;
+  bonusBradesco: string;
+  bonusYelumAliroIndiana: string;
   // Veículo
-  placa: string; chassi: string; renavam: string; marca: string; modelo: string;
-  anoModelo: string; anoFab: string; combustivel: string; cor: string; zeroKm: boolean;
-  blindado: boolean; alienado: boolean; banco: string; usoComercial: string; kmMensal: string;
+  placa: string;
+  chassi: string;
+  renavam: string;
+  marca: string;
+  modelo: string;
+  anoModelo: string;
+  anoFab: string;
+  combustivel: string;
+  cor: string;
+  zeroKm: boolean;
+  blindado: boolean;
+  alienado: boolean;
+  banco: string;
+  usoComercial: string;
+  kmMensal: string;
   // Perfil
-  condutorMesmo: "sim" | "nao"; condCpf: string; condNome: string; condNasc: string;
-  condSexo: string; condEstadoCivil: string; profissao: string; cepPernoite: string;
-  garagemResid: boolean; garagemTrab: boolean; garagemEsc: boolean;
+  condutorMesmo: "sim" | "nao";
+  condCpf: string;
+  condNome: string;
+  condNasc: string;
+  condSexo: string;
+  condEstadoCivil: string;
+  profissao: string;
+  cepPernoite: string;
+  garagemResid: boolean;
+  garagemTrab: boolean;
+  garagemEsc: boolean;
   jovens1825: "sim" | "nao";
   // Coberturas
-  tipoCobertura: string; casco: string; cascoValor: string; franquia: string;
-  appMorte: string; appInval: string; dmh: string; rcfDm: string; rcfDc: string;
-  vidros: boolean; carroReserva: string; assist24: string;
+  tipoCobertura: string;
+  casco: string;
+  cascoValor: string;
+  franquia: string;
+  appMorte: string;
+  appInval: string;
+  dmh: string;
+  rcfDm: string;
+  rcfDc: string;
+  vidros: boolean;
+  carroReserva: string;
+  assist24: string;
 };
+
+type BonusFieldKey =
+  | "bonusRenovacaoTodasSeguradoras"
+  | "bonusAllianz"
+  | "bonusSuhai"
+  | "bonusPortoAzulItau"
+  | "bonusMapfre"
+  | "bonusTokio"
+  | "bonusHdi"
+  | "bonusBradesco"
+  | "bonusYelumAliroIndiana";
 
 const STEPS = ["Segurado", "Seguro", "Veículo", "Perfil", "Coberturas", "Cálculo"];
 const SEGURADORAS = ["Porto Seguro", "Azul Seguros", "Bradesco Auto", "HDI", "Allianz"];
@@ -109,17 +194,28 @@ function Page() {
   const [modelos, setModelos] = useState<{ codigo: number; nome: string }[]>([]);
   const [fipeValor, setFipeValor] = useState<string>("");
   const [calculando, setCalculando] = useState(false);
-  const [resultados, setResultados] = useState<{ cia: string; premio: number; cobertura: string }[]>([]);
+  const [resultados, setResultados] = useState<
+    { cia: string; premio: number; cobertura: string }[]
+  >([]);
   const [seguradorasDb, setSeguradorasDb] = useState<string[]>([]);
   const navigate = useNavigate();
 
   // ----- Classificar perda -----
   type PerdaMotivo = { id: number; nome: string };
-  type PerdaSubmotivo = { id: number; motivo_id: number; nome: string; destino_sugerido: "Remalho" | "Descarte" };
+  type PerdaSubmotivo = {
+    id: number;
+    motivo_id: number;
+    nome: string;
+    destino_sugerido: "Remalho" | "Descarte";
+  };
   const [perdaOpen, setPerdaOpen] = useState(false);
   const [perdaMotivos, setPerdaMotivos] = useState<PerdaMotivo[]>([]);
   const [perdaSubs, setPerdaSubs] = useState<PerdaSubmotivo[]>([]);
-  const [perdaForm, setPerdaForm] = useState<{ motivo: string; sub: string; obs: string }>({ motivo: "", sub: "", obs: "" });
+  const [perdaForm, setPerdaForm] = useState<{ motivo: string; sub: string; obs: string }>({
+    motivo: "",
+    sub: "",
+    obs: "",
+  });
   const [perdaSaving, setPerdaSaving] = useState(false);
 
   useEffect(() => {
@@ -128,7 +224,11 @@ function Page() {
     void (async () => {
       const [m, s] = await Promise.all([
         supabase.from("perda_motivos").select("id,nome").eq("ativo", true).order("ordem"),
-        supabase.from("perda_submotivos").select("id,motivo_id,nome,destino_sugerido").eq("ativo", true).order("ordem"),
+        supabase
+          .from("perda_submotivos")
+          .select("id,motivo_id,nome,destino_sugerido")
+          .eq("ativo", true)
+          .order("ordem"),
       ]);
       if (m.data) setPerdaMotivos(m.data as PerdaMotivo[]);
       if (s.data) setPerdaSubs(s.data as PerdaSubmotivo[]);
@@ -137,7 +237,11 @@ function Page() {
 
   async function abrirPerda() {
     if (!cotacaoId) {
-      try { await persistir(); } catch { /* noop */ }
+      try {
+        await persistir();
+      } catch {
+        /* noop */
+      }
     }
     setPerdaForm({ motivo: "", sub: "", obs: "" });
     setPerdaOpen(true);
@@ -153,44 +257,118 @@ function Page() {
       p_observacao: perdaForm.obs || undefined,
     });
     setPerdaSaving(false);
-    if (error) { alert("Erro ao classificar perda: " + error.message); return; }
+    if (error) {
+      alert("Erro ao classificar perda: " + error.message);
+      return;
+    }
     setPerdaOpen(false);
     navigate({ to: "/venda/pipeline" });
   }
 
   useEffect(() => {
-    supabase.from("seguradoras").select("nome").eq("ativo", true).order("ordem").then(({ data }) => {
-      if (data) setSeguradorasDb(data.map((x: any) => x.nome));
-    });
+    supabase
+      .from("seguradoras")
+      .select("nome")
+      .eq("ativo", true)
+      .order("ordem")
+      .then(({ data }) => {
+        if (data) setSeguradorasDb(data.map((x) => x.nome));
+      });
   }, []);
 
   const [f, setF] = useState<Form>({
-    cpf: "", pessoa: "Física", nome: "", nomeSocial: "", nasc: "", sexo: "",
-    estadoCivil: "", celular: "", telRes: "", email: "",
-    cep: "", logradouro: "", bairro: "", cidade: "", uf: "", sms: "nao",
-    tipoSeguro: "Seguro novo", ramo: "Automóvel", categoria: "Particular", vigIni: "", vigFim: "",
-    ciaAtual: "", apoliceAtual: "", ciAtual: "", classeBonus: "0",
+    cpf: "",
+    pessoa: "Física",
+    nome: "",
+    nomeSocial: "",
+    nasc: "",
+    sexo: "",
+    estadoCivil: "",
+    celular: "",
+    telRes: "",
+    email: "",
+    cep: "",
+    logradouro: "",
+    bairro: "",
+    cidade: "",
+    uf: "",
+    sms: "nao",
+    tipoSeguro: "Seguro novo",
+    ramo: "Automóvel",
+    categoria: "Particular",
+    vigIni: "",
+    vigFim: "",
+    ciaAtual: "",
+    apoliceAtual: "",
+    ciAtual: "",
+    classeBonus: "0",
     seguradorasSel: ["Mapfre", "Aliro", "Yelum", "HDI", "Suhai"],
-    tipoCalculo: "Anual", grupoProducao: "", campanha: "", observacoesCot: "",
-    seguradoraAnterior: "", sucursalAnterior: "", apoliceAnterior: "",
-    coberturaAnterior: "Compreensiva", statusApoliceAnterior: "Em vigor", itemApoliceAnterior: "",
-    inicioVigenciaAnterior: "", fimVigenciaAnterior: "",
-    renovacaoMesmoVeiculo: "Sim", renovacaoInclusaoCasco: "Não",
-    qtdSinistrosParcialAnterior: "", ciApoliceAnterior: "",
-    classeBonusAnterior: "0", comissaoApoliceAnterior: "",
+    tipoCalculo: "Anual",
+    grupoProducao: "",
+    campanha: "",
+    observacoesCot: "",
+    seguradoraAnterior: "",
+    sucursalAnterior: "",
+    apoliceAnterior: "",
+    coberturaAnterior: "Compreensiva",
+    statusApoliceAnterior: "Em vigor",
+    itemApoliceAnterior: "",
+    inicioVigenciaAnterior: "",
+    fimVigenciaAnterior: "",
+    renovacaoMesmoVeiculo: "Sim",
+    renovacaoInclusaoCasco: "Não",
+    qtdSinistrosParcialAnterior: "",
+    ciApoliceAnterior: "",
+    classeBonusAnterior: "0",
+    comissaoApoliceAnterior: "",
     bonusRenovacaoTodasSeguradoras: "0",
-    bonusAllianz: "0", bonusSuhai: "0", bonusPortoAzulItau: "0",
-    bonusMapfre: "0", bonusTokio: "0", bonusHdi: "0",
-    bonusBradesco: "0", bonusYelumAliroIndiana: "0",
-    placa: "", chassi: "", renavam: "", marca: "", modelo: "",
-    anoModelo: "", anoFab: "", combustivel: "Flex", cor: "", zeroKm: false,
-    blindado: false, alienado: false, banco: "", usoComercial: "Não", kmMensal: "",
-    condutorMesmo: "sim", condCpf: "", condNome: "", condNasc: "", condSexo: "",
-    condEstadoCivil: "", profissao: "", cepPernoite: "",
-    garagemResid: true, garagemTrab: false, garagemEsc: false, jovens1825: "nao",
-    tipoCobertura: "Compreensiva", casco: "100% Tabela FIPE", cascoValor: "", franquia: "Normal",
-    appMorte: "", appInval: "", dmh: "", rcfDm: "", rcfDc: "",
-    vidros: true, carroReserva: "7 dias", assist24: "Básica",
+    bonusAllianz: "0",
+    bonusSuhai: "0",
+    bonusPortoAzulItau: "0",
+    bonusMapfre: "0",
+    bonusTokio: "0",
+    bonusHdi: "0",
+    bonusBradesco: "0",
+    bonusYelumAliroIndiana: "0",
+    placa: "",
+    chassi: "",
+    renavam: "",
+    marca: "",
+    modelo: "",
+    anoModelo: "",
+    anoFab: "",
+    combustivel: "Flex",
+    cor: "",
+    zeroKm: false,
+    blindado: false,
+    alienado: false,
+    banco: "",
+    usoComercial: "Não",
+    kmMensal: "",
+    condutorMesmo: "sim",
+    condCpf: "",
+    condNome: "",
+    condNasc: "",
+    condSexo: "",
+    condEstadoCivil: "",
+    profissao: "",
+    cepPernoite: "",
+    garagemResid: true,
+    garagemTrab: false,
+    garagemEsc: false,
+    jovens1825: "nao",
+    tipoCobertura: "Compreensiva",
+    casco: "100% Tabela FIPE",
+    cascoValor: "",
+    franquia: "Normal",
+    appMorte: "",
+    appInval: "",
+    dmh: "",
+    rcfDm: "",
+    rcfDc: "",
+    vidros: true,
+    carroReserva: "7 dias",
+    assist24: "Básica",
   });
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
 
@@ -208,41 +386,100 @@ function Page() {
     return {
       step_atual: step,
       segurado: {
-        cpf: f.cpf, pessoa: f.pessoa, nome: f.nome, nome_social: f.nomeSocial, nasc: f.nasc,
-        sexo: f.sexo, estado_civil: f.estadoCivil, celular: f.celular, tel_res: f.telRes, email: f.email,
-        cep: f.cep, logradouro: f.logradouro, bairro: f.bairro, cidade: f.cidade, uf: f.uf,
+        cpf: f.cpf,
+        pessoa: f.pessoa,
+        nome: f.nome,
+        nome_social: f.nomeSocial,
+        nasc: f.nasc,
+        sexo: f.sexo,
+        estado_civil: f.estadoCivil,
+        celular: f.celular,
+        tel_res: f.telRes,
+        email: f.email,
+        cep: f.cep,
+        logradouro: f.logradouro,
+        bairro: f.bairro,
+        cidade: f.cidade,
+        uf: f.uf,
         sms_optin: f.sms === "sim",
       },
       seguro: {
-        tipo_seguro: f.tipoSeguro, ramo: f.ramo, categoria: f.categoria,
-        vig_ini: f.vigIni, vig_fim: f.vigFim,
-        cia_atual: f.ciaAtual, apolice_atual: f.apoliceAtual, ci_atual: f.ciAtual, classe_bonus: f.classeBonus,
+        tipo_seguro: f.tipoSeguro,
+        ramo: f.ramo,
+        categoria: f.categoria,
+        vig_ini: f.vigIni,
+        vig_fim: f.vigFim,
+        cia_atual: f.ciaAtual,
+        apolice_atual: f.apoliceAtual,
+        ci_atual: f.ciAtual,
+        classe_bonus: f.classeBonus,
         seguradoras_sel: f.seguradorasSel,
-        tipo_calculo: f.tipoCalculo, tipo_cobertura: f.tipoCobertura,
-        grupo_producao: f.grupoProducao, campanha: f.campanha, observacoes: f.observacoesCot,
+        tipo_calculo: f.tipoCalculo,
+        tipo_cobertura: f.tipoCobertura,
+        grupo_producao: f.grupoProducao,
+        campanha: f.campanha,
+        observacoes: f.observacoesCot,
       },
       veiculo: {
-        placa: f.placa, chassi: f.chassi, renavam: f.renavam,
-        marca_codigo: f.marca, marca_nome: marcas.find((m) => m.codigo === f.marca)?.nome || "",
-        modelo_codigo: f.modelo, modelo_nome: modelos.find((m) => String(m.codigo) === f.modelo)?.nome || "",
-        ano_modelo: f.anoModelo, ano_fab: f.anoFab, combustivel: f.combustivel, cor: f.cor,
-        zero_km: f.zeroKm, blindado: f.blindado, alienado: f.alienado, banco: f.banco,
-        uso_comercial: f.usoComercial, km_mensal: f.kmMensal, fipe_valor: fipeValor,
+        placa: f.placa,
+        chassi: f.chassi,
+        renavam: f.renavam,
+        marca_codigo: f.marca,
+        marca_nome: marcas.find((m) => m.codigo === f.marca)?.nome || "",
+        modelo_codigo: f.modelo,
+        modelo_nome: modelos.find((m) => String(m.codigo) === f.modelo)?.nome || "",
+        ano_modelo: f.anoModelo,
+        ano_fab: f.anoFab,
+        combustivel: f.combustivel,
+        cor: f.cor,
+        zero_km: f.zeroKm,
+        blindado: f.blindado,
+        alienado: f.alienado,
+        banco: f.banco,
+        uso_comercial: f.usoComercial,
+        km_mensal: f.kmMensal,
+        fipe_valor: fipeValor,
       },
       perfil: {
         condutor_mesmo: f.condutorMesmo === "sim",
-        cond_cpf: f.condCpf, cond_nome: f.condNome, cond_nasc: f.condNasc,
-        cond_sexo: f.condSexo, cond_estado_civil: f.condEstadoCivil,
-        profissao: f.profissao, cep_pernoite: f.cepPernoite,
-        garagem_resid: f.garagemResid, garagem_trab: f.garagemTrab, garagem_esc: f.garagemEsc,
+        cond_cpf: f.condCpf,
+        cond_nome: f.condNome,
+        cond_nasc: f.condNasc,
+        cond_sexo: f.condSexo,
+        cond_estado_civil: f.condEstadoCivil,
+        profissao: f.profissao,
+        cep_pernoite: f.cepPernoite,
+        garagem_resid: f.garagemResid,
+        garagem_trab: f.garagemTrab,
+        garagem_esc: f.garagemEsc,
         jovens_18_25: f.jovens1825 === "sim",
       },
       coberturas: {
-        tipo_cobertura: f.tipoCobertura, casco: f.casco, casco_valor: f.cascoValor, franquia: f.franquia,
-        app_morte: f.appMorte, app_invalidez: f.appInval, dmh: f.dmh, rcf_dm: f.rcfDm, rcf_dc: f.rcfDc,
-        vidros: f.vidros, carro_reserva: f.carroReserva, assist_24: f.assist24,
+        tipo_cobertura: f.tipoCobertura,
+        casco: f.casco,
+        casco_valor: f.cascoValor,
+        franquia: f.franquia,
+        app_morte: f.appMorte,
+        app_invalidez: f.appInval,
+        dmh: f.dmh,
+        rcf_dm: f.rcfDm,
+        rcf_dc: f.rcfDc,
+        vidros: f.vidros,
+        carro_reserva: f.carroReserva,
+        assist_24: f.assist24,
       },
-      ...(extra?.premios ? { premios: extra.premios.map((p) => ({ seguradora: (p as any).cia ?? (p as any).seguradora, premio: p.premio, cobertura: p.cobertura })) } : {}),
+      ...(extra?.premios
+        ? {
+            premios: extra.premios.map((p) => {
+              const legado = p as { cia?: string; seguradora?: string };
+              return {
+                seguradora: legado.cia ?? legado.seguradora,
+                premio: p.premio,
+                cobertura: p.cobertura,
+              };
+            }),
+          }
+        : {}),
     };
   }
 
@@ -266,11 +503,18 @@ function Page() {
 
   // auto-save com debounce
   useEffect(() => {
-    if (firstRender.current) { firstRender.current = false; return; }
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
     if (loadingRef.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => { void persistir(); }, 1500);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+    saveTimer.current = setTimeout(() => {
+      void persistir();
+    }, 1500);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f, step]);
 
@@ -282,75 +526,139 @@ function Page() {
       const { data, error } = await supabase
         .from("cotacoes")
         .select(
-          "id,step_atual,ramo," +
-          "segurado:cotacao_segurado(*)," +
-          "seguro:cotacao_seguro(*)," +
-          "veiculo:cotacao_veiculo(*)," +
-          "perfil:cotacao_perfil(*)," +
-          "coberturas:cotacao_coberturas(*)," +
-          "premios:cotacao_premios(seguradora,cobertura,premio)"
+          "id,step_atual,ramo,segurado:cotacao_segurado(*),seguro:cotacao_seguro(*),veiculo:cotacao_veiculo(*),perfil:cotacao_perfil(*),coberturas:cotacao_coberturas(*),premios:cotacao_premios(seguradora,cobertura,premio)",
         )
         .eq("id", routeId)
         .maybeSingle();
       if (cancel) return;
-      if (error || !data) { loadingRef.current = false; setLoading(false); return; }
-      const s = (data as any).segurado || {};
-      const sg = (data as any).seguro || {};
-      const v = (data as any).veiculo || {};
-      const p = (data as any).perfil || {};
-      const c = (data as any).coberturas || {};
-      const pr = ((data as any).premios || []) as { seguradora: string; cobertura: string; premio: number }[];
-      setStep(routeStep != null && !Number.isNaN(routeStep) ? routeStep : Number((data as any).step_atual ?? 0));
+      if (error || !data) {
+        loadingRef.current = false;
+        setLoading(false);
+        return;
+      }
+      const s = data.segurado ?? ({} as NonNullable<typeof data.segurado>);
+      const sg = data.seguro ?? ({} as NonNullable<typeof data.seguro>);
+      const v = data.veiculo ?? ({} as NonNullable<typeof data.veiculo>);
+      const p = data.perfil ?? ({} as NonNullable<typeof data.perfil>);
+      const c = data.coberturas ?? ({} as NonNullable<typeof data.coberturas>);
+      const pr = data.premios || [];
+      setStep(
+        routeStep != null && !Number.isNaN(routeStep) ? routeStep : Number(data.step_atual ?? 0),
+      );
       setF((prev) => ({
         ...prev,
-        cpf: s.cpf_cnpj ?? "", pessoa: s.pessoa ?? prev.pessoa, nome: s.nome ?? "", nomeSocial: s.nome_social ?? "",
-        nasc: s.nascimento ?? "", sexo: s.sexo ?? "", estadoCivil: s.estado_civil ?? "",
-        celular: s.celular ?? "", telRes: s.tel_res ?? "", email: s.email ?? "",
-        cep: s.cep ?? "", logradouro: s.logradouro ?? "", bairro: s.bairro ?? "",
-        cidade: s.cidade ?? "", uf: s.uf ?? "", sms: s.sms_optin ? "sim" : "nao",
-        tipoSeguro: sg.tipo_seguro ?? prev.tipoSeguro, ramo: sg.ramo ?? prev.ramo,
-        categoria: sg.categoria ?? prev.categoria, vigIni: sg.vig_ini ?? "", vigFim: sg.vig_fim ?? "",
-        ciaAtual: sg.cia_atual ?? "", apoliceAtual: sg.apolice_atual ?? "",
-        ciAtual: sg.ci_atual ?? "", classeBonus: sg.classe_bonus ?? "0",
-        seguradorasSel: Array.isArray(sg.seguradoras_sel) ? sg.seguradoras_sel : prev.seguradorasSel,
+        cpf: s.cpf_cnpj ?? "",
+        pessoa: s.pessoa ?? prev.pessoa,
+        nome: s.nome ?? "",
+        nomeSocial: s.nome_social ?? "",
+        nasc: s.nascimento ?? "",
+        sexo: s.sexo ?? "",
+        estadoCivil: s.estado_civil ?? "",
+        celular: s.celular ?? "",
+        telRes: s.tel_res ?? "",
+        email: s.email ?? "",
+        cep: s.cep ?? "",
+        logradouro: s.logradouro ?? "",
+        bairro: s.bairro ?? "",
+        cidade: s.cidade ?? "",
+        uf: s.uf ?? "",
+        sms: s.sms_optin ? "sim" : "nao",
+        tipoSeguro: sg.tipo_seguro ?? prev.tipoSeguro,
+        ramo: sg.ramo ?? prev.ramo,
+        categoria: sg.categoria ?? prev.categoria,
+        vigIni: sg.vig_ini ?? "",
+        vigFim: sg.vig_fim ?? "",
+        ciaAtual: sg.cia_atual ?? "",
+        apoliceAtual: sg.apolice_atual ?? "",
+        ciAtual: sg.ci_atual ?? "",
+        classeBonus: sg.classe_bonus ?? "0",
+        seguradorasSel: Array.isArray(sg.seguradoras_sel)
+          ? sg.seguradoras_sel
+          : prev.seguradorasSel,
         tipoCalculo: sg.tipo_calculo ?? prev.tipoCalculo,
         tipoCobertura: sg.tipo_cobertura ?? prev.tipoCobertura,
         grupoProducao: sg.grupo_producao ?? prev.grupoProducao,
         campanha: sg.campanha ?? prev.campanha,
         observacoesCot: sg.observacoes ?? prev.observacoesCot,
-        placa: v.placa ?? "", chassi: v.chassi ?? "", renavam: v.renavam ?? "",
-        marca: v.marca_codigo ?? "", modelo: v.modelo_codigo ?? "",
-        anoModelo: v.ano_modelo ?? "", anoFab: v.ano_fab ?? "",
-        combustivel: v.combustivel ?? prev.combustivel, cor: v.cor ?? "",
-        zeroKm: !!v.zero_km, blindado: !!v.blindado, alienado: !!v.alienado,
-        banco: v.banco ?? "", usoComercial: v.uso_comercial ?? prev.usoComercial, kmMensal: v.km_mensal ?? "",
+        placa: v.placa ?? "",
+        chassi: v.chassi ?? "",
+        renavam: v.renavam ?? "",
+        marca: v.marca_codigo ?? "",
+        modelo: v.modelo_codigo ?? "",
+        anoModelo: v.ano_modelo ?? "",
+        anoFab: v.ano_fab ?? "",
+        combustivel: v.combustivel ?? prev.combustivel,
+        cor: v.cor ?? "",
+        zeroKm: !!v.zero_km,
+        blindado: !!v.blindado,
+        alienado: !!v.alienado,
+        banco: v.banco ?? "",
+        usoComercial: v.uso_comercial ?? prev.usoComercial,
+        kmMensal: v.km_mensal ?? "",
         condutorMesmo: p.condutor_mesmo === false ? "nao" : "sim",
-        condCpf: p.cond_cpf ?? "", condNome: p.cond_nome ?? "", condNasc: p.cond_nasc ?? "",
-        condSexo: p.cond_sexo ?? "", condEstadoCivil: p.cond_estado_civil ?? "",
-        profissao: p.profissao ?? "", cepPernoite: p.cep_pernoite ?? "",
+        condCpf: p.cond_cpf ?? "",
+        condNome: p.cond_nome ?? "",
+        condNasc: p.cond_nasc ?? "",
+        condSexo: p.cond_sexo ?? "",
+        condEstadoCivil: p.cond_estado_civil ?? "",
+        profissao: p.profissao ?? "",
+        cepPernoite: p.cep_pernoite ?? "",
         garagemResid: p.garagem_resid ?? prev.garagemResid,
-        garagemTrab: !!p.garagem_trab, garagemEsc: !!p.garagem_esc,
+        garagemTrab: !!p.garagem_trab,
+        garagemEsc: !!p.garagem_esc,
         jovens1825: p.jovens_18_25 ? "sim" : "nao",
         casco: c.casco ?? prev.casco,
-        cascoValor: c.casco_valor ?? "", franquia: c.franquia ?? prev.franquia,
-        appMorte: c.app_morte ?? "", appInval: c.app_invalidez ?? "", dmh: c.dmh ?? "",
-        rcfDm: c.rcf_dm ?? "", rcfDc: c.rcf_dc ?? "",
-        vidros: c.vidros ?? prev.vidros, carroReserva: c.carro_reserva ?? prev.carroReserva,
+        cascoValor: c.casco_valor ?? "",
+        franquia: c.franquia ?? prev.franquia,
+        appMorte: c.app_morte ?? "",
+        appInval: c.app_invalidez ?? "",
+        dmh: c.dmh ?? "",
+        rcfDm: c.rcf_dm ?? "",
+        rcfDc: c.rcf_dc ?? "",
+        vidros: c.vidros ?? prev.vidros,
+        carroReserva: c.carro_reserva ?? prev.carroReserva,
         assist24: c.assist_24 ?? prev.assist24,
       }));
       if (v.fipe_valor) setFipeValor(v.fipe_valor);
-      if (v.marca_codigo && v.marca_nome) setMarcas((m) => m.some((x) => x.codigo === v.marca_codigo) ? m : [...m, { codigo: v.marca_codigo, nome: v.marca_nome }]);
-      if (v.modelo_codigo && v.modelo_nome) setModelos((m) => m.some((x) => String(x.codigo) === String(v.modelo_codigo)) ? m : [...m, { codigo: Number(v.modelo_codigo), nome: v.modelo_nome }]);
-      if (pr.length) setResultados(pr.map((x) => ({ cia: x.seguradora, premio: Number(x.premio), cobertura: x.cobertura })));
+      if (v.marca_codigo && v.marca_nome) {
+        const marcaCodigo = v.marca_codigo;
+        const marcaNome = v.marca_nome;
+        setMarcas((m) =>
+          m.some((x) => x.codigo === marcaCodigo)
+            ? m
+            : [...m, { codigo: marcaCodigo, nome: marcaNome }],
+        );
+      }
+      if (v.modelo_codigo && v.modelo_nome) {
+        const modeloCodigo = v.modelo_codigo;
+        const modeloNome = v.modelo_nome;
+        setModelos((m) =>
+          m.some((x) => String(x.codigo) === String(modeloCodigo))
+            ? m
+            : [...m, { codigo: Number(modeloCodigo), nome: modeloNome }],
+        );
+      }
+      if (pr.length)
+        setResultados(
+          pr.map((x) => ({
+            cia: x.seguradora ?? "",
+            premio: Number(x.premio),
+            cobertura: x.cobertura ?? "",
+          })),
+        );
       setCotacaoId(routeId);
       setLastSavedAt(new Date());
       setSaveState("saved");
       // libera autosave após dois ticks pra evitar disparo pelo setF
-      setTimeout(() => { loadingRef.current = false; setLoading(false); }, 50);
+      setTimeout(() => {
+        loadingRef.current = false;
+        setLoading(false);
+      }, 50);
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [routeId]);
-
 
   async function lookupCep(cep: string, prefix: "" | "cond" = "") {
     const d = onlyDigits(cep);
@@ -360,28 +668,52 @@ function Page() {
       const r = await fetch(`https://viacep.com.br/ws/${d}/json/`);
       const j = await r.json();
       if (!j.erro && !prefix) {
-        setF((p) => ({ ...p, logradouro: j.logradouro || "", bairro: j.bairro || "", cidade: j.localidade || "", uf: j.uf || "" }));
+        setF((p) => ({
+          ...p,
+          logradouro: j.logradouro || "",
+          bairro: j.bairro || "",
+          cidade: j.localidade || "",
+          uf: j.uf || "",
+        }));
       }
-    } catch { /* noop */ } finally { setCepLoading(false); }
+    } catch {
+      /* noop */
+    } finally {
+      setCepLoading(false);
+    }
   }
 
   // FIPE: marcas
   useEffect(() => {
     fetch("https://parallelum.com.br/fipe/api/v1/carros/marcas")
-      .then((r) => r.json()).then(setMarcas).catch(() => setMarcas([]));
+      .then((r) => r.json())
+      .then(setMarcas)
+      .catch(() => setMarcas([]));
   }, []);
   // FIPE: modelos quando marca muda
   useEffect(() => {
-    if (!f.marca) { setModelos([]); return; }
+    if (!f.marca) {
+      setModelos([]);
+      return;
+    }
     fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${f.marca}/modelos`)
-      .then((r) => r.json()).then((j) => setModelos(j.modelos || [])).catch(() => setModelos([]));
+      .then((r) => r.json())
+      .then((j) => setModelos(j.modelos || []))
+      .catch(() => setModelos([]));
   }, [f.marca]);
   // FIPE: valor quando modelo+ano
   useEffect(() => {
-    if (!f.marca || !f.modelo || !f.anoModelo) { setFipeValor(""); return; }
+    if (!f.marca || !f.modelo || !f.anoModelo) {
+      setFipeValor("");
+      return;
+    }
     const combCode = f.combustivel === "Diesel" ? 3 : f.combustivel === "Álcool" ? 2 : 1;
-    fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${f.marca}/modelos/${f.modelo}/anos/${f.anoModelo}-${combCode}`)
-      .then((r) => r.json()).then((j) => setFipeValor(j.Valor || "")).catch(() => setFipeValor(""));
+    fetch(
+      `https://parallelum.com.br/fipe/api/v1/carros/marcas/${f.marca}/modelos/${f.modelo}/anos/${f.anoModelo}-${combCode}`,
+    )
+      .then((r) => r.json())
+      .then((j) => setFipeValor(j.Valor || ""))
+      .catch(() => setFipeValor(""));
   }, [f.marca, f.modelo, f.anoModelo, f.combustivel]);
 
   function simularCalculo() {
@@ -394,7 +726,8 @@ function Page() {
     setResultados([]);
     setTimeout(() => {
       const base = fipeValor ? Number(onlyDigits(fipeValor)) / 100 : 60000;
-      const fator = f.tipoCobertura === "Compreensiva" ? 0.035 : f.tipoCobertura === "RCF" ? 0.012 : 0.020;
+      const fator =
+        f.tipoCobertura === "Compreensiva" ? 0.035 : f.tipoCobertura === "RCF" ? 0.012 : 0.02;
       const novos = alvos.map((cia, i) => ({
         cia,
         premio: Math.round(base * fator * (0.85 + i * 0.07)),
@@ -402,39 +735,90 @@ function Page() {
       }));
       setResultados(novos);
       setCalculando(false);
-      void persistir({ premios: novos.map((r) => ({ cia: r.cia, premio: r.premio, cobertura: r.cobertura })) as never });
+      void persistir({
+        premios: novos.map((r) => ({
+          cia: r.cia,
+          premio: r.premio,
+          cobertura: r.cobertura,
+        })) as never,
+      });
     }, 900);
   }
 
-  const podeCalcular = !!(f.cpf && f.nome && f.marca && f.modelo && f.anoModelo && (f.seguradorasSel?.length ?? 0) > 0);
+  const podeCalcular = !!(
+    f.cpf &&
+    f.nome &&
+    f.marca &&
+    f.modelo &&
+    f.anoModelo &&
+    (f.seguradorasSel?.length ?? 0) > 0
+  );
 
   return (
     <AppShell title="Novo lead">
       <ProtoIcons />
       <div className="page-head">
         <div>
-          <h1>Nova cotação <span className="chip chip-slate" style={{ marginLeft: 6, verticalAlign: "middle" }}>Novo</span></h1>
-          <div className="sub">Multi cálculo · Padrão Automóvel · espelha o fluxo de cotação do Quiver com a cara da Supper.</div>
+          <h1>
+            Nova cotação{" "}
+            <span className="chip chip-slate" style={{ marginLeft: 6, verticalAlign: "middle" }}>
+              Novo
+            </span>
+          </h1>
+          <div className="sub">
+            Multi cálculo · Padrão Automóvel · espelha o fluxo de cotação do Quiver com a cara da
+            Supper.
+          </div>
         </div>
         <div className="tools">
-          <button className="btn btn-ghost"><svg width="14" height="14"><use href="#i-message" /></svg> WhatsApp</button>
-          <button className="btn btn-ghost"><svg width="14" height="14"><use href="#i-history" /></svg> Histórico</button>
-          <button className="btn btn-ghost" onClick={() => void abrirPerda()}><svg width="14" height="14"><use href="#i-flag" /></svg> Classificar perda</button>
+          <button className="btn btn-ghost">
+            <svg width="14" height="14">
+              <use href="#i-message" />
+            </svg>{" "}
+            WhatsApp
+          </button>
+          <button className="btn btn-ghost">
+            <svg width="14" height="14">
+              <use href="#i-history" />
+            </svg>{" "}
+            Histórico
+          </button>
+          <button className="btn btn-ghost" onClick={() => void abrirPerda()}>
+            <svg width="14" height="14">
+              <use href="#i-flag" />
+            </svg>{" "}
+            Classificar perda
+          </button>
         </div>
       </div>
-      {loading && <div className="muted" style={{ marginBottom: 8 }}>Carregando rascunho…</div>}
+      {loading && (
+        <div className="muted" style={{ marginBottom: 8 }}>
+          Carregando rascunho…
+        </div>
+      )}
 
       <div className="stepper">
         {STEPS.map((label, i) => (
           <span key={label} style={{ display: "contents" }}>
-            <div className={"step " + (i === step ? "current" : "")} onClick={() => setStep(i)} style={{ cursor: "pointer" }}>
+            <div
+              className={"step " + (i === step ? "current" : "")}
+              onClick={() => setStep(i)}
+              style={{ cursor: "pointer" }}
+            >
               <div className="n">{i + 1}</div>
               <div className="lbl">{label}</div>
             </div>
             {i < STEPS.length - 1 && <div className="line " />}
           </span>
         ))}
-        {podeCalcular && <span className="ready "><svg width="12" height="12"><use href="#i-check" /></svg> Pronto para cotar</span>}
+        {podeCalcular && (
+          <span className="ready ">
+            <svg width="12" height="12">
+              <use href="#i-check" />
+            </svg>{" "}
+            Pronto para cotar
+          </span>
+        )}
       </div>
 
       <div className="lead-shell">
@@ -442,386 +826,851 @@ function Page() {
           {step === 0 && (
             <>
               <h2>Dados do Segurado</h2>
-              <div className="sub">Digite o CPF/CNPJ que o sistema busca o cadastro. Se for novo, preenche o resto manualmente.</div>
+              <div className="sub">
+                Digite o CPF/CNPJ que o sistema busca o cadastro. Se for novo, preenche o resto
+                manualmente.
+              </div>
               <div className="wizard-grid">
                 <div className="field-group">
-                  <label>CPF ou CNPJ<span className="req">*</span></label>
-                  <input className="input" value={f.cpf} inputMode="numeric"
-                    onChange={(e) => up("cpf", maskCpfCnpj(e.target.value))} placeholder="000.000.000-00" />
+                  <label>
+                    CPF ou CNPJ<span className="req">*</span>
+                  </label>
+                  <input
+                    className="input"
+                    value={f.cpf}
+                    inputMode="numeric"
+                    onChange={(e) => up("cpf", maskCpfCnpj(e.target.value))}
+                    placeholder="000.000.000-00"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Pessoa</label>
-                  <select className="input" value={f.pessoa} onChange={(e) => up("pessoa", e.target.value)}>
-                    <option>Física</option><option>Jurídica</option>
+                  <select
+                    className="input"
+                    value={f.pessoa}
+                    onChange={(e) => up("pessoa", e.target.value)}
+                  >
+                    <option>Física</option>
+                    <option>Jurídica</option>
                   </select>
                 </div>
                 <div className="field-group full">
-                  <label>Nome<span className="req">*</span></label>
-                  <input className="input" value={f.nome} onChange={(e) => up("nome", e.target.value)} placeholder="Nome completo" />
+                  <label>
+                    Nome<span className="req">*</span>
+                  </label>
+                  <input
+                    className="input"
+                    value={f.nome}
+                    onChange={(e) => up("nome", e.target.value)}
+                    placeholder="Nome completo"
+                  />
                 </div>
                 <div className="field-group full">
                   <label>Nome social</label>
-                  <input className="input" value={f.nomeSocial} onChange={(e) => up("nomeSocial", e.target.value)} placeholder="Opcional" />
+                  <input
+                    className="input"
+                    value={f.nomeSocial}
+                    onChange={(e) => up("nomeSocial", e.target.value)}
+                    placeholder="Opcional"
+                  />
                 </div>
                 <div className="field-group">
-                  <label>Data de nascimento<span className="req">*</span></label>
-                  <input className="input" type="date" value={f.nasc} onChange={(e) => up("nasc", e.target.value)} />
+                  <label>
+                    Data de nascimento<span className="req">*</span>
+                  </label>
+                  <input
+                    className="input"
+                    type="date"
+                    value={f.nasc}
+                    onChange={(e) => up("nasc", e.target.value)}
+                  />
                 </div>
                 <div className="field-group">
-                  <label>Sexo<span className="req">*</span></label>
+                  <label>
+                    Sexo<span className="req">*</span>
+                  </label>
                   <div className="row" style={{ gap: 8, paddingTop: 4 }}>
                     {["Masculino", "Feminino"].map((s) => (
-                      <span key={s} className={"chip " + (f.sexo === s ? "chip-slate" : "chip-outline")}
-                        style={{ cursor: "pointer" }} onClick={() => up("sexo", s)}>{s}</span>
+                      <span
+                        key={s}
+                        className={"chip " + (f.sexo === s ? "chip-slate" : "chip-outline")}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => up("sexo", s)}
+                      >
+                        {s}
+                      </span>
                     ))}
                   </div>
                 </div>
                 <div className="field-group">
-                  <label>Estado civil<span className="req">*</span></label>
-                  <select className="input" value={f.estadoCivil} onChange={(e) => up("estadoCivil", e.target.value)}>
+                  <label>
+                    Estado civil<span className="req">*</span>
+                  </label>
+                  <select
+                    className="input"
+                    value={f.estadoCivil}
+                    onChange={(e) => up("estadoCivil", e.target.value)}
+                  >
                     <option value="">Selecione</option>
-                    <option>Casado(a)</option><option>Solteiro(a)</option><option>Viúvo(a)</option>
-                    <option>Divorciado(a)</option><option>Separado(a)</option><option>União estável</option>
+                    <option>Casado(a)</option>
+                    <option>Solteiro(a)</option>
+                    <option>Viúvo(a)</option>
+                    <option>Divorciado(a)</option>
+                    <option>Separado(a)</option>
+                    <option>União estável</option>
                   </select>
                 </div>
                 <div className="field-group">
-                  <label>Telefone celular<span className="req">*</span> <span className="hint">WhatsApp</span></label>
-                  <input className="input" value={f.celular} inputMode="numeric"
-                    onChange={(e) => up("celular", maskCel(e.target.value))} placeholder="(00) 00000-0000" />
+                  <label>
+                    Telefone celular<span className="req">*</span>{" "}
+                    <span className="hint">WhatsApp</span>
+                  </label>
+                  <input
+                    className="input"
+                    value={f.celular}
+                    inputMode="numeric"
+                    onChange={(e) => up("celular", maskCel(e.target.value))}
+                    placeholder="(00) 00000-0000"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Telefone residencial</label>
-                  <input className="input" value={f.telRes} inputMode="numeric"
-                    onChange={(e) => up("telRes", maskFixo(e.target.value))} placeholder="(00) 0000-0000" />
+                  <input
+                    className="input"
+                    value={f.telRes}
+                    inputMode="numeric"
+                    onChange={(e) => up("telRes", maskFixo(e.target.value))}
+                    placeholder="(00) 0000-0000"
+                  />
                 </div>
                 <div className="field-group full">
                   <label>E-mail</label>
-                  <input className="input" type="email" value={f.email}
-                    onChange={(e) => up("email", e.target.value)} placeholder="cliente@email.com" />
+                  <input
+                    className="input"
+                    type="email"
+                    value={f.email}
+                    onChange={(e) => up("email", e.target.value)}
+                    placeholder="cliente@email.com"
+                  />
                 </div>
                 <div className="field-group">
-                  <label>CEP residencial<span className="req">*</span></label>
-                  <input className="input" value={f.cep} inputMode="numeric"
+                  <label>
+                    CEP residencial<span className="req">*</span>
+                  </label>
+                  <input
+                    className="input"
+                    value={f.cep}
+                    inputMode="numeric"
                     onChange={(e) => {
-                      const v = maskCep(e.target.value); up("cep", v);
+                      const v = maskCep(e.target.value);
+                      up("cep", v);
                       if (onlyDigits(v).length === 8) lookupCep(v);
                     }}
-                    onBlur={() => lookupCep(f.cep)} placeholder="00000-000" />
+                    onBlur={() => lookupCep(f.cep)}
+                    placeholder="00000-000"
+                  />
                   {cepLoading && <span className="hint">Buscando CEP…</span>}
                 </div>
                 <div className="field-group">
                   <label>Logradouro</label>
-                  <input className="input" value={f.logradouro} onChange={(e) => up("logradouro", e.target.value)} placeholder="Preenche via CEP" />
+                  <input
+                    className="input"
+                    value={f.logradouro}
+                    onChange={(e) => up("logradouro", e.target.value)}
+                    placeholder="Preenche via CEP"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Bairro</label>
-                  <input className="input" value={f.bairro} onChange={(e) => up("bairro", e.target.value)} placeholder="Preenche via CEP" />
+                  <input
+                    className="input"
+                    value={f.bairro}
+                    onChange={(e) => up("bairro", e.target.value)}
+                    placeholder="Preenche via CEP"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Cidade</label>
-                  <input className="input" value={f.cidade} onChange={(e) => up("cidade", e.target.value)} placeholder="Preenche via CEP" />
+                  <input
+                    className="input"
+                    value={f.cidade}
+                    onChange={(e) => up("cidade", e.target.value)}
+                    placeholder="Preenche via CEP"
+                  />
                 </div>
                 <div className="field-group">
                   <label>UF</label>
-                  <input className="input" value={f.uf} maxLength={2}
-                    onChange={(e) => up("uf", e.target.value.toUpperCase())} placeholder="UF" />
+                  <input
+                    className="input"
+                    value={f.uf}
+                    maxLength={2}
+                    onChange={(e) => up("uf", e.target.value.toUpperCase())}
+                    placeholder="UF"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Autorizo o envio por SMS</label>
                   <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-                    <label><input type="radio" name="sms" checked={f.sms === "sim"} onChange={() => up("sms", "sim")} /> Sim</label>
-                    <label><input type="radio" name="sms" checked={f.sms === "nao"} onChange={() => up("sms", "nao")} /> Não</label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="sms"
+                        checked={f.sms === "sim"}
+                        onChange={() => up("sms", "sim")}
+                      />{" "}
+                      Sim
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="sms"
+                        checked={f.sms === "nao"}
+                        onChange={() => up("sms", "nao")}
+                      />{" "}
+                      Não
+                    </label>
                   </div>
                 </div>
               </div>
             </>
           )}
 
-          {step === 1 && (() => {
-            const SEG_HABILITADAS = seguradorasDb;
-            const INSURERS = seguradorasDb;
-            const bonusClasses = ["0","1","2","3","4","5","6","7","8","9","10"];
-            const isRenov = (f.tipoSeguro || "").includes("Renovação");
-            return (
-            <>
-              <h2>Dados do Seguro</h2>
-              <div className="sub">Seguradoras para o cálculo, tipo de seguro e vigência.</div>
+          {step === 1 &&
+            (() => {
+              const SEG_HABILITADAS = seguradorasDb;
+              const INSURERS = seguradorasDb;
+              const bonusClasses = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+              const isRenov = (f.tipoSeguro || "").includes("Renovação");
+              return (
+                <>
+                  <h2>Dados do Seguro</h2>
+                  <div className="sub">Seguradoras para o cálculo, tipo de seguro e vigência.</div>
 
-              <div className="field-group full" style={{ marginBottom: 6 }}>
-                <label>
-                  Seguradoras disponíveis{" "}
-                  <span className="hint">marque e desmarque para o cálculo</span>
-                </label>
-                <div className="row" style={{ gap: 8, flexWrap: "wrap", paddingTop: 6 }}>
-                  {SEG_HABILITADAS.map((s) => {
-                    const on = f.seguradorasSel.includes(s);
-                    return (
-                      <span
-                        key={s}
-                        className={"chip " + (on ? "chip-yellow" : "chip-outline")}
-                        style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
-                        onClick={() =>
-                          up("seguradorasSel", on ? f.seguradorasSel.filter((x) => x !== s) : [...f.seguradorasSel, s])
-                        }
+                  <div className="field-group full" style={{ marginBottom: 6 }}>
+                    <label>
+                      Seguradoras disponíveis{" "}
+                      <span className="hint">marque e desmarque para o cálculo</span>
+                    </label>
+                    <div className="row" style={{ gap: 8, flexWrap: "wrap", paddingTop: 6 }}>
+                      {SEG_HABILITADAS.map((s) => {
+                        const on = f.seguradorasSel.includes(s);
+                        return (
+                          <span
+                            key={s}
+                            className={"chip " + (on ? "chip-yellow" : "chip-outline")}
+                            style={{
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                            onClick={() =>
+                              up(
+                                "seguradorasSel",
+                                on
+                                  ? f.seguradorasSel.filter((x) => x !== s)
+                                  : [...f.seguradorasSel, s],
+                              )
+                            }
+                          >
+                            {on && (
+                              <svg width="12" height="12">
+                                <use href="#i-check" />
+                              </svg>
+                            )}
+                            {s}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="wizard-grid cols-3">
+                    <div className="field-group">
+                      <label>
+                        Tipo de seguro<span className="req">*</span>
+                      </label>
+                      <select
+                        className="input"
+                        value={f.tipoSeguro}
+                        onChange={(e) => up("tipoSeguro", e.target.value)}
                       >
-                        {on && <svg width="12" height="12"><use href="#i-check" /></svg>}
-                        {s}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="wizard-grid cols-3">
-                <div className="field-group">
-                  <label>Tipo de seguro<span className="req">*</span></label>
-                  <select className="input" value={f.tipoSeguro} onChange={(e) => up("tipoSeguro", e.target.value)}>
-                    {["Seguro novo","Renovação com nossa corretora","Renovação de outra corretora"].map((o) => <option key={o}>{o}</option>)}
-                  </select>
-                </div>
-                <div className="field-group">
-                  <label>Tipo de cálculo</label>
-                  <select className="input" value={f.tipoCalculo} onChange={(e) => {
-                    const tc = e.target.value;
-                    const yearsMap: Record<string, number> = { "Anual": 1, "Bianual": 2, "Trianual": 3, "Quadrianual": 4, "Quinquenal": 5 };
-                    const add = yearsMap[tc];
-                    let fim = f.vigFim;
-                    if (f.vigIni && add) {
-                      const d = new Date(f.vigIni + "T00:00:00");
-                      d.setFullYear(d.getFullYear() + add);
-                      d.setDate(d.getDate() - 1);
-                      fim = d.toISOString().slice(0, 10);
-                    }
-                    setF((s) => ({ ...s, tipoCalculo: tc, vigFim: fim }));
-                  }}>
-                     {["Anual","Bianual","Trianual","Quadrianual","Quinquenal","Plurianual","Prazo curto"].map((o) => <option key={o}>{o}</option>)}
-                   </select>
-                </div>
-                <div className="field-group">
-                  <label>Tipo de cobertura</label>
-                  <select className="input" value={f.tipoCobertura} onChange={(e) => up("tipoCobertura", e.target.value)}>
-                    {["Compreensiva","Casco (Incêndio, Roubo e Furto)","Casco (Colisão e Incêndio)","RCF (Somente terceiros)"].map((o) => <option key={o}>{o}</option>)}
-                  </select>
-                </div>
-                <div className="field-group">
-                   <label>Período de vigência<span className="req">*</span></label>
-                   <input className="input" type="date" value={f.vigIni} onChange={(e) => {
-                     const ini = e.target.value;
-                     const yearsMap: Record<string, number> = { "Anual": 1, "Bianual": 2, "Trianual": 3, "Quadrianual": 4, "Quinquenal": 5 };
-                     const add = yearsMap[f.tipoCalculo];
-                     let fim = f.vigFim;
-                     if (ini && add) {
-                       const d = new Date(ini + "T00:00:00");
-                       d.setFullYear(d.getFullYear() + add);
-                       d.setDate(d.getDate() - 1);
-                       fim = d.toISOString().slice(0, 10);
-                     }
-                     setF((s) => ({ ...s, vigIni: ini, vigFim: fim }));
-                   }} />
-                 </div>
-                 <div className="field-group">
-                   <label>Até</label>
-                   <input className="input" type="date" value={f.vigFim} onChange={(e) => up("vigFim", e.target.value)} />
-                 </div>
-                <div className="field-group">
-                  <label>Grupo de produção<span className="req">*</span></label>
-                  <input className="input" value={f.grupoProducao} onChange={(e) => up("grupoProducao", e.target.value)} placeholder="Busca o produtor" />
-                </div>
-              </div>
-
-              <div className="wizard-grid">
-                <div className="field-group">
-                  <label>Campanha</label>
-                  <select className="input" value={f.campanha} onChange={(e) => up("campanha", e.target.value)}>
-                    <option value="">Selecione</option>
-                    <option>Campanha Supper Auto 2026</option>
-                    <option>Indique e ganhe</option>
-                  </select>
-                </div>
-                <div className="field-group full">
-                  <label>Observações para a cotação</label>
-                  <textarea className="input" rows={2} placeholder="Anotações internas desta cotação"
-                    value={f.observacoesCot} onChange={(e) => up("observacoesCot", e.target.value)} />
-                </div>
-              </div>
-
-              {isRenov && (
-                <div style={{ marginTop: 16, border: "1px solid var(--border)", borderRadius: 12, padding: 16, background: "var(--cream-soft)" }}>
-                  <div className="sec-title" style={{ margin: "0 0 8px", color: "var(--slate)", fontWeight: 700, fontSize: 14 }}>
-                    <svg width="14" height="14"><use href="#i-history" /></svg> Dados da apólice anterior{" "}
-                    <span className="hint">obrigatório em renovação</span>
+                        {[
+                          "Seguro novo",
+                          "Renovação com nossa corretora",
+                          "Renovação de outra corretora",
+                        ].map((o) => (
+                          <option key={o}>{o}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label>Tipo de cálculo</label>
+                      <select
+                        className="input"
+                        value={f.tipoCalculo}
+                        onChange={(e) => {
+                          const tc = e.target.value;
+                          const yearsMap: Record<string, number> = {
+                            Anual: 1,
+                            Bianual: 2,
+                            Trianual: 3,
+                            Quadrianual: 4,
+                            Quinquenal: 5,
+                          };
+                          const add = yearsMap[tc];
+                          let fim = f.vigFim;
+                          if (f.vigIni && add) {
+                            const d = new Date(f.vigIni + "T00:00:00");
+                            d.setFullYear(d.getFullYear() + add);
+                            d.setDate(d.getDate() - 1);
+                            fim = d.toISOString().slice(0, 10);
+                          }
+                          setF((s) => ({ ...s, tipoCalculo: tc, vigFim: fim }));
+                        }}
+                      >
+                        {[
+                          "Anual",
+                          "Bianual",
+                          "Trianual",
+                          "Quadrianual",
+                          "Quinquenal",
+                          "Plurianual",
+                          "Prazo curto",
+                        ].map((o) => (
+                          <option key={o}>{o}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label>Tipo de cobertura</label>
+                      <select
+                        className="input"
+                        value={f.tipoCobertura}
+                        onChange={(e) => up("tipoCobertura", e.target.value)}
+                      >
+                        {[
+                          "Compreensiva",
+                          "Casco (Incêndio, Roubo e Furto)",
+                          "Casco (Colisão e Incêndio)",
+                          "RCF (Somente terceiros)",
+                        ].map((o) => (
+                          <option key={o}>{o}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label>
+                        Período de vigência<span className="req">*</span>
+                      </label>
+                      <input
+                        className="input"
+                        type="date"
+                        value={f.vigIni}
+                        onChange={(e) => {
+                          const ini = e.target.value;
+                          const yearsMap: Record<string, number> = {
+                            Anual: 1,
+                            Bianual: 2,
+                            Trianual: 3,
+                            Quadrianual: 4,
+                            Quinquenal: 5,
+                          };
+                          const add = yearsMap[f.tipoCalculo];
+                          let fim = f.vigFim;
+                          if (ini && add) {
+                            const d = new Date(ini + "T00:00:00");
+                            d.setFullYear(d.getFullYear() + add);
+                            d.setDate(d.getDate() - 1);
+                            fim = d.toISOString().slice(0, 10);
+                          }
+                          setF((s) => ({ ...s, vigIni: ini, vigFim: fim }));
+                        }}
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label>Até</label>
+                      <input
+                        className="input"
+                        type="date"
+                        value={f.vigFim}
+                        onChange={(e) => up("vigFim", e.target.value)}
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label>
+                        Grupo de produção<span className="req">*</span>
+                      </label>
+                      <input
+                        className="input"
+                        value={f.grupoProducao}
+                        onChange={(e) => up("grupoProducao", e.target.value)}
+                        placeholder="Busca o produtor"
+                      />
+                    </div>
                   </div>
-                  <div className="wizard-grid cols-3">
-                    <div className="field-group"><label>Seguradora anterior<span className="req">*</span></label>
-                      <select className="input" value={f.seguradoraAnterior} onChange={(e) => up("seguradoraAnterior", e.target.value)}>
+
+                  <div className="wizard-grid">
+                    <div className="field-group">
+                      <label>Campanha</label>
+                      <select
+                        className="input"
+                        value={f.campanha}
+                        onChange={(e) => up("campanha", e.target.value)}
+                      >
                         <option value="">Selecione</option>
-                        {INSURERS.map((o) => <option key={o}>{o}</option>)}
+                        <option>Campanha Supper Auto 2026</option>
+                        <option>Indique e ganhe</option>
                       </select>
                     </div>
-                    <div className="field-group"><label>Sucursal / endosso <span className="hint">Bradesco e Porto</span></label>
-                      <input className="input" value={f.sucursalAnterior} onChange={(e) => up("sucursalAnterior", e.target.value)} /></div>
-                    <div className="field-group"><label>Nº da apólice anterior<span className="req">*</span></label>
-                      <input className="input" value={f.apoliceAnterior} onChange={(e) => up("apoliceAnterior", e.target.value)} /></div>
-                    <div className="field-group"><label>Cobertura anterior<span className="req">*</span></label>
-                      <select className="input" value={f.coberturaAnterior} onChange={(e) => up("coberturaAnterior", e.target.value)}>
-                        {["Compreensiva","Casco (Incêndio, Roubo e Furto)","Casco (Colisão e Incêndio)","RCF (Somente terceiros)"].map((o) => <option key={o}>{o}</option>)}
-                      </select>
+                    <div className="field-group full">
+                      <label>Observações para a cotação</label>
+                      <textarea
+                        className="input"
+                        rows={2}
+                        placeholder="Anotações internas desta cotação"
+                        value={f.observacoesCot}
+                        onChange={(e) => up("observacoesCot", e.target.value)}
+                      />
                     </div>
-                    <div className="field-group"><label>Status da apólice anterior<span className="req">*</span></label>
-                      <select className="input" value={f.statusApoliceAnterior} onChange={(e) => up("statusApoliceAnterior", e.target.value)}>
-                        {["Em vigor","Vencida","Cancelada"].map((o) => <option key={o}>{o}</option>)}
-                      </select>
-                    </div>
-                    <div className="field-group"><label>Item da apólice anterior</label>
-                      <input className="input" value={f.itemApoliceAnterior} onChange={(e) => up("itemApoliceAnterior", e.target.value)} placeholder="opcional" /></div>
-                    <div className="field-group"><label>Início vigência anterior<span className="req">*</span></label>
-                      <input className="input" type="date" value={f.inicioVigenciaAnterior} onChange={(e) => up("inicioVigenciaAnterior", e.target.value)} /></div>
-                    <div className="field-group"><label>Fim vigência anterior<span className="req">*</span></label>
-                      <input className="input" type="date" value={f.fimVigenciaAnterior} onChange={(e) => up("fimVigenciaAnterior", e.target.value)} /></div>
-                    <div className="field-group"><label>Renovação para o mesmo veículo?<span className="req">*</span></label>
-                      <select className="input" value={f.renovacaoMesmoVeiculo} onChange={(e) => up("renovacaoMesmoVeiculo", e.target.value)}>
-                        {["Sim","Não"].map((o) => <option key={o}>{o}</option>)}
-                      </select>
-                    </div>
-                    <div className="field-group"><label>Inclusão de casco <span className="hint">Yelum, Mapfre, Aliro</span></label>
-                      <select className="input" value={f.renovacaoInclusaoCasco} onChange={(e) => up("renovacaoInclusaoCasco", e.target.value)}>
-                        {["Não","Sim"].map((o) => <option key={o}>{o}</option>)}
-                      </select>
-                    </div>
-                    <div className="field-group"><label>Qtd. sinistros parciais anterior</label>
-                      <input className="input" value={f.qtdSinistrosParcialAnterior} onChange={(e) => up("qtdSinistrosParcialAnterior", e.target.value)} placeholder="0" /></div>
-                    <div className="field-group"><label>CI da apólice anterior</label>
-                      <input className="input" value={f.ciApoliceAnterior} onChange={(e) => up("ciApoliceAnterior", e.target.value)} placeholder="opcional" /></div>
-                    <div className="field-group"><label>Classe de bônus anterior</label>
-                      <select className="input" value={f.classeBonusAnterior} onChange={(e) => up("classeBonusAnterior", e.target.value)}>
-                        {bonusClasses.map((o) => <option key={o}>{o}</option>)}
-                      </select>
-                    </div>
-                    <div className="field-group"><label>Comissão da apólice anterior (%)</label>
-                      <input className="input" value={f.comissaoApoliceAnterior} onChange={(e) => up("comissaoApoliceAnterior", e.target.value)} placeholder="opcional" /></div>
                   </div>
 
-                  <div className="sec-title" style={{ margin: "14px 0 6px", color: "var(--slate)", fontWeight: 700, fontSize: 13 }}>
-                    Bônus por seguradora
-                  </div>
-                  <div className="wizard-grid cols-3">
-                    {[
-                      ["bonusRenovacaoTodasSeguradoras", "Bônus — todas as seguradoras", true],
-                      ["bonusAllianz", "Bônus Allianz", false],
-                      ["bonusSuhai", "Bônus Suhai", false],
-                      ["bonusPortoAzulItau", "Bônus Porto / Azul / Itaú", false],
-                      ["bonusMapfre", "Bônus Mapfre", false],
-                      ["bonusTokio", "Bônus Tokio Marine", false],
-                      ["bonusHdi", "Bônus HDI", false],
-                      ["bonusBradesco", "Bônus Bradesco", false],
-                      ["bonusYelumAliroIndiana", "Bônus Yelum / Aliro / Indiana", false],
-                    ].map(([key, label, req]) => (
-                      <div key={key as string} className="field-group">
-                        <label>{label as string}{req && <span className="req">*</span>}</label>
-                        <select className="input" value={(f as any)[key as string]} onChange={(e) => up(key as keyof Form, e.target.value)}>
-                          {bonusClasses.map((o) => <option key={o}>{o}</option>)}
-                        </select>
+                  {isRenov && (
+                    <div
+                      style={{
+                        marginTop: 16,
+                        border: "1px solid var(--border)",
+                        borderRadius: 12,
+                        padding: 16,
+                        background: "var(--cream-soft)",
+                      }}
+                    >
+                      <div
+                        className="sec-title"
+                        style={{
+                          margin: "0 0 8px",
+                          color: "var(--slate)",
+                          fontWeight: 700,
+                          fontSize: 14,
+                        }}
+                      >
+                        <svg width="14" height="14">
+                          <use href="#i-history" />
+                        </svg>{" "}
+                        Dados da apólice anterior{" "}
+                        <span className="hint">obrigatório em renovação</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-            );
-          })()}
+                      <div className="wizard-grid cols-3">
+                        <div className="field-group">
+                          <label>
+                            Seguradora anterior<span className="req">*</span>
+                          </label>
+                          <select
+                            className="input"
+                            value={f.seguradoraAnterior}
+                            onChange={(e) => up("seguradoraAnterior", e.target.value)}
+                          >
+                            <option value="">Selecione</option>
+                            {INSURERS.map((o) => (
+                              <option key={o}>{o}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="field-group">
+                          <label>
+                            Sucursal / endosso <span className="hint">Bradesco e Porto</span>
+                          </label>
+                          <input
+                            className="input"
+                            value={f.sucursalAnterior}
+                            onChange={(e) => up("sucursalAnterior", e.target.value)}
+                          />
+                        </div>
+                        <div className="field-group">
+                          <label>
+                            Nº da apólice anterior<span className="req">*</span>
+                          </label>
+                          <input
+                            className="input"
+                            value={f.apoliceAnterior}
+                            onChange={(e) => up("apoliceAnterior", e.target.value)}
+                          />
+                        </div>
+                        <div className="field-group">
+                          <label>
+                            Cobertura anterior<span className="req">*</span>
+                          </label>
+                          <select
+                            className="input"
+                            value={f.coberturaAnterior}
+                            onChange={(e) => up("coberturaAnterior", e.target.value)}
+                          >
+                            {[
+                              "Compreensiva",
+                              "Casco (Incêndio, Roubo e Furto)",
+                              "Casco (Colisão e Incêndio)",
+                              "RCF (Somente terceiros)",
+                            ].map((o) => (
+                              <option key={o}>{o}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="field-group">
+                          <label>
+                            Status da apólice anterior<span className="req">*</span>
+                          </label>
+                          <select
+                            className="input"
+                            value={f.statusApoliceAnterior}
+                            onChange={(e) => up("statusApoliceAnterior", e.target.value)}
+                          >
+                            {["Em vigor", "Vencida", "Cancelada"].map((o) => (
+                              <option key={o}>{o}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="field-group">
+                          <label>Item da apólice anterior</label>
+                          <input
+                            className="input"
+                            value={f.itemApoliceAnterior}
+                            onChange={(e) => up("itemApoliceAnterior", e.target.value)}
+                            placeholder="opcional"
+                          />
+                        </div>
+                        <div className="field-group">
+                          <label>
+                            Início vigência anterior<span className="req">*</span>
+                          </label>
+                          <input
+                            className="input"
+                            type="date"
+                            value={f.inicioVigenciaAnterior}
+                            onChange={(e) => up("inicioVigenciaAnterior", e.target.value)}
+                          />
+                        </div>
+                        <div className="field-group">
+                          <label>
+                            Fim vigência anterior<span className="req">*</span>
+                          </label>
+                          <input
+                            className="input"
+                            type="date"
+                            value={f.fimVigenciaAnterior}
+                            onChange={(e) => up("fimVigenciaAnterior", e.target.value)}
+                          />
+                        </div>
+                        <div className="field-group">
+                          <label>
+                            Renovação para o mesmo veículo?<span className="req">*</span>
+                          </label>
+                          <select
+                            className="input"
+                            value={f.renovacaoMesmoVeiculo}
+                            onChange={(e) => up("renovacaoMesmoVeiculo", e.target.value)}
+                          >
+                            {["Sim", "Não"].map((o) => (
+                              <option key={o}>{o}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="field-group">
+                          <label>
+                            Inclusão de casco <span className="hint">Yelum, Mapfre, Aliro</span>
+                          </label>
+                          <select
+                            className="input"
+                            value={f.renovacaoInclusaoCasco}
+                            onChange={(e) => up("renovacaoInclusaoCasco", e.target.value)}
+                          >
+                            {["Não", "Sim"].map((o) => (
+                              <option key={o}>{o}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="field-group">
+                          <label>Qtd. sinistros parciais anterior</label>
+                          <input
+                            className="input"
+                            value={f.qtdSinistrosParcialAnterior}
+                            onChange={(e) => up("qtdSinistrosParcialAnterior", e.target.value)}
+                            placeholder="0"
+                          />
+                        </div>
+                        <div className="field-group">
+                          <label>CI da apólice anterior</label>
+                          <input
+                            className="input"
+                            value={f.ciApoliceAnterior}
+                            onChange={(e) => up("ciApoliceAnterior", e.target.value)}
+                            placeholder="opcional"
+                          />
+                        </div>
+                        <div className="field-group">
+                          <label>Classe de bônus anterior</label>
+                          <select
+                            className="input"
+                            value={f.classeBonusAnterior}
+                            onChange={(e) => up("classeBonusAnterior", e.target.value)}
+                          >
+                            {bonusClasses.map((o) => (
+                              <option key={o}>{o}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="field-group">
+                          <label>Comissão da apólice anterior (%)</label>
+                          <input
+                            className="input"
+                            value={f.comissaoApoliceAnterior}
+                            onChange={(e) => up("comissaoApoliceAnterior", e.target.value)}
+                            placeholder="opcional"
+                          />
+                        </div>
+                      </div>
+
+                      <div
+                        className="sec-title"
+                        style={{
+                          margin: "14px 0 6px",
+                          color: "var(--slate)",
+                          fontWeight: 700,
+                          fontSize: 13,
+                        }}
+                      >
+                        Bônus por seguradora
+                      </div>
+                      <div className="wizard-grid cols-3">
+                        {[
+                          ["bonusRenovacaoTodasSeguradoras", "Bônus — todas as seguradoras", true],
+                          ["bonusAllianz", "Bônus Allianz", false],
+                          ["bonusSuhai", "Bônus Suhai", false],
+                          ["bonusPortoAzulItau", "Bônus Porto / Azul / Itaú", false],
+                          ["bonusMapfre", "Bônus Mapfre", false],
+                          ["bonusTokio", "Bônus Tokio Marine", false],
+                          ["bonusHdi", "Bônus HDI", false],
+                          ["bonusBradesco", "Bônus Bradesco", false],
+                          ["bonusYelumAliroIndiana", "Bônus Yelum / Aliro / Indiana", false],
+                        ].map(([key, label, req]) => (
+                          <div key={key as string} className="field-group">
+                            <label>
+                              {label as string}
+                              {req && <span className="req">*</span>}
+                            </label>
+                            <select
+                              className="input"
+                              value={f[key as BonusFieldKey]}
+                              onChange={(e) => up(key as keyof Form, e.target.value)}
+                            >
+                              {bonusClasses.map((o) => (
+                                <option key={o}>{o}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
           {step === 2 && (
             <>
               <h2>Dados do Veículo</h2>
-              <div className="sub">Marca / Modelo via Tabela FIPE. Valor sugerido aparece automaticamente.</div>
+              <div className="sub">
+                Marca / Modelo via Tabela FIPE. Valor sugerido aparece automaticamente.
+              </div>
               <div className="wizard-grid">
                 <div className="field-group">
                   <label>Placa</label>
-                  <input className="input" value={f.placa}
-                    onChange={(e) => up("placa", maskPlaca(e.target.value))} placeholder="AAA-0A00" />
+                  <input
+                    className="input"
+                    value={f.placa}
+                    onChange={(e) => up("placa", maskPlaca(e.target.value))}
+                    placeholder="AAA-0A00"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Chassi</label>
-                  <input className="input" value={f.chassi} maxLength={17}
-                    onChange={(e) => up("chassi", e.target.value.toUpperCase())} placeholder="17 caracteres" />
+                  <input
+                    className="input"
+                    value={f.chassi}
+                    maxLength={17}
+                    onChange={(e) => up("chassi", e.target.value.toUpperCase())}
+                    placeholder="17 caracteres"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Renavam</label>
-                  <input className="input" value={f.renavam} inputMode="numeric"
-                    onChange={(e) => up("renavam", onlyDigits(e.target.value).slice(0, 11))} />
+                  <input
+                    className="input"
+                    value={f.renavam}
+                    inputMode="numeric"
+                    onChange={(e) => up("renavam", onlyDigits(e.target.value).slice(0, 11))}
+                  />
                 </div>
                 <div className="field-group">
                   <label>Zero KM</label>
                   <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-                    <label><input type="checkbox" checked={f.zeroKm} onChange={(e) => up("zeroKm", e.target.checked)} /> Sim</label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={f.zeroKm}
+                        onChange={(e) => up("zeroKm", e.target.checked)}
+                      />{" "}
+                      Sim
+                    </label>
                   </div>
                 </div>
                 <div className="field-group">
-                  <label>Marca<span className="req">*</span></label>
-                  <select className="input" value={f.marca} onChange={(e) => { up("marca", e.target.value); up("modelo", ""); }}>
+                  <label>
+                    Marca<span className="req">*</span>
+                  </label>
+                  <select
+                    className="input"
+                    value={f.marca}
+                    onChange={(e) => {
+                      up("marca", e.target.value);
+                      up("modelo", "");
+                    }}
+                  >
                     <option value="">Selecione</option>
-                    {marcas.map((m) => <option key={m.codigo} value={m.codigo}>{m.nome}</option>)}
+                    {marcas.map((m) => (
+                      <option key={m.codigo} value={m.codigo}>
+                        {m.nome}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="field-group full">
-                  <label>Modelo<span className="req">*</span></label>
-                  <select className="input" value={f.modelo} onChange={(e) => up("modelo", e.target.value)} disabled={!f.marca}>
+                  <label>
+                    Modelo<span className="req">*</span>
+                  </label>
+                  <select
+                    className="input"
+                    value={f.modelo}
+                    onChange={(e) => up("modelo", e.target.value)}
+                    disabled={!f.marca}
+                  >
                     <option value="">{f.marca ? "Selecione" : "Selecione a marca antes"}</option>
-                    {modelos.map((m) => <option key={m.codigo} value={m.codigo}>{m.nome}</option>)}
+                    {modelos.map((m) => (
+                      <option key={m.codigo} value={m.codigo}>
+                        {m.nome}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="field-group">
-                  <label>Ano modelo<span className="req">*</span></label>
-                  <input className="input" value={f.anoModelo} inputMode="numeric"
-                    onChange={(e) => up("anoModelo", maskAno(e.target.value))} placeholder="2024" />
+                  <label>
+                    Ano modelo<span className="req">*</span>
+                  </label>
+                  <input
+                    className="input"
+                    value={f.anoModelo}
+                    inputMode="numeric"
+                    onChange={(e) => up("anoModelo", maskAno(e.target.value))}
+                    placeholder="2024"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Ano fabricação</label>
-                  <input className="input" value={f.anoFab} inputMode="numeric"
-                    onChange={(e) => up("anoFab", maskAno(e.target.value))} placeholder="2023" />
+                  <input
+                    className="input"
+                    value={f.anoFab}
+                    inputMode="numeric"
+                    onChange={(e) => up("anoFab", maskAno(e.target.value))}
+                    placeholder="2023"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Combustível</label>
-                  <select className="input" value={f.combustivel} onChange={(e) => up("combustivel", e.target.value)}>
-                    <option>Flex</option><option>Gasolina</option><option>Álcool</option><option>Diesel</option><option>Elétrico</option>
+                  <select
+                    className="input"
+                    value={f.combustivel}
+                    onChange={(e) => up("combustivel", e.target.value)}
+                  >
+                    <option>Flex</option>
+                    <option>Gasolina</option>
+                    <option>Álcool</option>
+                    <option>Diesel</option>
+                    <option>Elétrico</option>
                   </select>
                 </div>
                 <div className="field-group">
                   <label>Cor</label>
-                  <input className="input" value={f.cor} onChange={(e) => up("cor", e.target.value)} />
+                  <input
+                    className="input"
+                    value={f.cor}
+                    onChange={(e) => up("cor", e.target.value)}
+                  />
                 </div>
                 <div className="field-group">
                   <label>Valor FIPE</label>
-                  <input className="input" value={fipeValor} readOnly style={{ background: "var(--offwhite)" }} placeholder="Preenche via FIPE" />
+                  <input
+                    className="input"
+                    value={fipeValor}
+                    readOnly
+                    style={{ background: "var(--offwhite)" }}
+                    placeholder="Preenche via FIPE"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Blindado</label>
                   <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-                    <label><input type="checkbox" checked={f.blindado} onChange={(e) => up("blindado", e.target.checked)} /> Sim</label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={f.blindado}
+                        onChange={(e) => up("blindado", e.target.checked)}
+                      />{" "}
+                      Sim
+                    </label>
                   </div>
                 </div>
                 <div className="field-group">
                   <label>Alienado</label>
                   <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-                    <label><input type="checkbox" checked={f.alienado} onChange={(e) => up("alienado", e.target.checked)} /> Sim</label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={f.alienado}
+                        onChange={(e) => up("alienado", e.target.checked)}
+                      />{" "}
+                      Sim
+                    </label>
                   </div>
                 </div>
                 {f.alienado && (
                   <div className="field-group">
                     <label>Banco / Financeira</label>
-                    <input className="input" value={f.banco} onChange={(e) => up("banco", e.target.value)} />
+                    <input
+                      className="input"
+                      value={f.banco}
+                      onChange={(e) => up("banco", e.target.value)}
+                    />
                   </div>
                 )}
                 <div className="field-group">
                   <label>Uso comercial</label>
-                  <select className="input" value={f.usoComercial} onChange={(e) => up("usoComercial", e.target.value)}>
-                    <option>Não</option><option>Sim</option>
+                  <select
+                    className="input"
+                    value={f.usoComercial}
+                    onChange={(e) => up("usoComercial", e.target.value)}
+                  >
+                    <option>Não</option>
+                    <option>Sim</option>
                   </select>
                 </div>
                 <div className="field-group">
                   <label>KM mensal</label>
-                  <input className="input" value={f.kmMensal} inputMode="numeric"
-                    onChange={(e) => up("kmMensal", maskKm(e.target.value))} placeholder="1.000 km" />
+                  <input
+                    className="input"
+                    value={f.kmMensal}
+                    inputMode="numeric"
+                    onChange={(e) => up("kmMensal", maskKm(e.target.value))}
+                    placeholder="1.000 km"
+                  />
                 </div>
               </div>
             </>
@@ -830,68 +1679,159 @@ function Page() {
           {step === 3 && (
             <>
               <h2>Perfil do Condutor</h2>
-              <div className="sub">Quem dirige o veículo na maior parte do tempo e detalhes de uso.</div>
+              <div className="sub">
+                Quem dirige o veículo na maior parte do tempo e detalhes de uso.
+              </div>
               <div className="wizard-grid">
                 <div className="field-group full">
                   <label>Condutor principal é o próprio segurado?</label>
                   <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-                    <label><input type="radio" name="cond" checked={f.condutorMesmo === "sim"} onChange={() => up("condutorMesmo", "sim")} /> Sim</label>
-                    <label><input type="radio" name="cond" checked={f.condutorMesmo === "nao"} onChange={() => up("condutorMesmo", "nao")} /> Não</label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="cond"
+                        checked={f.condutorMesmo === "sim"}
+                        onChange={() => up("condutorMesmo", "sim")}
+                      />{" "}
+                      Sim
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="cond"
+                        checked={f.condutorMesmo === "nao"}
+                        onChange={() => up("condutorMesmo", "nao")}
+                      />{" "}
+                      Não
+                    </label>
                   </div>
                 </div>
                 {f.condutorMesmo === "nao" && (
                   <>
                     <div className="field-group">
                       <label>CPF do condutor</label>
-                      <input className="input" value={f.condCpf} inputMode="numeric"
-                        onChange={(e) => up("condCpf", maskCpfCnpj(e.target.value))} placeholder="000.000.000-00" />
+                      <input
+                        className="input"
+                        value={f.condCpf}
+                        inputMode="numeric"
+                        onChange={(e) => up("condCpf", maskCpfCnpj(e.target.value))}
+                        placeholder="000.000.000-00"
+                      />
                     </div>
                     <div className="field-group full">
                       <label>Nome do condutor</label>
-                      <input className="input" value={f.condNome} onChange={(e) => up("condNome", e.target.value)} />
+                      <input
+                        className="input"
+                        value={f.condNome}
+                        onChange={(e) => up("condNome", e.target.value)}
+                      />
                     </div>
                     <div className="field-group">
                       <label>Nascimento</label>
-                      <input className="input" type="date" value={f.condNasc} onChange={(e) => up("condNasc", e.target.value)} />
+                      <input
+                        className="input"
+                        type="date"
+                        value={f.condNasc}
+                        onChange={(e) => up("condNasc", e.target.value)}
+                      />
                     </div>
                     <div className="field-group">
                       <label>Sexo</label>
-                      <select className="input" value={f.condSexo} onChange={(e) => up("condSexo", e.target.value)}>
-                        <option value="">Selecione</option><option>Masculino</option><option>Feminino</option>
+                      <select
+                        className="input"
+                        value={f.condSexo}
+                        onChange={(e) => up("condSexo", e.target.value)}
+                      >
+                        <option value="">Selecione</option>
+                        <option>Masculino</option>
+                        <option>Feminino</option>
                       </select>
                     </div>
                     <div className="field-group">
                       <label>Estado civil</label>
-                      <select className="input" value={f.condEstadoCivil} onChange={(e) => up("condEstadoCivil", e.target.value)}>
+                      <select
+                        className="input"
+                        value={f.condEstadoCivil}
+                        onChange={(e) => up("condEstadoCivil", e.target.value)}
+                      >
                         <option value="">Selecione</option>
-                        <option>Casado(a)</option><option>Solteiro(a)</option><option>Viúvo(a)</option>
-                        <option>Divorciado(a)</option><option>União estável</option>
+                        <option>Casado(a)</option>
+                        <option>Solteiro(a)</option>
+                        <option>Viúvo(a)</option>
+                        <option>Divorciado(a)</option>
+                        <option>União estável</option>
                       </select>
                     </div>
                   </>
                 )}
                 <div className="field-group">
                   <label>Profissão</label>
-                  <input className="input" value={f.profissao} onChange={(e) => up("profissao", e.target.value)} />
+                  <input
+                    className="input"
+                    value={f.profissao}
+                    onChange={(e) => up("profissao", e.target.value)}
+                  />
                 </div>
                 <div className="field-group">
                   <label>CEP de pernoite</label>
-                  <input className="input" value={f.cepPernoite} inputMode="numeric"
-                    onChange={(e) => up("cepPernoite", maskCep(e.target.value))} placeholder="00000-000" />
+                  <input
+                    className="input"
+                    value={f.cepPernoite}
+                    inputMode="numeric"
+                    onChange={(e) => up("cepPernoite", maskCep(e.target.value))}
+                    placeholder="00000-000"
+                  />
                 </div>
                 <div className="field-group full">
                   <label>Garagem</label>
                   <div className="row" style={{ gap: 18, paddingTop: 6 }}>
-                    <label><input type="checkbox" checked={f.garagemResid} onChange={(e) => up("garagemResid", e.target.checked)} /> Residência</label>
-                    <label><input type="checkbox" checked={f.garagemTrab} onChange={(e) => up("garagemTrab", e.target.checked)} /> Trabalho</label>
-                    <label><input type="checkbox" checked={f.garagemEsc} onChange={(e) => up("garagemEsc", e.target.checked)} /> Escola/Faculdade</label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={f.garagemResid}
+                        onChange={(e) => up("garagemResid", e.target.checked)}
+                      />{" "}
+                      Residência
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={f.garagemTrab}
+                        onChange={(e) => up("garagemTrab", e.target.checked)}
+                      />{" "}
+                      Trabalho
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={f.garagemEsc}
+                        onChange={(e) => up("garagemEsc", e.target.checked)}
+                      />{" "}
+                      Escola/Faculdade
+                    </label>
                   </div>
                 </div>
                 <div className="field-group">
                   <label>Condutores entre 18-25 anos?</label>
                   <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-                    <label><input type="radio" name="j1825" checked={f.jovens1825 === "sim"} onChange={() => up("jovens1825", "sim")} /> Sim</label>
-                    <label><input type="radio" name="j1825" checked={f.jovens1825 === "nao"} onChange={() => up("jovens1825", "nao")} /> Não</label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="j1825"
+                        checked={f.jovens1825 === "sim"}
+                        onChange={() => up("jovens1825", "sim")}
+                      />{" "}
+                      Sim
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="j1825"
+                        checked={f.jovens1825 === "nao"}
+                        onChange={() => up("jovens1825", "nao")}
+                      />{" "}
+                      Não
+                    </label>
                   </div>
                 </div>
               </div>
@@ -904,75 +1844,141 @@ function Page() {
               <div className="sub">Defina o tipo de cobertura, casco, franquia e adicionais.</div>
               <div className="wizard-grid">
                 <div className="field-group full">
-                  <label>Tipo de cobertura<span className="req">*</span></label>
+                  <label>
+                    Tipo de cobertura<span className="req">*</span>
+                  </label>
                   <div className="row" style={{ gap: 8, paddingTop: 4, flexWrap: "wrap" }}>
                     {["Compreensiva", "Incêndio + Roubo", "RCF"].map((t) => (
-                      <span key={t} className={"chip " + (f.tipoCobertura === t ? "chip-slate" : "chip-outline")}
-                        style={{ cursor: "pointer" }} onClick={() => up("tipoCobertura", t)}>{t}</span>
+                      <span
+                        key={t}
+                        className={
+                          "chip " + (f.tipoCobertura === t ? "chip-slate" : "chip-outline")
+                        }
+                        style={{ cursor: "pointer" }}
+                        onClick={() => up("tipoCobertura", t)}
+                      >
+                        {t}
+                      </span>
                     ))}
                   </div>
                 </div>
                 <div className="field-group">
                   <label>Casco</label>
-                  <select className="input" value={f.casco} onChange={(e) => up("casco", e.target.value)}>
-                    <option>100% Tabela FIPE</option><option>95% Tabela FIPE</option><option>110% Tabela FIPE</option>
+                  <select
+                    className="input"
+                    value={f.casco}
+                    onChange={(e) => up("casco", e.target.value)}
+                  >
+                    <option>100% Tabela FIPE</option>
+                    <option>95% Tabela FIPE</option>
+                    <option>110% Tabela FIPE</option>
                     <option>Valor determinado</option>
                   </select>
                 </div>
                 {f.casco === "Valor determinado" && (
                   <div className="field-group">
                     <label>Valor determinado</label>
-                    <input className="input" value={f.cascoValor}
-                      onChange={(e) => up("cascoValor", maskBRL(e.target.value))} placeholder="R$ 0,00" />
+                    <input
+                      className="input"
+                      value={f.cascoValor}
+                      onChange={(e) => up("cascoValor", maskBRL(e.target.value))}
+                      placeholder="R$ 0,00"
+                    />
                   </div>
                 )}
                 <div className="field-group">
                   <label>Franquia</label>
-                  <select className="input" value={f.franquia} onChange={(e) => up("franquia", e.target.value)}>
-                    <option>Reduzida</option><option>Normal</option><option>Majorada</option>
+                  <select
+                    className="input"
+                    value={f.franquia}
+                    onChange={(e) => up("franquia", e.target.value)}
+                  >
+                    <option>Reduzida</option>
+                    <option>Normal</option>
+                    <option>Majorada</option>
                   </select>
                 </div>
                 <div className="field-group">
                   <label>APP — Morte</label>
-                  <input className="input" value={f.appMorte}
-                    onChange={(e) => up("appMorte", maskBRL(e.target.value))} placeholder="R$ 10.000,00" />
+                  <input
+                    className="input"
+                    value={f.appMorte}
+                    onChange={(e) => up("appMorte", maskBRL(e.target.value))}
+                    placeholder="R$ 10.000,00"
+                  />
                 </div>
                 <div className="field-group">
                   <label>APP — Invalidez</label>
-                  <input className="input" value={f.appInval}
-                    onChange={(e) => up("appInval", maskBRL(e.target.value))} placeholder="R$ 10.000,00" />
+                  <input
+                    className="input"
+                    value={f.appInval}
+                    onChange={(e) => up("appInval", maskBRL(e.target.value))}
+                    placeholder="R$ 10.000,00"
+                  />
                 </div>
                 <div className="field-group">
                   <label>DMH (despesas médicas)</label>
-                  <input className="input" value={f.dmh}
-                    onChange={(e) => up("dmh", maskBRL(e.target.value))} placeholder="R$ 5.000,00" />
+                  <input
+                    className="input"
+                    value={f.dmh}
+                    onChange={(e) => up("dmh", maskBRL(e.target.value))}
+                    placeholder="R$ 5.000,00"
+                  />
                 </div>
                 <div className="field-group">
                   <label>RCF — Danos materiais</label>
-                  <input className="input" value={f.rcfDm}
-                    onChange={(e) => up("rcfDm", maskBRL(e.target.value))} placeholder="R$ 100.000,00" />
+                  <input
+                    className="input"
+                    value={f.rcfDm}
+                    onChange={(e) => up("rcfDm", maskBRL(e.target.value))}
+                    placeholder="R$ 100.000,00"
+                  />
                 </div>
                 <div className="field-group">
                   <label>RCF — Danos corporais</label>
-                  <input className="input" value={f.rcfDc}
-                    onChange={(e) => up("rcfDc", maskBRL(e.target.value))} placeholder="R$ 100.000,00" />
+                  <input
+                    className="input"
+                    value={f.rcfDc}
+                    onChange={(e) => up("rcfDc", maskBRL(e.target.value))}
+                    placeholder="R$ 100.000,00"
+                  />
                 </div>
                 <div className="field-group">
                   <label>Vidros</label>
                   <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-                    <label><input type="checkbox" checked={f.vidros} onChange={(e) => up("vidros", e.target.checked)} /> Incluir cobertura</label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={f.vidros}
+                        onChange={(e) => up("vidros", e.target.checked)}
+                      />{" "}
+                      Incluir cobertura
+                    </label>
                   </div>
                 </div>
                 <div className="field-group">
                   <label>Carro reserva</label>
-                  <select className="input" value={f.carroReserva} onChange={(e) => up("carroReserva", e.target.value)}>
-                    <option>Não</option><option>7 dias</option><option>15 dias</option><option>30 dias</option>
+                  <select
+                    className="input"
+                    value={f.carroReserva}
+                    onChange={(e) => up("carroReserva", e.target.value)}
+                  >
+                    <option>Não</option>
+                    <option>7 dias</option>
+                    <option>15 dias</option>
+                    <option>30 dias</option>
                   </select>
                 </div>
                 <div className="field-group">
                   <label>Assistência 24h</label>
-                  <select className="input" value={f.assist24} onChange={(e) => up("assist24", e.target.value)}>
-                    <option>Básica</option><option>Intermediária</option><option>Premium</option>
+                  <select
+                    className="input"
+                    value={f.assist24}
+                    onChange={(e) => up("assist24", e.target.value)}
+                  >
+                    <option>Básica</option>
+                    <option>Intermediária</option>
+                    <option>Premium</option>
                   </select>
                 </div>
               </div>
@@ -994,12 +2000,26 @@ function Page() {
                 </div>
                 <span className="spacer" style={{ flex: 1 }} />
                 {cotacaoId && (
-                  <Link to="/venda/cotacoes/$id" params={{ id: cotacaoId }} className="btn btn-slate btn-sm">
-                    <svg width="13" height="13"><use href="#i-shield" /></svg> Comparativo lado a lado
+                  <Link
+                    to="/venda/cotacoes/$id"
+                    params={{ id: cotacaoId }}
+                    className="btn btn-slate btn-sm"
+                  >
+                    <svg width="13" height="13">
+                      <use href="#i-shield" />
+                    </svg>{" "}
+                    Comparativo lado a lado
                   </Link>
                 )}
-                <button className="btn btn-ghost btn-sm" disabled={!podeCalcular || calculando} onClick={simularCalculo}>
-                  <svg width="13" height="13"><use href="#i-refresh" /></svg> {calculando ? "Calculando…" : "Recalcular"}
+                <button
+                  className="btn btn-ghost btn-sm"
+                  disabled={!podeCalcular || calculando}
+                  onClick={simularCalculo}
+                >
+                  <svg width="13" height="13">
+                    <use href="#i-refresh" />
+                  </svg>{" "}
+                  {calculando ? "Calculando…" : "Recalcular"}
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"
@@ -1047,18 +2067,27 @@ function Page() {
                       </table>`;
                     printHtml(
                       "Cotação · " + (f.nome || "Cliente"),
-                      `<h1>Resumo da cotação</h1><div class="sub">${sorted.length} seguradora(s) calculada(s)</div>${head}<h2>Prêmios</h2>${cards}${cob}<p style="font-size:11px;color:#64748b">Cotação válida por 5 dias. Sujeita à aceitação da seguradora.</p>`
+                      `<h1>Resumo da cotação</h1><div class="sub">${sorted.length} seguradora(s) calculada(s)</div>${head}<h2>Prêmios</h2>${cards}${cob}<p style="font-size:11px;color:#64748b">Cotação válida por 5 dias. Sujeita à aceitação da seguradora.</p>`,
                     );
                   }}
                 >
-                  <svg width="13" height="13"><use href="#i-download" /></svg> Imprimir
+                  <svg width="13" height="13">
+                    <use href="#i-download" />
+                  </svg>{" "}
+                  Imprimir
                 </button>
               </div>
 
               {resultados.length === 0 && !calculando && (
                 <div style={{ padding: "12px 0", marginBottom: 8 }}>
-                  <button className="btn btn-yellow" disabled={!podeCalcular} onClick={simularCalculo}>
-                    <svg width="14" height="14"><use href="#i-bolt" /></svg>
+                  <button
+                    className="btn btn-yellow"
+                    disabled={!podeCalcular}
+                    onClick={simularCalculo}
+                  >
+                    <svg width="14" height="14">
+                      <use href="#i-bolt" />
+                    </svg>
                     {podeCalcular ? " Calcular agora" : " Selecione seguradoras no passo Seguro"}
                   </button>
                 </div>
@@ -1066,59 +2095,126 @@ function Page() {
 
               {resultados.length > 0 && (
                 <div className="calc-grid">
-                  {resultados.sort((a, b) => a.premio - b.premio).map((r) => {
-                    const aVista = r.premio;
-                    const reduz = Math.round(r.premio * 1.18);
-                    const fmt = (n: number) => "R$ " + n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    const fr1 = Math.round(r.premio * 1.5).toLocaleString("pt-BR");
-                    const fr2 = Math.round(r.premio * 0.75).toLocaleString("pt-BR");
-                    return (
-                      <div className="calc-card" key={r.cia}>
-                        <div className="calc-head">
-                          <div className="calc-ins"><svg width="16" height="16"><use href="#i-shield" /></svg> {r.cia}</div>
-                          <select className="select-mini"><option>Customizado</option><option>Plano Fácil</option><option>Plano Pleno</option></select>
-                          <span className="chip chip-slate" style={{ marginLeft: "auto" }}>{r.cobertura || "Compreensiva"}</span>
-                        </div>
-                        <div className="calc-tiers">
-                          <div className="calc-tier">
-                            <div className="t-lbl">normal 100%</div>
-                            <div className="t-fr">Franquia R$ {fr1}</div>
-                            <div className="t-vista">à vista {fmt(aVista)}</div>
-                            <div className="t-parc">10x sem juros</div>
+                  {resultados
+                    .sort((a, b) => a.premio - b.premio)
+                    .map((r) => {
+                      const aVista = r.premio;
+                      const reduz = Math.round(r.premio * 1.18);
+                      const fmt = (n: number) =>
+                        "R$ " +
+                        n.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        });
+                      const fr1 = Math.round(r.premio * 1.5).toLocaleString("pt-BR");
+                      const fr2 = Math.round(r.premio * 0.75).toLocaleString("pt-BR");
+                      return (
+                        <div className="calc-card" key={r.cia}>
+                          <div className="calc-head">
+                            <div className="calc-ins">
+                              <svg width="16" height="16">
+                                <use href="#i-shield" />
+                              </svg>{" "}
+                              {r.cia}
+                            </div>
+                            <select className="select-mini">
+                              <option>Customizado</option>
+                              <option>Plano Fácil</option>
+                              <option>Plano Pleno</option>
+                            </select>
+                            <span className="chip chip-slate" style={{ marginLeft: "auto" }}>
+                              {r.cobertura || "Compreensiva"}
+                            </span>
                           </div>
-                          <div className="calc-tier">
-                            <div className="t-lbl">reduzida 50%</div>
-                            <div className="t-fr">Franquia R$ {fr2}</div>
-                            <div className="t-vista">à vista {fmt(reduz)}</div>
-                            <div className="t-parc">10x sem juros</div>
+                          <div className="calc-tiers">
+                            <div className="calc-tier">
+                              <div className="t-lbl">normal 100%</div>
+                              <div className="t-fr">Franquia R$ {fr1}</div>
+                              <div className="t-vista">à vista {fmt(aVista)}</div>
+                              <div className="t-parc">10x sem juros</div>
+                            </div>
+                            <div className="calc-tier">
+                              <div className="t-lbl">reduzida 50%</div>
+                              <div className="t-fr">Franquia R$ {fr2}</div>
+                              <div className="t-vista">à vista {fmt(reduz)}</div>
+                              <div className="t-parc">10x sem juros</div>
+                            </div>
+                          </div>
+                          <div className="calc-cobs">
+                            <div className="cob-col">
+                              <div className="cob-h">Coberturas básicas</div>
+                              <div className="cob-row">
+                                <span>Valor mercado</span>
+                                <b>100% FIPE</b>
+                              </div>
+                              <div className="cob-row">
+                                <span>Danos materiais</span>
+                                <b>
+                                  R${" "}
+                                  {Number(onlyDigits(f.rcfDm || ""))
+                                    ? Number(onlyDigits(f.rcfDm)).toLocaleString("pt-BR")
+                                    : "100.000"}
+                                </b>
+                              </div>
+                              <div className="cob-row">
+                                <span>Danos corporais</span>
+                                <b>
+                                  R${" "}
+                                  {Number(onlyDigits(f.rcfDc || ""))
+                                    ? Number(onlyDigits(f.rcfDc)).toLocaleString("pt-BR")
+                                    : "100.000"}
+                                </b>
+                              </div>
+                              <div className="cob-row">
+                                <span>APP / passageiro</span>
+                                <b>
+                                  {f.appMorte
+                                    ? "R$ " + Number(onlyDigits(f.appMorte)).toLocaleString("pt-BR")
+                                    : "R$ 5.000"}
+                                </b>
+                              </div>
+                            </div>
+                            <div className="cob-col">
+                              <div className="cob-h">Adicionais</div>
+                              <div className="cob-row">
+                                <span>Assistência</span>
+                                <b>{f.assist24 || "Padrão"}</b>
+                              </div>
+                              <div className="cob-row">
+                                <span>Carro reserva</span>
+                                <b>{f.carroReserva || "30 dias"}</b>
+                              </div>
+                              <div className="cob-row">
+                                <span>Vidros</span>
+                                <b>{f.vidros ? "Sim" : "—"}</b>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="calc-foot">
+                            <select className="select-mini" style={{ flex: 1 }}>
+                              <option>Débito em Conta</option>
+                              <option>Cartão de crédito</option>
+                              <option>Boleto</option>
+                            </select>
+                            <button className="ic-btn" title="Observações">
+                              <svg width="15" height="15">
+                                <use href="#i-message" />
+                              </svg>
+                            </button>
+                            <button className="ic-btn" title="Enviar">
+                              <svg width="15" height="15">
+                                <use href="#i-download" />
+                              </svg>
+                            </button>
+                            <button className="ic-btn ok" title="Gerar proposta">
+                              <svg width="15" height="15">
+                                <use href="#i-check" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
-                        <div className="calc-cobs">
-                          <div className="cob-col">
-                            <div className="cob-h">Coberturas básicas</div>
-                            <div className="cob-row"><span>Valor mercado</span><b>100% FIPE</b></div>
-                            <div className="cob-row"><span>Danos materiais</span><b>R$ {Number(onlyDigits(f.rcfDm || "")) ? Number(onlyDigits(f.rcfDm)).toLocaleString("pt-BR") : "100.000"}</b></div>
-                            <div className="cob-row"><span>Danos corporais</span><b>R$ {Number(onlyDigits(f.rcfDc || "")) ? Number(onlyDigits(f.rcfDc)).toLocaleString("pt-BR") : "100.000"}</b></div>
-                            <div className="cob-row"><span>APP / passageiro</span><b>{f.appMorte ? "R$ " + Number(onlyDigits(f.appMorte)).toLocaleString("pt-BR") : "R$ 5.000"}</b></div>
-                          </div>
-                          <div className="cob-col">
-                            <div className="cob-h">Adicionais</div>
-                            <div className="cob-row"><span>Assistência</span><b>{f.assist24 || "Padrão"}</b></div>
-                            <div className="cob-row"><span>Carro reserva</span><b>{f.carroReserva || "30 dias"}</b></div>
-                            <div className="cob-row"><span>Vidros</span><b>{f.vidros ? "Sim" : "—"}</b></div>
-                          </div>
-                        </div>
-                        <div className="calc-foot">
-                          <select className="select-mini" style={{ flex: 1 }}>
-                            <option>Débito em Conta</option><option>Cartão de crédito</option><option>Boleto</option>
-                          </select>
-                          <button className="ic-btn" title="Observações"><svg width="15" height="15"><use href="#i-message" /></svg></button>
-                          <button className="ic-btn" title="Enviar"><svg width="15" height="15"><use href="#i-download" /></svg></button>
-                          <button className="ic-btn ok" title="Gerar proposta"><svg width="15" height="15"><use href="#i-check" /></svg></button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               )}
             </>
@@ -1128,30 +2224,58 @@ function Page() {
             {step === 5 ? (
               <>
                 <button className="btn btn-ghost" onClick={() => setStep(4)}>
-                  <svg width="14" height="14"><use href="#i-chevron-left" /></svg> Voltar às coberturas
+                  <svg width="14" height="14">
+                    <use href="#i-chevron-left" />
+                  </svg>{" "}
+                  Voltar às coberturas
                 </button>
                 <span className="spacer" />
                 <button className="btn btn-yellow pulse" disabled={resultados.length === 0}>
-                  <svg width="14" height="14"><use href="#i-check" /></svg> Gerar proposta
+                  <svg width="14" height="14">
+                    <use href="#i-check" />
+                  </svg>{" "}
+                  Gerar proposta
                 </button>
               </>
             ) : (
               <>
-                <button className="btn btn-ghost" disabled={step === 0}
+                <button
+                  className="btn btn-ghost"
+                  disabled={step === 0}
                   style={step === 0 ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
-                  onClick={() => setStep((s) => Math.max(0, s - 1))}>
-                  <svg width="14" height="14"><use href="#i-chevron-left" /></svg> Voltar
+                  onClick={() => setStep((s) => Math.max(0, s - 1))}
+                >
+                  <svg width="14" height="14">
+                    <use href="#i-chevron-left" />
+                  </svg>{" "}
+                  Voltar
                 </button>
                 <span className="spacer" />
-                <span className="muted small">Passo {step + 1} de {STEPS.length}</span>
+                <span className="muted small">
+                  Passo {step + 1} de {STEPS.length}
+                </span>
                 {step === 4 ? (
-                  <button className="btn btn-yellow pulse" onClick={() => { setStep(5); if (podeCalcular) simularCalculo(); }}>
-                    <svg width="14" height="14"><use href="#i-bolt" /></svg> Calcular
+                  <button
+                    className="btn btn-yellow pulse"
+                    onClick={() => {
+                      setStep(5);
+                      if (podeCalcular) simularCalculo();
+                    }}
+                  >
+                    <svg width="14" height="14">
+                      <use href="#i-bolt" />
+                    </svg>{" "}
+                    Calcular
                   </button>
                 ) : (
-                  <button className="btn btn-slate"
-                    onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}>
-                    Próximo <svg width="14" height="14"><use href="#i-chevron-right" /></svg>
+                  <button
+                    className="btn btn-slate"
+                    onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+                  >
+                    Próximo{" "}
+                    <svg width="14" height="14">
+                      <use href="#i-chevron-right" />
+                    </svg>
                   </button>
                 )}
               </>
@@ -1160,69 +2284,240 @@ function Page() {
         </div>
 
         <div className="resumo">
-          <div className="head"><svg width="16" height="16"><use href="#i-clock" /></svg><h3>Resumo da cotação</h3></div>
+          <div className="head">
+            <svg width="16" height="16">
+              <use href="#i-clock" />
+            </svg>
+            <h3>Resumo da cotação</h3>
+          </div>
           <div className="body">
-            {(f.nome || f.cpf || f.marca || f.tipoCobertura || f.placa || f.condNome) ? (
+            {f.nome || f.cpf || f.marca || f.tipoCobertura || f.placa || f.condNome ? (
               <div style={{ display: "grid", gap: 10, fontSize: 13 }}>
                 {(f.nome || f.cpf || f.celular || f.cidade) && (
                   <div style={{ display: "grid", gap: 4 }}>
-                    <div className="muted small" style={{ textTransform: "uppercase", letterSpacing: 0.5 }}>Segurado</div>
-                    {f.nome && <div><b>Nome:</b> {f.nome}</div>}
-                    {f.cpf && <div><b>{f.pessoa === "Jurídica" ? "CNPJ" : "CPF"}:</b> {f.cpf}</div>}
-                    {f.celular && <div><b>Celular:</b> {f.celular}</div>}
-                    {(f.cidade || f.uf) && <div><b>Cidade/UF:</b> {f.cidade}{f.uf ? `/${f.uf}` : ""}</div>}
+                    <div
+                      className="muted small"
+                      style={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+                    >
+                      Segurado
+                    </div>
+                    {f.nome && (
+                      <div>
+                        <b>Nome:</b> {f.nome}
+                      </div>
+                    )}
+                    {f.cpf && (
+                      <div>
+                        <b>{f.pessoa === "Jurídica" ? "CNPJ" : "CPF"}:</b> {f.cpf}
+                      </div>
+                    )}
+                    {f.celular && (
+                      <div>
+                        <b>Celular:</b> {f.celular}
+                      </div>
+                    )}
+                    {(f.cidade || f.uf) && (
+                      <div>
+                        <b>Cidade/UF:</b> {f.cidade}
+                        {f.uf ? `/${f.uf}` : ""}
+                      </div>
+                    )}
                   </div>
                 )}
                 {f.tipoSeguro && (
                   <div style={{ display: "grid", gap: 4 }}>
-                    <div className="muted small" style={{ textTransform: "uppercase", letterSpacing: 0.5 }}>Seguro</div>
-                    <div><b>Tipo:</b> {f.tipoSeguro}{f.ramo ? ` · ${f.ramo}` : ""}{f.categoria ? ` · ${f.categoria}` : ""}</div>
+                    <div
+                      className="muted small"
+                      style={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+                    >
+                      Seguro
+                    </div>
+                    <div>
+                      <b>Tipo:</b> {f.tipoSeguro}
+                      {f.ramo ? ` · ${f.ramo}` : ""}
+                      {f.categoria ? ` · ${f.categoria}` : ""}
+                    </div>
                   </div>
                 )}
                 {(f.marca || f.placa || f.modelo || f.anoModelo) && (
                   <div style={{ display: "grid", gap: 4 }}>
-                    <div className="muted small" style={{ textTransform: "uppercase", letterSpacing: 0.5 }}>Veículo</div>
-                    {f.placa && <div><b>Placa:</b> {f.placa}</div>}
-                    {f.marca && <div><b>Marca:</b> {marcas.find((m) => m.codigo === f.marca)?.nome || f.marca}</div>}
-                    {f.modelo && <div><b>Modelo:</b> {modelos.find((m) => String(m.codigo) === f.modelo)?.nome || f.modelo}</div>}
-                    {f.anoModelo && <div><b>Ano:</b> {f.anoModelo}{f.anoFab ? `/${f.anoFab}` : ""}</div>}
-                    {fipeValor && <div><b>FIPE:</b> {fipeValor}</div>}
-                    {f.combustivel && <div><b>Combustível:</b> {f.combustivel}</div>}
-                    {f.cor && <div><b>Cor:</b> {f.cor}</div>}
-                    {f.chassi && <div><b>Chassi:</b> {f.chassi}</div>}
-                    {f.renavam && <div><b>Renavam:</b> {f.renavam}</div>}
-                    {(f.zeroKm || f.blindado || f.alienado) && (
-                      <div><b>Flags:</b> {[f.zeroKm && "0km", f.blindado && "Blindado", f.alienado && `Alienado${f.banco ? ` (${f.banco})` : ""}`].filter(Boolean).join(" · ")}</div>
+                    <div
+                      className="muted small"
+                      style={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+                    >
+                      Veículo
+                    </div>
+                    {f.placa && (
+                      <div>
+                        <b>Placa:</b> {f.placa}
+                      </div>
                     )}
-                    {f.usoComercial && <div><b>Uso comercial:</b> {f.usoComercial}</div>}
-                    {f.kmMensal && <div><b>Km/mês:</b> {f.kmMensal}</div>}
+                    {f.marca && (
+                      <div>
+                        <b>Marca:</b> {marcas.find((m) => m.codigo === f.marca)?.nome || f.marca}
+                      </div>
+                    )}
+                    {f.modelo && (
+                      <div>
+                        <b>Modelo:</b>{" "}
+                        {modelos.find((m) => String(m.codigo) === f.modelo)?.nome || f.modelo}
+                      </div>
+                    )}
+                    {f.anoModelo && (
+                      <div>
+                        <b>Ano:</b> {f.anoModelo}
+                        {f.anoFab ? `/${f.anoFab}` : ""}
+                      </div>
+                    )}
+                    {fipeValor && (
+                      <div>
+                        <b>FIPE:</b> {fipeValor}
+                      </div>
+                    )}
+                    {f.combustivel && (
+                      <div>
+                        <b>Combustível:</b> {f.combustivel}
+                      </div>
+                    )}
+                    {f.cor && (
+                      <div>
+                        <b>Cor:</b> {f.cor}
+                      </div>
+                    )}
+                    {f.chassi && (
+                      <div>
+                        <b>Chassi:</b> {f.chassi}
+                      </div>
+                    )}
+                    {f.renavam && (
+                      <div>
+                        <b>Renavam:</b> {f.renavam}
+                      </div>
+                    )}
+                    {(f.zeroKm || f.blindado || f.alienado) && (
+                      <div>
+                        <b>Flags:</b>{" "}
+                        {[
+                          f.zeroKm && "0km",
+                          f.blindado && "Blindado",
+                          f.alienado && `Alienado${f.banco ? ` (${f.banco})` : ""}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                    )}
+                    {f.usoComercial && (
+                      <div>
+                        <b>Uso comercial:</b> {f.usoComercial}
+                      </div>
+                    )}
+                    {f.kmMensal && (
+                      <div>
+                        <b>Km/mês:</b> {f.kmMensal}
+                      </div>
+                    )}
                   </div>
                 )}
                 {(f.condNome || f.condCpf || f.profissao || f.cepPernoite) && (
                   <div style={{ display: "grid", gap: 4 }}>
-                    <div className="muted small" style={{ textTransform: "uppercase", letterSpacing: 0.5 }}>Perfil</div>
-                    <div><b>Condutor:</b> {f.condutorMesmo === "sim" ? "Mesmo segurado" : (f.condNome || "—")}</div>
-                    {f.condCpf && f.condutorMesmo === "nao" && <div><b>CPF cond.:</b> {f.condCpf}</div>}
-                    {f.profissao && <div><b>Profissão:</b> {f.profissao}</div>}
-                    {f.cepPernoite && <div><b>CEP pernoite:</b> {f.cepPernoite}</div>}
-                    {(f.garagemResid || f.garagemTrab || f.garagemEsc) && (
-                      <div><b>Garagem:</b> {[f.garagemResid && "Resid.", f.garagemTrab && "Trab.", f.garagemEsc && "Escola"].filter(Boolean).join(" · ")}</div>
+                    <div
+                      className="muted small"
+                      style={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+                    >
+                      Perfil
+                    </div>
+                    <div>
+                      <b>Condutor:</b>{" "}
+                      {f.condutorMesmo === "sim" ? "Mesmo segurado" : f.condNome || "—"}
+                    </div>
+                    {f.condCpf && f.condutorMesmo === "nao" && (
+                      <div>
+                        <b>CPF cond.:</b> {f.condCpf}
+                      </div>
                     )}
-                    {f.jovens1825 === "sim" && <div><b>Jovens 18-25:</b> Sim</div>}
+                    {f.profissao && (
+                      <div>
+                        <b>Profissão:</b> {f.profissao}
+                      </div>
+                    )}
+                    {f.cepPernoite && (
+                      <div>
+                        <b>CEP pernoite:</b> {f.cepPernoite}
+                      </div>
+                    )}
+                    {(f.garagemResid || f.garagemTrab || f.garagemEsc) && (
+                      <div>
+                        <b>Garagem:</b>{" "}
+                        {[
+                          f.garagemResid && "Resid.",
+                          f.garagemTrab && "Trab.",
+                          f.garagemEsc && "Escola",
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                    )}
+                    {f.jovens1825 === "sim" && (
+                      <div>
+                        <b>Jovens 18-25:</b> Sim
+                      </div>
+                    )}
                   </div>
                 )}
                 {(f.tipoCobertura || f.casco || f.franquia) && (
                   <div style={{ display: "grid", gap: 4 }}>
-                    <div className="muted small" style={{ textTransform: "uppercase", letterSpacing: 0.5 }}>Coberturas</div>
-                    {f.tipoCobertura && <div><b>Tipo:</b> {f.tipoCobertura}</div>}
-                    {f.casco && <div><b>Casco:</b> {f.casco}{f.cascoValor ? ` · ${f.cascoValor}` : ""}</div>}
-                    {f.franquia && <div><b>Franquia:</b> {f.franquia}</div>}
-                    {(f.appMorte || f.appInval) && <div><b>APP:</b> M {f.appMorte || "—"} / I {f.appInval || "—"}</div>}
-                    {(f.rcfDm || f.rcfDc) && <div><b>RCF:</b> DM {f.rcfDm || "—"} / DC {f.rcfDc || "—"}</div>}
-                    {f.dmh && <div><b>DMH:</b> {f.dmh}</div>}
-                    {f.carroReserva && <div><b>Carro reserva:</b> {f.carroReserva}</div>}
-                    {f.assist24 && <div><b>Assist. 24h:</b> {f.assist24}</div>}
-                    {f.vidros && <div><b>Vidros:</b> Sim</div>}
+                    <div
+                      className="muted small"
+                      style={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+                    >
+                      Coberturas
+                    </div>
+                    {f.tipoCobertura && (
+                      <div>
+                        <b>Tipo:</b> {f.tipoCobertura}
+                      </div>
+                    )}
+                    {f.casco && (
+                      <div>
+                        <b>Casco:</b> {f.casco}
+                        {f.cascoValor ? ` · ${f.cascoValor}` : ""}
+                      </div>
+                    )}
+                    {f.franquia && (
+                      <div>
+                        <b>Franquia:</b> {f.franquia}
+                      </div>
+                    )}
+                    {(f.appMorte || f.appInval) && (
+                      <div>
+                        <b>APP:</b> M {f.appMorte || "—"} / I {f.appInval || "—"}
+                      </div>
+                    )}
+                    {(f.rcfDm || f.rcfDc) && (
+                      <div>
+                        <b>RCF:</b> DM {f.rcfDm || "—"} / DC {f.rcfDc || "—"}
+                      </div>
+                    )}
+                    {f.dmh && (
+                      <div>
+                        <b>DMH:</b> {f.dmh}
+                      </div>
+                    )}
+                    {f.carroReserva && (
+                      <div>
+                        <b>Carro reserva:</b> {f.carroReserva}
+                      </div>
+                    )}
+                    {f.assist24 && (
+                      <div>
+                        <b>Assist. 24h:</b> {f.assist24}
+                      </div>
+                    )}
+                    {f.vidros && (
+                      <div>
+                        <b>Vidros:</b> Sim
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1231,109 +2526,232 @@ function Page() {
             )}
           </div>
           <div className="insurers-row">
-            <span className="ins-chip"><svg width="12" height="12"><use href="#i-shield" /></svg> {SEGURADORAS.length} seguradoras no cálculo</span>
+            <span className="ins-chip">
+              <svg width="12" height="12">
+                <use href="#i-shield" />
+              </svg>{" "}
+              {SEGURADORAS.length} seguradoras no cálculo
+            </span>
           </div>
           <div className="footer">
-            <button className="btn btn-yellow" disabled={!podeCalcular}
+            <button
+              className="btn btn-yellow"
+              disabled={!podeCalcular}
               style={!podeCalcular ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
-              onClick={() => { setStep(5); simularCalculo(); }}>
-              <svg width="14" height="14"><use href="#i-bolt" /></svg> Calcular
+              onClick={() => {
+                setStep(5);
+                simularCalculo();
+              }}
+            >
+              <svg width="14" height="14">
+                <use href="#i-bolt" />
+              </svg>{" "}
+              Calcular
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={() => void persistir()} disabled={saveState === "saving"}>
-              <svg width="13" height="13"><use href="#i-download" /></svg>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => void persistir()}
+              disabled={saveState === "saving"}
+            >
+              <svg width="13" height="13">
+                <use href="#i-download" />
+              </svg>
               {saveState === "saving" ? " Salvando…" : " Salvar rascunho"}
             </button>
             <div className="muted small" style={{ marginTop: 6 }}>
               {saveState === "saving" && "Salvando…"}
-              {saveState === "saved" && lastSavedAt && `Salvo às ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
-              {saveState === "error" && <span style={{ color: "#dc2626" }}>Erro ao salvar — tente novamente</span>}
-              {cotacaoId && <div style={{ fontSize: 11, opacity: 0.6 }}>ID: {cotacaoId.slice(0, 8)}…</div>}
+              {saveState === "saved" &&
+                lastSavedAt &&
+                `Salvo às ${lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
+              {saveState === "error" && (
+                <span style={{ color: "#dc2626" }}>Erro ao salvar — tente novamente</span>
+              )}
+              {cotacaoId && (
+                <div style={{ fontSize: 11, opacity: 0.6 }}>ID: {cotacaoId.slice(0, 8)}…</div>
+              )}
             </div>
           </div>
         </div>
       </div>
-      {perdaOpen && (() => {
-        const motivoObj = perdaMotivos.find((m) => m.nome === perdaForm.motivo);
-        const subs = motivoObj ? perdaSubs.filter((s) => s.motivo_id === motivoObj.id) : [];
-        const ready = !!(perdaForm.motivo && perdaForm.sub);
-        return (
-          <div onClick={() => setPerdaOpen(false)}
-            style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}>
-            <div onClick={(e) => e.stopPropagation()} className="modal-box"
-              style={{ background: "#fff", borderRadius: 14, padding: 22, width: "100%", maxWidth: 600, textAlign: "left", boxShadow: "0 24px 48px rgba(15,23,42,.25)" }}>
-              <div className="row" style={{ alignItems: "center", marginBottom: 4, display: "flex" }}>
-                <strong style={{ color: "var(--slate)", fontSize: 17, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  <svg width="16" height="16"><use href="#i-flag" /></svg> Classificar perda
-                </strong>
-                <span style={{ flex: 1 }} />
-                <button className="ic-btn" onClick={() => setPerdaOpen(false)} title="Fechar">
-                  <svg width="16" height="16"><use href="#i-x" /></svg>
-                </button>
-              </div>
-              <div className="muted small" style={{ marginBottom: 14 }}>
-                O lead{f.nome ? <> de <strong>{f.nome}</strong></> : null} volta para a matriz com o motivo registrado.
-                A <strong>central de distribuição</strong> faz a triagem final (remalho ou descarte). A classificação fica visível e filtrável.
-              </div>
+      {perdaOpen &&
+        (() => {
+          const motivoObj = perdaMotivos.find((m) => m.nome === perdaForm.motivo);
+          const subs = motivoObj ? perdaSubs.filter((s) => s.motivo_id === motivoObj.id) : [];
+          const ready = !!(perdaForm.motivo && perdaForm.sub);
+          return (
+            <div
+              onClick={() => setPerdaOpen(false)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(15,23,42,.45)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 100,
+                padding: 16,
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="modal-box"
+                style={{
+                  background: "#fff",
+                  borderRadius: 14,
+                  padding: 22,
+                  width: "100%",
+                  maxWidth: 600,
+                  textAlign: "left",
+                  boxShadow: "0 24px 48px rgba(15,23,42,.25)",
+                }}
+              >
+                <div
+                  className="row"
+                  style={{ alignItems: "center", marginBottom: 4, display: "flex" }}
+                >
+                  <strong
+                    style={{
+                      color: "var(--slate)",
+                      fontSize: 17,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <svg width="16" height="16">
+                      <use href="#i-flag" />
+                    </svg>{" "}
+                    Classificar perda
+                  </strong>
+                  <span style={{ flex: 1 }} />
+                  <button className="ic-btn" onClick={() => setPerdaOpen(false)} title="Fechar">
+                    <svg width="16" height="16">
+                      <use href="#i-x" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="muted small" style={{ marginBottom: 14 }}>
+                  O lead
+                  {f.nome ? (
+                    <>
+                      {" "}
+                      de <strong>{f.nome}</strong>
+                    </>
+                  ) : null}{" "}
+                  volta para a matriz com o motivo registrado. A{" "}
+                  <strong>central de distribuição</strong> faz a triagem final (remalho ou
+                  descarte). A classificação fica visível e filtrável.
+                </div>
 
-              <label style={{ display: "block", fontWeight: 700, color: "var(--slate)", fontSize: 12, marginBottom: 6 }}>Motivo</label>
-              <div className="row" style={{ flexWrap: "wrap", gap: 8, marginBottom: 14, display: "flex" }}>
-                {perdaMotivos.map((m) => (
-                  <span key={m.id}
-                    className={`chip ${perdaForm.motivo === m.nome ? "chip-yellow" : "chip-outline"}`}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => setPerdaForm({ motivo: m.nome, sub: "", obs: perdaForm.obs })}>
-                    {m.nome}
-                  </span>
-                ))}
-              </div>
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: 700,
+                    color: "var(--slate)",
+                    fontSize: 12,
+                    marginBottom: 6,
+                  }}
+                >
+                  Motivo
+                </label>
+                <div
+                  className="row"
+                  style={{ flexWrap: "wrap", gap: 8, marginBottom: 14, display: "flex" }}
+                >
+                  {perdaMotivos.map((m) => (
+                    <span
+                      key={m.id}
+                      className={`chip ${perdaForm.motivo === m.nome ? "chip-yellow" : "chip-outline"}`}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setPerdaForm({ motivo: m.nome, sub: "", obs: perdaForm.obs })}
+                    >
+                      {m.nome}
+                    </span>
+                  ))}
+                </div>
 
-              {perdaForm.motivo && (
-                <>
-                  <label style={{ display: "block", fontWeight: 700, color: "var(--slate)", fontSize: 12, marginBottom: 6 }}>Sub-motivo</label>
-                  <div className="row" style={{ flexWrap: "wrap", gap: 8, marginBottom: 14, display: "flex" }}>
-                    {subs.map((s) => (
-                      <span key={s.id}
-                        className={`chip ${perdaForm.sub === s.nome ? "chip-yellow" : "chip-outline"}`}
-                        style={{ cursor: "pointer" }}
-                        onClick={() => setPerdaForm({ ...perdaForm, sub: s.nome })}>
-                        {s.nome}
-                      </span>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {perdaForm.sub && (
-                <>
-                  <div className="wizard-grid" style={{ marginBottom: 6 }}>
-                    <div className="field-group full">
-                      <label>Observação <span className="hint">opcional</span></label>
-                      <textarea className="input" rows={2} placeholder="Detalhe livre para a matriz"
-                        value={perdaForm.obs}
-                        onChange={(e) => setPerdaForm({ ...perdaForm, obs: e.target.value })} />
+                {perdaForm.motivo && (
+                  <>
+                    <label
+                      style={{
+                        display: "block",
+                        fontWeight: 700,
+                        color: "var(--slate)",
+                        fontSize: 12,
+                        marginBottom: 6,
+                      }}
+                    >
+                      Sub-motivo
+                    </label>
+                    <div
+                      className="row"
+                      style={{ flexWrap: "wrap", gap: 8, marginBottom: 14, display: "flex" }}
+                    >
+                      {subs.map((s) => (
+                        <span
+                          key={s.id}
+                          className={`chip ${perdaForm.sub === s.nome ? "chip-yellow" : "chip-outline"}`}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => setPerdaForm({ ...perdaForm, sub: s.nome })}
+                        >
+                          {s.nome}
+                        </span>
+                      ))}
                     </div>
-                  </div>
-                  <div className="audit-note" style={{ marginTop: 4 }}>
-                    <svg width="15" height="15"><use href="#i-info" /></svg>
-                    {" "}A triagem <strong style={{ margin: "0 4px" }}>remalho × descarte</strong> é feita pela central de distribuição (Matriz).
-                  </div>
-                </>
-              )}
+                  </>
+                )}
 
-              <div className="row" style={{ marginTop: 16, gap: 10, justifyContent: "flex-end", display: "flex" }}>
-                <button className="btn btn-ghost" onClick={() => setPerdaOpen(false)}>Cancelar</button>
-                <button
-                  className={`btn ${ready ? "btn-slate" : ""}`}
-                  disabled={!ready || perdaSaving}
-                  style={!ready || perdaSaving ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
-                  onClick={() => void confirmarPerda()}>
-                  <svg width="14" height="14"><use href="#i-send" /></svg> {perdaSaving ? " Enviando…" : " Devolver à matriz"}
-                </button>
+                {perdaForm.sub && (
+                  <>
+                    <div className="wizard-grid" style={{ marginBottom: 6 }}>
+                      <div className="field-group full">
+                        <label>
+                          Observação <span className="hint">opcional</span>
+                        </label>
+                        <textarea
+                          className="input"
+                          rows={2}
+                          placeholder="Detalhe livre para a matriz"
+                          value={perdaForm.obs}
+                          onChange={(e) => setPerdaForm({ ...perdaForm, obs: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="audit-note" style={{ marginTop: 4 }}>
+                      <svg width="15" height="15">
+                        <use href="#i-info" />
+                      </svg>{" "}
+                      A triagem <strong style={{ margin: "0 4px" }}>remalho × descarte</strong> é
+                      feita pela central de distribuição (Matriz).
+                    </div>
+                  </>
+                )}
+
+                <div
+                  className="row"
+                  style={{ marginTop: 16, gap: 10, justifyContent: "flex-end", display: "flex" }}
+                >
+                  <button className="btn btn-ghost" onClick={() => setPerdaOpen(false)}>
+                    Cancelar
+                  </button>
+                  <button
+                    className={`btn ${ready ? "btn-slate" : ""}`}
+                    disabled={!ready || perdaSaving}
+                    style={
+                      !ready || perdaSaving ? { opacity: 0.4, cursor: "not-allowed" } : undefined
+                    }
+                    onClick={() => void confirmarPerda()}
+                  >
+                    <svg width="14" height="14">
+                      <use href="#i-send" />
+                    </svg>{" "}
+                    {perdaSaving ? " Enviando…" : " Devolver à matriz"}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </AppShell>
   );
 }

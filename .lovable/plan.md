@@ -1,12 +1,15 @@
 # Documentação do CoteCerto 3.3 — Implementado × Pendente
 
 ## Objetivo
+
 Entregar um único documento navegável (DOCX + resumo em Markdown) que sirva como onboarding para quem entra no projeto agora, cobrindo:
+
 - O que já está no ar
 - Como cada peça foi construída (arquivos, migrations, RPCs, integrações)
 - O que ainda falta em relação ao protótipo e às diretrizes já discutidas
 
 ## Fontes que vou usar como "verdade"
+
 1. **Protótipo visual** original (referenciado em `src/styles/proto.css`, `src/components/proto-page.tsx`, `proto-icons.tsx`) — base de todas as telas.
 2. **Migrations 001 → 039** em `migrations/` — spec real do banco.
 3. **Rotas** em `src/routes/**` — spec real das telas.
@@ -16,6 +19,7 @@ Entregar um único documento navegável (DOCX + resumo em Markdown) que sirva co
 > Observação: não foram anexados a este projeto os PDFs/documentos originais de escopo. Vou trabalhar com as fontes acima, que representam o estado atual acordado. Se você tiver um documento-mestre de requisitos, me envie e eu incorporo antes de finalizar.
 
 ## Estrutura do documento (DOCX)
+
 1. **Visão geral e stack** — TanStack Start, Supabase self-hosted, papéis (matriz/master/vendedor), URL/anon key, seed admin.
 2. **Arquitetura**
    - Rotas públicas × `_authenticated/` (SPA, `ssr: false`)
@@ -53,15 +57,18 @@ Entregar um único documento navegável (DOCX + resumo em Markdown) que sirva co
    - Glossário (matriz, master, vendedor, SLA, triagem, remalho, etc.)
 
 ## Entrega
+
 - `/mnt/documents/cotecerto-3.3-documentacao.docx` — documento principal, gerado com `docx-js` seguindo a skill DOCX (US Letter, Arial, tabelas com DXA, sem bullets unicode).
 - `/mnt/documents/cotecerto-3.3-resumo.md` — versão curta em Markdown para leitura rápida.
 - Ambos expostos via `<presentation-artifact>` no fim da execução.
 
 ## Detalhes técnicos
+
 - Vou ler em paralelo: todas as migrations, todos os arquivos em `src/routes/**`, `src/lib/*.ts(x)`, `src/components/app-shell.tsx`, `AGENTS.md`, `.lovable/plan.md`.
 - Não vou alterar nenhum arquivo do app — a entrega é só documental (arquivos em `/mnt/documents`).
 - Após gerar o DOCX, converto para PDF/imagens e inspeciono página a página (QA obrigatório da skill) antes de entregar.
 - Se algo estiver ambíguo entre protótipo e código, marco como "**Divergência a decidir**" no documento em vez de assumir.
 
 ## Fora do escopo deste plano
+
 - Implementar qualquer item listado em "O que falta" — este plano é apenas a documentação. Depois de aprovado o documento, abrimos planos separados por pendência priorizada.

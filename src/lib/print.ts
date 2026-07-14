@@ -28,7 +28,7 @@ const BASE_CSS = `
 export function printHtml(title: string, bodyHtml: string) {
   const when = new Date().toLocaleString("pt-BR");
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escapeHtml(
-    title
+    title,
   )}</title><style>${BASE_CSS}</style></head><body>
     <div class="brand">
       <div class="logo">CoteCerto</div>

@@ -35,10 +35,7 @@ function Page() {
     const uid = u.user?.id ?? null;
     setMe(uid);
     if (uid) {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", uid);
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", uid);
       setIsMatriz(!!roles?.some((r) => r.role === "matriz"));
     }
     const { data, error } = await supabase
@@ -167,7 +164,10 @@ function Page() {
 
       {!loading && rows.length === 0 && !editing && (
         <div className="card">
-          <div className="card-b" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+          <div
+            className="card-b"
+            style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
+          >
             Nenhuma mensagem cadastrada.
           </div>
         </div>

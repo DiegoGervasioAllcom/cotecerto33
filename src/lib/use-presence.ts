@@ -72,7 +72,9 @@ export function usePresence() {
     const channel = supabase.channel("global-presence", {
       config: { presence: { key: userId } },
     });
-    channel.on("presence", { event: "sync" }, () => { /* noop */ });
+    channel.on("presence", { event: "sync" }, () => {
+      /* noop */
+    });
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") {
         void channel.track({ user_id: userId, at: new Date().toISOString() });

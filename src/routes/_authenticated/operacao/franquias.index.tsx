@@ -106,7 +106,10 @@ function Page() {
 
       {!loading && rows.length === 0 && (
         <div className="card">
-          <div className="card-b" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+          <div
+            className="card-b"
+            style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
+          >
             Nenhuma franquia aprovada ainda. Aprove cadastros pendentes em{" "}
             <strong>Acessos e permissões</strong>.
           </div>
@@ -147,9 +150,7 @@ function Page() {
                     <td>
                       <div className="mini-cell">
                         <strong>{r.nome}</strong>
-                        <small>
-                          {r.cidade ? `${r.cidade}${r.uf ? "/" + r.uf : ""}` : "—"}
-                        </small>
+                        <small>{r.cidade ? `${r.cidade}${r.uf ? "/" + r.uf : ""}` : "—"}</small>
                       </div>
                     </td>
                     <td>{resps[r.empresa_id] ?? "—"}</td>
