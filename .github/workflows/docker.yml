@@ -1,0 +1,69 @@
+name: Docker
+
+# Builda a imagem em todo Pull Request (sem push) e builda+publica no GHCR em
+# push para main ou em tags de versão (v*).
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+# Cancela runs superados do mesmo ref (ex.: pushes seguidos no mesmo PR).
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+# Sem necessidade de escrita — apenas ler o código (o job redeclara packages:
+# write para o push da imagem).
+permissions:
+  contents: read
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extrair metadados (tags/labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # String literal em lowercase: `${{ github.repository }}` teria
+          # maiúsculas (DiegoGervasioAllcom/...) e o push no GHCR falha, pois
+          # o registry exige nomes de imagem em lowercase.
+          images: ghcr.io/diegogervasioallcom/cotecerto33
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short,prefix=sha-
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Login no GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push da imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          # Builda em todo PR (valida o Dockerfile), mas só publica fora de PR.
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}
+            VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
