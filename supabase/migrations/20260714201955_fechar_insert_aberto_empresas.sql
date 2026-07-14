@@ -1,0 +1,21 @@
+-- ===========================================================================
+-- S2 — fecha insert aberto em public.empresas.
+--
+-- A policy "empresas insert self" (20240101000001_init.sql ~L235-238) permitia
+-- `for insert to authenticated with check (true)`, ou seja, qualquer usuário
+-- autenticado podia criar empresas direto via PostgREST, sem passar pelas
+-- validações de negócio.
+--
+-- A criação legítima de franquia já ocorre exclusivamente via RPCs
+-- `security definer` (`set search_path = public`), que fazem o insert por
+-- dentro (bypass de RLS do dono da função) e aplicam as regras de cadastro:
+--   - public.cadastrar_franquia(jsonb)            — grant authenticated
+--   - public.cadastrar_franquia_admin(jsonb, uuid) — grant service_role
+--
+-- Não há em lugar nenhum do app um `.from("empresas").insert(...)` direto.
+-- Removendo a policy de INSERT sem substituí-la: insert direto via
+-- authenticated/anon passa a ser bloqueado por RLS (nenhuma policy de INSERT
+-- restante); apenas as RPCs definer e o service_role continuam podendo criar.
+-- ===========================================================================
+
+drop policy if exists "empresas insert self" on public.empresas;
