@@ -232,8 +232,7 @@ function Page() {
         <div>
           <h1>Comissões</h1>
           <div className="sub">
-            Comissão por franquia, vendedor e seguradora — fechamento de{" "}
-            {period.label}
+            Comissão por franquia, vendedor e seguradora — fechamento de {period.label}
           </div>
         </div>
         <div className="tools">
@@ -261,62 +260,84 @@ function Page() {
         <svg width="16" height="16">
           <use href="#i-lock" />
         </svg>{" "}
-        <strong style={{ marginRight: 4 }}>Trava de auditoria ativa.</strong>{" "}
-        Toda alteração de comissão fica registrada com autor, data e valor
-        anterior. Comissão gera conflito — aqui nada se altera sem rastro.
+        <strong style={{ marginRight: 4 }}>Trava de auditoria ativa.</strong> Toda alteração de
+        comissão fica registrada com autor, data e valor anterior. Comissão gera conflito — aqui
+        nada se altera sem rastro.
       </div>
 
-      {err && (
-        <div style={{ color: "var(--alert)", marginBottom: 12 }}>{err}</div>
-      )}
+      {err && <div style={{ color: "var(--alert)", marginBottom: 12 }}>{err}</div>}
 
       <div className="mkpi-grid">
         <div className="kpi">
           <div className="ic-wrap">
-            <svg width="18" height="18"><use href="#i-dollar" /></svg>
+            <svg width="18" height="18">
+              <use href="#i-dollar" />
+            </svg>
           </div>
           <div className="lbl">COMISSÃO GERADA</div>
-          <div className="val" style={{ fontSize: 22 }}>{fmtBRL(kpis.gerada)}</div>
+          <div className="val" style={{ fontSize: 22 }}>
+            {fmtBRL(kpis.gerada)}
+          </div>
           <div className="meta">{kpis.qtd} apólices</div>
         </div>
         <div className="kpi k-ok">
           <div className="ic-wrap">
-            <svg width="18" height="18"><use href="#i-check-circle" /></svg>
+            <svg width="18" height="18">
+              <use href="#i-check-circle" />
+            </svg>
           </div>
           <div className="lbl">COMISSÃO PAGA</div>
-          <div className="val" style={{ fontSize: 22 }}>{fmtBRL(kpis.paga)}</div>
+          <div className="val" style={{ fontSize: 22 }}>
+            {fmtBRL(kpis.paga)}
+          </div>
           <div className="meta">{kpis.pctPaga.toFixed(0)}% do total</div>
         </div>
         <div className="kpi k-alert">
           <div className="ic-wrap">
-            <svg width="18" height="18"><use href="#i-clock" /></svg>
+            <svg width="18" height="18">
+              <use href="#i-clock" />
+            </svg>
           </div>
           <div className="lbl">COMISSÃO PENDENTE</div>
-          <div className="val" style={{ fontSize: 22 }}>{fmtBRL(kpis.pendente)}</div>
+          <div className="val" style={{ fontSize: 22 }}>
+            {fmtBRL(kpis.pendente)}
+          </div>
           <div className="meta">aguardando baixa</div>
         </div>
         <div className="kpi">
           <div className="ic-wrap">
-            <svg width="18" height="18"><use href="#i-percent" /></svg>
+            <svg width="18" height="18">
+              <use href="#i-percent" />
+            </svg>
           </div>
           <div className="lbl">COMISSÃO MÉDIA</div>
-          <div className="val" style={{ fontSize: 22 }}>{fmtBRL(kpis.media)}</div>
+          <div className="val" style={{ fontSize: 22 }}>
+            {fmtBRL(kpis.media)}
+          </div>
           <div className="meta">por apólice</div>
         </div>
         <div className="kpi k-alert">
           <div className="ic-wrap">
-            <svg width="18" height="18"><use href="#i-refresh" /></svg>
+            <svg width="18" height="18">
+              <use href="#i-refresh" />
+            </svg>
           </div>
           <div className="lbl">ESTORNADA</div>
-          <div className="val" style={{ fontSize: 22 }}>{fmtBRL(kpis.estornada)}</div>
+          <div className="val" style={{ fontSize: 22 }}>
+            {fmtBRL(kpis.estornada)}
+          </div>
           <div className="meta">{kpis.qtdEst} cancelamentos</div>
         </div>
         <div className="kpi">
           <div className="ic-wrap">
-            <svg width="18" height="18"><use href="#i-tag" /></svg>
+            <svg width="18" height="18">
+              <use href="#i-tag" />
+            </svg>
           </div>
           <div className="lbl">SALDO A PAGAR</div>
-          <div className="val" style={{ fontSize: 22 }}>{fmtBRL(kpis.pendente)}</div>
+          <div className="val" style={{ fontSize: 22 }}>
+            {fmtBRL(kpis.pendente)}
+          </div>
           <div className="meta">no fechamento do mês</div>
         </div>
       </div>
@@ -325,7 +346,9 @@ function Page() {
         <div className="card">
           <div className="card-h">
             <h3>
-              <svg width="16" height="16"><use href="#i-building" /></svg>{" "}
+              <svg width="16" height="16">
+                <use href="#i-building" />
+              </svg>{" "}
               Comissão por franquia
             </h3>
           </div>
@@ -337,7 +360,9 @@ function Page() {
             <div className="funnel">
               {porFranquia.map((f) => (
                 <div className="funnel-row" key={f.nome}>
-                  <div className="fn-lbl" style={{ width: 150 }}>{f.nome}</div>
+                  <div className="fn-lbl" style={{ width: 150 }}>
+                    {f.nome}
+                  </div>
                   <div className="funnel-track" style={{ height: 22 }}>
                     <div
                       className="funnel-bar"
@@ -359,7 +384,9 @@ function Page() {
         <div className="card">
           <div className="card-h">
             <h3>
-              <svg width="16" height="16"><use href="#i-shield" /></svg>{" "}
+              <svg width="16" height="16">
+                <use href="#i-shield" />
+              </svg>{" "}
               Por seguradora
             </h3>
           </div>
@@ -370,7 +397,9 @@ function Page() {
             <div className="funnel">
               {porSeguradora.map((s) => (
                 <div className="funnel-row" key={s.nome}>
-                  <div className="fn-lbl" style={{ width: 150 }}>{s.nome}</div>
+                  <div className="fn-lbl" style={{ width: 150 }}>
+                    {s.nome}
+                  </div>
                   <div className="funnel-track" style={{ height: 22 }}>
                     <div
                       className="funnel-bar"
@@ -394,8 +423,10 @@ function Page() {
         <div className="card">
           <div className="card-h">
             <h3>
-              <svg width="16" height="16"><use href="#i-users" /></svg> Top
-              vendedores por comissão
+              <svg width="16" height="16">
+                <use href="#i-users" />
+              </svg>{" "}
+              Top vendedores por comissão
             </h3>
           </div>
           <div className="card-b" style={{ paddingTop: 6, paddingBottom: 6 }}>
@@ -403,14 +434,8 @@ function Page() {
               <div className="muted">Sem vendas no período.</div>
             )}
             {topVendedores.map((v, i) => (
-              <div
-                key={v.nome + i}
-                className="rank-row"
-                style={{ cursor: "default" }}
-              >
-                <div className={"rank-pos " + (i === 0 ? "top" : "")}>
-                  {i + 1}
-                </div>
+              <div key={v.nome + i} className="rank-row" style={{ cursor: "default" }}>
+                <div className={"rank-pos " + (i === 0 ? "top" : "")}>{i + 1}</div>
                 <div style={{ flex: 1 }} className="rk-name">
                   {v.nome}
                 </div>
@@ -423,7 +448,9 @@ function Page() {
         <div className="card card-yellow">
           <div className="card-h">
             <h3>
-              <svg width="16" height="16"><use href="#i-history" /></svg>{" "}
+              <svg width="16" height="16">
+                <use href="#i-history" />
+              </svg>{" "}
               Resumo do fechamento
             </h3>
           </div>
@@ -431,16 +458,22 @@ function Page() {
             <div className="actions-list">
               <div className="action-row" style={{ cursor: "default" }}>
                 <div className="ic-square info">
-                  <svg width="16" height="16"><use href="#i-check-circle" /></svg>
+                  <svg width="16" height="16">
+                    <use href="#i-check-circle" />
+                  </svg>
                 </div>
                 <div className="body">
-                  <h4>{kpis.qtd} apólices emitidas em {period.label}</h4>
+                  <h4>
+                    {kpis.qtd} apólices emitidas em {period.label}
+                  </h4>
                   <p>Comissão gerada: {fmtBRL(kpis.gerada)}</p>
                 </div>
               </div>
               <div className="action-row" style={{ cursor: "default" }}>
                 <div className="ic-square warn">
-                  <svg width="16" height="16"><use href="#i-clock" /></svg>
+                  <svg width="16" height="16">
+                    <use href="#i-clock" />
+                  </svg>
                 </div>
                 <div className="body">
                   <h4>{fmtBRL(kpis.pendente)} pendentes de baixa</h4>
@@ -449,7 +482,9 @@ function Page() {
               </div>
               <div className="action-row" style={{ cursor: "default" }}>
                 <div className="ic-square alert">
-                  <svg width="16" height="16"><use href="#i-refresh" /></svg>
+                  <svg width="16" height="16">
+                    <use href="#i-refresh" />
+                  </svg>
                 </div>
                 <div className="body">
                   <h4>{kpis.qtdEst} cancelamentos</h4>
@@ -465,8 +500,10 @@ function Page() {
       <div className="card" style={{ marginTop: 18 }}>
         <div className="card-h">
           <h3>
-            <svg width="16" height="16"><use href="#i-dollar" /></svg> Conta
-            corrente de comissões
+            <svg width="16" height="16">
+              <use href="#i-dollar" />
+            </svg>{" "}
+            Conta corrente de comissões
           </h3>
           <div className="row" style={{ gap: 8 }}>
             <select
@@ -475,13 +512,11 @@ function Page() {
               onChange={(e) => setVendedorSel(e.target.value)}
             >
               <option value="">Todos os vendedores</option>
-              {Array.from(new Set(lancs.map((l) => l.vendedor_id))).map(
-                (id) => (
-                  <option key={id} value={id}>
-                    {profiles[id]?.nome || id.slice(0, 8)}
-                  </option>
-                ),
-              )}
+              {Array.from(new Set(lancs.map((l) => l.vendedor_id))).map((id) => (
+                <option key={id} value={id}>
+                  {profiles[id]?.nome || id.slice(0, 8)}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -499,10 +534,7 @@ function Page() {
             const saldo = cred - deb;
             return (
               <>
-                <div
-                  className="row"
-                  style={{ gap: 16, marginBottom: 12, flexWrap: "wrap" }}
-                >
+                <div className="row" style={{ gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
                   <span className="chip chip-ok">
                     Créditos: <strong>{fmtBRL(cred)}</strong>
                   </span>
@@ -512,9 +544,7 @@ function Page() {
                   <span className="chip">
                     Saldo: <strong>{fmtBRL(saldo)}</strong>
                   </span>
-                  <span className="small muted">
-                    {filtered.length} lançamentos
-                  </span>
+                  <span className="small muted">{filtered.length} lançamentos</span>
                 </div>
                 <div style={{ overflowX: "auto" }}>
                   <table className="table-pipe mtable" style={{ minWidth: 900 }}>
@@ -545,15 +575,12 @@ function Page() {
                             </small>
                           </td>
                           <td>
-                            <small>
-                              {profiles[l.vendedor_id]?.nome || "—"}
-                            </small>
+                            <small>{profiles[l.vendedor_id]?.nome || "—"}</small>
                           </td>
                           <td>
                             <span
                               className={
-                                "chip " +
-                                (l.tipo === "credito" ? "chip-ok" : "chip-alert")
+                                "chip " + (l.tipo === "credito" ? "chip-ok" : "chip-alert")
                               }
                             >
                               {l.tipo === "credito" ? "Crédito" : "Débito"}
@@ -571,14 +598,10 @@ function Page() {
                           <td style={{ textAlign: "right" }}>
                             <strong
                               style={{
-                                color:
-                                  l.tipo === "credito"
-                                    ? "var(--ok)"
-                                    : "var(--alert)",
+                                color: l.tipo === "credito" ? "var(--ok)" : "var(--alert)",
                               }}
                             >
-                              {l.tipo === "credito" ? "+" : "−"}{" "}
-                              {fmtBRL(Number(l.valor))}
+                              {l.tipo === "credito" ? "+" : "−"} {fmtBRL(Number(l.valor))}
                             </strong>
                           </td>
                         </tr>

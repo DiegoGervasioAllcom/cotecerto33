@@ -13,7 +13,7 @@ export default async function setup() {
   } catch (e) {
     throw new Error(
       `\n\n⛔ Supabase local não está rodando em ${url}.\n` +
-      `   Execute \`bun run db:start\` antes de \`bun run test:db\`.\n   (${e})\n`,
+        `   Execute \`bun run db:start\` antes de \`bun run test:db\`.\n   (${e})\n`,
     );
   }
 }

@@ -26,9 +26,7 @@ type Row = {
 };
 
 const fmtBRL = (n: number | null) =>
-  n
-    ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-    : "—";
+  n ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
 
 function statusChip(s: string) {
   if (s === "transmitida") return <span className="chip chip-ok">Transmitida</span>;
@@ -49,7 +47,7 @@ function Page() {
         .from("propostas")
         .select(
           "id,numero,status,seguradora,premio,valor,criado_em,transmitida_em,cotacao_id," +
-            "cotacoes(segurado:cotacao_segurado(nome))"
+            "cotacoes(segurado:cotacao_segurado(nome))",
         )
         .order("criado_em", { ascending: false })
         .limit(200);
@@ -64,7 +62,6 @@ function Page() {
     const el = rowRefs.current[selected];
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [selected, loading, rows.length]);
-
 
   return (
     <AppShell title="Propostas">
@@ -83,7 +80,10 @@ function Page() {
 
       {!loading && rows.length === 0 && (
         <div className="card">
-          <div className="card-b" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+          <div
+            className="card-b"
+            style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
+          >
             Nenhuma proposta ainda. Selecione um prêmio em uma cotação para gerar a primeira.
           </div>
         </div>
@@ -107,14 +107,18 @@ function Page() {
               {rows.map((r) => (
                 <tr
                   key={r.id}
-                  ref={(el) => { rowRefs.current[r.id] = el; }}
+                  ref={(el) => {
+                    rowRefs.current[r.id] = el;
+                  }}
                   style={
                     selected === r.id
-                      ? { outline: "2px solid var(--brand, #2563eb)", background: "rgba(37,99,235,.06)" }
+                      ? {
+                          outline: "2px solid var(--brand, #2563eb)",
+                          background: "rgba(37,99,235,.06)",
+                        }
                       : undefined
                   }
                 >
-
                   <td>
                     <strong>{r.numero || "—"}</strong>
                   </td>
@@ -124,9 +128,7 @@ function Page() {
                   <td>{statusChip(r.status)}</td>
                   <td>{new Date(r.criado_em).toLocaleDateString("pt-BR")}</td>
                   <td>
-                    {r.transmitida_em
-                      ? new Date(r.transmitida_em).toLocaleString("pt-BR")
-                      : "—"}
+                    {r.transmitida_em ? new Date(r.transmitida_em).toLocaleString("pt-BR") : "—"}
                   </td>
                 </tr>
               ))}

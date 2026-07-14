@@ -25,7 +25,11 @@ type Kpi = {
 };
 
 const fmtBRL = (n: number) =>
-  (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  (Number(n) || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    maximumFractionDigits: 0,
+  });
 
 function statusChip(status: string, vendas: number, meta: number | null) {
   if (status !== "aprovada") return <span className="chip chip-slate">{status}</span>;
@@ -36,13 +40,47 @@ function statusChip(status: string, vendas: number, meta: number | null) {
   return <span className="chip chip-alert">Travado</span>;
 }
 
-function Bar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+function Bar({
+  label,
+  value,
+  max,
+  color,
+}: {
+  label: string;
+  value: number;
+  max: number;
+  color: string;
+}) {
   const pct = max > 0 ? Math.max(4, Math.round((value / max) * 100)) : 4;
   return (
     <div className="row" style={{ alignItems: "center", gap: 12, marginBottom: 10 }}>
-      <div style={{ width: 130, color: "var(--muted)", fontSize: 13, textAlign: "right" }}>{label}</div>
-      <div style={{ flex: 1, background: "#e2e8f0", borderRadius: 6, height: 28, position: "relative", overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, background: color, height: "100%", borderRadius: 6, display: "flex", alignItems: "center", paddingLeft: 10, color: "#fff", fontWeight: 700, fontSize: 13 }}>
+      <div style={{ width: 130, color: "var(--muted)", fontSize: 13, textAlign: "right" }}>
+        {label}
+      </div>
+      <div
+        style={{
+          flex: 1,
+          background: "#e2e8f0",
+          borderRadius: 6,
+          height: 28,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            width: `${pct}%`,
+            background: color,
+            height: "100%",
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            paddingLeft: 10,
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: 13,
+          }}
+        >
           {value}
         </div>
       </div>
@@ -66,17 +104,31 @@ function Page() {
     (async () => {
       try {
         const start = new Date();
-        start.setDate(1); start.setHours(0, 0, 0, 0);
-        const end = new Date(start); end.setMonth(end.getMonth() + 1);
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + 1);
 
         const [kRes, lRes, pRes, oRes] = await Promise.all([
           supabase.from("v_vendedor_kpis").select("*").eq("user_id", id).maybeSingle(),
-          supabase.from("leads").select("status_pipeline,criado_em,ultimo_atendimento_em").eq("responsavel_id", id)
-            .gte("criado_em", start.toISOString()).lt("criado_em", end.toISOString()),
-          supabase.from("propostas").select("seguradora,status,premio,valor").eq("responsavel_id", id)
-            .gte("criado_em", start.toISOString()).lt("criado_em", end.toISOString()),
-          supabase.from("oportunidades").select("valor").eq("responsavel_id", id)
-            .gte("criado_em", start.toISOString()).lt("criado_em", end.toISOString()),
+          supabase
+            .from("leads")
+            .select("status_pipeline,criado_em,ultimo_atendimento_em")
+            .eq("responsavel_id", id)
+            .gte("criado_em", start.toISOString())
+            .lt("criado_em", end.toISOString()),
+          supabase
+            .from("propostas")
+            .select("seguradora,status,premio,valor")
+            .eq("responsavel_id", id)
+            .gte("criado_em", start.toISOString())
+            .lt("criado_em", end.toISOString()),
+          supabase
+            .from("oportunidades")
+            .select("valor")
+            .eq("responsavel_id", id)
+            .gte("criado_em", start.toISOString())
+            .lt("criado_em", end.toISOString()),
         ]);
         if (!alive) return;
 
@@ -84,23 +136,59 @@ function Page() {
         const k = kRes.data as Kpi | null;
         setKpi(k);
 
-        const leadsArr = (lRes.data ?? []) as { status_pipeline: string | null; criado_em: string | null; ultimo_atendimento_em: string | null }[];
-        let cot = 0, prop = 0, vend = 0;
+        const leadsArr = (lRes.data ?? []) as {
+          status_pipeline: string | null;
+          criado_em: string | null;
+          ultimo_atendimento_em: string | null;
+        }[];
+        let cot = 0,
+          prop = 0,
+          vend = 0;
         const tempos: number[] = [];
         leadsArr.forEach((l) => {
           const sp = l.status_pipeline ?? "";
-          if (["cotando", "cotacao", "proposta_enviada", "em_negociacao", "proposta", "negociacao", "ganho", "fechado"].includes(sp)) cot++;
-          if (["proposta_enviada", "em_negociacao", "proposta", "negociacao", "ganho", "fechado"].includes(sp)) prop++;
+          if (
+            [
+              "cotando",
+              "cotacao",
+              "proposta_enviada",
+              "em_negociacao",
+              "proposta",
+              "negociacao",
+              "ganho",
+              "fechado",
+            ].includes(sp)
+          )
+            cot++;
+          if (
+            [
+              "proposta_enviada",
+              "em_negociacao",
+              "proposta",
+              "negociacao",
+              "ganho",
+              "fechado",
+            ].includes(sp)
+          )
+            prop++;
           if (["ganho", "fechado"].includes(sp)) vend++;
           if (l.criado_em && l.ultimo_atendimento_em) {
-            const m = (new Date(l.ultimo_atendimento_em).getTime() - new Date(l.criado_em).getTime()) / 60000;
+            const m =
+              (new Date(l.ultimo_atendimento_em).getTime() - new Date(l.criado_em).getTime()) /
+              60000;
             if (m >= 0 && m < 60 * 24) tempos.push(m);
           }
         });
         tempos.sort((a, b) => a - b);
-        setPrimeiroContatoMin(tempos.length ? Math.round(tempos[Math.floor(tempos.length / 2)]) : null);
+        setPrimeiroContatoMin(
+          tempos.length ? Math.round(tempos[Math.floor(tempos.length / 2)]) : null,
+        );
 
-        const propostas = (pRes.data ?? []) as { seguradora: string | null; status: string | null; premio: number | null }[];
+        const propostas = (pRes.data ?? []) as {
+          seguradora: string | null;
+          status: string | null;
+          premio: number | null;
+        }[];
         const segMap = new Map<string, number>();
         let premio = 0;
         propostas.forEach((p) => {
@@ -115,10 +203,21 @@ function Page() {
         setPremioTotal(premio);
 
         // cancelamentos: oportunidades não tem coluna status — a fonte correta é propostas (bug pego pelo typegen)
-        setCancelamentos(propostas.filter((p) => ["cancelada", "estornada", "cancelado", "estornado"].includes((p.status || "").toLowerCase())).length);
+        setCancelamentos(
+          propostas.filter((p) =>
+            ["cancelada", "estornada", "cancelado", "estornado"].includes(
+              (p.status || "").toLowerCase(),
+            ),
+          ).length,
+        );
 
         const realVendas = k?.vendas_mes ?? vend;
-        setCounts({ leads: k?.leads_mes ?? leadsArr.length, cotacoes: cot, propostas: prop, vendas: realVendas });
+        setCounts({
+          leads: k?.leads_mes ?? leadsArr.length,
+          cotacoes: cot,
+          propostas: prop,
+          vendas: realVendas,
+        });
       } catch (e: unknown) {
         if (!alive) return;
         setErr((e as Error).message);
@@ -126,7 +225,9 @@ function Page() {
         if (alive) setLoading(false);
       }
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [id]);
 
   const conv = counts.leads > 0 ? Math.round((counts.vendas / counts.leads) * 100) : 0;
@@ -139,39 +240,94 @@ function Page() {
       <ProtoIcons />
 
       <div className="row" style={{ alignItems: "center", gap: 6, marginBottom: 8 }}>
-        <Link to="/operacao/vendedores" style={{ color: "var(--muted)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-          <svg width="14" height="14"><use href="#i-chevron-left"></use></svg> Todos os vendedores
+        <Link
+          to="/operacao/vendedores"
+          style={{
+            color: "var(--muted)",
+            textDecoration: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 13,
+          }}
+        >
+          <svg width="14" height="14">
+            <use href="#i-chevron-left"></use>
+          </svg>{" "}
+          Todos os vendedores
         </Link>
       </div>
 
       <div className="page-head">
         <div>
           <h1 style={{ marginBottom: 2 }}>{kpi?.nome || kpi?.email || "Vendedor"}</h1>
-          <div className="sub">
-            {kpi?.empresa_nome ?? "—"} · performance individual
-          </div>
+          <div className="sub">{kpi?.empresa_nome ?? "—"} · performance individual</div>
         </div>
         <div>{kpi && statusChip(kpi.status, counts.vendas, kpi.meta_vendas)}</div>
       </div>
 
       {err && <div className="alert alert-err">{err}</div>}
-      {loading && <div className="card"><div className="card-b" style={{ padding: 24, color: "var(--muted)" }}>Carregando…</div></div>}
+      {loading && (
+        <div className="card">
+          <div className="card-b" style={{ padding: 24, color: "var(--muted)" }}>
+            Carregando…
+          </div>
+        </div>
+      )}
 
       {!loading && kpi && (
         <>
-          <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 14 }}>
-            <KpiCard title="LEADS RECEBIDOS" value={String(counts.leads)} hint={primeiroContatoMin != null ? `${primeiroContatoMin} min 1º contato` : "—"} icon="i-layers" />
-            <KpiCard title="COTAÇÕES" value={String(counts.cotacoes)} hint={`${counts.propostas} propostas enviadas`} icon="i-grid" />
-            <KpiCard title="VENDAS" value={String(counts.vendas)} hint={kpi.meta_vendas ? `meta ${kpi.meta_vendas}` : "—"} icon="i-check-circle" />
+          <div
+            className="grid-3"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 14,
+              marginBottom: 14,
+            }}
+          >
+            <KpiCard
+              title="LEADS RECEBIDOS"
+              value={String(counts.leads)}
+              hint={primeiroContatoMin != null ? `${primeiroContatoMin} min 1º contato` : "—"}
+              icon="i-layers"
+            />
+            <KpiCard
+              title="COTAÇÕES"
+              value={String(counts.cotacoes)}
+              hint={`${counts.propostas} propostas enviadas`}
+              icon="i-grid"
+            />
+            <KpiCard
+              title="VENDAS"
+              value={String(counts.vendas)}
+              hint={kpi.meta_vendas ? `meta ${kpi.meta_vendas}` : "—"}
+              icon="i-check-circle"
+            />
             <KpiCard title="CONVERSÃO" value={`${conv}%`} hint="lead → apólice" icon="i-percent" />
-            <KpiCard title="COMISSÃO" value={fmtBRL(kpi.comissao_mes)} hint={premioMedio ? `prêmio: ${fmtBRL(premioMedio)}` : "—"} icon="i-dollar" />
-            <KpiCard title="CANCELAMENTOS" value={String(cancelamentos)} hint="vinculados a este vendedor" icon="i-refresh-cw" />
+            <KpiCard
+              title="COMISSÃO"
+              value={fmtBRL(kpi.comissao_mes)}
+              hint={premioMedio ? `prêmio: ${fmtBRL(premioMedio)}` : "—"}
+              icon="i-dollar"
+            />
+            <KpiCard
+              title="CANCELAMENTOS"
+              value={String(cancelamentos)}
+              hint="vinculados a este vendedor"
+              icon="i-refresh-cw"
+            />
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <div className="card">
               <div className="card-h">
-                <strong><svg width="14" height="14" style={{ verticalAlign: -2 }}><use href="#i-gauge"></use></svg> Funil individual</strong>
+                <strong>
+                  <svg width="14" height="14" style={{ verticalAlign: -2 }}>
+                    <use href="#i-gauge"></use>
+                  </svg>{" "}
+                  Funil individual
+                </strong>
               </div>
               <div className="card-b" style={{ padding: 18 }}>
                 <Bar label="Leads recebidos" value={counts.leads} max={maxFunil} color="#1f2a44" />
@@ -183,7 +339,12 @@ function Page() {
 
             <div className="card">
               <div className="card-h">
-                <strong><svg width="14" height="14" style={{ verticalAlign: -2 }}><use href="#i-shield"></use></svg> Performance por seguradora</strong>
+                <strong>
+                  <svg width="14" height="14" style={{ verticalAlign: -2 }}>
+                    <use href="#i-shield"></use>
+                  </svg>{" "}
+                  Performance por seguradora
+                </strong>
               </div>
               <div className="card-b" style={{ padding: 18 }}>
                 {porSeguradora.length === 0 ? (
@@ -202,17 +363,44 @@ function Page() {
   );
 }
 
-function KpiCard({ title, value, hint, icon }: { title: string; value: string; hint: string; icon: string }) {
+function KpiCard({
+  title,
+  value,
+  hint,
+  icon,
+}: {
+  title: string;
+  value: string;
+  hint: string;
+  icon: string;
+}) {
   return (
     <div className="card" style={{ borderTop: "3px solid #f5b400" }}>
       <div className="card-b" style={{ padding: 16 }}>
         <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={{ fontSize: 11, color: "var(--muted)", letterSpacing: 0.4, fontWeight: 700 }}>{title}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: "var(--primary, #0f172a)", marginTop: 4 }}>{value}</div>
-            <div className="small muted" style={{ marginTop: 4 }}>{hint}</div>
+            <div
+              style={{ fontSize: 11, color: "var(--muted)", letterSpacing: 0.4, fontWeight: 700 }}
+            >
+              {title}
+            </div>
+            <div
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                color: "var(--primary, #0f172a)",
+                marginTop: 4,
+              }}
+            >
+              {value}
+            </div>
+            <div className="small muted" style={{ marginTop: 4 }}>
+              {hint}
+            </div>
           </div>
-          <svg width="18" height="18" style={{ color: "var(--muted)" }}><use href={`#${icon}`}></use></svg>
+          <svg width="18" height="18" style={{ color: "var(--muted)" }}>
+            <use href={`#${icon}`}></use>
+          </svg>
         </div>
       </div>
     </div>

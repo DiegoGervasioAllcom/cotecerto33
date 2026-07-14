@@ -77,7 +77,6 @@ function Page() {
     }
   }
 
-
   async function load() {
     setLoading(true);
     const [{ data: st }, { data: lds, error }] = await Promise.all([
@@ -107,12 +106,13 @@ function Page() {
   }, [stages, leads]);
 
   async function move(lead: Lead, novo: string) {
-    setLeads((prev) =>
-      prev.map((x) => (x.id === lead.id ? { ...x, status_pipeline: novo } : x))
-    );
+    setLeads((prev) => prev.map((x) => (x.id === lead.id ? { ...x, status_pipeline: novo } : x)));
     const { error } = await supabase
       .from("leads")
-      .update({ status_pipeline: novo as Database["public"]["Enums"]["lead_status"], atualizado_em: new Date().toISOString() })
+      .update({
+        status_pipeline: novo as Database["public"]["Enums"]["lead_status"],
+        atualizado_em: new Date().toISOString(),
+      })
       .eq("id", lead.id);
     if (error) {
       setErr(error.message);

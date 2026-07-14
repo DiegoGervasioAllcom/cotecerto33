@@ -22,19 +22,64 @@ type FieldDef = {
 };
 
 const CNPJ_FIELDS: FieldDef[] = [
-  { key: "nome", label: "Razão Social", type: "text", full: true, ph: "Empresa LTDA", required: true },
+  {
+    key: "nome",
+    label: "Razão Social",
+    type: "text",
+    full: true,
+    ph: "Empresa LTDA",
+    required: true,
+  },
   { key: "documento", label: "CNPJ", type: "text", ph: "00.000.000/0000-00", required: true },
   { key: "data_nascimento", label: "Data de nascimento (sócio)", type: "date" },
-  { key: "endereco", label: "Endereço completo", type: "text", full: true, ph: "Rua, nº, bairro, cidade - UF, CEP" },
-  { key: "socio_nome", label: "Nome do sócio operador", type: "text", full: true, ph: "Quem vai operar a franquia", required: true },
+  {
+    key: "endereco",
+    label: "Endereço completo",
+    type: "text",
+    full: true,
+    ph: "Rua, nº, bairro, cidade - UF, CEP",
+  },
+  {
+    key: "socio_nome",
+    label: "Nome do sócio operador",
+    type: "text",
+    full: true,
+    ph: "Quem vai operar a franquia",
+    required: true,
+  },
   { key: "socio_cpf", label: "CPF do sócio operador", type: "text", ph: "000.000.000-00" },
   { key: "socio_rg", label: "RG do sócio operador", type: "text", ph: "00.000.000-0" },
   { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000" },
   { key: "telefone_recado", label: "Outro telefone / recado", type: "tel", ph: "(11) 90000-0000" },
-  { key: "email", label: "E-mail", type: "email", full: true, ph: "voce@email.com", required: true },
-  { key: "pix_chave", label: "Chave Pix (conta PJ)", type: "text", full: true, ph: "CNPJ, e-mail, telefone ou chave aleatória" },
-  { key: "dados_bancarios", label: "Banco / Agência / Conta (PJ)", type: "text", full: true, ph: "Banco 000 · Ag 0001 · CC 00000-0" },
-  { key: "password", label: "Senha de acesso", type: "password", ph: "Mínimo 6 caracteres", required: true },
+  {
+    key: "email",
+    label: "E-mail",
+    type: "email",
+    full: true,
+    ph: "voce@email.com",
+    required: true,
+  },
+  {
+    key: "pix_chave",
+    label: "Chave Pix (conta PJ)",
+    type: "text",
+    full: true,
+    ph: "CNPJ, e-mail, telefone ou chave aleatória",
+  },
+  {
+    key: "dados_bancarios",
+    label: "Banco / Agência / Conta (PJ)",
+    type: "text",
+    full: true,
+    ph: "Banco 000 · Ag 0001 · CC 00000-0",
+  },
+  {
+    key: "password",
+    label: "Senha de acesso",
+    type: "password",
+    ph: "Mínimo 6 caracteres",
+    required: true,
+  },
 ];
 
 const CPF_FIELDS: FieldDef[] = [
@@ -43,13 +88,50 @@ const CPF_FIELDS: FieldDef[] = [
   { key: "rg", label: "RG", type: "text", ph: "00.000.000-0" },
   { key: "data_nascimento", label: "Data de nascimento", type: "date" },
   { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000" },
-  { key: "endereco", label: "Endereço completo", type: "text", full: true, ph: "Rua, nº, bairro, cidade - UF, CEP" },
+  {
+    key: "endereco",
+    label: "Endereço completo",
+    type: "text",
+    full: true,
+    ph: "Rua, nº, bairro, cidade - UF, CEP",
+  },
   { key: "telefone_recado", label: "Outro telefone / recado", type: "tel", ph: "(11) 90000-0000" },
-  { key: "contato_emergencia", label: "Contato de emergência", type: "text", full: true, ph: "Nome e telefone do contato" },
-  { key: "email", label: "E-mail", type: "email", full: true, ph: "voce@email.com", required: true },
-  { key: "pix_chave", label: "Chave Pix", type: "text", full: true, ph: "CPF, e-mail, telefone ou chave aleatória" },
-  { key: "dados_bancarios", label: "Banco / Agência / Conta", type: "text", full: true, ph: "Banco 000 · Ag 0001 · CC 00000-0" },
-  { key: "password", label: "Senha de acesso", type: "password", ph: "Mínimo 6 caracteres", required: true },
+  {
+    key: "contato_emergencia",
+    label: "Contato de emergência",
+    type: "text",
+    full: true,
+    ph: "Nome e telefone do contato",
+  },
+  {
+    key: "email",
+    label: "E-mail",
+    type: "email",
+    full: true,
+    ph: "voce@email.com",
+    required: true,
+  },
+  {
+    key: "pix_chave",
+    label: "Chave Pix",
+    type: "text",
+    full: true,
+    ph: "CPF, e-mail, telefone ou chave aleatória",
+  },
+  {
+    key: "dados_bancarios",
+    label: "Banco / Agência / Conta",
+    type: "text",
+    full: true,
+    ph: "Banco 000 · Ag 0001 · CC 00000-0",
+  },
+  {
+    key: "password",
+    label: "Senha de acesso",
+    type: "password",
+    ph: "Mínimo 6 caracteres",
+    required: true,
+  },
 ];
 
 function onlyDigits(s: string) {
@@ -91,13 +173,9 @@ function maskFor(key: string, raw: string): string {
     case "telefone_recado": {
       const t = d.slice(0, 11);
       if (t.length <= 10) {
-        return t
-          .replace(/^(\d{2})(\d)/, "($1) $2")
-          .replace(/(\d{4})(\d)/, "$1-$2");
+        return t.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
       }
-      return t
-        .replace(/^(\d{2})(\d)/, "($1) $2")
-        .replace(/(\d{5})(\d)/, "$1-$2");
+      return t.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
     }
     default:
       return raw;
@@ -153,8 +231,8 @@ function CadastroPage() {
         },
       });
       setView("success");
-    } catch (err: any) {
-      setError(err?.message || "Falha ao enviar cadastro.");
+    } catch (err: unknown) {
+      setError((err instanceof Error && err.message) || "Falha ao enviar cadastro.");
     } finally {
       setSubmitting(false);
     }
@@ -181,20 +259,31 @@ function CadastroPage() {
           </div>
           <div className="auth-card">
             <Link to="/auth" className="auth-back">
-              <svg><use href="#i-chevron-left" /></svg> Voltar ao login
+              <svg>
+                <use href="#i-chevron-left" />
+              </svg>{" "}
+              Voltar ao login
             </Link>
             <h3>Escolha o modelo de cadastro</h3>
             <p className="lead">Selecione o tipo de pessoa para o cadastro correto.</p>
             <div className="auth-models">
               <button className="auth-model" type="button" onClick={() => pick("cnpj")}>
-                <span className="mi"><svg><use href="#i-building" /></svg></span>
+                <span className="mi">
+                  <svg>
+                    <use href="#i-building" />
+                  </svg>
+                </span>
                 <span>
                   <b>Pessoa Jurídica · CNPJ</b>
                   <span>Franquia / empresa com CNPJ próprio</span>
                 </span>
               </button>
               <button className="auth-model" type="button" onClick={() => pick("cpf")}>
-                <span className="mi"><svg><use href="#i-user" /></svg></span>
+                <span className="mi">
+                  <svg>
+                    <use href="#i-user" />
+                  </svg>
+                </span>
                 <span>
                   <b>Pessoa Física · CPF</b>
                   <span>Vendedor / profissional pessoa física</span>
@@ -214,7 +303,10 @@ function CadastroPage() {
           </div>
           <div className="auth-card">
             <button className="auth-back" type="button" onClick={() => setView("model")}>
-              <svg><use href="#i-chevron-left" /></svg> Trocar modelo
+              <svg>
+                <use href="#i-chevron-left" />
+              </svg>{" "}
+              Trocar modelo
             </button>
             <form onSubmit={submit}>
               <div className="auth-form">
@@ -242,7 +334,14 @@ function CadastroPage() {
                           required={f.required}
                           minLength={f.type === "password" ? 6 : undefined}
                           inputMode={
-                            ["documento", "socio_cpf", "socio_rg", "rg", "celular", "telefone_recado"].includes(f.key)
+                            [
+                              "documento",
+                              "socio_cpf",
+                              "socio_rg",
+                              "rg",
+                              "celular",
+                              "telefone_recado",
+                            ].includes(f.key)
                               ? "numeric"
                               : undefined
                           }
@@ -272,13 +371,21 @@ function CadastroPage() {
 
       {view === "success" && (
         <div className="auth-card auth-success">
-          <div className="sx"><svg><use href="#i-check" /></svg></div>
+          <div className="sx">
+            <svg>
+              <use href="#i-check" />
+            </svg>
+          </div>
           <h3>Cadastro enviado com sucesso!</h3>
           <p>{successLead}</p>
           <div className="auth-note">
-            <svg><use href="#i-mail" /></svg>
+            <svg>
+              <use href="#i-mail" />
+            </svg>
             <span>
-              Você receberá <strong>por e-mail</strong> a confirmação da liberação de acesso assim que a matriz autorizar sua entrada. Qualquer dúvida, fale diretamente com a <strong>matriz</strong>.
+              Você receberá <strong>por e-mail</strong> a confirmação da liberação de acesso assim
+              que a matriz autorizar sua entrada. Qualquer dúvida, fale diretamente com a{" "}
+              <strong>matriz</strong>.
             </span>
           </div>
           <button className="auth-btn" type="button" onClick={() => navigate({ to: "/auth" })}>

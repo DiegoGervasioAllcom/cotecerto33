@@ -84,7 +84,7 @@ function Page() {
           .from("propostas")
           .select(
             "id,numero,apolice_numero,seguradora,premio,valor,comissao_valor,cancelada_em,cancelamento_motivo,empresa_id,responsavel_id," +
-              "cotacoes(segurado:cotacao_segurado(nome,cpf_cnpj))"
+              "cotacoes(segurado:cotacao_segurado(nome,cpf_cnpj))",
           )
           .not("cancelada_em", "is", null)
           .gte("cancelada_em", period.ini)
@@ -115,10 +115,7 @@ function Page() {
 
   const kpis = useMemo(() => {
     const n = rows.length;
-    const premio = rows.reduce(
-      (s, r) => s + Number(r.premio ?? r.valor ?? 0),
-      0,
-    );
+    const premio = rows.reduce((s, r) => s + Number(r.premio ?? r.valor ?? 0), 0);
     const com = rows.reduce((s, r) => s + Number(r.comissao_valor ?? 0), 0);
     const taxa = vendasMes > 0 ? (n / vendasMes) * 100 : 0;
     return { n, premio, com, taxa };
@@ -179,9 +176,7 @@ function Page() {
       <div className="page-head">
         <div>
           <h1>Estornos e cancelamentos</h1>
-          <div className="sub">
-            Onde a comissão volta e por quê — para a Matriz agir rápido
-          </div>
+          <div className="sub">Onde a comissão volta e por quê — para a Matriz agir rápido</div>
         </div>
         <div className="tools">
           <select
@@ -215,9 +210,7 @@ function Page() {
           <div className="val" style={{ fontSize: 22 }}>
             {kpis.n}
           </div>
-          <div className="meta">
-            taxa de {kpis.taxa.toFixed(1)}% das vendas
-          </div>
+          <div className="meta">taxa de {kpis.taxa.toFixed(1)}% das vendas</div>
         </div>
         <div className="kpi k-alert">
           <div className="ic-wrap">
@@ -270,10 +263,7 @@ function Page() {
             )}
             {!loading && err && (
               <tr>
-                <td
-                  colSpan={9}
-                  style={{ color: "var(--alert)", padding: 16 }}
-                >
+                <td colSpan={9} style={{ color: "var(--alert)", padding: 16 }}>
                   {err}
                 </td>
               </tr>
@@ -300,9 +290,7 @@ function Page() {
                     </div>
                   </td>
                   <td>
-                    <small>
-                      {profiles[r.responsavel_id || ""]?.nome || "—"}
-                    </small>
+                    <small>{profiles[r.responsavel_id || ""]?.nome || "—"}</small>
                   </td>
                   <td>
                     <small>{empresas[r.empresa_id || ""]?.nome || "—"}</small>

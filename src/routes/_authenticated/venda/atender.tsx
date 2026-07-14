@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { veiculoLabel } from "@/lib/veiculo";
 
 export const Route = createFileRoute("/_authenticated/venda/atender")({
   head: () => ({ meta: [{ title: "Atender agora · CoteCerto" }] }),
@@ -22,17 +23,6 @@ type Lead = {
 };
 
 const WINDOW_MS = 3 * 60 * 1000; // 3 min
-
-function veiculoLabel(d: Record<string, unknown> | null): string {
-  if (!d) return "—";
-  const v = (d.veiculo as any) ?? d;
-  const marca = v?.marca_nome ?? v?.marca ?? "";
-  const modelo = v?.modelo_nome ?? v?.modelo ?? "";
-  const ano = v?.ano_modelo ?? v?.ano ?? "";
-  const cor = v?.cor ?? "";
-  const head = [marca, modelo, ano].filter(Boolean).join(" ");
-  return [head, cor].filter(Boolean).join(" · ") || "—";
-}
 
 function fmtTimer(ms: number): { txt: string; pct: number; tone: "ok" | "warn" | "urgent" } {
   const clamped = Math.max(0, ms);
@@ -62,7 +52,10 @@ function Page() {
     setLoading(true);
     const { data: u } = await supabase.auth.getUser();
     const uid = u.user?.id;
-    if (!uid) { setLoading(false); return; }
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("leads")
@@ -95,22 +88,31 @@ function Page() {
         return start + WINDOW_MS - n <= 0;
       });
       if (!expirou || expiringRef.current) return;
-      leadsRef.current.forEach((l) => { if (!l.bloqueado) firedRef.current.add(l.id); });
+      leadsRef.current.forEach((l) => {
+        if (!l.bloqueado) firedRef.current.add(l.id);
+      });
       expiringRef.current = true;
       (async () => {
-        try { await load(); }
-        finally { expiringRef.current = false; }
+        try {
+          await load();
+        } finally {
+          expiringRef.current = false;
+        }
       })();
     }, 1000);
-    return () => { if (tickRef.current) clearInterval(tickRef.current); };
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
   }, []);
-
 
   async function assumir(l: Lead) {
     setBusy(l.id);
     const { data, error } = await supabase.rpc("assumir_lead", { p_lead_id: l.id });
     setBusy(null);
-    if (error) { setErr(error.message); return; }
+    if (error) {
+      setErr(error.message);
+      return;
+    }
     const cotId = data as string | null;
     if (cotId) navigate({ to: "/venda/novo-lead", search: { id: cotId, step: 0 } });
     else navigate({ to: "/venda/pipeline" });
@@ -125,38 +127,53 @@ function Page() {
         <div>
           <h1>Atender agora</h1>
           <div className="sub">
-            Leads distribuídos pela Matriz esperando sua reação — <strong>aja rápido ou eles voltam pra fila</strong>
+            Leads distribuídos pela Matriz esperando sua reação —{" "}
+            <strong>aja rápido ou eles voltam pra fila</strong>
           </div>
         </div>
         <div className="tools">
           <Link to="/venda/pipeline" className="btn btn-ghost">
-            <svg width={14} height={14}><use href="#i-kanban" /></svg> Ver pipeline
+            <svg width={14} height={14}>
+              <use href="#i-kanban" />
+            </svg>{" "}
+            Ver pipeline
           </Link>
         </div>
       </div>
 
-      {err && <div className="alert alert-err" style={{ marginBottom: 12 }}>{err}</div>}
+      {err && (
+        <div className="alert alert-err" style={{ marginBottom: 12 }}>
+          {err}
+        </div>
+      )}
 
       <div
         className="audit-note"
         style={{ background: "var(--alert-soft)", color: "var(--alert)", marginBottom: 16 }}
       >
-        <svg width={16} height={16}><use href="#i-bolt" /></svg>{" "}
+        <svg width={16} height={16}>
+          <use href="#i-bolt" />
+        </svg>{" "}
         <strong style={{ marginRight: 4 }}>
           {total} {total === 1 ? "lead para tratar agora." : "leads para tratar agora."}
         </strong>{" "}
-        Cada um tem 3 min desde a distribuição; sem reação, volta automaticamente para a Matriz e é redistribuído.
+        Cada um tem 3 min desde a distribuição; sem reação, volta automaticamente para a Matriz e é
+        redistribuído.
       </div>
 
       {loading ? (
-        <div className="card"><div className="card-b">Carregando…</div></div>
+        <div className="card">
+          <div className="card-b">Carregando…</div>
+        </div>
       ) : total === 0 ? (
         <div className="card">
           <div className="card-b" style={{ padding: 40, textAlign: "center" }}>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
               Nenhum lead aguardando atendimento 🎉
             </div>
-            <div className="muted">Aguarde a Matriz distribuir novos leads ou crie um manualmente.</div>
+            <div className="muted">
+              Aguarde a Matriz distribuir novos leads ou crie um manualmente.
+            </div>
           </div>
         </div>
       ) : (
@@ -168,36 +185,58 @@ function Page() {
             const t = fmtTimer(left);
             const cls = blocked
               ? "atender-card"
-              : t.tone === "urgent" ? "atender-card urgent"
-              : t.tone === "warn" ? "atender-card warn" : "atender-card";
+              : t.tone === "urgent"
+                ? "atender-card urgent"
+                : t.tone === "warn"
+                  ? "atender-card warn"
+                  : "atender-card";
             const barColor = blocked
               ? "var(--muted)"
-              : t.tone === "urgent" ? "var(--alert)"
-              : t.tone === "warn" ? "var(--yellow)" : "var(--ok)";
+              : t.tone === "urgent"
+                ? "var(--alert)"
+                : t.tone === "warn"
+                  ? "var(--yellow)"
+                  : "var(--ok)";
             const txtColor = barColor;
             return (
               <div key={l.id} className={cls} style={blocked ? { opacity: 0.85 } : undefined}>
-                <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div
+                  className="row"
+                  style={{ justifyContent: "space-between", alignItems: "flex-start" }}
+                >
                   <div>
-                    <strong style={{ fontSize: 15, color: "var(--slate)" }}>{l.nome || "Lead sem nome"}</strong>
+                    <strong style={{ fontSize: 15, color: "var(--slate)" }}>
+                      {l.nome || "Lead sem nome"}
+                    </strong>
                     <div className="small muted">{veiculoLabel(l.dados)}</div>
                   </div>
                   {blocked ? (
                     <span className="chip chip-red">
-                      <svg width={11} height={11}><use href="#i-lock" /></svg> Bloqueado
+                      <svg width={11} height={11}>
+                        <use href="#i-lock" />
+                      </svg>{" "}
+                      Bloqueado
                     </span>
                   ) : (
                     <span className="chip chip-yellow">
-                      <svg width={11} height={11}><use href="#i-share" /></svg> Matriz
+                      <svg width={11} height={11}>
+                        <use href="#i-share" />
+                      </svg>{" "}
+                      Matriz
                     </span>
                   )}
                 </div>
                 <div className="at-bar">
-                  <div className="at-fill" style={{ width: blocked ? "100%" : `${t.pct}%`, background: barColor }} />
+                  <div
+                    className="at-fill"
+                    style={{ width: blocked ? "100%" : `${t.pct}%`, background: barColor }}
+                  />
                 </div>
                 <div className="row" style={{ justifyContent: "space-between" }}>
                   <span style={{ color: txtColor, fontWeight: 700, fontSize: 13 }}>
-                    <svg width={12} height={12}><use href={blocked ? "#i-lock" : "#i-clock"} /></svg>{" "}
+                    <svg width={12} height={12}>
+                      <use href={blocked ? "#i-lock" : "#i-clock"} />
+                    </svg>{" "}
                     {blocked ? "SLA pausado — aguardando desbloqueio pela Matriz" : t.txt}
                   </span>
                   <span className="small muted">{l.contato || "—"}</span>
@@ -210,8 +249,10 @@ function Page() {
                     title={blocked ? "Lead bloqueado — solicite o desbloqueio à Matriz" : undefined}
                     onClick={() => !blocked && assumir(l)}
                   >
-                    <svg width={13} height={13}><use href={blocked ? "#i-lock" : "#i-check"} /></svg>{" "}
-                    {blocked ? "Bloqueado" : (busy === l.id ? "Iniciando…" : "Assumir e iniciar")}
+                    <svg width={13} height={13}>
+                      <use href={blocked ? "#i-lock" : "#i-check"} />
+                    </svg>{" "}
+                    {blocked ? "Bloqueado" : busy === l.id ? "Iniciando…" : "Assumir e iniciar"}
                   </button>
                   <button
                     className="btn btn-ghost btn-sm"
@@ -219,7 +260,10 @@ function Page() {
                     title={blocked ? "Indisponível enquanto bloqueado" : undefined}
                     onClick={() => !blocked && setView(l)}
                   >
-                    <svg width={13} height={13}><use href="#i-eye" /></svg> Ver lead
+                    <svg width={13} height={13}>
+                      <use href="#i-eye" />
+                    </svg>{" "}
+                    Ver lead
                   </button>
                 </div>
               </div>
@@ -234,16 +278,26 @@ function Page() {
 }
 
 function VerLeadModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
-  const d = (lead.dados ?? {}) as Record<string, any>;
-  const cliente = (d.cliente ?? {}) as Record<string, any>;
-  const endereco = (d.endereco ?? {}) as Record<string, any>;
-  const veic = (d.veiculo ?? {}) as Record<string, any>;
-  function row(label: string, value: any) {
+  const d = (lead.dados ?? {}) as Record<string, unknown>;
+  const cliente = (d.cliente ?? {}) as Record<string, unknown>;
+  const endereco = (d.endereco ?? {}) as Record<string, unknown>;
+  const veic = (d.veiculo ?? {}) as Record<string, unknown>;
+  function row(label: string, value: unknown) {
     if (value === null || value === undefined || value === "") return null;
     return (
-      <div className="row" style={{ justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: "1px dashed var(--border)" }}>
+      <div
+        className="row"
+        style={{
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "6px 0",
+          borderBottom: "1px dashed var(--border)",
+        }}
+      >
         <span className="small muted">{label}</span>
-        <strong className="small" style={{ textAlign: "right" }}>{String(value)}</strong>
+        <strong className="small" style={{ textAlign: "right" }}>
+          {String(value)}
+        </strong>
       </div>
     );
   }
@@ -251,13 +305,25 @@ function VerLeadModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-h">
-          <h3><svg width={16} height={16}><use href="#i-eye" /></svg> Ver lead — {lead.nome || "—"}</h3>
-          <button className="ic-mini" onClick={onClose} title="Fechar"><svg width={14} height={14}><use href="#i-x" /></svg></button>
+          <h3>
+            <svg width={16} height={16}>
+              <use href="#i-eye" />
+            </svg>{" "}
+            Ver lead — {lead.nome || "—"}
+          </h3>
+          <button className="ic-mini" onClick={onClose} title="Fechar">
+            <svg width={14} height={14}>
+              <use href="#i-x" />
+            </svg>
+          </button>
         </div>
         <div className="modal-b">
           <div className="alert alert-info" style={{ marginBottom: 12 }}>
-            <svg width={14} height={14}><use href="#i-info" /></svg>{" "}
-            Modo somente leitura. Para interagir com o lead, clique em <strong>Assumir e iniciar</strong>.
+            <svg width={14} height={14}>
+              <use href="#i-info" />
+            </svg>{" "}
+            Modo somente leitura. Para interagir com o lead, clique em{" "}
+            <strong>Assumir e iniciar</strong>.
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div>
@@ -286,7 +352,9 @@ function VerLeadModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
           </div>
         </div>
         <div className="modal-f">
-          <button className="btn btn-ghost" onClick={onClose}>Fechar</button>
+          <button className="btn btn-ghost" onClick={onClose}>
+            Fechar
+          </button>
         </div>
       </div>
     </div>

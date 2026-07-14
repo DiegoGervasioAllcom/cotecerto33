@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { applyMask, type Mask } from "@/lib/masks";
 
-type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value" | "defaultValue"> & {
+type Props = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "onChange" | "value" | "defaultValue"
+> & {
   mask: Mask;
   value?: string;
   defaultValue?: string;

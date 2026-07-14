@@ -6,7 +6,9 @@ const URL = process.env.VITE_SUPABASE_URL || "http://127.0.0.1:54321";
 const ANON = process.env.VITE_SUPABASE_ANON_KEY || "";
 const SERVICE = process.env.SELF_SUPABASE_SERVICE_ROLE_KEY || "";
 if (!ANON || !SERVICE) {
-  throw new Error("Defina VITE_SUPABASE_ANON_KEY e SELF_SUPABASE_SERVICE_ROLE_KEY no .env (chaves do `supabase start`).");
+  throw new Error(
+    "Defina VITE_SUPABASE_ANON_KEY e SELF_SUPABASE_SERVICE_ROLE_KEY no .env (chaves do `supabase start`).",
+  );
 }
 
 export type Db = SupabaseClient<Database>;
@@ -17,15 +19,23 @@ export const admin: Db = createClient<Database>(URL, SERVICE, {
 });
 
 export function anonClient(): Db {
-  return createClient<Database>(URL, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient<Database>(URL, ANON, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export const MATRIZ = { email: "desenvolvimento@suppercerto.com.br", senha: "Supper@123!" };
 
 export async function loginMatriz(): Promise<Db> {
   const c = anonClient();
-  const { error } = await c.auth.signInWithPassword({ email: MATRIZ.email, password: MATRIZ.senha });
-  if (error) throw new Error(`login da matriz falhou (seed aplicado? \`bun run db:reset\`): ${error.message}`);
+  const { error } = await c.auth.signInWithPassword({
+    email: MATRIZ.email,
+    password: MATRIZ.senha,
+  });
+  if (error)
+    throw new Error(
+      `login da matriz falhou (seed aplicado? \`bun run db:reset\`): ${error.message}`,
+    );
   return c;
 }
 
@@ -39,7 +49,11 @@ export function uniqDoc(): string {
 
 /** Cria usuário autenticável (o trigger handle_new_user cria o profile pendente). */
 export async function criarUsuario(email: string, senha = "Teste@123!") {
-  const { data, error } = await admin.auth.admin.createUser({ email, password: senha, email_confirm: true });
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password: senha,
+    email_confirm: true,
+  });
   if (error || !data.user) throw new Error(`admin.createUser: ${error?.message}`);
   const client = anonClient();
   const { error: e2 } = await client.auth.signInWithPassword({ email, password: senha });

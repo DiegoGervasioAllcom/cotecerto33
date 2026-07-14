@@ -24,9 +24,7 @@ type Row = {
 };
 
 const fmtBRL = (n: number | null) =>
-  n
-    ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-    : "—";
+  n ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
 
 function Page() {
   const { selected } = Route.useSearch();
@@ -43,7 +41,7 @@ function Page() {
       .from("propostas")
       .select(
         "id,numero,status,seguradora,premio,valor,criado_em," +
-          "cotacoes(segurado:cotacao_segurado(nome))"
+          "cotacoes(segurado:cotacao_segurado(nome))",
       )
       .eq("status", "gerada")
       .order("criado_em", { ascending: true });
@@ -60,7 +58,6 @@ function Page() {
     const el = cardRefs.current[selected];
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [selected, loading, rows.length]);
-
 
   async function transmitir(id: string) {
     setBusy(id);
@@ -91,7 +88,10 @@ function Page() {
 
       {!loading && rows.length === 0 && (
         <div className="card">
-          <div className="card-b" style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+          <div
+            className="card-b"
+            style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
+          >
             Nenhuma proposta aguardando transmissão.
           </div>
         </div>
@@ -101,20 +101,16 @@ function Page() {
         {rows.map((r) => (
           <div
             key={r.id}
-            ref={(el) => { cardRefs.current[r.id] = el; }}
+            ref={(el) => {
+              cardRefs.current[r.id] = el;
+            }}
             className="card"
-            style={
-              selected === r.id
-                ? { outline: "2px solid var(--brand, #2563eb)" }
-                : undefined
-            }
+            style={selected === r.id ? { outline: "2px solid var(--brand, #2563eb)" } : undefined}
           >
             <div className="card-h">
               <div>
                 <strong>{r.numero}</strong>{" "}
-                <span className="muted small">
-                  · {r.cotacoes?.segurado?.[0]?.nome || "—"}
-                </span>
+                <span className="muted small">· {r.cotacoes?.segurado?.[0]?.nome || "—"}</span>
               </div>
               <span className="chip chip-yellow">Aguardando transmissão</span>
             </div>

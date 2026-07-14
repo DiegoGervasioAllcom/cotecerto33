@@ -13,7 +13,9 @@ export function maskBRL(raw: string): string {
 }
 
 export function parseBRL(formatted: string): number {
-  const s = String(formatted ?? "").replace(/[^\d,]/g, "").replace(",", ".");
+  const s = String(formatted ?? "")
+    .replace(/[^\d,]/g, "")
+    .replace(",", ".");
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : 0;
 }
@@ -26,7 +28,9 @@ export function maskPct(raw: string): string {
 }
 
 export function parsePct(formatted: string): number {
-  const s = String(formatted ?? "").replace(/[^\d,]/g, "").replace(",", ".");
+  const s = String(formatted ?? "")
+    .replace(/[^\d,]/g, "")
+    .replace(",", ".");
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : 0;
 }

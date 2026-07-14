@@ -4,11 +4,11 @@
 
 ## Pré-requisitos
 
-| Ferramenta | Para quê | Instalação |
-|---|---|---|
-| Docker Desktop | roda o Supabase local | https://docker.com (deixar aberto) |
-| Supabase CLI | banco local + migrations | `brew install supabase/tap/supabase` |
-| Bun | dependências e dev server | `curl -fsSL https://bun.sh/install \| bash` |
+| Ferramenta     | Para quê                  | Instalação                                  |
+| -------------- | ------------------------- | ------------------------------------------- |
+| Docker Desktop | roda o Supabase local     | https://docker.com (deixar aberto)          |
+| Supabase CLI   | banco local + migrations  | `brew install supabase/tap/supabase`        |
+| Bun            | dependências e dev server | `curl -fsSL https://bun.sh/install \| bash` |
 
 ## Passo a passo
 
@@ -26,11 +26,11 @@ cp .env.example .env
 
 Preencher o `.env` com o mapeamento (a CLI atual chama as chaves de Publishable/Secret):
 
-| Painel do `supabase start` | Variável no `.env` |
-|---|---|
+| Painel do `supabase start`             | Variável no `.env`                        |
+| -------------------------------------- | ----------------------------------------- |
 | Project URL (`http://127.0.0.1:54321`) | `VITE_SUPABASE_URL` e `SELF_SUPABASE_URL` |
-| **Publishable** key | `VITE_SUPABASE_ANON_KEY` |
-| **Secret** key | `SELF_SUPABASE_SERVICE_ROLE_KEY` |
+| **Publishable** key                    | `VITE_SUPABASE_ANON_KEY`                  |
+| **Secret** key                         | `SELF_SUPABASE_SERVICE_ROLE_KEY`          |
 
 ```bash
 # 3. Aplicar as 39 migrations + seed num banco limpo
@@ -51,17 +51,17 @@ Abrir a URL que o vite imprimir (ex.: `http://localhost:3000`).
 
 ## Comandos do dia a dia
 
-| Comando | O que faz |
-|---|---|
-| `bun run db:start` / `db:stop` | sobe/para o Supabase local |
-| `bun run db:reset` | recria o banco do zero (migrations + seed) — descartável, use à vontade |
-| `bun run db:new <nome>` | cria uma migration nova em `supabase/migrations/` |
-| `bun run db:diff` | compara o schema com a produção (`$PROD_DB_URL` no ambiente) |
-| `bun run db:push` | aplica migrations na produção (`$PROD_DB_URL`) — só após passar no local |
-| Studio local | `http://127.0.0.1:54323` (visualizar tabelas/dados no navegador) |
-| `bun run test:unit` | testes unitários (rodam offline) |
-| `bun run test:db` | testes de integração (exigem o Supabase local rodando) |
-| `bun run typecheck` | checagem de tipos — deve passar antes de qualquer commit |
+| Comando                        | O que faz                                                                |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| `bun run db:start` / `db:stop` | sobe/para o Supabase local                                               |
+| `bun run db:reset`             | recria o banco do zero (migrations + seed) — descartável, use à vontade  |
+| `bun run db:new <nome>`        | cria uma migration nova em `supabase/migrations/`                        |
+| `bun run db:diff`              | compara o schema com a produção (`$PROD_DB_URL` no ambiente)             |
+| `bun run db:push`              | aplica migrations na produção (`$PROD_DB_URL`) — só após passar no local |
+| Studio local                   | `http://127.0.0.1:54323` (visualizar tabelas/dados no navegador)         |
+| `bun run test:unit`            | testes unitários (rodam offline)                                         |
+| `bun run test:db`              | testes de integração (exigem o Supabase local rodando)                   |
+| `bun run typecheck`            | checagem de tipos — deve passar antes de qualquer commit                 |
 
 ## Notas e soluções de problemas
 

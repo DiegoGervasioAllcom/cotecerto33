@@ -22,7 +22,7 @@ export const cadastrarFranquia = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const url =
-      (import.meta as any).env?.VITE_SUPABASE_URL ||
+      import.meta.env?.VITE_SUPABASE_URL ||
       process.env.VITE_SUPABASE_URL ||
       process.env.SELF_SUPABASE_URL;
     const serviceKey = process.env.SELF_SUPABASE_SERVICE_ROLE_KEY;

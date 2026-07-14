@@ -47,10 +47,7 @@ function Page() {
     const uid = u.user?.id ?? null;
     setMe(uid);
     if (uid) {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", uid);
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", uid);
       setIsMatriz(!!roles?.some((r) => r.role === "matriz"));
     }
     const { data, error } = await supabase
@@ -148,7 +145,15 @@ function Page() {
         </div>
       </div>
 
-      <div className="kpis" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,180px))", gap: 12, marginBottom: 12 }}>
+      <div
+        className="kpis"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0,180px))",
+          gap: 12,
+          marginBottom: 12,
+        }}
+      >
         <div className="card" style={{ borderLeft: "4px solid var(--accent, #f59e0b)" }}>
           <div className="card-b">
             <div style={{ fontSize: 24, fontWeight: 700 }}>{kpis.total}</div>
@@ -170,7 +175,8 @@ function Page() {
       </div>
 
       <div className="alert alert-info" style={{ marginBottom: 12 }}>
-        Só mensagens <strong>oficiais</strong> aparecem para os vendedores. Padronize a comunicação da marca e evite promessas indevidas de cobertura.
+        Só mensagens <strong>oficiais</strong> aparecem para os vendedores. Padronize a comunicação
+        da marca e evite promessas indevidas de cobertura.
       </div>
 
       {err && <div className="alert alert-err">{err}</div>}
@@ -182,7 +188,10 @@ function Page() {
             <strong>{editing.id ? "Editar" : "Nova"} mensagem</strong>
           </div>
           <div className="card-b" style={{ display: "grid", gap: 10 }}>
-            <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div
+              className="grid-2"
+              style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
+            >
               <div>
                 <div className="label">Etapa / Título</div>
                 <input
@@ -297,7 +306,11 @@ function Page() {
                     <div className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
                       {canEdit && (
                         <>
-                          <button className="btn btn-icon" title="Editar" onClick={() => setEditing(m)}>
+                          <button
+                            className="btn btn-icon"
+                            title="Editar"
+                            onClick={() => setEditing(m)}
+                          >
                             ✎
                           </button>
                           <button
@@ -307,7 +320,11 @@ function Page() {
                           >
                             ✓
                           </button>
-                          <button className="btn btn-icon" title="Excluir" onClick={() => excluir(m.id)}>
+                          <button
+                            className="btn btn-icon"
+                            title="Excluir"
+                            onClick={() => excluir(m.id)}
+                          >
                             🗑
                           </button>
                         </>

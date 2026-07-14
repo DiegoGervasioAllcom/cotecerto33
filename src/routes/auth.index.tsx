@@ -1,6 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { isSupabaseConfigured, supabase, supabaseConfigError } from "@/integrations/supabase/client";
+import {
+  isSupabaseConfigured,
+  supabase,
+  supabaseConfigError,
+} from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 
