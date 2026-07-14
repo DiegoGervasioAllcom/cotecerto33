@@ -1,0 +1,35 @@
+# Dependências/artefatos que devem ser (re)gerados dentro da imagem
+node_modules
+.output
+dist
+dist-ssr
+.vinxi
+.nitro
+.tanstack
+.wrangler
+
+# Controle de versão / CI / ferramentas locais
+.git
+.github
+.claude
+.lovable
+
+# Segredos e config local (env real entra só via ARG/ENV/--env-file no runtime)
+.env
+.env.*
+!.env.example
+
+# Testes, cobertura e docs — não são necessários para `bun run build`
+tests
+coverage
+docs
+*.md
+
+# Supabase self-hosted / migrations (não usados pelo build do app)
+supabase
+migrations
+
+# Editor / SO
+.vscode
+.idea
+.DS_Store
