@@ -73,11 +73,14 @@ jobs:
 
       - name: Exportar env do Supabase local
         run: |
+          # `supabase status -o env` emite valores entre aspas (estilo dotenv); o
+          # $GITHUB_ENV trata as aspas como parte do valor, então removemos com sed
+          # antes de exportar (senão a URL vira `"http://..."` e o fetch quebra).
           supabase status -o env \
             --override-name api.url=VITE_SUPABASE_URL \
             --override-name auth.anon_key=VITE_SUPABASE_ANON_KEY \
             --override-name auth.service_role_key=SELF_SUPABASE_SERVICE_ROLE_KEY \
-            >> "$GITHUB_ENV"
+            | sed -E 's/="(.*)"$/=\1/' >> "$GITHUB_ENV"
 
       - name: DB tests
         run: bun run test:db
