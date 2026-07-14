@@ -1,0 +1,24 @@
+-- ===========================================================================
+-- S4 — fecha insert aberto em public.lead_eventos.
+--
+-- A policy "leadev_insert" (20240101000016_lead_acoes.sql ~L39-41) permitia
+-- `for insert to authenticated with check (true)`, ou seja, qualquer usuário
+-- autenticado podia forjar evento em qualquer lead (histórico/timeline).
+--
+-- A gravação legítima de eventos já ocorre exclusivamente via RPCs
+-- `security definer` (`set search_path = public`), que fazem o insert por
+-- dentro (bypass de RLS do dono da função) e aplicam as regras de negócio,
+-- ex.: redistribuir_lead, puxar_lead_de_volta, bloquear_lead, desbloquear_lead
+-- (20240101000016_lead_acoes.sql), além de outras RPCs de ação sobre leads
+-- (arquivar_lead, evento_lead_assumido, distribuicao_automatica,
+-- sla_expiracao, perda_triagem, etc.).
+--
+-- Não há em lugar nenhum do app um `.from("lead_eventos").insert(...)` direto
+-- (grep em src/ só encontra `.select`). Mesmo racional do S2
+-- (20260714201955_fechar_insert_aberto_empresas.sql): removendo a policy de
+-- INSERT sem substituí-la, insert direto via authenticated/anon passa a ser
+-- bloqueado por RLS (nenhuma policy de INSERT restante); apenas as RPCs
+-- definer e o service_role continuam podendo criar eventos.
+-- ===========================================================================
+
+drop policy if exists "leadev_insert" on public.lead_eventos;
