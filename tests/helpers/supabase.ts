@@ -60,3 +60,59 @@ export async function criarUsuario(email: string, senha = "Teste@123!") {
   if (e2) throw new Error(`login ${email}: ${e2.message}`);
   return { client, userId: data.user.id, email };
 }
+
+type Perfil = Database["public"]["Enums"]["perfil"];
+
+/**
+ * Cria uma empresa aprovada via admin (fixture). `overrides.parent_id` monta rede
+ * (franquia filha de um master/matriz).
+ */
+export async function criarEmpresa(overrides?: {
+  nome?: string;
+  tipo?: Database["public"]["Enums"]["empresa_tipo"];
+  documento?: string;
+  status?: Database["public"]["Enums"]["empresa_status"];
+  parent_id?: string;
+  uf?: string;
+  cidade?: string;
+}): Promise<{ id: string }> {
+  const { data, error } = await admin
+    .from("empresas")
+    .insert({
+      nome: overrides?.nome ?? uniq("Empresa"),
+      tipo: overrides?.tipo ?? "pj",
+      documento: overrides?.documento ?? uniqDoc(),
+      status: overrides?.status ?? "aprovada",
+      parent_id: overrides?.parent_id,
+      uf: overrides?.uf,
+      cidade: overrides?.cidade,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Generaliza o padrão manual (admin cria empresa → criarUsuario → admin seta
+ * profiles.empresa_id/status='aprovada' → admin insere user_roles) usado em
+ * distribuicao-lead.test.ts e user-roles-select-rede.test.ts.
+ *
+ * Sem `opts.empresaId`, cria uma empresa nova (use `opts.parentId` para pendurá-la
+ * como filha de uma empresa existente — monta rede master→franquia).
+ */
+export async function criarPersonaComEmpresa(
+  role: Perfil,
+  opts?: { empresaId?: string; parentId?: string; emailPrefix?: string },
+): Promise<{ client: Db; userId: string; empresaId: string; email: string }> {
+  const empresaId = opts?.empresaId ?? (await criarEmpresa({ parent_id: opts?.parentId })).id;
+  const { client, userId, email } = await criarUsuario(
+    `${uniq(opts?.emailPrefix ?? role)}@teste.local`,
+  );
+  await admin
+    .from("profiles")
+    .update({ empresa_id: empresaId, status: "aprovada" })
+    .eq("id", userId);
+  await admin.from("user_roles").insert({ user_id: userId, role });
+  return { client, userId, empresaId, email };
+}
