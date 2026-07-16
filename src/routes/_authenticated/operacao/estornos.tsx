@@ -3,21 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { maskCpfCnpj } from "@/lib/masks";
 
 export const Route = createFileRoute("/_authenticated/operacao/estornos")({
   head: () => ({ meta: [{ title: "Estornos · CoteCerto" }] }),
   component: Page,
 });
-
-function maskCpfCnpj(v: string): string {
-  const d = (v || "").replace(/\D/g, "");
-  if (!d) return "";
-  if (d.length <= 11)
-    return d.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, "$1.$2.$3-$4").replace(/[-.]+$/, "");
-  return d
-    .replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, "$1.$2.$3/$4-$5")
-    .replace(/[-./]+$/, "");
-}
 
 type Estorno = {
   id: string;

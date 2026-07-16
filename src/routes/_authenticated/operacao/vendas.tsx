@@ -3,22 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
-
-function maskCpfCnpj(v: string): string {
-  const d = (v || "").replace(/\D/g, "");
-  if (d.length <= 11) {
-    return d.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, "$1.$2.$3-$4").replace(/[-.]+$/, "");
-  }
-  return d
-    .replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, "$1.$2.$3/$4-$5")
-    .replace(/[-./]+$/, "");
-}
-function maskPhone(v: string): string {
-  const d = (v || "").replace(/\D/g, "");
-  if (d.length <= 10)
-    return d.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3").replace(/[-\s()]+$/, "");
-  return d.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").replace(/[-\s()]+$/, "");
-}
+import { maskCpfCnpj, maskTelefone as maskPhone } from "@/lib/masks";
 
 export const Route = createFileRoute("/_authenticated/operacao/vendas")({
   head: () => ({ meta: [{ title: "Controle de Vendas · CoteCerto" }] }),

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { cadastrarFranquia } from "@/lib/cadastro.functions";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
+import { onlyDigits, maskCpfCnpj, maskTelefone } from "@/lib/masks";
 
 export const Route = createFileRoute("/auth/cadastro")({
   head: () => ({ meta: [{ title: "Criar cadastro · CoteCerto" }] }),
@@ -134,28 +135,12 @@ const CPF_FIELDS: FieldDef[] = [
   },
 ];
 
-function onlyDigits(s: string) {
-  return s.replace(/\D+/g, "");
-}
-
 function maskFor(key: string, raw: string): string {
   const d = onlyDigits(raw);
   switch (key) {
     case "documento":
       // CPF (11) ou CNPJ (14)
-      if (d.length <= 11) {
-        return d
-          .slice(0, 11)
-          .replace(/^(\d{3})(\d)/, "$1.$2")
-          .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-          .replace(/\.(\d{3})(\d)/, ".$1-$2");
-      }
-      return d
-        .slice(0, 14)
-        .replace(/^(\d{2})(\d)/, "$1.$2")
-        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-        .replace(/\.(\d{3})(\d)/, ".$1/$2")
-        .replace(/(\d{4})(\d)/, "$1-$2");
+      return maskCpfCnpj(raw);
     case "socio_cpf":
       return d
         .slice(0, 11)
@@ -170,13 +155,8 @@ function maskFor(key: string, raw: string): string {
         .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
         .replace(/\.(\d{3})(\d)/, ".$1-$2");
     case "celular":
-    case "telefone_recado": {
-      const t = d.slice(0, 11);
-      if (t.length <= 10) {
-        return t.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
-      }
-      return t.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
-    }
+    case "telefone_recado":
+      return maskTelefone(raw);
     default:
       return raw;
   }

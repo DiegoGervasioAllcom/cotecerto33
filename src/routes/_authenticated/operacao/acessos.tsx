@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { MaskedInput } from "@/components/masked-input";
-import { applyMask, maskPct, type Mask } from "@/lib/masks";
+import { applyMask, maskPct, maskCpfCnpj, maskTelefone, type Mask } from "@/lib/masks";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
@@ -328,10 +328,12 @@ function Page() {
                             <span className="chip chip-outline">Pessoa Física</span>
                           )}
                         </td>
-                        <td>{p.documento}</td>
+                        <td>{maskCpfCnpj(p.documento)}</td>
                         <td>
                           {p.email ?? "—"}
-                          <div className="small muted">{p.celular ?? p.telefone ?? ""}</div>
+                          <div className="small muted">
+                            {maskTelefone(p.celular ?? p.telefone ?? "")}
+                          </div>
                         </td>
                         <td>{new Date(p.created_at).toLocaleDateString("pt-BR")}</td>
                         <td style={{ textAlign: "right" }}>
@@ -512,10 +514,14 @@ function AnalisarModal({
           >
             <div>
               <div>
-                {tipoChip} <strong style={{ marginLeft: 6 }}>{pendente.documento}</strong>
+                {tipoChip}{" "}
+                <strong style={{ marginLeft: 6 }}>{maskCpfCnpj(pendente.documento)}</strong>
               </div>
               <div className="small muted" style={{ marginTop: 4 }}>
-                {pendente.email ?? "—"} · {pendente.celular ?? pendente.telefone ?? "—"}
+                {pendente.email ?? "—"} ·{" "}
+                {(pendente.celular ?? pendente.telefone)
+                  ? maskTelefone(pendente.celular ?? pendente.telefone)
+                  : "—"}
                 {pendente.cidade
                   ? ` · ${pendente.cidade}${pendente.uf ? "/" + pendente.uf : ""}`
                   : ""}
