@@ -1,0 +1,94 @@
+# CoteCerto — app (imagem GHCR) + nginx (reverse proxy / TLS / rate limit)
+#
+# Depende da rede "cotecerto_net", criada por docker-compose.supabase.yml.
+# Suba a stack do Supabase PRIMEIRO (ver docs/RUNBOOK_DEPLOY.md):
+#
+#   docker compose -f deploy/docker-compose.supabase.yml --env-file deploy/.env up -d
+#   docker compose -f deploy/docker-compose.app.yml --env-file deploy/.env up -d
+#
+# O nginx é o ÚNICO ponto de entrada da internet (portas 80/443 do host).
+# Ele termina TLS e aplica rate limiting (S5) antes de repassar para:
+#   - o app (porta 3000, interno)
+#   - o Kong do Supabase (porta 8000, interno, serviço "kong" na rede
+#     cotecerto_net) — para /auth/v1, /rest/v1, /storage/v1, /realtime/v1,
+#     /functions/v1 e o Studio (dashboard) se decidirem expor.
+
+name: cotecerto-app
+
+services:
+
+  app:
+    container_name: cotecerto-app
+    # Imagem privada publicada pelo CI (.github/workflows/docker.yml) no
+    # GHCR. Ver docs/RUNBOOK_DEPLOY.md para o `docker login ghcr.io`
+    # necessário (PAT com escopo read:packages).
+    image: ghcr.io/diegogervasioallcom/cotecerto33:${APP_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks: [cotecerto_net]
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      # Runtime-only (server functions) — NUNCA embutidas na imagem/bundle;
+      # vêm só via env do compose. Apontam para o Supabase desta mesma stack
+      # (via rede interna, usando o Kong como gateway).
+      SELF_SUPABASE_URL: ${SELF_SUPABASE_URL}
+      SELF_SUPABASE_SERVICE_ROLE_KEY: ${SELF_SUPABASE_SERVICE_ROLE_KEY}
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok||r.status<500?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  nginx:
+    container_name: cotecerto-nginx
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    networks: [cotecerto_net]
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # Certificados TLS (Let's Encrypt via certbot, ou outro emissor).
+      # Ver docs/RUNBOOK_DEPLOY.md, seção DNS/TLS.
+      - certbot-certs:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Renovação de certificado Let's Encrypt (roda o cliente certbot em modo
+  # "renew" periodicamente; o desafio HTTP-01 é servido pelo nginx a partir
+  # do volume certbot-www). Ver runbook para a emissão inicial (que roda uma
+  # vez, manualmente, antes de o nginx exigir os certs).
+  certbot:
+    container_name: cotecerto-certbot
+    image: certbot/certbot:v3.1.0
+    restart: unless-stopped
+    volumes:
+      - certbot-certs:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: >
+      /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done"
+
+networks:
+  cotecerto_net:
+    external: true
+
+volumes:
+  certbot-certs:
+  certbot-www:
