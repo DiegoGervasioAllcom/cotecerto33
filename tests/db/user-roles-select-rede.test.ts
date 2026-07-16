@@ -7,7 +7,10 @@ import { admin, loginMatriz, criarUsuario, uniq, uniqDoc, type Db } from "../hel
  * 20260714164737_fix_user_roles_select_rede.sql substitui isso por self + rede visível
  * (mesmo critério de "profiles select self or rede").
  *
- * Rede A: empresa do master (matriz da rede) + 1 franquia filha (parent_id = empresa do master).
+ * Rede A: empresa do master (matriz da rede) + 1 franquia filha (parent_id = empresa do
+ * master); o vendedor da filha tem `profiles.superior_id` = master A — é essa cadeia de
+ * pessoas que a empresas_visiveis() multinível (G1.2) usa para dar visibilidade ao master
+ * sobre a franquia filha, não mais só parent_id.
  * Rede B: empresa independente, sem relação com a rede A — usada para os casos negativos.
  */
 describe("RLS user_roles — select escopado por rede", () => {
@@ -67,7 +70,7 @@ describe("RLS user_roles — select escopado por rede", () => {
     vendedorFilhaAId = vFilha.userId;
     await admin
       .from("profiles")
-      .update({ empresa_id: empAFilha.id, status: "aprovada" })
+      .update({ empresa_id: empAFilha.id, status: "aprovada", superior_id: masterAId })
       .eq("id", vendedorFilhaAId);
     await admin.from("user_roles").insert({ user_id: vendedorFilhaAId, role: "vendedor" });
 

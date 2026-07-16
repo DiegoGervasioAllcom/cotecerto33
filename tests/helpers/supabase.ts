@@ -100,10 +100,14 @@ export async function criarEmpresa(overrides?: {
  *
  * Sem `opts.empresaId`, cria uma empresa nova (use `opts.parentId` para pendurá-la
  * como filha de uma empresa existente — monta rede master→franquia).
+ *
+ * `opts.superiorId` religa `profiles.superior_id` (hierarquia de pessoas usada por
+ * `empresas_visiveis()` desde a G1.2 — visibilidade multinível não depende mais só
+ * de `empresas.parent_id`).
  */
 export async function criarPersonaComEmpresa(
   role: Perfil,
-  opts?: { empresaId?: string; parentId?: string; emailPrefix?: string },
+  opts?: { empresaId?: string; parentId?: string; emailPrefix?: string; superiorId?: string },
 ): Promise<{ client: Db; userId: string; empresaId: string; email: string }> {
   const empresaId = opts?.empresaId ?? (await criarEmpresa({ parent_id: opts?.parentId })).id;
   const { client, userId, email } = await criarUsuario(
@@ -111,7 +115,11 @@ export async function criarPersonaComEmpresa(
   );
   await admin
     .from("profiles")
-    .update({ empresa_id: empresaId, status: "aprovada" })
+    .update({
+      empresa_id: empresaId,
+      status: "aprovada",
+      ...(opts?.superiorId ? { superior_id: opts.superiorId } : {}),
+    })
     .eq("id", userId);
   await admin.from("user_roles").insert({ user_id: userId, role });
   return { client, userId, empresaId, email };
