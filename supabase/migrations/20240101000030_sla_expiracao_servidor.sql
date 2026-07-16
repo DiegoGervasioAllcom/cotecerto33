@@ -17,24 +17,37 @@
 create extension if not exists pg_cron;
 
 -- Reagenda o job (idempotente).
+-- Em self-hosted o schema "cron" pode pertencer a supabase_admin e não estar
+-- acessível ao usuário de migration; se faltar permissão, registramos um aviso
+-- e seguimos (best-effort) — a migration NÃO falha. Atenção: sem pg_cron a
+-- expiração automática por SLA fica inativa (a migration 031 remove o trigger
+-- oportunista por causar recursão). Conceda acesso ao cron para habilitá-la —
+-- ver docs/RUNBOOK_DEPLOY.md, §3.3.
 do $$
 begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
-    perform cron.unschedule(jobid)
-       from cron.job
-      where jobname = 'expirar_leads_nao_atendidos';
     begin
-      perform cron.schedule(
-        'expirar_leads_nao_atendidos',
-        '30 seconds',
-        $cron$ select public.expirar_leads_nao_atendidos(180); $cron$
-      );
-    exception when others then
-      perform cron.schedule(
-        'expirar_leads_nao_atendidos',
-        '* * * * *',
-        $cron$ select public.expirar_leads_nao_atendidos(180); $cron$
-      );
+      perform cron.unschedule(jobid)
+         from cron.job
+        where jobname = 'expirar_leads_nao_atendidos';
+      begin
+        perform cron.schedule(
+          'expirar_leads_nao_atendidos',
+          '30 seconds',
+          $cron$ select public.expirar_leads_nao_atendidos(180); $cron$
+        );
+      exception when others then
+        perform cron.schedule(
+          'expirar_leads_nao_atendidos',
+          '* * * * *',
+          $cron$ select public.expirar_leads_nao_atendidos(180); $cron$
+        );
+      end;
+    exception
+      when insufficient_privilege then
+        raise notice 'pg_cron sem permissão para o usuário atual — agendamento ignorado; expiração por SLA inativa até conceder acesso ao cron (ver RUNBOOK_DEPLOY.md §3.3)';
+      when others then
+        raise notice 'falha ao agendar pg_cron (%) — agendamento ignorado; expiração por SLA inativa', sqlerrm;
     end;
   end if;
 end$$;
