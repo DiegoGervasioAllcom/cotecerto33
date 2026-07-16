@@ -33,6 +33,20 @@ alter table public.profiles
 comment on column public.profiles.superior_id is
   'A quem este usuário reporta na hierarquia multinível (cadeia Vendedor de franquia > Franquia > Master/Supervisor > Matriz). NULL = topo (Matriz). Definido na classificação de acesso (G1.4).';
 
--- 3) Índice para a resolução da cadeia (empresas_visiveis() recursiva — 043).
+-- 3) Guarda mínima anti-auto-referência (um usuário não pode reportar a si
+--    mesmo). Ciclos mais longos (A→B→A) ficam a cargo da resolução recursiva
+--    com CYCLE na 043 — um check simples não os cobre.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'profiles_superior_id_nao_self'
+  ) then
+    alter table public.profiles
+      add constraint profiles_superior_id_nao_self
+      check (superior_id is distinct from id);
+  end if;
+end$$;
+
+-- 4) Índice para a resolução da cadeia (empresas_visiveis() recursiva — 043).
 create index if not exists idx_profiles_superior_id
   on public.profiles(superior_id);
