@@ -64,28 +64,41 @@ end$$;
 grant execute on function public.expirar_leads_nao_atendidos(int) to authenticated, anon, service_role;
 
 -- Agenda pg_cron a cada 30 segundos, se disponível.
+-- Em alguns ambientes self-hosted o schema "cron" pertence a supabase_admin
+-- e o usuário de migration não tem acesso a ele; nesse caso o agendamento é
+-- ignorado (best-effort) e a migration NÃO falha. Sem pg_cron a expiração por
+-- SLA fica inativa — conceda acesso ao cron para habilitá-la (ver
+-- docs/RUNBOOK_DEPLOY.md, §3.3).
 do $$
 begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
-    perform cron.unschedule(jobid)
-       from cron.job
-      where jobname = 'expirar_leads_nao_atendidos';
+    begin
+      perform cron.unschedule(jobid)
+         from cron.job
+        where jobname = 'expirar_leads_nao_atendidos';
 
-    perform cron.schedule(
-      'expirar_leads_nao_atendidos',
-      '30 seconds',
-      $cron$ select public.expirar_leads_nao_atendidos(180); $cron$
-    );
+      perform cron.schedule(
+        'expirar_leads_nao_atendidos',
+        '30 seconds',
+        $cron$ select public.expirar_leads_nao_atendidos(180); $cron$
+      );
+    exception
+      when insufficient_privilege then
+        raise notice 'pg_cron sem permissão para o usuário atual — agendamento ignorado; expiração por SLA inativa até conceder acesso ao cron (ver RUNBOOK_DEPLOY.md §3.3)';
+      when others then
+        -- Se a sintaxe '30 seconds' não for suportada, cai para 1 minuto.
+        begin
+          perform cron.schedule(
+            'expirar_leads_nao_atendidos',
+            '* * * * *',
+            $cron$ select public.expirar_leads_nao_atendidos(180); $cron$
+          );
+        exception
+          when insufficient_privilege then
+            raise notice 'pg_cron sem permissão para o usuário atual — agendamento ignorado; expiração por SLA inativa até conceder acesso ao cron (ver RUNBOOK_DEPLOY.md §3.3)';
+          when others then
+            null;
+        end;
+    end;
   end if;
-exception when others then
-  -- Se a sintaxe '30 seconds' não for suportada, cai para 1 minuto.
-  begin
-    perform cron.schedule(
-      'expirar_leads_nao_atendidos',
-      '* * * * *',
-      $cron$ select public.expirar_leads_nao_atendidos(180); $cron$
-    );
-  exception when others then
-    null;
-  end;
 end$$;

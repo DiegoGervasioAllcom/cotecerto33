@@ -226,7 +226,22 @@ Abrir **https://cote-certo.sandboxallcom.com** e logar.
 
 ## 6. Atualizar o app (deploy de nova versão)
 
-Após um novo push na `main` (o CI republica a imagem `:latest`):
+Após um novo push na `main` (o CI republica a imagem `:latest`), use o script
+versionado **`deploy/deploy.sh`** — ele faz pull, recria o container, health check
+(com retry) e dá instruções de rollback se falhar.
+
+**Instalar (uma vez):** copie `deploy/deploy.sh` para o servidor (ex.: via SFTP para
+`/home/alldev/deploy.sh`) e `chmod +x`. Requer o `docker login ghcr.io` já feito (§4).
+
+```bash
+# atualizar para a última versão
+./deploy.sh
+
+# ou fixar uma tag/commit específico
+IMAGE_TAG=sha-abc123 ./deploy.sh
+```
+
+Equivalente manual (o que o script faz por baixo):
 
 ```bash
 sudo docker pull ghcr.io/diegogervasioallcom/cotecerto33:latest
@@ -239,6 +254,11 @@ sudo docker run -d --name cotecerto-app --restart unless-stopped \
   ghcr.io/diegogervasioallcom/cotecerto33:latest
 curl -sS -o /dev/null -w "HTTP %{http_code}\n" http://127.0.0.1:3001/
 ```
+
+> **Auto-deploy via CI (opção futura):** dá pra disparar `deploy.sh` automaticamente a
+> cada push na `main` com um step que faz SSH no servidor. Exige guardar uma chave SSH
+> nos secrets do GitHub e abrir acesso pros runners — mais superfície de ataque. Por ora
+> o deploy é manual (um comando), que é mais simples e seguro.
 
 **Mudanças de banco (nova migration):** como o histórico agora existe (§3.4), dá pra
 aplicar incrementalmente com `supabase db push` apontando pro Postgres local **de
