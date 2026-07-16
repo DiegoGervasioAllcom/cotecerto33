@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { cadastrarFranquia } from "@/lib/cadastro.functions";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 import { onlyDigits, maskCpfCnpj, maskTelefone } from "@/lib/masks";
+import { cnpjCadastroSchema, cpfCadastroSchema } from "@/lib/schemas/cadastro.schema";
 
 export const Route = createFileRoute("/auth/cadastro")({
   head: () => ({ meta: [{ title: "Criar cadastro · CoteCerto" }] }),
@@ -20,6 +21,7 @@ type FieldDef = {
   ph?: string;
   full?: boolean;
   required?: boolean;
+  maxLen?: number;
 };
 
 const CNPJ_FIELDS: FieldDef[] = [
@@ -30,8 +32,16 @@ const CNPJ_FIELDS: FieldDef[] = [
     full: true,
     ph: "Empresa LTDA",
     required: true,
+    maxLen: 150,
   },
-  { key: "documento", label: "CNPJ", type: "text", ph: "00.000.000/0000-00", required: true },
+  {
+    key: "documento",
+    label: "CNPJ",
+    type: "text",
+    ph: "00.000.000/0000-00",
+    required: true,
+    maxLen: 18,
+  },
   { key: "data_nascimento", label: "Data de nascimento (sócio)", type: "date" },
   {
     key: "endereco",
@@ -39,6 +49,7 @@ const CNPJ_FIELDS: FieldDef[] = [
     type: "text",
     full: true,
     ph: "Rua, nº, bairro, cidade - UF, CEP",
+    maxLen: 2000,
   },
   {
     key: "socio_nome",
@@ -47,11 +58,24 @@ const CNPJ_FIELDS: FieldDef[] = [
     full: true,
     ph: "Quem vai operar a franquia",
     required: true,
+    maxLen: 150,
   },
-  { key: "socio_cpf", label: "CPF do sócio operador", type: "text", ph: "000.000.000-00" },
-  { key: "socio_rg", label: "RG do sócio operador", type: "text", ph: "00.000.000-0" },
-  { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000" },
-  { key: "telefone_recado", label: "Outro telefone / recado", type: "tel", ph: "(11) 90000-0000" },
+  {
+    key: "socio_cpf",
+    label: "CPF do sócio operador",
+    type: "text",
+    ph: "000.000.000-00",
+    maxLen: 14,
+  },
+  { key: "socio_rg", label: "RG do sócio operador", type: "text", ph: "00.000.000-0", maxLen: 20 },
+  { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000", maxLen: 15 },
+  {
+    key: "telefone_recado",
+    label: "Outro telefone / recado",
+    type: "tel",
+    ph: "(11) 90000-0000",
+    maxLen: 15,
+  },
   {
     key: "email",
     label: "E-mail",
@@ -59,6 +83,7 @@ const CNPJ_FIELDS: FieldDef[] = [
     full: true,
     ph: "voce@email.com",
     required: true,
+    maxLen: 254,
   },
   {
     key: "pix_chave",
@@ -66,6 +91,7 @@ const CNPJ_FIELDS: FieldDef[] = [
     type: "text",
     full: true,
     ph: "CNPJ, e-mail, telefone ou chave aleatória",
+    maxLen: 150,
   },
   {
     key: "dados_bancarios",
@@ -73,6 +99,7 @@ const CNPJ_FIELDS: FieldDef[] = [
     type: "text",
     full: true,
     ph: "Banco 000 · Ag 0001 · CC 00000-0",
+    maxLen: 2000,
   },
   {
     key: "password",
@@ -84,25 +111,48 @@ const CNPJ_FIELDS: FieldDef[] = [
 ];
 
 const CPF_FIELDS: FieldDef[] = [
-  { key: "nome", label: "Nome completo", type: "text", full: true, ph: "Seu nome", required: true },
-  { key: "documento", label: "CPF", type: "text", ph: "000.000.000-00", required: true },
-  { key: "rg", label: "RG", type: "text", ph: "00.000.000-0" },
+  {
+    key: "nome",
+    label: "Nome completo",
+    type: "text",
+    full: true,
+    ph: "Seu nome",
+    required: true,
+    maxLen: 150,
+  },
+  {
+    key: "documento",
+    label: "CPF",
+    type: "text",
+    ph: "000.000.000-00",
+    required: true,
+    maxLen: 14,
+  },
+  { key: "rg", label: "RG", type: "text", ph: "00.000.000-0", maxLen: 20 },
   { key: "data_nascimento", label: "Data de nascimento", type: "date" },
-  { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000" },
+  { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000", maxLen: 15 },
   {
     key: "endereco",
     label: "Endereço completo",
     type: "text",
     full: true,
     ph: "Rua, nº, bairro, cidade - UF, CEP",
+    maxLen: 2000,
   },
-  { key: "telefone_recado", label: "Outro telefone / recado", type: "tel", ph: "(11) 90000-0000" },
+  {
+    key: "telefone_recado",
+    label: "Outro telefone / recado",
+    type: "tel",
+    ph: "(11) 90000-0000",
+    maxLen: 15,
+  },
   {
     key: "contato_emergencia",
     label: "Contato de emergência",
     type: "text",
     full: true,
     ph: "Nome e telefone do contato",
+    maxLen: 2000,
   },
   {
     key: "email",
@@ -111,6 +161,7 @@ const CPF_FIELDS: FieldDef[] = [
     full: true,
     ph: "voce@email.com",
     required: true,
+    maxLen: 254,
   },
   {
     key: "pix_chave",
@@ -118,6 +169,7 @@ const CPF_FIELDS: FieldDef[] = [
     type: "text",
     full: true,
     ph: "CPF, e-mail, telefone ou chave aleatória",
+    maxLen: 150,
   },
   {
     key: "dados_bancarios",
@@ -125,6 +177,7 @@ const CPF_FIELDS: FieldDef[] = [
     type: "text",
     full: true,
     ph: "Banco 000 · Ag 0001 · CC 00000-0",
+    maxLen: 2000,
   },
   {
     key: "password",
@@ -189,13 +242,16 @@ function CadastroPage() {
     setError(null);
     setSubmitting(true);
 
-    const email = values.email?.trim();
-    const password = values.password ?? "";
-    if (!email || password.length < 6) {
-      setError("Informe e-mail válido e senha com pelo menos 6 caracteres.");
+    const schema = model === "cnpj" ? cnpjCadastroSchema : cpfCadastroSchema;
+    const result = schema.safeParse(values);
+    if (!result.success) {
+      setError(result.error.issues[0]?.message ?? "Dados inválidos.");
       setSubmitting(false);
       return;
     }
+
+    const email = values.email?.trim() ?? "";
+    const password = values.password ?? "";
 
     const { password: _pwd, email: _em, nome: _n, documento: _d, tipo: _t, ...extras } = values;
 
@@ -313,6 +369,7 @@ function CadastroPage() {
                           placeholder={f.ph || ""}
                           required={f.required}
                           minLength={f.type === "password" ? 6 : undefined}
+                          maxLength={f.maxLen}
                           inputMode={
                             [
                               "documento",
