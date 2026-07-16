@@ -10,6 +10,8 @@ import {
   maskTelefone as maskTelefoneCentral,
   maskCep as maskCepCentral,
 } from "@/lib/masks";
+import { seguradoSchema } from "@/lib/schemas/cotacaoSegurado.schema";
+import { seguroSchema } from "@/lib/schemas/cotacaoSeguro.schema";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
@@ -175,6 +177,7 @@ const SEGURADORAS = ["Porto Seguro", "Azul Seguros", "Bradesco Auto", "HDI", "Al
 
 function Page() {
   const [step, setStep] = useState(0);
+  const [erros, setErros] = useState<Record<string, string>>({});
   const [cepLoading, setCepLoading] = useState(false);
   const [marcas, setMarcas] = useState<{ codigo: string; nome: string }[]>([]);
   const [modelos, setModelos] = useState<{ codigo: number; nome: string }[]>([]);
@@ -357,6 +360,63 @@ function Page() {
     assist24: "Básica",
   });
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
+
+  // Valida só ao avançar (não no autosave). Retorna true se pode avançar.
+  function validarEtapa(atual: number): boolean {
+    if (atual === 0) {
+      const r = seguradoSchema.safeParse({
+        cpf: f.cpf,
+        pessoa: f.pessoa,
+        nome: f.nome,
+        nomeSocial: f.nomeSocial,
+        sexo: f.sexo,
+        estadoCivil: f.estadoCivil,
+        celular: f.celular,
+        telRes: f.telRes,
+        email: f.email,
+        cep: f.cep,
+        logradouro: f.logradouro,
+        bairro: f.bairro,
+        cidade: f.cidade,
+        uf: f.uf,
+      });
+      if (!r.success) {
+        const novos: Record<string, string> = {};
+        for (const issue of r.error.issues) {
+          const campo = String(issue.path[0] ?? "");
+          if (campo && !novos[campo]) novos[campo] = issue.message;
+        }
+        setErros(novos);
+        return false;
+      }
+      setErros({});
+      return true;
+    }
+    if (atual === 1) {
+      const r = seguroSchema.safeParse({
+        tipoSeguro: f.tipoSeguro,
+        categoria: f.categoria,
+        ramo: f.ramo,
+        ciaAtual: f.ciaAtual,
+        ciAtual: f.ciAtual,
+        classeBonus: f.classeBonus,
+        apoliceAtual: f.apoliceAtual,
+      });
+      if (!r.success) {
+        const novos: Record<string, string> = {};
+        for (const issue of r.error.issues) {
+          const campo = String(issue.path[0] ?? "");
+          if (campo && !novos[campo]) novos[campo] = issue.message;
+        }
+        setErros(novos);
+        return false;
+      }
+      setErros({});
+      return true;
+    }
+    setErros({});
+    return true;
+  }
 
   // ----- persistência: cotação no Supabase -----
   const { id: routeId, step: routeStep } = Route.useSearch();
@@ -825,9 +885,15 @@ function Page() {
                     className="input"
                     value={f.cpf}
                     inputMode="numeric"
+                    maxLength={18}
                     onChange={(e) => up("cpf", maskCpfCnpj(e.target.value))}
                     placeholder="000.000.000-00"
                   />
+                  {erros.cpf && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.cpf}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>Pessoa</label>
@@ -847,18 +913,30 @@ function Page() {
                   <input
                     className="input"
                     value={f.nome}
+                    maxLength={150}
                     onChange={(e) => up("nome", e.target.value)}
                     placeholder="Nome completo"
                   />
+                  {erros.nome && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.nome}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group full">
                   <label>Nome social</label>
                   <input
                     className="input"
                     value={f.nomeSocial}
+                    maxLength={150}
                     onChange={(e) => up("nomeSocial", e.target.value)}
                     placeholder="Opcional"
                   />
+                  {erros.nomeSocial && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.nomeSocial}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>
@@ -915,9 +993,15 @@ function Page() {
                     className="input"
                     value={f.celular}
                     inputMode="numeric"
+                    maxLength={15}
                     onChange={(e) => up("celular", maskCel(e.target.value))}
                     placeholder="(00) 00000-0000"
                   />
+                  {erros.celular && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.celular}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>Telefone residencial</label>
@@ -925,9 +1009,15 @@ function Page() {
                     className="input"
                     value={f.telRes}
                     inputMode="numeric"
+                    maxLength={14}
                     onChange={(e) => up("telRes", maskFixo(e.target.value))}
                     placeholder="(00) 0000-0000"
                   />
+                  {erros.telRes && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.telRes}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group full">
                   <label>E-mail</label>
@@ -935,9 +1025,15 @@ function Page() {
                     className="input"
                     type="email"
                     value={f.email}
+                    maxLength={254}
                     onChange={(e) => up("email", e.target.value)}
                     placeholder="cliente@email.com"
                   />
+                  {erros.email && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.email}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>
@@ -947,6 +1043,7 @@ function Page() {
                     className="input"
                     value={f.cep}
                     inputMode="numeric"
+                    maxLength={9}
                     onChange={(e) => {
                       const v = maskCep(e.target.value);
                       up("cep", v);
@@ -956,12 +1053,18 @@ function Page() {
                     placeholder="00000-000"
                   />
                   {cepLoading && <span className="hint">Buscando CEP…</span>}
+                  {erros.cep && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.cep}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>Logradouro</label>
                   <input
                     className="input"
                     value={f.logradouro}
+                    maxLength={2000}
                     onChange={(e) => up("logradouro", e.target.value)}
                     placeholder="Preenche via CEP"
                   />
@@ -971,6 +1074,7 @@ function Page() {
                   <input
                     className="input"
                     value={f.bairro}
+                    maxLength={2000}
                     onChange={(e) => up("bairro", e.target.value)}
                     placeholder="Preenche via CEP"
                   />
@@ -980,6 +1084,7 @@ function Page() {
                   <input
                     className="input"
                     value={f.cidade}
+                    maxLength={150}
                     onChange={(e) => up("cidade", e.target.value)}
                     placeholder="Preenche via CEP"
                   />
@@ -2256,7 +2361,10 @@ function Page() {
                 ) : (
                   <button
                     className="btn btn-slate"
-                    onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+                    onClick={() => {
+                      if (!validarEtapa(step)) return;
+                      setStep((s) => Math.min(STEPS.length - 1, s + 1));
+                    }}
                   >
                     Próximo{" "}
                     <svg width="14" height="14">
