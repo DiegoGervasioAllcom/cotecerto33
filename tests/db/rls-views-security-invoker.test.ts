@@ -14,8 +14,10 @@ import { admin, loginMatriz, criarPersonaComEmpresa, uniqDoc, type Db } from "..
  *     has_role(master)/has_role(franqueado)).
  *
  * Rede A: master A (empresa própria) + franquia filha F1 (parent_id = empresa do
- * master A), com um vendedor em F1. Rede B: master B independente, com um vendedor —
- * usada nos casos negativos.
+ * master A; o vendedor de F1 tem `profiles.superior_id` = master A, que é o que a
+ * empresas_visiveis() multinível (G1.2) usa para enxergar a rede — parent_id sozinho
+ * não basta mais). Rede B: master B independente, com um vendedor — usada nos casos
+ * negativos.
  */
 describe("RLS — views security_invoker + escopo de comissão/presença por rede", () => {
   let matriz: Db;
@@ -59,6 +61,7 @@ describe("RLS — views security_invoker + escopo de comissão/presença por red
     const vFilha = await criarPersonaComEmpresa("vendedor", {
       empresaId: empresaFilhaA,
       emailPrefix: "vend-filha-a",
+      superiorId: masterAId,
     });
     vendedorFilhaA = vFilha.client;
     vendedorFilhaAId = vFilha.userId;

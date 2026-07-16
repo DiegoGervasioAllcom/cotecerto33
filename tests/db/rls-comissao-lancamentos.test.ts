@@ -25,8 +25,10 @@ import {
  * pagar/cancelar proposta) não foi tocado.
  *
  * Rede A: master A (empresa própria) + franquia filha F1 (parent_id = empresa do
- * master A), com um vendedor em F1. Rede B: vendedor independente, fora da rede A
- * — usado para o caso negativo de escopo.
+ * master A; o vendedor de F1 tem `profiles.superior_id` = master A — é essa cadeia
+ * de pessoas que a empresas_visiveis() multinível (G1.2) usa, não mais só
+ * parent_id). Rede B: vendedor independente, fora da rede A — usado para o caso
+ * negativo de escopo.
  */
 describe("S3 — insert direto em comissao_lancamentos fica bloqueado; RPC valida valor/rede", () => {
   let matriz: Db;
@@ -75,13 +77,14 @@ describe("S3 — insert direto em comissao_lancamentos fica bloqueado; RPC valid
       emailPrefix: "master-a-cclanc",
     });
     masterA = masterAP.client;
+    const masterAId = masterAP.userId;
 
     const vFilha = await criarUsuario(`${uniq("vend-filha-a-cclanc")}@teste.local`);
     vendedorFilhaA = vFilha.client;
     vendedorFilhaAId = vFilha.userId;
     await admin
       .from("profiles")
-      .update({ empresa_id: empAFilha.id, status: "aprovada" })
+      .update({ empresa_id: empAFilha.id, status: "aprovada", superior_id: masterAId })
       .eq("id", vendedorFilhaAId);
     await admin.from("user_roles").insert({ user_id: vendedorFilhaAId, role: "vendedor" });
 

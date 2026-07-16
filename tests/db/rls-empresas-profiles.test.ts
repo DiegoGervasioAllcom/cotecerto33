@@ -24,7 +24,9 @@ import {
  *  - "empresas update matriz" (~L241-244): só matriz.
  *  - "profiles select self or rede" (~L248-254): self, matriz, ou empresa na rede visível.
  *  - "profiles update self" (~L257-260): só self ou matriz.
- *  - empresas_visiveis() (~L99-126): master vê própria+filhas (parent_id=própria); vendedor vê só a própria.
+ *  - empresas_visiveis() (G1.2, 20260716210100): visibilidade multinível por
+ *    `profiles.superior_id` — master vê as empresas de toda a subárvore que reporta
+ *    a ele (recursivo); vendedor sem subordinados vê só a própria empresa.
  */
 describe("RLS empresas/profiles — visibilidade por rede", () => {
   let matriz: Db;
@@ -56,6 +58,7 @@ describe("RLS empresas/profiles — visibilidade por rede", () => {
     const v1 = await criarPersonaComEmpresa("vendedor", {
       empresaId: empresaFilhaA,
       emailPrefix: "vend-f1a",
+      superiorId: masterAId,
     });
     vendedorF1a = v1.client;
     vendedorF1aId = v1.userId;
@@ -63,6 +66,7 @@ describe("RLS empresas/profiles — visibilidade por rede", () => {
     const v2 = await criarPersonaComEmpresa("vendedor", {
       empresaId: empresaFilhaA,
       emailPrefix: "vend-f1b",
+      superiorId: masterAId,
     });
     vendedorF1b = v2.client;
     vendedorF1bId = v2.userId;

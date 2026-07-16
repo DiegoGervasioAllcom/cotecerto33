@@ -48,6 +48,7 @@ describe("RLS leads/clientes/oportunidades/propostas — visibilidade por rede",
   beforeAll(async () => {
     const master = await criarPersonaComEmpresa("master", { emailPrefix: "master-a" });
     masterA = master.client;
+    const masterAId = master.userId;
     const empresaMasterA = master.empresaId;
 
     const filha = await criarEmpresa({ nome: "Filha Pipeline A", parent_id: empresaMasterA });
@@ -56,6 +57,7 @@ describe("RLS leads/clientes/oportunidades/propostas — visibilidade por rede",
     const v1 = await criarPersonaComEmpresa("vendedor", {
       empresaId: empresaFilhaA,
       emailPrefix: "vend-pipe-a",
+      superiorId: masterAId,
     });
     vendedorA = v1.client;
     vendedorAId = v1.userId;
@@ -63,6 +65,7 @@ describe("RLS leads/clientes/oportunidades/propostas — visibilidade por rede",
     const v2 = await criarPersonaComEmpresa("vendedor", {
       empresaId: empresaFilhaA,
       emailPrefix: "vend-pipe-a2",
+      superiorId: masterAId,
     });
     vendedorA2 = v2.client;
 
