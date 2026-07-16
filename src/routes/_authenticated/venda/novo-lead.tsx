@@ -12,6 +12,9 @@ import {
 } from "@/lib/masks";
 import { seguradoSchema } from "@/lib/schemas/cotacaoSegurado.schema";
 import { seguroSchema } from "@/lib/schemas/cotacaoSeguro.schema";
+import { veiculoSchema } from "@/lib/schemas/cotacaoVeiculo.schema";
+import { perfilSchema } from "@/lib/schemas/cotacaoPerfil.schema";
+import { coberturasSchema } from "@/lib/schemas/cotacaoCoberturas.schema";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
@@ -401,6 +404,83 @@ function Page() {
         ciAtual: f.ciAtual,
         classeBonus: f.classeBonus,
         apoliceAtual: f.apoliceAtual,
+      });
+      if (!r.success) {
+        const novos: Record<string, string> = {};
+        for (const issue of r.error.issues) {
+          const campo = String(issue.path[0] ?? "");
+          if (campo && !novos[campo]) novos[campo] = issue.message;
+        }
+        setErros(novos);
+        return false;
+      }
+      setErros({});
+      return true;
+    }
+    if (atual === 2) {
+      const r = veiculoSchema.safeParse({
+        placa: f.placa,
+        chassi: f.chassi,
+        renavam: f.renavam,
+        marcaCodigo: f.marca,
+        modeloCodigo: f.modelo,
+        marcaNome: marcas.find((m) => m.codigo === f.marca)?.nome || "",
+        modeloNome: modelos.find((m) => String(m.codigo) === f.modelo)?.nome || "",
+        anoModelo: f.anoModelo,
+        anoFab: f.anoFab,
+        combustivel: f.combustivel,
+        cor: f.cor,
+        banco: f.banco,
+        usoComercial: f.usoComercial,
+        kmMensal: f.kmMensal,
+        fipeValor: fipeValor,
+      });
+      if (!r.success) {
+        const novos: Record<string, string> = {};
+        for (const issue of r.error.issues) {
+          const campo = String(issue.path[0] ?? "");
+          if (campo && !novos[campo]) novos[campo] = issue.message;
+        }
+        setErros(novos);
+        return false;
+      }
+      setErros({});
+      return true;
+    }
+    if (atual === 3) {
+      const r = perfilSchema.safeParse({
+        condCpf: f.condCpf,
+        condNome: f.condNome,
+        condSexo: f.condSexo,
+        condEstadoCivil: f.condEstadoCivil,
+        profissao: f.profissao,
+        cepPernoite: f.cepPernoite,
+      });
+      if (!r.success) {
+        const novos: Record<string, string> = {};
+        for (const issue of r.error.issues) {
+          const campo = String(issue.path[0] ?? "");
+          if (campo && !novos[campo]) novos[campo] = issue.message;
+        }
+        setErros(novos);
+        return false;
+      }
+      setErros({});
+      return true;
+    }
+    if (atual === 4) {
+      const r = coberturasSchema.safeParse({
+        tipoCobertura: f.tipoCobertura,
+        casco: f.casco,
+        cascoValor: f.cascoValor,
+        franquia: f.franquia,
+        appMorte: f.appMorte,
+        appInvalidez: f.appInval,
+        dmh: f.dmh,
+        rcfDm: f.rcfDm,
+        rcfDc: f.rcfDc,
+        carroReserva: f.carroReserva,
+        assist24: f.assist24,
       });
       if (!r.success) {
         const novos: Record<string, string> = {};
@@ -1578,9 +1658,15 @@ function Page() {
                   <input
                     className="input"
                     value={f.placa}
+                    maxLength={8}
                     onChange={(e) => up("placa", maskPlaca(e.target.value))}
                     placeholder="AAA-0A00"
                   />
+                  {erros.placa && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.placa}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>Chassi</label>
@@ -1591,6 +1677,11 @@ function Page() {
                     onChange={(e) => up("chassi", e.target.value.toUpperCase())}
                     placeholder="17 caracteres"
                   />
+                  {erros.chassi && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.chassi}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>Renavam</label>
@@ -1598,6 +1689,7 @@ function Page() {
                     className="input"
                     value={f.renavam}
                     inputMode="numeric"
+                    maxLength={11}
                     onChange={(e) => up("renavam", onlyDigits(e.target.value).slice(0, 11))}
                   />
                 </div>
@@ -1693,8 +1785,14 @@ function Page() {
                   <input
                     className="input"
                     value={f.cor}
+                    maxLength={50}
                     onChange={(e) => up("cor", e.target.value)}
                   />
+                  {erros.cor && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.cor}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>Valor FIPE</label>
@@ -1738,8 +1836,14 @@ function Page() {
                     <input
                       className="input"
                       value={f.banco}
+                      maxLength={150}
                       onChange={(e) => up("banco", e.target.value)}
                     />
+                    {erros.banco && (
+                      <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                        {erros.banco}
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className="field-group">
@@ -1805,17 +1909,29 @@ function Page() {
                         className="input"
                         value={f.condCpf}
                         inputMode="numeric"
+                        maxLength={14}
                         onChange={(e) => up("condCpf", maskCpfCnpj(e.target.value))}
                         placeholder="000.000.000-00"
                       />
+                      {erros.condCpf && (
+                        <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                          {erros.condCpf}
+                        </span>
+                      )}
                     </div>
                     <div className="field-group full">
                       <label>Nome do condutor</label>
                       <input
                         className="input"
                         value={f.condNome}
+                        maxLength={150}
                         onChange={(e) => up("condNome", e.target.value)}
                       />
+                      {erros.condNome && (
+                        <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                          {erros.condNome}
+                        </span>
+                      )}
                     </div>
                     <div className="field-group">
                       <label>Nascimento</label>
@@ -1860,8 +1976,14 @@ function Page() {
                   <input
                     className="input"
                     value={f.profissao}
+                    maxLength={150}
                     onChange={(e) => up("profissao", e.target.value)}
                   />
+                  {erros.profissao && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.profissao}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>CEP de pernoite</label>
@@ -1869,9 +1991,15 @@ function Page() {
                     className="input"
                     value={f.cepPernoite}
                     inputMode="numeric"
+                    maxLength={9}
                     onChange={(e) => up("cepPernoite", maskCep(e.target.value))}
                     placeholder="00000-000"
                   />
+                  {erros.cepPernoite && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.cepPernoite}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group full">
                   <label>Garagem</label>
@@ -1972,9 +2100,15 @@ function Page() {
                     <input
                       className="input"
                       value={f.cascoValor}
+                      maxLength={100}
                       onChange={(e) => up("cascoValor", maskBRL(e.target.value))}
                       placeholder="R$ 0,00"
                     />
+                    {erros.cascoValor && (
+                      <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                        {erros.cascoValor}
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className="field-group">
@@ -1994,45 +2128,75 @@ function Page() {
                   <input
                     className="input"
                     value={f.appMorte}
+                    maxLength={100}
                     onChange={(e) => up("appMorte", maskBRL(e.target.value))}
                     placeholder="R$ 10.000,00"
                   />
+                  {erros.appMorte && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.appMorte}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>APP — Invalidez</label>
                   <input
                     className="input"
                     value={f.appInval}
+                    maxLength={100}
                     onChange={(e) => up("appInval", maskBRL(e.target.value))}
                     placeholder="R$ 10.000,00"
                   />
+                  {erros.appInvalidez && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.appInvalidez}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>DMH (despesas médicas)</label>
                   <input
                     className="input"
                     value={f.dmh}
+                    maxLength={100}
                     onChange={(e) => up("dmh", maskBRL(e.target.value))}
                     placeholder="R$ 5.000,00"
                   />
+                  {erros.dmh && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.dmh}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>RCF — Danos materiais</label>
                   <input
                     className="input"
                     value={f.rcfDm}
+                    maxLength={100}
                     onChange={(e) => up("rcfDm", maskBRL(e.target.value))}
                     placeholder="R$ 100.000,00"
                   />
+                  {erros.rcfDm && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.rcfDm}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>RCF — Danos corporais</label>
                   <input
                     className="input"
                     value={f.rcfDc}
+                    maxLength={100}
                     onChange={(e) => up("rcfDc", maskBRL(e.target.value))}
                     placeholder="R$ 100.000,00"
                   />
+                  {erros.rcfDc && (
+                    <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                      {erros.rcfDc}
+                    </span>
+                  )}
                 </div>
                 <div className="field-group">
                   <label>Vidros</label>
@@ -2349,6 +2513,7 @@ function Page() {
                   <button
                     className="btn btn-yellow pulse"
                     onClick={() => {
+                      if (!validarEtapa(4)) return;
                       setStep(5);
                       if (podeCalcular) simularCalculo();
                     }}
