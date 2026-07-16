@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { onlyDigits } from "@/lib/masks";
+import { email, password } from "@/lib/schemas/common";
 
 function optionalDigits(min: number, max: number) {
   return z
@@ -27,15 +28,6 @@ const documento = z
   .refine((v) => [11, 14].includes(onlyDigits(v).length), {
     message: "CPF ou CNPJ inválido.",
   });
-
-const email = z
-  .string()
-  .trim()
-  .min(1, "Informe o e-mail.")
-  .email("E-mail inválido.")
-  .max(254, "E-mail muito longo.");
-
-const password = z.string().min(6, "Senha deve ter pelo menos 6 caracteres.");
 
 const socioCpf = z
   .string()
