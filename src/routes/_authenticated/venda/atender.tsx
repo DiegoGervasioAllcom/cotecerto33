@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { veiculoLabel } from "@/lib/veiculo";
+import { maskCpfCnpj, maskCep } from "@/lib/masks";
 
 export const Route = createFileRoute("/_authenticated/venda/atender")({
   head: () => ({ meta: [{ title: "Atender agora · CoteCerto" }] }),
@@ -330,13 +331,18 @@ function VerLeadModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
               <h4 style={{ margin: "0 0 6px" }}>Cliente</h4>
               {row("Nome", lead.nome)}
               {row("Contato", lead.contato)}
-              {row("CPF/CNPJ", cliente.cpf_cnpj ?? cliente.documento)}
+              {row(
+                "CPF/CNPJ",
+                cliente.cpf_cnpj || cliente.documento
+                  ? maskCpfCnpj(String(cliente.cpf_cnpj ?? cliente.documento))
+                  : null,
+              )}
               {row("E-mail", cliente.email)}
               {row("Origem", lead.origem)}
             </div>
             <div>
               <h4 style={{ margin: "0 0 6px" }}>Endereço</h4>
-              {row("CEP", endereco.cep)}
+              {row("CEP", endereco.cep ? maskCep(String(endereco.cep)) : null)}
               {row("Logradouro", endereco.logradouro)}
               {row("Bairro", endereco.bairro)}
               {row("Cidade/UF", [endereco.cidade, endereco.uf].filter(Boolean).join("/"))}

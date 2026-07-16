@@ -4,6 +4,12 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { printHtml, escapeHtml, fmtBRL } from "@/lib/print";
+import {
+  onlyDigits,
+  maskCpfCnpj,
+  maskTelefone as maskTelefoneCentral,
+  maskCep as maskCepCentral,
+} from "@/lib/masks";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
@@ -16,36 +22,16 @@ export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
 });
 
 // ---------- máscaras ----------
-const onlyDigits = (s: string) => (s || "").replace(/\D/g, "");
-
-function maskCpfCnpj(raw: string) {
-  const d = onlyDigits(raw).slice(0, 14);
-  if (d.length <= 11) {
-    return d
-      .replace(/^(\d{3})(\d)/, "$1.$2")
-      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-      .replace(/\.(\d{3})(\d{1,2})$/, ".$1-$2");
-  }
-  return d
-    .replace(/^(\d{2})(\d)/, "$1.$2")
-    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-    .replace(/\.(\d{3})(\d)/, ".$1/$2")
-    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
-}
+// onlyDigits/maskCpfCnpj/maskTelefone/maskCep centralizados em "@/lib/masks".
 function maskCel(raw: string) {
-  const d = onlyDigits(raw).slice(0, 11);
-  if (d.length <= 10)
-    return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
-  return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{1,4})$/, "$1-$2");
+  return maskTelefoneCentral(raw);
 }
 function maskFixo(raw: string) {
   const d = onlyDigits(raw).slice(0, 10);
   return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
 }
 function maskCep(raw: string) {
-  return onlyDigits(raw)
-    .slice(0, 8)
-    .replace(/^(\d{5})(\d)/, "$1-$2");
+  return maskCepCentral(raw);
 }
 function maskPlaca(raw: string) {
   // Mercosul: AAA0A00 | Antigo: AAA0000
@@ -547,17 +533,17 @@ function Page() {
       );
       setF((prev) => ({
         ...prev,
-        cpf: s.cpf_cnpj ?? "",
+        cpf: s.cpf_cnpj ? maskCpfCnpj(s.cpf_cnpj) : "",
         pessoa: s.pessoa ?? prev.pessoa,
         nome: s.nome ?? "",
         nomeSocial: s.nome_social ?? "",
         nasc: s.nascimento ?? "",
         sexo: s.sexo ?? "",
         estadoCivil: s.estado_civil ?? "",
-        celular: s.celular ?? "",
-        telRes: s.tel_res ?? "",
+        celular: s.celular ? maskCel(s.celular) : "",
+        telRes: s.tel_res ? maskFixo(s.tel_res) : "",
         email: s.email ?? "",
-        cep: s.cep ?? "",
+        cep: s.cep ? maskCep(s.cep) : "",
         logradouro: s.logradouro ?? "",
         bairro: s.bairro ?? "",
         cidade: s.cidade ?? "",
@@ -596,13 +582,13 @@ function Page() {
         usoComercial: v.uso_comercial ?? prev.usoComercial,
         kmMensal: v.km_mensal ?? "",
         condutorMesmo: p.condutor_mesmo === false ? "nao" : "sim",
-        condCpf: p.cond_cpf ?? "",
+        condCpf: p.cond_cpf ? maskCpfCnpj(p.cond_cpf) : "",
         condNome: p.cond_nome ?? "",
         condNasc: p.cond_nasc ?? "",
         condSexo: p.cond_sexo ?? "",
         condEstadoCivil: p.cond_estado_civil ?? "",
         profissao: p.profissao ?? "",
-        cepPernoite: p.cep_pernoite ?? "",
+        cepPernoite: p.cep_pernoite ? maskCep(p.cep_pernoite) : "",
         garagemResid: p.garagem_resid ?? prev.garagemResid,
         garagemTrab: !!p.garagem_trab,
         garagemEsc: !!p.garagem_esc,

@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { printHtml, escapeHtml, fmtBRL } from "@/lib/print";
+import { maskCpfCnpj } from "@/lib/masks";
 
 export const Route = createFileRoute("/_authenticated/venda/cotacoes/$id")({
   head: () => ({ meta: [{ title: "Comparativo · CoteCerto" }] }),
@@ -127,7 +128,7 @@ function Page() {
     const head = `
       <div class="grid">
         <div class="kv"><b>Cliente:</b> ${escapeHtml(headName)}</div>
-        <div class="kv"><b>CPF/CNPJ:</b> ${escapeHtml(data.segurado?.cpf_cnpj || "—")}</div>
+        <div class="kv"><b>CPF/CNPJ:</b> ${escapeHtml(data.segurado?.cpf_cnpj ? maskCpfCnpj(data.segurado.cpf_cnpj) : "—")}</div>
         <div class="kv"><b>Veículo:</b> ${escapeHtml(headCar)}</div>
         <div class="kv"><b>Placa:</b> ${escapeHtml(v?.placa || "—")}</div>
         <div class="kv"><b>Cotação:</b> #${escapeHtml(cotNum(data.numero, data.criado_em))}</div>
@@ -377,7 +378,7 @@ function Page() {
                 }}
               >
                 {data.segurado?.cpf_cnpj
-                  ? `CPF/CNPJ ${data.segurado.cpf_cnpj}.`
+                  ? `CPF/CNPJ ${maskCpfCnpj(data.segurado.cpf_cnpj)}.`
                   : "Sem histórico anterior registrado."}
               </p>
             </div>
