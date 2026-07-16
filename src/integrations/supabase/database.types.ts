@@ -1323,6 +1323,7 @@ export type Database = {
           id: string;
           nome: string;
           status: Database["public"]["Enums"]["empresa_status"];
+          superior_id: string | null;
           telefone: string | null;
         };
         Insert: {
@@ -1336,6 +1337,7 @@ export type Database = {
           id: string;
           nome?: string;
           status?: Database["public"]["Enums"]["empresa_status"];
+          superior_id?: string | null;
           telefone?: string | null;
         };
         Update: {
@@ -1349,6 +1351,7 @@ export type Database = {
           id?: string;
           nome?: string;
           status?: Database["public"]["Enums"]["empresa_status"];
+          superior_id?: string | null;
           telefone?: string | null;
         };
         Relationships: [
@@ -1365,6 +1368,20 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "v_franquia_kpis";
             referencedColumns: ["empresa_id"];
+          },
+          {
+            foreignKeyName: "profiles_superior_id_fkey";
+            columns: ["superior_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profiles_superior_id_fkey";
+            columns: ["superior_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
           },
         ];
       };
@@ -1731,6 +1748,9 @@ export type Database = {
         Returns: boolean;
       };
       iniciar_atendimento: { Args: { p_lead_id: string }; Returns: undefined };
+      jsonb_clt_regras_ok: { Args: { j: Json }; Returns: boolean };
+      jsonb_criterios_ok: { Args: { j: Json }; Returns: boolean };
+      jsonb_is_pair_array: { Args: { j: Json }; Returns: boolean };
       lancar_ajuste_comissao: {
         Args: {
           p_descricao: string;
@@ -1811,7 +1831,7 @@ export type Database = {
       meta_escopo: "empresa" | "usuario";
       modelo_tipo: "franqueada" | "clt";
       msg_escopo: "global" | "pessoal";
-      perfil: "matriz" | "master" | "vendedor" | "franqueado";
+      perfil: "matriz" | "master" | "vendedor" | "franqueado" | "supervisor";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1959,7 +1979,7 @@ export const Constants = {
       meta_escopo: ["empresa", "usuario"],
       modelo_tipo: ["franqueada", "clt"],
       msg_escopo: ["global", "pessoal"],
-      perfil: ["matriz", "master", "vendedor", "franqueado"],
+      perfil: ["matriz", "master", "vendedor", "franqueado", "supervisor"],
     },
   },
 } as const;
