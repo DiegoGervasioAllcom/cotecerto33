@@ -5,6 +5,11 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { adminCreateUser, adminDeleteUser } from "@/lib/admin-users.functions";
+import { seguradoraSchema } from "@/lib/schemas/catalogos.schema";
+import { email as emailSchema, password as passwordSchema } from "@/lib/schemas/common";
+import { z } from "zod";
+
+const nomeUsuarioSchema = z.string().trim().min(1, "Informe o nome.").max(150, "Nome muito longo.");
 
 export const Route = createFileRoute("/_authenticated/operacao/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações · CoteCerto" }] }),
@@ -538,13 +543,17 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   async function add() {
-    if (!nova.nome.trim()) return;
+    const r = seguradoraSchema.safeParse(nova);
+    if (!r.success) {
+      setErr(r.error.issues[0]?.message ?? "Dados inválidos.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     const ordem = (rows.at(-1)?.ordem ?? 0) + 1;
     const { error } = await supabase
       .from("seguradoras")
-      .insert({ nome: nova.nome.trim(), codigo: nova.codigo.trim() || null, ordem });
+      .insert({ nome: r.data.nome, codigo: r.data.codigo?.trim() || null, ordem });
     if (error) setErr(error.message);
     setNova({ nome: "", codigo: "" });
     setBusy(false);
@@ -559,9 +568,14 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
 
   async function rename(r: Seguradora, nome: string) {
     if (nome === r.nome || !nome.trim()) return;
+    const check = seguradoraSchema.shape.nome.safeParse(nome);
+    if (!check.success) {
+      setErr(check.error.issues[0]?.message ?? "Nome inválido.");
+      return;
+    }
     const { error } = await supabase
       .from("seguradoras")
-      .update({ nome: nome.trim() })
+      .update({ nome: check.data })
       .eq("id", r.id);
     if (error) setErr(error.message);
     void load();
@@ -570,6 +584,11 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
   async function updateCodigo(r: Seguradora, codigo: string) {
     const novo = codigo.trim() || null;
     if (novo === r.codigo) return;
+    const check = seguradoraSchema.shape.codigo.safeParse(codigo);
+    if (!check.success) {
+      setErr(check.error.issues[0]?.message ?? "Código inválido.");
+      return;
+    }
     const { error } = await supabase.from("seguradoras").update({ codigo: novo }).eq("id", r.id);
     if (error) setErr(error.message);
     void load();
@@ -661,12 +680,14 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
             placeholder="Nome da seguradora"
             value={nova.nome}
             onChange={(e) => setNova({ ...nova, nome: e.target.value })}
+            maxLength={150}
           />
           <input
             className="input"
             placeholder="Código (opcional)"
             value={nova.codigo}
             onChange={(e) => setNova({ ...nova, codigo: e.target.value })}
+            maxLength={30}
           />
           <button className="btn btn-primary" onClick={add} disabled={busy || !nova.nome.trim()}>
             Adicionar
@@ -700,6 +721,7 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
                         className="input"
                         defaultValue={r.nome}
                         onBlur={(e) => rename(r, e.target.value)}
+                        maxLength={150}
                       />
                     </td>
                     <td>
@@ -708,6 +730,7 @@ function SeguradorasModal({ onClose }: { onClose: () => void }) {
                         defaultValue={r.codigo ?? ""}
                         placeholder="—"
                         onBlur={(e) => updateCodigo(r, e.target.value)}
+                        maxLength={30}
                       />
                     </td>
                     <td>
@@ -1018,11 +1041,16 @@ function EditUserModal({
   const [err, setErr] = useState<string | null>(null);
 
   async function save() {
+    const check = nomeUsuarioSchema.safeParse(nome);
+    if (!check.success) {
+      setErr(check.error.issues[0]?.message ?? "Nome inválido.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     const { error } = await supabase.rpc("admin_atualizar_usuario", {
       p_user_id: user.id,
-      p_nome: nome ?? "",
+      p_nome: check.data,
       p_empresa_id: (empresaId || null) as unknown as string, // SQL aceita null (remove vínculo); tipo gerado exige string
     });
     setBusy(false);
@@ -1055,7 +1083,12 @@ function EditUserModal({
       )}
       <div className="field-group">
         <label>Nome</label>
-        <input className="input" value={nome} onChange={(e) => setNome(e.target.value)} />
+        <input
+          className="input"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          maxLength={150}
+        />
       </div>
       <div className="field-group">
         <label>E-mail</label>
@@ -1106,13 +1139,28 @@ function CreateUserModal({
   const [err, setErr] = useState<string | null>(null);
 
   async function submit() {
+    const nomeCheck = nomeUsuarioSchema.safeParse(form.nome);
+    if (!nomeCheck.success) {
+      setErr(nomeCheck.error.issues[0]?.message ?? "Nome inválido.");
+      return;
+    }
+    const emailCheck = emailSchema.safeParse(form.email);
+    if (!emailCheck.success) {
+      setErr(emailCheck.error.issues[0]?.message ?? "E-mail inválido.");
+      return;
+    }
+    const passwordCheck = passwordSchema.safeParse(form.password);
+    if (!passwordCheck.success) {
+      setErr(passwordCheck.error.issues[0]?.message ?? "Senha inválida.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
       await createFn({
-        nome: form.nome.trim(),
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
+        nome: nomeCheck.data,
+        email: emailCheck.data.toLowerCase(),
+        password: passwordCheck.data,
         role,
         empresa_id: form.empresa_id || null,
       });
@@ -1154,6 +1202,7 @@ function CreateUserModal({
           className="input"
           value={form.nome}
           onChange={(e) => setForm({ ...form, nome: e.target.value })}
+          maxLength={150}
         />
       </div>
       <div className="field-group">
@@ -1163,6 +1212,7 @@ function CreateUserModal({
           type="email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
+          maxLength={254}
         />
       </div>
       <div className="field-group">

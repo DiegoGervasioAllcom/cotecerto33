@@ -5,6 +5,7 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { MaskedInput } from "@/components/masked-input";
 import { applyMask, maskPct, maskCpfCnpj, maskTelefone, type Mask } from "@/lib/masks";
 import { supabase } from "@/integrations/supabase/client";
+import { modeloFranquiaNomeSchema } from "@/lib/schemas/catalogos.schema";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
   head: () => ({ meta: [{ title: "Acessos e permissões · CoteCerto" }] }),
@@ -769,6 +770,13 @@ function ModeloFranquiaPanel({
   }
 
   async function salvar() {
+    for (const m of modelos) {
+      const check = modeloFranquiaNomeSchema.safeParse(m.nome);
+      if (!check.success) {
+        onError(check.error.issues[0]?.message ?? "Nome de modelo inválido.");
+        return;
+      }
+    }
     setBusy(true);
     const updates = modelos.map((m) =>
       supabase
@@ -787,11 +795,15 @@ function ModeloFranquiaPanel({
   }
 
   async function adicionar() {
-    if (!novoNome.trim()) return;
+    const check = modeloFranquiaNomeSchema.safeParse(novoNome);
+    if (!check.success) {
+      onError(check.error.issues[0]?.message ?? "Nome de modelo inválido.");
+      return;
+    }
     setBusy(true);
     const ordem = (modelos.reduce((a, m) => Math.max(a, m.ordem), 0) ?? 0) + 1;
     const { error } = await supabase.from("modelos_franquia").insert({
-      nome: novoNome.trim(),
+      nome: check.data,
       tipo: "franqueada",
       perc_comissao_padrao: 0,
       ordem,
@@ -852,6 +864,7 @@ function ModeloFranquiaPanel({
             value={novoNome}
             onChange={(e) => setNovoNome(e.target.value)}
             style={{ maxWidth: 320 }}
+            maxLength={150}
           />
           <button
             className="btn btn-yellow btn-sm"
@@ -901,6 +914,7 @@ function ModeloFranquiaPanel({
                     value={m.nome}
                     onChange={(e) => patchModelo(m.id, { nome: e.target.value })}
                     style={{ fontWeight: 700, minWidth: 110 }}
+                    maxLength={150}
                   />
                 </td>
                 {PARAMS.map((p) => (
