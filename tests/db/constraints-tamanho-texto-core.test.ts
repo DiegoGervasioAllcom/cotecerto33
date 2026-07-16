@@ -27,16 +27,13 @@ describe("D1 — CHECK de char_length no CRM core", () => {
     ordemSeq = Math.floor(Date.now() / 1000);
   });
 
+  // documento/celular/telefone/telefone_recado/socio_cpf/email migraram para
+  // constraints-normalizacao-documentos.test.ts (D3.1: normalização + formato).
   it("empresas: limites de texto", async () => {
     const campos: Array<[string, number]> = [
       ["nome", 150],
-      ["documento", 20],
       ["endereco", 2000],
-      ["celular", 20],
-      ["telefone", 20],
-      ["telefone_recado", 20],
       ["socio_nome", 150],
-      ["socio_cpf", 14],
       ["socio_rg", 20],
       ["rg", 20],
       ["contato_emergencia", 2000],
@@ -44,7 +41,6 @@ describe("D1 — CHECK de char_length no CRM core", () => {
       ["dados_bancarios", 2000],
       ["cidade", 150],
       ["uf", 2],
-      ["email", 254],
       ["recusa_motivo", 2000],
     ];
 
@@ -67,10 +63,10 @@ describe("D1 — CHECK de char_length no CRM core", () => {
     }
   });
 
+  // email migrou para constraints-normalizacao-documentos.test.ts (D3.1: formato).
   it("profiles: limites de texto", async () => {
     const campos: Array<[string, number]> = [
       ["nome", 150],
-      ["email", 254],
       ["avatar_url", 2000],
       ["desligado_motivo", 2000],
     ];
@@ -113,13 +109,10 @@ describe("D1 — CHECK de char_length no CRM core", () => {
     }
   });
 
+  // documento/telefone/email migraram para constraints-normalizacao-documentos.test.ts
+  // (D3.1: normalização + formato).
   it("clientes: limites de texto", async () => {
-    const campos: Array<[string, number]> = [
-      ["nome", 150],
-      ["documento", 20],
-      ["email", 254],
-      ["telefone", 20],
-    ];
+    const campos: Array<[string, number]> = [["nome", 150]];
 
     for (const [col, limite] of campos) {
       const { error: eInvalido } = await admin.from("clientes").insert({

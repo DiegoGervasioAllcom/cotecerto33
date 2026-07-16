@@ -181,18 +181,15 @@ describe("D1 — CHECK de char_length em auditoria e cotação", () => {
     }
   });
 
+  // cpf_cnpj/celular/tel_res/cep/email migraram para
+  // constraints-normalizacao-documentos.test.ts (D3.1: normalização + formato).
   it("cotacao_segurado: limites de texto", async () => {
     const campos: Array<[string, number]> = [
-      ["cpf_cnpj", 20],
       ["nome", 150],
       ["nome_social", 150],
       ["sexo", 30],
       ["estado_civil", 30],
       ["pessoa", 20],
-      ["celular", 20],
-      ["tel_res", 20],
-      ["email", 254],
-      ["cep", 9],
       ["logradouro", 2000],
       ["bairro", 2000],
       ["cidade", 150],
@@ -274,14 +271,14 @@ describe("D1 — CHECK de char_length em auditoria e cotação", () => {
     }
   });
 
+  // cond_cpf/cep_pernoite migraram para
+  // constraints-normalizacao-documentos.test.ts (D3.1: normalização + formato).
   it("cotacao_perfil: limites de texto", async () => {
     const campos: Array<[string, number]> = [
-      ["cond_cpf", 20],
       ["cond_nome", 150],
       ["cond_sexo", 30],
       ["cond_estado_civil", 30],
       ["profissao", 150],
-      ["cep_pernoite", 9],
     ];
 
     for (const [col, limite] of campos) {
