@@ -33,6 +33,7 @@ import { Route as AuthenticatedOperacaoMensagensRouteImport } from './routes/_au
 import { Route as AuthenticatedOperacaoEstornosRouteImport } from './routes/_authenticated/operacao/estornos'
 import { Route as AuthenticatedOperacaoConfiguracoesRouteImport } from './routes/_authenticated/operacao/configuracoes'
 import { Route as AuthenticatedOperacaoComissoesRouteImport } from './routes/_authenticated/operacao/comissoes'
+import { Route as AuthenticatedOperacaoAprovacoesRouteImport } from './routes/_authenticated/operacao/aprovacoes'
 import { Route as AuthenticatedOperacaoAcessosRouteImport } from './routes/_authenticated/operacao/acessos'
 import { Route as AuthenticatedComandoVisaoGeralRouteImport } from './routes/_authenticated/comando/visao-geral'
 import { Route as AuthenticatedComandoLeadsRouteImport } from './routes/_authenticated/comando/leads'
@@ -181,6 +182,12 @@ const AuthenticatedOperacaoComissoesRoute =
     path: '/operacao/comissoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedOperacaoAprovacoesRoute =
+  AuthenticatedOperacaoAprovacoesRouteImport.update({
+    id: '/operacao/aprovacoes',
+    path: '/operacao/aprovacoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedOperacaoAcessosRoute =
   AuthenticatedOperacaoAcessosRouteImport.update({
     id: '/operacao/acessos',
@@ -252,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/comando/leads': typeof AuthenticatedComandoLeadsRoute
   '/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
   '/operacao/acessos': typeof AuthenticatedOperacaoAcessosRoute
+  '/operacao/aprovacoes': typeof AuthenticatedOperacaoAprovacoesRoute
   '/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
   '/operacao/configuracoes': typeof AuthenticatedOperacaoConfiguracoesRoute
   '/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
@@ -287,6 +295,7 @@ export interface FileRoutesByTo {
   '/comando/leads': typeof AuthenticatedComandoLeadsRoute
   '/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
   '/operacao/acessos': typeof AuthenticatedOperacaoAcessosRoute
+  '/operacao/aprovacoes': typeof AuthenticatedOperacaoAprovacoesRoute
   '/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
   '/operacao/configuracoes': typeof AuthenticatedOperacaoConfiguracoesRoute
   '/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
@@ -324,6 +333,7 @@ export interface FileRoutesById {
   '/_authenticated/comando/leads': typeof AuthenticatedComandoLeadsRoute
   '/_authenticated/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
   '/_authenticated/operacao/acessos': typeof AuthenticatedOperacaoAcessosRoute
+  '/_authenticated/operacao/aprovacoes': typeof AuthenticatedOperacaoAprovacoesRoute
   '/_authenticated/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
   '/_authenticated/operacao/configuracoes': typeof AuthenticatedOperacaoConfiguracoesRoute
   '/_authenticated/operacao/estornos': typeof AuthenticatedOperacaoEstornosRoute
@@ -361,6 +371,7 @@ export interface FileRouteTypes {
     | '/comando/leads'
     | '/comando/visao-geral'
     | '/operacao/acessos'
+    | '/operacao/aprovacoes'
     | '/operacao/comissoes'
     | '/operacao/configuracoes'
     | '/operacao/estornos'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/comando/leads'
     | '/comando/visao-geral'
     | '/operacao/acessos'
+    | '/operacao/aprovacoes'
     | '/operacao/comissoes'
     | '/operacao/configuracoes'
     | '/operacao/estornos'
@@ -432,6 +444,7 @@ export interface FileRouteTypes {
     | '/_authenticated/comando/leads'
     | '/_authenticated/comando/visao-geral'
     | '/_authenticated/operacao/acessos'
+    | '/_authenticated/operacao/aprovacoes'
     | '/_authenticated/operacao/comissoes'
     | '/_authenticated/operacao/configuracoes'
     | '/_authenticated/operacao/estornos'
@@ -636,6 +649,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperacaoComissoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/operacao/aprovacoes': {
+      id: '/_authenticated/operacao/aprovacoes'
+      path: '/operacao/aprovacoes'
+      fullPath: '/operacao/aprovacoes'
+      preLoaderRoute: typeof AuthenticatedOperacaoAprovacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/operacao/acessos': {
       id: '/_authenticated/operacao/acessos'
       path: '/operacao/acessos'
@@ -715,6 +735,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedComandoLeadsRoute: typeof AuthenticatedComandoLeadsRoute
   AuthenticatedComandoVisaoGeralRoute: typeof AuthenticatedComandoVisaoGeralRoute
   AuthenticatedOperacaoAcessosRoute: typeof AuthenticatedOperacaoAcessosRoute
+  AuthenticatedOperacaoAprovacoesRoute: typeof AuthenticatedOperacaoAprovacoesRoute
   AuthenticatedOperacaoComissoesRoute: typeof AuthenticatedOperacaoComissoesRoute
   AuthenticatedOperacaoConfiguracoesRoute: typeof AuthenticatedOperacaoConfiguracoesRoute
   AuthenticatedOperacaoEstornosRoute: typeof AuthenticatedOperacaoEstornosRoute
@@ -747,6 +768,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedComandoLeadsRoute: AuthenticatedComandoLeadsRoute,
   AuthenticatedComandoVisaoGeralRoute: AuthenticatedComandoVisaoGeralRoute,
   AuthenticatedOperacaoAcessosRoute: AuthenticatedOperacaoAcessosRoute,
+  AuthenticatedOperacaoAprovacoesRoute: AuthenticatedOperacaoAprovacoesRoute,
   AuthenticatedOperacaoComissoesRoute: AuthenticatedOperacaoComissoesRoute,
   AuthenticatedOperacaoConfiguracoesRoute:
     AuthenticatedOperacaoConfiguracoesRoute,

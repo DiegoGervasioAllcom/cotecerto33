@@ -8,6 +8,7 @@ import {
   FileText,
   Send,
   CheckSquare,
+  ClipboardCheck,
   Receipt,
   MessageSquare,
   LayoutDashboard,
@@ -32,74 +33,97 @@ import {
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 import { useAuth } from "@/lib/auth";
 import { usePresence } from "@/lib/use-presence";
+import { useGroupScope } from "@/lib/group-scope";
 import type { Perfil } from "@/integrations/supabase/client";
 
 type Item = {
   to: string;
   label: string;
   icon: typeof Home;
-  roles?: Perfil[];
   soon?: boolean;
 };
 
 type Group = {
   label: string;
-  roles?: Perfil[];
   items: Item[];
 };
 
-const GROUPS: Group[] = [
-  {
-    label: "VENDA",
-    roles: ["master", "vendedor"],
-    items: [
-      { to: "/inicio", label: "Início", icon: Home },
-      { to: "/venda/atender", label: "Atender agora", icon: PlayCircle },
-      { to: "/venda/pipeline", label: "Pipeline", icon: GitBranch },
-      { to: "/venda/novo-lead", label: "Novo lead", icon: UserPlus },
-      { to: "/venda/cotacoes", label: "Cotações", icon: FileText },
-      { to: "/venda/propostas", label: "Propostas", icon: Send },
-      { to: "/venda/aceite", label: "Aceite & transmissão", icon: CheckSquare },
-      { to: "/venda/extrato", label: "Extrato de vendas", icon: Receipt },
-      { to: "/venda/mensagens-prontas", label: "Mensagens prontas", icon: MessageSquare },
-    ],
-  },
-  {
-    label: "COMANDO",
-    roles: ["master", "matriz"],
-    items: [
-      { to: "/comando/visao-geral", label: "Visão geral", icon: LayoutDashboard },
-      { to: "/comando/leads", label: "Leads", icon: Users },
-      { to: "/comando/distribuicao", label: "Distribuição", icon: Share2 },
-    ],
-  },
-  {
-    label: "OPERAÇÃO",
-    roles: ["matriz"],
-    items: [
-      { to: "/operacao/franquias", label: "Franquias", icon: Building2 },
-      { to: "/operacao/vendedores", label: "Vendedores", icon: Briefcase },
-      { to: "/operacao/supervisao", label: "Supervisão", icon: ShieldCheck },
-      { to: "/operacao/pipeline-geral", label: "Pipeline geral", icon: GitBranch },
-      { to: "/operacao/vendas", label: "Vendas", icon: TrendingUp },
-      { to: "/operacao/comissoes", label: "Comissões", icon: DollarSign, soon: true },
-      { to: "/operacao/premiacoes", label: "Premiações", icon: Trophy },
-      { to: "/operacao/estornos", label: "Estornos", icon: RotateCcw },
+/** Vendedor e Franquia Individual — 9 itens (nav de venda). */
+const VENDA_GROUP: Group = {
+  label: "VENDA",
+  items: [
+    { to: "/inicio", label: "Início", icon: Home },
+    { to: "/venda/atender", label: "Atender agora", icon: PlayCircle },
+    { to: "/venda/pipeline", label: "Pipeline", icon: GitBranch },
+    { to: "/venda/novo-lead", label: "Novo lead", icon: UserPlus },
+    { to: "/venda/cotacoes", label: "Cotações", icon: FileText },
+    { to: "/venda/propostas", label: "Propostas", icon: Send },
+    { to: "/venda/aceite", label: "Aceite & transmissão", icon: CheckSquare },
+    { to: "/venda/extrato", label: "Extrato de vendas", icon: Receipt },
+    { to: "/venda/mensagens-prontas", label: "Mensagens prontas", icon: MessageSquare },
+  ],
+};
 
-      { to: "/operacao/renovacoes", label: "Renovações", icon: RefreshCw },
-      { to: "/operacao/relatorios", label: "Relatórios", icon: BarChart3 },
-      { to: "/operacao/mensagens", label: "Mensagens", icon: Mail },
-      { to: "/operacao/acessos", label: "Acessos e permissões", icon: KeyRound },
-      { to: "/operacao/configuracoes", label: "Configurações", icon: Settings },
-    ],
-  },
-];
+/** Matriz — 16 itens (COMANDO 3 + OPERAÇÃO 13). */
+const MATRIZ_COMANDO_GROUP: Group = {
+  label: "COMANDO",
+  items: [
+    { to: "/comando/visao-geral", label: "Visão geral", icon: LayoutDashboard },
+    { to: "/comando/leads", label: "Leads", icon: Users },
+    { to: "/comando/distribuicao", label: "Distribuição", icon: Share2 },
+  ],
+};
 
-function canSee(role: Perfil | null, roles?: Perfil[]) {
-  if (!roles || roles.length === 0) return true;
-  if (!role) return false;
-  return roles.includes(role);
-}
+const MATRIZ_OPERACAO_GROUP: Group = {
+  label: "OPERAÇÃO",
+  items: [
+    { to: "/operacao/franquias", label: "Franquias", icon: Building2 },
+    { to: "/operacao/vendedores", label: "Vendedores", icon: Briefcase },
+    { to: "/operacao/supervisao", label: "Supervisão", icon: ShieldCheck },
+    { to: "/operacao/pipeline-geral", label: "Pipeline geral", icon: GitBranch },
+    { to: "/operacao/vendas", label: "Vendas", icon: TrendingUp },
+    { to: "/operacao/comissoes", label: "Comissões", icon: DollarSign, soon: true },
+    { to: "/operacao/premiacoes", label: "Premiações", icon: Trophy },
+    { to: "/operacao/estornos", label: "Estornos", icon: RotateCcw },
+    { to: "/operacao/renovacoes", label: "Renovações", icon: RefreshCw },
+    { to: "/operacao/relatorios", label: "Relatórios", icon: BarChart3 },
+    { to: "/operacao/mensagens", label: "Mensagens", icon: Mail },
+    { to: "/operacao/acessos", label: "Acessos e permissões", icon: KeyRound },
+    { to: "/operacao/configuracoes", label: "Configurações", icon: Settings },
+  ],
+};
+
+/**
+ * Master / Supervisor / Franquia Full — 12 itens (área de grupo).
+ * As telas são as mesmas para os 3 perfis; o escopo dos dados é resolvido
+ * pelo RLS (`empresas_visiveis` multinível) + `useGroupScope()`.
+ */
+const GRUPO_GROUP: Group = {
+  label: "GRUPO",
+  items: [
+    { to: "/comando/visao-geral", label: "Visão geral", icon: LayoutDashboard },
+    { to: "/operacao/aprovacoes", label: "Aprovações", icon: ClipboardCheck, soon: true },
+    { to: "/operacao/vendedores", label: "Vendedores", icon: Briefcase },
+    { to: "/operacao/supervisao", label: "Supervisão", icon: ShieldCheck },
+    { to: "/operacao/pipeline-geral", label: "Pipeline geral", icon: GitBranch },
+    { to: "/operacao/vendas", label: "Vendas", icon: TrendingUp },
+    { to: "/operacao/comissoes", label: "Comissões", icon: DollarSign, soon: true },
+    { to: "/operacao/premiacoes", label: "Premiações", icon: Trophy },
+    { to: "/operacao/estornos", label: "Estornos", icon: RotateCcw },
+    { to: "/operacao/renovacoes", label: "Renovações", icon: RefreshCw },
+    { to: "/operacao/relatorios", label: "Relatórios", icon: BarChart3 },
+    { to: "/operacao/acessos", label: "Acessos e permissões", icon: KeyRound },
+  ],
+};
+
+/** Selo da marca por perfil (SUPPER · <selo>). */
+const BRAND_LABEL: Record<Perfil, string> = {
+  matriz: "MATRIZ",
+  master: "MASTER",
+  supervisor: "SUPERVISOR",
+  franqueado: "FRANQUEADO",
+  vendedor: "CORRETOR",
+};
 
 function initials(name: string | null | undefined) {
   if (!name) return "?";
@@ -119,6 +143,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const { role, profile, empresa, signOut } = useAuth();
+  const { isGroupView, isFranqIndividual, loading: scopeLoading } = useGroupScope();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   usePresence();
@@ -128,34 +153,46 @@ export function AppShell({
     navigate({ to: "/auth", replace: true });
   };
 
+  // 3 experiências de navegação (ver docs/MAPA_PROTOTIPO_PERFIS.md §2-3):
+  // venLike = vendedor + franquia Individual · grpLike = master/supervisor/franquia Full · matriz.
+  // Só o franqueado depende da query de modelo (Individual/Full); enquanto ela
+  // carrega, não computamos a experiência para não "piscar" a nav errada.
+  const franqPend = role === "franqueado" && scopeLoading;
+  const venLike =
+    !franqPend && (role === "vendedor" || (role === "franqueado" && isFranqIndividual));
+  const grpLike = !franqPend && isGroupView;
+  const isMatriz = role === "matriz";
+
+  const visibleGroups: Group[] = [
+    ...(isMatriz ? [MATRIZ_COMANDO_GROUP, MATRIZ_OPERACAO_GROUP] : []),
+    ...(venLike ? [VENDA_GROUP] : []),
+    ...(grpLike ? [GRUPO_GROUP] : []),
+  ];
+
+  const brandLabel = role ? BRAND_LABEL[role] : "";
+
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
           <img src={logoAsset.url} alt="CoteCerto" className="logo-img" />
-          <div className="sublabel">FRANQUIA</div>
+          <div className="sublabel">{brandLabel}</div>
         </div>
         <div className="nav-group">
-          {GROUPS.filter((g) => canSee(role, g.roles)).map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.label}>
               <div className="nav-label">{group.label}</div>
-              {group.items
-                .filter((i) => canSee(role, i.roles))
-                .map((item) => {
-                  const Icon = item.icon;
-                  const active = pathname === item.to || pathname.startsWith(item.to + "/");
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={`nav-item${active ? " active" : ""}`}
-                    >
-                      <Icon className="ic" />
-                      <span>{item.label}</span>
-                      {item.soon && <span className="soon-tag">EM FORMULAÇÃO</span>}
-                    </Link>
-                  );
-                })}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = pathname === item.to || pathname.startsWith(item.to + "/");
+                return (
+                  <Link key={item.to} to={item.to} className={`nav-item${active ? " active" : ""}`}>
+                    <Icon className="ic" />
+                    <span>{item.label}</span>
+                    {item.soon && <span className="soon-tag">EM FORMULAÇÃO</span>}
+                  </Link>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -170,9 +207,12 @@ export function AppShell({
           </div>
           <button type="button" className="user-cluster" onClick={handleSignOut} title="Sair">
             <div className="user-info">
-              <div className="nm">{profile?.nome ?? "Usuário"}</div>
+              <div className="nm">
+                {profile?.nome ?? "Usuário"}
+                {isFranqIndividual && " · individual"}
+              </div>
               <div className="co">
-                {empresa?.nome ?? "—"} · {role ? role.toUpperCase() : ""}
+                {empresa?.nome ?? "—"} · {brandLabel}
               </div>
             </div>
             <div className="avatar">{initials(profile?.nome)}</div>
