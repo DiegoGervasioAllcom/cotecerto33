@@ -112,7 +112,7 @@ const GRUPO_GROUP: Group = {
     { to: "/operacao/estornos", label: "Estornos", icon: RotateCcw },
     { to: "/operacao/renovacoes", label: "Renovações", icon: RefreshCw },
     { to: "/operacao/relatorios", label: "Relatórios", icon: BarChart3 },
-    { to: "/operacao/acessos", label: "Acessos e permissões", icon: KeyRound },
+    { to: "/operacao/xacessos", label: "Acessos", icon: KeyRound },
   ],
 };
 
