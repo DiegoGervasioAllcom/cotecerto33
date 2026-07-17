@@ -38,3 +38,8 @@ supabase/.branches/
 
 # Cobertura de testes (relatório gerado)
 coverage/
+
+# Playwright (E2E)
+test-results/
+playwright-report/
+/playwright/.cache/
