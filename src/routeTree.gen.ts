@@ -22,6 +22,7 @@ import { Route as AuthenticatedVendaMensagensProntasRouteImport } from './routes
 import { Route as AuthenticatedVendaExtratoRouteImport } from './routes/_authenticated/venda/extrato'
 import { Route as AuthenticatedVendaAtenderRouteImport } from './routes/_authenticated/venda/atender'
 import { Route as AuthenticatedVendaAceiteRouteImport } from './routes/_authenticated/venda/aceite'
+import { Route as AuthenticatedOperacaoXacessosRouteImport } from './routes/_authenticated/operacao/xacessos'
 import { Route as AuthenticatedOperacaoVendasRouteImport } from './routes/_authenticated/operacao/vendas'
 import { Route as AuthenticatedOperacaoSupervisaoRouteImport } from './routes/_authenticated/operacao/supervisao'
 import { Route as AuthenticatedOperacaoRenovacoesRouteImport } from './routes/_authenticated/operacao/renovacoes'
@@ -114,6 +115,12 @@ const AuthenticatedVendaAceiteRoute =
   AuthenticatedVendaAceiteRouteImport.update({
     id: '/venda/aceite',
     path: '/venda/aceite',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedOperacaoXacessosRoute =
+  AuthenticatedOperacaoXacessosRouteImport.update({
+    id: '/operacao/xacessos',
+    path: '/operacao/xacessos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedOperacaoVendasRoute =
@@ -271,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/operacao/renovacoes': typeof AuthenticatedOperacaoRenovacoesRoute
   '/operacao/supervisao': typeof AuthenticatedOperacaoSupervisaoRoute
   '/operacao/vendas': typeof AuthenticatedOperacaoVendasRoute
+  '/operacao/xacessos': typeof AuthenticatedOperacaoXacessosRoute
   '/venda/aceite': typeof AuthenticatedVendaAceiteRoute
   '/venda/atender': typeof AuthenticatedVendaAtenderRoute
   '/venda/extrato': typeof AuthenticatedVendaExtratoRoute
@@ -307,6 +315,7 @@ export interface FileRoutesByTo {
   '/operacao/renovacoes': typeof AuthenticatedOperacaoRenovacoesRoute
   '/operacao/supervisao': typeof AuthenticatedOperacaoSupervisaoRoute
   '/operacao/vendas': typeof AuthenticatedOperacaoVendasRoute
+  '/operacao/xacessos': typeof AuthenticatedOperacaoXacessosRoute
   '/venda/aceite': typeof AuthenticatedVendaAceiteRoute
   '/venda/atender': typeof AuthenticatedVendaAtenderRoute
   '/venda/extrato': typeof AuthenticatedVendaExtratoRoute
@@ -345,6 +354,7 @@ export interface FileRoutesById {
   '/_authenticated/operacao/renovacoes': typeof AuthenticatedOperacaoRenovacoesRoute
   '/_authenticated/operacao/supervisao': typeof AuthenticatedOperacaoSupervisaoRoute
   '/_authenticated/operacao/vendas': typeof AuthenticatedOperacaoVendasRoute
+  '/_authenticated/operacao/xacessos': typeof AuthenticatedOperacaoXacessosRoute
   '/_authenticated/venda/aceite': typeof AuthenticatedVendaAceiteRoute
   '/_authenticated/venda/atender': typeof AuthenticatedVendaAtenderRoute
   '/_authenticated/venda/extrato': typeof AuthenticatedVendaExtratoRoute
@@ -383,6 +393,7 @@ export interface FileRouteTypes {
     | '/operacao/renovacoes'
     | '/operacao/supervisao'
     | '/operacao/vendas'
+    | '/operacao/xacessos'
     | '/venda/aceite'
     | '/venda/atender'
     | '/venda/extrato'
@@ -419,6 +430,7 @@ export interface FileRouteTypes {
     | '/operacao/renovacoes'
     | '/operacao/supervisao'
     | '/operacao/vendas'
+    | '/operacao/xacessos'
     | '/venda/aceite'
     | '/venda/atender'
     | '/venda/extrato'
@@ -456,6 +468,7 @@ export interface FileRouteTypes {
     | '/_authenticated/operacao/renovacoes'
     | '/_authenticated/operacao/supervisao'
     | '/_authenticated/operacao/vendas'
+    | '/_authenticated/operacao/xacessos'
     | '/_authenticated/venda/aceite'
     | '/_authenticated/venda/atender'
     | '/_authenticated/venda/extrato'
@@ -570,6 +583,13 @@ declare module '@tanstack/react-router' {
       path: '/venda/aceite'
       fullPath: '/venda/aceite'
       preLoaderRoute: typeof AuthenticatedVendaAceiteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/operacao/xacessos': {
+      id: '/_authenticated/operacao/xacessos'
+      path: '/operacao/xacessos'
+      fullPath: '/operacao/xacessos'
+      preLoaderRoute: typeof AuthenticatedOperacaoXacessosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/operacao/vendas': {
@@ -747,6 +767,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOperacaoRenovacoesRoute: typeof AuthenticatedOperacaoRenovacoesRoute
   AuthenticatedOperacaoSupervisaoRoute: typeof AuthenticatedOperacaoSupervisaoRoute
   AuthenticatedOperacaoVendasRoute: typeof AuthenticatedOperacaoVendasRoute
+  AuthenticatedOperacaoXacessosRoute: typeof AuthenticatedOperacaoXacessosRoute
   AuthenticatedVendaAceiteRoute: typeof AuthenticatedVendaAceiteRoute
   AuthenticatedVendaAtenderRoute: typeof AuthenticatedVendaAtenderRoute
   AuthenticatedVendaExtratoRoute: typeof AuthenticatedVendaExtratoRoute
@@ -782,6 +803,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOperacaoRenovacoesRoute: AuthenticatedOperacaoRenovacoesRoute,
   AuthenticatedOperacaoSupervisaoRoute: AuthenticatedOperacaoSupervisaoRoute,
   AuthenticatedOperacaoVendasRoute: AuthenticatedOperacaoVendasRoute,
+  AuthenticatedOperacaoXacessosRoute: AuthenticatedOperacaoXacessosRoute,
   AuthenticatedVendaAceiteRoute: AuthenticatedVendaAceiteRoute,
   AuthenticatedVendaAtenderRoute: AuthenticatedVendaAtenderRoute,
   AuthenticatedVendaExtratoRoute: AuthenticatedVendaExtratoRoute,

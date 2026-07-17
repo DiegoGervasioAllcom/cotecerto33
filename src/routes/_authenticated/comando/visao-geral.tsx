@@ -4,6 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { printHtml } from "@/lib/print";
+import { useGroupScope } from "@/lib/group-scope";
+import { useAuth } from "@/lib/auth";
 
 type Periodo = "mes_atual" | "mes_passado" | "mes_retrasado" | "ult_90";
 
@@ -48,6 +50,8 @@ type Proposta = {
 
 function Page() {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const { isGroupView, group, groupPct } = useGroupScope();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -105,13 +109,18 @@ function Page() {
     return () => clearInterval(t);
   }, []);
 
-  // Franquias = todas as empresas exceto a matriz do usuário logado
+  // Franquias = todas as empresas exceto a matriz do usuário logado (Matriz)
+  // ou, na visão de grupo, todas as empresas da rede já escopadas pelo RLS
+  // (empresas_visiveis) exceto a própria operação do gestor logado.
   const franquias = useMemo(() => empresas.filter((x) => x.id !== matrizId), [empresas, matrizId]);
   // Vendedores = profiles vinculados a uma franquia (não à matriz) e diferentes do usuário logado matriz
   const vendedores = useMemo(
     () => profiles.filter((x) => x.empresa_id && x.empresa_id !== matrizId),
     [profiles, matrizId],
   );
+
+  const groupLabel =
+    group === "MASTER" ? "Master" : group === "SUPERVISOR" ? "Supervisor" : "Franqueado";
 
   // Período selecionável
   const [periodo, setPeriodo] = useState<Periodo>("mes_atual");
@@ -475,11 +484,22 @@ function Page() {
       <ProtoIcons />
       <div className="page-head">
         <div>
-          <h1>Operação CoteCerto</h1>
+          <h1>{isGroupView ? "Visão geral do grupo" : "Operação CoteCerto"}</h1>
           <div className="sub">
-            {monthLabel(new Date())} · <strong>{franquias.length} franquias</strong> ·{" "}
-            <strong>{vendedores.length} vendedores</strong> ativos · período:{" "}
-            <strong style={{ textTransform: "capitalize" }}>{periodLabel}</strong>
+            {isGroupView ? (
+              <>
+                Equipe de <strong>{profile?.nome ?? "—"}</strong> ({groupLabel}) ·{" "}
+                <strong>{franquias.length} franquias</strong> ·{" "}
+                <strong>{vendedores.length} vendedores</strong> · {groupPct}% sobre a equipe ·
+                período: <strong style={{ textTransform: "capitalize" }}>{periodLabel}</strong>
+              </>
+            ) : (
+              <>
+                {monthLabel(new Date())} · <strong>{franquias.length} franquias</strong> ·{" "}
+                <strong>{vendedores.length} vendedores</strong> ativos · período:{" "}
+                <strong style={{ textTransform: "capitalize" }}>{periodLabel}</strong>
+              </>
+            )}
           </div>
         </div>
         <div className="tools" style={{ gap: 8, flexWrap: "wrap" }}>
@@ -553,7 +573,9 @@ function Page() {
             <svg width="16" height="16">
               <use href="#i-target"></use>
             </svg>{" "}
-            Resumo do dia — meta diária da Matriz
+            {isGroupView
+              ? "Resumo do dia — meta do grupo"
+              : "Resumo do dia — meta diária da Matriz"}
           </h3>
           <span className="small muted">atualizado agora</span>
         </div>
@@ -730,6 +752,18 @@ function Page() {
           <div className="val">{BRL(comissaoMes)}</div>
           <div className="meta">somatório das transmitidas</div>
         </div>
+        {isGroupView && (
+          <div className="kpi">
+            <div className="ic-wrap">
+              <svg width="20" height="20">
+                <use href="#i-dollar"></use>
+              </svg>
+            </div>
+            <div className="lbl">COMISSÃO DO GRUPO</div>
+            <div className="val">—</div>
+            <div className="meta">cálculo no G4 · {groupPct}% sobre a equipe</div>
+          </div>
+        )}
       </div>
 
       <div className="dash-grid">
@@ -814,7 +848,7 @@ function Page() {
                 <svg width="16" height="16">
                   <use href="#i-bolt"></use>
                 </svg>{" "}
-                Alertas críticos do dia
+                {isGroupView ? "Alertas do grupo" : "Alertas críticos do dia"}
               </h3>
               <span className="chip chip-alert">
                 {alertasCount} pendência{alertasCount === 1 ? "" : "s"}
@@ -903,7 +937,7 @@ function Page() {
                 <svg width="16" height="16">
                   <use href="#i-award"></use>
                 </svg>{" "}
-                Ranking de franquias
+                {isGroupView ? "Franquias supervisionadas" : "Ranking de franquias"}
               </h3>
               <button
                 className="btn-link btn-sm"
