@@ -1,18 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
-import { MaskedInput } from "@/components/masked-input";
 import { applyMask, maskPct, maskCpfCnpj, maskTelefone, type Mask } from "@/lib/masks";
 import { supabase } from "@/integrations/supabase/client";
 import { modeloFranquiaNomeSchema } from "@/lib/schemas/catalogos.schema";
+import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
   head: () => ({ meta: [{ title: "Acessos e permissões · CoteCerto" }] }),
   component: Page,
 });
 
-type Pendente = {
+export type Pendente = {
   id: string;
   nome: string;
   tipo: "pj" | "pf";
@@ -36,7 +36,7 @@ type Deslig = {
 };
 
 type ModeloParams = Record<string, string>;
-type Modelo = {
+export type Modelo = {
   id: string;
   nome: string;
   tipo: "franqueada" | "clt";
@@ -98,7 +98,7 @@ const CLT_DEFAULT: CltConfig = {
 type Tab = "pend" | "deslig" | "modelos";
 type PersoSub = "franquia" | "clt";
 
-const FAIXAS: Array<[string, string]> = [
+export const FAIXAS: Array<[string, string]> = [
   ["Faixa 1", "8"],
   ["Faixa 2", "12"],
   ["Faixa 3", "16"],
@@ -115,7 +115,15 @@ const PARAMS = [
   { k: "royalties", l: "Royalties + FPP" },
 ];
 
-const FIELD_LABELS: Record<string, string> = {
+export type Superior = { id: string; nome: string; role: "master" | "supervisor" };
+export type FranquiaAprovada = {
+  id: string;
+  nome: string;
+  modeloNome: string;
+  donoProfileId: string | null;
+};
+
+export const FIELD_LABELS: Record<string, string> = {
   nome: "Nome / Razão Social",
   documento: "Documento (CPF/CNPJ)",
   rg: "RG",
@@ -133,7 +141,7 @@ const FIELD_LABELS: Record<string, string> = {
   tipo: "Tipo de cadastro",
 };
 
-function Icon({ id, size = 14 }: { id: string; size?: number }) {
+export function Icon({ id, size = 14 }: { id: string; size?: number }) {
   return (
     <svg style={{ width: size, height: size, verticalAlign: "-2px" }}>
       <use href={`#i-${id}`} />
@@ -151,14 +159,14 @@ function Page() {
   const [err, setErr] = useState<string | null>(null);
 
   const [analisando, setAnalisando] = useState<Pendente | null>(null);
-  const [modelSel, setModelSel] = useState<string>("");
-  const [fullForm, setFullForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ msg: string; kind: "ok" | "alert" } | null>(null);
+  const [superiores, setSuperiores] = useState<Superior[]>([]);
+  const [franquiasAprovadas, setFranquiasAprovadas] = useState<FranquiaAprovada[]>([]);
 
   const reload = useCallback(async () => {
     setErr(null);
-    const [p, d, m, c] = await Promise.all([
+    const [p, d, m, c, roles] = await Promise.all([
       supabase
         .from("empresas")
         .select("id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro")
@@ -171,13 +179,81 @@ function Page() {
         .order("desligado_em", { ascending: false }),
       supabase.from("modelos_franquia").select("*").order("ordem").order("nome"),
       supabase.from("clt_config").select("*").eq("id", "default").maybeSingle(),
+      supabase.from("user_roles").select("user_id,role").in("role", ["master", "supervisor"]),
     ]);
     if (p.error) setErr(p.error.message);
     setPendentes((p.data ?? []) as Pendente[]);
     setDeslig((d.data ?? []) as Deslig[]);
-    setModelos(
-      ((m.data ?? []) as Modelo[]).map((x) => ({ ...x, params: (x.params ?? {}) as ModeloParams })),
+    const modelosData = ((m.data ?? []) as Modelo[]).map((x) => ({
+      ...x,
+      params: (x.params ?? {}) as ModeloParams,
+    }));
+    setModelos(modelosData);
+
+    // Superiores elegíveis para "Reporta a" (Master ou Supervisor da Matriz).
+    const roleIds = ((roles.data ?? []) as Array<{ user_id: string; role: string }>).filter(
+      (r) => r.role === "master" || r.role === "supervisor",
     );
+    if (roleIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id,nome")
+        .in(
+          "id",
+          roleIds.map((r) => r.user_id),
+        )
+        .is("desligado_em", null);
+      const roleById = new Map(roleIds.map((r) => [r.user_id, r.role as "master" | "supervisor"]));
+      setSuperiores(
+        ((profs ?? []) as Array<{ id: string; nome: string }>).map((pr) => ({
+          id: pr.id,
+          nome: pr.nome,
+          role: roleById.get(pr.id) ?? "master",
+        })),
+      );
+    } else {
+      setSuperiores([]);
+    }
+
+    // Franquias aprovadas (PJ com modelo de franquia atribuído) — para "vínculo
+    // com franquia" (vendedor de franquia) e "franquias que vai supervisionar".
+    const { data: franqData } = await supabase
+      .from("empresas")
+      .select("id,nome,modelo_id")
+      .eq("tipo", "pj")
+      .eq("status", "aprovada")
+      .not("modelo_id", "is", null);
+    const franquias = (franqData ?? []) as Array<{
+      id: string;
+      nome: string;
+      modelo_id: string | null;
+    }>;
+    if (franquias.length > 0) {
+      const { data: donos } = await supabase
+        .from("profiles")
+        .select("id,empresa_id")
+        .in(
+          "empresa_id",
+          franquias.map((f) => f.id),
+        );
+      const donoByEmpresa = new Map(
+        ((donos ?? []) as Array<{ id: string; empresa_id: string | null }>).map((pr) => [
+          pr.empresa_id,
+          pr.id,
+        ]),
+      );
+      setFranquiasAprovadas(
+        franquias.map((f) => ({
+          id: f.id,
+          nome: f.nome,
+          modeloNome: modelosData.find((mm) => mm.id === f.modelo_id)?.nome ?? "",
+          donoProfileId: donoByEmpresa.get(f.id) ?? null,
+        })),
+      );
+    } else {
+      setFranquiasAprovadas([]);
+    }
+
     if (c.data) {
       setClt({
         progressiva: (c.data.progressiva ?? []) as Pair[],
@@ -202,14 +278,10 @@ function Page() {
 
   function openAnalisar(p: Pendente) {
     setAnalisando(p);
-    setFullForm(false);
-    const franquia = modelos.filter((m) => m.tipo === "franqueada");
-    setModelSel(p.tipo === "pj" && franquia[0] ? franquia[0].id : (modelos[0]?.id ?? ""));
   }
 
   function closeModal() {
     setAnalisando(null);
-    setFullForm(false);
   }
 
   async function recusar() {
@@ -229,22 +301,29 @@ function Page() {
     await reload();
   }
 
-  async function liberar() {
+  async function liberar(persist: () => Promise<void>, tag: string) {
     if (!analisando) return;
     setBusy(true);
     const { error } = await supabase.rpc("aprovar_empresa", {
       p_empresa_id: analisando.id,
     });
-    setBusy(false);
     if (error) {
+      setBusy(false);
       console.error("aprovar_empresa error", error);
       setErr(
         `${error.message}${error.details ? ` · ${error.details}` : ""}${error.hint ? ` · ${error.hint}` : ""}`,
       );
       return;
     }
-    const m = modelos.find((x) => x.id === modelSel);
-    const tag = analisando.tipo === "pf" ? " (CLT)" : m ? ` (${m.nome})` : "";
+    try {
+      await persist();
+    } catch (e) {
+      setBusy(false);
+      setErr(e instanceof Error ? e.message : "Erro ao salvar a classificação.");
+      await reload();
+      return;
+    }
+    setBusy(false);
     setToast({
       msg: `Acesso liberado · ${analisando.nome}${tag} · e-mail enviado`,
       kind: "ok",
@@ -412,13 +491,11 @@ function Page() {
       )}
 
       {analisando && (
-        <AnalisarModal
+        <ClassificarAcessoModal
           pendente={analisando}
-          modelos={modelos.filter((m) => m.tipo === "franqueada")}
-          modelSel={modelSel}
-          setModelSel={setModelSel}
-          fullForm={fullForm}
-          setFullForm={setFullForm}
+          modelosFranquia={modelos.filter((m) => m.tipo === "franqueada")}
+          superiores={superiores}
+          franquiasAprovadas={franquiasAprovadas}
           onClose={closeModal}
           onRecusar={recusar}
           onLiberar={liberar}
@@ -447,245 +524,6 @@ function Page() {
         </div>
       )}
     </AppShell>
-  );
-}
-
-function AnalisarModal({
-  pendente,
-  modelos,
-  modelSel,
-  setModelSel,
-  fullForm,
-  setFullForm,
-  onClose,
-  onRecusar,
-  onLiberar,
-  busy,
-}: {
-  pendente: Pendente;
-  modelos: Modelo[];
-  modelSel: string;
-  setModelSel: (s: string) => void;
-  fullForm: boolean;
-  setFullForm: (b: boolean) => void;
-  onClose: () => void;
-  onRecusar: () => void;
-  onLiberar: () => void;
-  busy: boolean;
-}) {
-  const isPF = pendente.tipo === "pf";
-  const tipoChip = isPF ? (
-    <span className="chip chip-outline">Pessoa Física</span>
-  ) : (
-    <span className="chip chip-slate">Pessoa Jurídica</span>
-  );
-
-  const formRows = useMemo(() => {
-    const dados = (pendente.dados_cadastro ?? {}) as Record<string, unknown>;
-    const entries = Object.entries(dados).filter(([, v]) => v != null && v !== "");
-    return entries.map(([k, v]) => [FIELD_LABELS[k] ?? k, String(v)] as [string, string]);
-  }, [pendente]);
-
-  return (
-    <div
-      className="modal-host"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="modal lg">
-        <div className="modal-h">
-          <Icon id={fullForm ? "file" : "shield"} size={18} />
-          <h3>
-            {fullForm ? "Formulário completo" : "Classificar acesso"} — {pendente.nome}
-          </h3>
-          <div className="x" onClick={onClose}>
-            <Icon id="x" size={18} />
-          </div>
-        </div>
-        <div className="modal-b">
-          <div
-            className="acc-sol"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <div>
-              <div>
-                {tipoChip}{" "}
-                <strong style={{ marginLeft: 6 }}>{maskCpfCnpj(pendente.documento)}</strong>
-              </div>
-              <div className="small muted" style={{ marginTop: 4 }}>
-                {pendente.email ?? "—"} ·{" "}
-                {(pendente.celular ?? pendente.telefone)
-                  ? maskTelefone(pendente.celular ?? pendente.telefone)
-                  : "—"}
-                {pendente.cidade
-                  ? ` · ${pendente.cidade}${pendente.uf ? "/" + pendente.uf : ""}`
-                  : ""}
-              </div>
-            </div>
-            {!fullForm && (
-              <button className="btn btn-ghost btn-sm" onClick={() => setFullForm(true)}>
-                <Icon id="file" size={13} /> Formulário completo
-              </button>
-            )}
-          </div>
-
-          {fullForm ? (
-            <table className="table-pipe ff-table" style={{ marginTop: 14 }}>
-              <tbody>
-                {formRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={2} className="muted small" style={{ padding: 16 }}>
-                      Sem dados adicionais informados no cadastro.
-                    </td>
-                  </tr>
-                ) : (
-                  formRows.map(([k, v]) => (
-                    <tr key={k}>
-                      <td className="ff-k">{k}</td>
-                      <td className="ff-v">{v}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          ) : isPF ? (
-            <>
-              <div className="acc-sec-t">Parâmetros do vendedor (CLT)</div>
-              <div className="acc-grid">
-                <div className="field-group">
-                  <label>Equipe</label>
-                  <select className="input" defaultValue="Novas Vendas">
-                    <option>Novas Vendas</option>
-                    <option>Remalho</option>
-                  </select>
-                </div>
-                <div className="field-group">
-                  <label>Leads · média/dia útil</label>
-                  <select className="input" defaultValue={FAIXAS[1][1]}>
-                    {FAIXAS.map(([nome, qtd]) => (
-                      <option key={nome} value={qtd}>
-                        {nome} — {qtd}/dia
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field-group">
-                  <label>Salário base (R$)</label>
-                  <MaskedInput mask="brl" className="input" placeholder="R$ 1.800,00" />
-                </div>
-                <div className="field-group">
-                  <label>Bônus de campanha</label>
-                  <input className="input" placeholder="ex.: +5% em julho" />
-                </div>
-              </div>
-              <div className="clt-note">
-                <Icon id="info" size={15} />
-                <div>
-                  A comissão segue o <strong>Modelo CLT</strong>: progressiva por faturamento
-                  (2%–3,5%) × fator de comissão média da equipe, somada à tabela Ituran (planos e
-                  adicionais). Apuração do dia 26 ao 25 · pagamento de comissão + salário + DSR no{" "}
-                  <strong>5º dia útil</strong>. Edite as tabelas em Personalização geral › Modelo
-                  CLT.
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="acc-sec-t">Modelo de franquia</div>
-              <div className="acc-pills">
-                {modelos.length === 0 && (
-                  <span className="muted small">
-                    Nenhum modelo cadastrado em Personalização geral.
-                  </span>
-                )}
-                {modelos.map((m) => (
-                  <button
-                    key={m.id}
-                    className={`acc-pill ${m.id === modelSel ? "on" : ""}`}
-                    onClick={() => setModelSel(m.id)}
-                  >
-                    {m.nome}
-                  </button>
-                ))}
-              </div>
-              <div className="acc-sec-t">
-                Parâmetros{" "}
-                <span className="muted small" style={{ fontWeight: 500 }}>
-                  — preenchidos pelo modelo, edite se necessário
-                </span>
-              </div>
-              <div className="acc-grid">
-                {PARAMS.map((p) => (
-                  <div className="field-group" key={p.k}>
-                    <label>{p.l}</label>
-                    {p.k === "leads" ? (
-                      <select className="input" defaultValue={FAIXAS[1][1]}>
-                        {FAIXAS.map(([nome, qtd]) => (
-                          <option key={nome} value={qtd}>
-                            {nome} — {qtd}/dia
-                          </option>
-                        ))}
-                      </select>
-                    ) : p.k === "comVenda" ? (
-                      <MaskedInput
-                        mask="pct"
-                        className="input"
-                        defaultValue={String(
-                          modelos.find((m) => m.id === modelSel)?.perc_comissao_padrao ?? 0,
-                        )}
-                      />
-                    ) : (
-                      <input className="input" defaultValue="—" />
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div className="acc-sec-t">Condições adicionais</div>
-              <div className="acc-grid">
-                <div className="field-group">
-                  <label>Dia de pagamento</label>
-                  <input className="input" defaultValue="10" />
-                </div>
-                <div className="field-group">
-                  <label>Bônus de campanha</label>
-                  <input className="input" placeholder="ex.: +5% em julho" />
-                </div>
-                <div className="field-group">
-                  <label>Faixa: acima de (R$)</label>
-                  <MaskedInput mask="brl" className="input" placeholder="R$ 50.000,00" />
-                </div>
-                <div className="field-group">
-                  <label>…comissão passa a</label>
-                  <MaskedInput mask="pct" className="input" placeholder="55%" />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-        <div className="modal-f">
-          {fullForm ? (
-            <button className="btn btn-yellow" onClick={() => setFullForm(false)}>
-              <Icon id="chevron-left" size={14} /> Voltar à classificação
-            </button>
-          ) : (
-            <>
-              <button className="btn btn-ghost" disabled={busy} onClick={onRecusar}>
-                <Icon id="x" size={14} /> Recusar
-              </button>
-              <button className="btn btn-yellow" disabled={busy} onClick={onLiberar}>
-                <Icon id="check" size={14} /> {busy ? "Processando…" : "Liberar acesso"}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
 
