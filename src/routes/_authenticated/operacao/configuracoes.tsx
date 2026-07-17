@@ -1096,7 +1096,7 @@ function UsuariosSistemaModal({ onClose }: { onClose: () => void }) {
           .select("id,nome,email,empresa_id,superior_id,desligado_em")
           .in("id", ids),
         supabase.from("empresas").select("id,tipo,modelo_id"),
-        supabase.from("modelos_franquia").select("id,nome"),
+        supabase.from("modelos_franquia").select("id,nome,modalidade"),
       ]);
       if (pr.error) {
         setErr(pr.error.message);
@@ -1119,8 +1119,11 @@ function UsuariosSistemaModal({ onClose }: { onClose: () => void }) {
           e,
         ]),
       );
-      const modeloNomeById = Object.fromEntries(
-        ((mf.data ?? []) as { id: string; nome: string }[]).map((m) => [m.id, m.nome]),
+      const modeloModalidadeById = Object.fromEntries(
+        ((mf.data ?? []) as { id: string; nome: string; modalidade: string | null }[]).map((m) => [
+          m.id,
+          m.modalidade,
+        ]),
       );
 
       function tipoLabel(p: ProfileLite, role: SistemaRole): string {
@@ -1129,10 +1132,8 @@ function UsuariosSistemaModal({ onClose }: { onClose: () => void }) {
         if (role === "master") return "Master franqueado";
         if (role === "franqueado") {
           const emp = p.empresa_id ? empresaById[p.empresa_id] : undefined;
-          const modeloNome = emp?.modelo_id ? (modeloNomeById[emp.modelo_id] ?? "") : "";
-          return modeloNome.toLowerCase().includes("full")
-            ? "Franquia (Full)"
-            : "Franquia (Individual)";
+          const modalidade = emp?.modelo_id ? modeloModalidadeById[emp.modelo_id] : null;
+          return modalidade === "full" ? "Franquia (Full)" : "Franquia (Individual)";
         }
         // vendedor: empresa vinculada com tipo 'pj' (franquia real) → de franquia; senão CLT
         const emp = p.empresa_id ? empresaById[p.empresa_id] : undefined;

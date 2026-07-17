@@ -23,11 +23,9 @@ export interface GroupScope {
 }
 
 /**
- * Detecta se a franquia do usuário é do modelo "Full" pelo nome do modelo
- * (`modelos_franquia.nome` contém "full", case-insensitive).
- *
- * Convenção interina usada também em G1.4/G1.5 (classificar-acesso-modal.tsx),
- * até o G2.1 introduzir uma flag explícita no schema.
+ * Detecta se a franquia do usuário é do modelo "Full" pela coluna
+ * `modelos_franquia.modalidade` ('individual' | 'full'; NULL para modelos
+ * CLT, tratado como 'individual' — não Full).
  */
 export function useGroupScope(): GroupScope {
   const { role, profile, empresa } = useAuth();
@@ -52,12 +50,12 @@ export function useGroupScope(): GroupScope {
     setLoading(true);
     supabase
       .from("modelos_franquia")
-      .select("nome")
+      .select("modalidade")
       .eq("id", empresa.modelo_id)
       .maybeSingle()
       .then(({ data }) => {
         if (!active) return;
-        setIsFranqFull((data?.nome ?? "").toLowerCase().includes("full"));
+        setIsFranqFull(data?.modalidade === "full");
         setLoading(false);
       });
 

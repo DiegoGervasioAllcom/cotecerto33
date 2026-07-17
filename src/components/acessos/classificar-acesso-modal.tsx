@@ -78,7 +78,7 @@ export function ClassificarAcessoModal({
   const [clMsFranq, setClMsFranq] = useState<string[]>([]);
 
   const franquiasFull = useMemo(
-    () => franquiasAprovadas.filter((f) => f.modeloNome.toLowerCase().includes("full")),
+    () => franquiasAprovadas.filter((f) => f.modalidade === "full"),
     [franquiasAprovadas],
   );
 
