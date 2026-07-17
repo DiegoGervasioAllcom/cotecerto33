@@ -6,6 +6,7 @@ import { applyMask, maskPct, maskCpfCnpj, maskTelefone, type Mask } from "@/lib/
 import { supabase } from "@/integrations/supabase/client";
 import { modeloFranquiaNomeSchema } from "@/lib/schemas/catalogos.schema";
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
+import { SolicitacoesVendedorTab } from "@/components/acessos/solicitacoes-vendedor-tab";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
   head: () => ({ meta: [{ title: "Acessos e permissões · CoteCerto" }] }),
@@ -95,7 +96,7 @@ const CLT_DEFAULT: CltConfig = {
   },
 };
 
-type Tab = "pend" | "deslig" | "modelos";
+type Tab = "pend" | "vendedores" | "deslig" | "modelos";
 type PersoSub = "franquia" | "clt";
 
 export const FAIXAS: Array<[string, string]> = [
@@ -348,6 +349,9 @@ function Page() {
         <button className={tab === "pend" ? "on" : ""} onClick={() => setTab("pend")}>
           Pendentes de aprovação <span style={{ opacity: 0.7 }}>({pendentes.length})</span>
         </button>
+        <button className={tab === "vendedores" ? "on" : ""} onClick={() => setTab("vendedores")}>
+          Solicitações de vendedor
+        </button>
         <button className={tab === "deslig" ? "on" : ""} onClick={() => setTab("deslig")}>
           Desligamentos <span style={{ opacity: 0.7 }}>({deslig.length})</span>
         </button>
@@ -430,6 +434,8 @@ function Page() {
           )}
         </>
       )}
+
+      {tab === "vendedores" && <SolicitacoesVendedorTab />}
 
       {tab === "deslig" && (
         <div className="card">
