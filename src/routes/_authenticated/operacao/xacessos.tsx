@@ -5,6 +5,7 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
 import { Icon } from "@/routes/_authenticated/operacao/acessos";
+import { CadastrarVendedorForm } from "@/components/acessos/cadastrar-vendedor-form";
 
 /**
  * Acessos da equipe (xacessos) — visão de grupo (master/supervisor/franquia Full).
@@ -14,14 +15,8 @@ import { Icon } from "@/routes/_authenticated/operacao/acessos";
  * garantido pelo RLS (`empresas_visiveis` multinível): a query de profiles já
  * volta só a rede do usuário logado — não é preciso filtrar de novo aqui.
  *
- * NOTA (pendência sinalizada para o G1.6c): o protótipo também mostra um
- * formulário "Cadastrar vendedor" que envia o cadastro para a Matriz aprovar
- * (fluxo de convite/criação de usuário). Isso depende de uma RPC ainda
- * inexistente (equivalente a `aprovar_empresa`, mas para criar o profile do
- * novo vendedor a partir de um pedido do grupo) — fora do escopo desta fatia
- * (só front, sem migration/RPC nova). Entregamos aqui o núcleo: a lista da
- * equipe (nome, tipo, supervisão, status), no mesmo padrão de "Usuários do
- * sistema" (G1.5).
+ * "Cadastrar vendedor" registra um pedido em `vendedor_solicitacoes`
+ * (RPC `solicitar_vendedor`) para a Matriz aprovar — ver G1.6c.
  */
 
 type SistemaRole = "master" | "vendedor" | "franqueado" | "supervisor";
@@ -176,6 +171,10 @@ function Page() {
           {err}
         </div>
       )}
+
+      <div style={{ marginBottom: 18 }}>
+        <CadastrarVendedorForm />
+      </div>
 
       <div className="card">
         <div className="card-h">
