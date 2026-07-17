@@ -46,6 +46,7 @@ export type Modelo = {
   ativo: boolean;
   ordem: number;
   params: ModeloParams;
+  modalidade: "individual" | "full" | null;
 };
 
 type Pair = [string, string];
@@ -121,6 +122,7 @@ export type FranquiaAprovada = {
   id: string;
   nome: string;
   modeloNome: string;
+  modalidade: "individual" | "full" | null;
   donoProfileId: string | null;
 };
 
@@ -244,12 +246,16 @@ function Page() {
         ]),
       );
       setFranquiasAprovadas(
-        franquias.map((f) => ({
-          id: f.id,
-          nome: f.nome,
-          modeloNome: modelosData.find((mm) => mm.id === f.modelo_id)?.nome ?? "",
-          donoProfileId: donoByEmpresa.get(f.id) ?? null,
-        })),
+        franquias.map((f) => {
+          const modelo = modelosData.find((mm) => mm.id === f.modelo_id);
+          return {
+            id: f.id,
+            nome: f.nome,
+            modeloNome: modelo?.nome ?? "",
+            modalidade: modelo?.modalidade ?? null,
+            donoProfileId: donoByEmpresa.get(f.id) ?? null,
+          };
+        }),
       );
     } else {
       setFranquiasAprovadas([]);
@@ -625,7 +631,12 @@ function ModeloFranquiaPanel({
     const updates = modelos.map((m) =>
       supabase
         .from("modelos_franquia")
-        .update({ nome: m.nome, params: m.params, ordem: m.ordem })
+        .update({
+          nome: m.nome,
+          params: m.params,
+          ordem: m.ordem,
+          modalidade: m.tipo === "franqueada" ? (m.modalidade ?? "individual") : null,
+        })
         .eq("id", m.id),
     );
     const res = await Promise.all(updates);
@@ -651,6 +662,7 @@ function ModeloFranquiaPanel({
       tipo: "franqueada",
       perc_comissao_padrao: 0,
       ordem,
+      modalidade: "individual",
       params: {
         leads: "—",
         comVenda: "—",
@@ -733,6 +745,7 @@ function ModeloFranquiaPanel({
           <thead>
             <tr>
               <th>Modelo</th>
+              <th>Modalidade</th>
               {PARAMS.map((p) => (
                 <th key={p.k}>{p.l}</th>
               ))}
@@ -743,7 +756,7 @@ function ModeloFranquiaPanel({
             {modelos.length === 0 && (
               <tr>
                 <td
-                  colSpan={PARAMS.length + 2}
+                  colSpan={PARAMS.length + 3}
                   style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}
                 >
                   Nenhum modelo cadastrado. Use “Adicionar modelo”.
@@ -760,6 +773,28 @@ function ModeloFranquiaPanel({
                     style={{ fontWeight: 700, minWidth: 110 }}
                     maxLength={150}
                   />
+                </td>
+                <td>
+                  {m.tipo === "franqueada" ? (
+                    <div className="acc-pills" style={{ gap: 4 }}>
+                      <button
+                        type="button"
+                        className={`acc-pill ${m.modalidade !== "full" ? "on" : ""}`}
+                        onClick={() => patchModelo(m.id, { modalidade: "individual" })}
+                      >
+                        Individual
+                      </button>
+                      <button
+                        type="button"
+                        className={`acc-pill ${m.modalidade === "full" ? "on" : ""}`}
+                        onClick={() => patchModelo(m.id, { modalidade: "full" })}
+                      >
+                        Full
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="muted small">—</span>
+                  )}
                 </td>
                 {PARAMS.map((p) => (
                   <td key={p.k}>

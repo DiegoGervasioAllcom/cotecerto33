@@ -1077,6 +1077,7 @@ export type Database = {
           criado_em: string;
           descricao: string | null;
           id: string;
+          modalidade: string | null;
           nome: string;
           ordem: number;
           params: Json;
@@ -1088,6 +1089,7 @@ export type Database = {
           criado_em?: string;
           descricao?: string | null;
           id?: string;
+          modalidade?: string | null;
           nome: string;
           ordem?: number;
           params?: Json;
@@ -1099,6 +1101,7 @@ export type Database = {
           criado_em?: string;
           descricao?: string | null;
           id?: string;
+          modalidade?: string | null;
           nome?: string;
           ordem?: number;
           params?: Json;
