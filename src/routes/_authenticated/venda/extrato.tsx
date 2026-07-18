@@ -19,6 +19,16 @@ type Row = {
   cotacoes: { segurado: { nome: string | null }[] | null } | null;
 };
 
+type Lanc = {
+  id: string;
+  competencia: string | null;
+  tipo: "credito" | "debito";
+  valor: number;
+  descricao: string;
+  origem: string;
+  criado_em: string;
+};
+
 const fmtBRL = (n: number) =>
   Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -38,6 +48,8 @@ function Page() {
   const [err, setErr] = useState<string | null>(null);
   const [de, setDe] = useState(firstOfMonth());
   const [ate, setAte] = useState(today());
+  const [lancs, setLancs] = useState<Lanc[]>([]);
+  const [loadingLancs, setLoadingLancs] = useState(true);
 
   async function load() {
     setLoading(true);
@@ -61,6 +73,49 @@ function Page() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [de, ate]);
+
+  // Comissão real do vendedor (fatia G4.6): lançamentos do próprio usuário
+  // logado em comissao_lancamentos, agrupados por competência (RLS já
+  // restringe a beneficiario_id = auth.uid()).
+  useEffect(() => {
+    (async () => {
+      setLoadingLancs(true);
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) {
+        setLancs([]);
+        setLoadingLancs(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("comissao_lancamentos")
+        .select("id,competencia,tipo,valor,descricao,origem,criado_em")
+        .eq("beneficiario_id", u.user.id)
+        .order("competencia", { ascending: false })
+        .order("criado_em", { ascending: false })
+        .limit(1000);
+      setLancs((data ?? []) as Lanc[]);
+      setLoadingLancs(false);
+    })();
+  }, []);
+
+  const porCompetencia = useMemo(() => {
+    const map = new Map<string, { creditos: number; debitos: number }>();
+    for (const l of lancs) {
+      const k = l.competencia || "—";
+      const cur = map.get(k) || { creditos: 0, debitos: 0 };
+      if (l.tipo === "credito") cur.creditos += Number(l.valor);
+      else cur.debitos += Number(l.valor);
+      map.set(k, cur);
+    }
+    return Array.from(map.entries())
+      .map(([competencia, v]) => ({
+        competencia,
+        creditos: v.creditos,
+        debitos: v.debitos,
+        saldo: v.creditos - v.debitos,
+      }))
+      .sort((a, b) => (a.competencia < b.competencia ? 1 : -1));
+  }, [lancs]);
 
   const total = useMemo(
     () => rows.reduce((s, r) => s + Number(r.premio ?? r.valor ?? 0), 0),
@@ -151,6 +206,54 @@ function Page() {
           </table>
         </div>
       )}
+
+      <div className="card" style={{ marginTop: 18 }}>
+        <div className="card-h">
+          <h3>
+            <svg width="16" height="16">
+              <use href="#i-dollar" />
+            </svg>{" "}
+            Minha comissão por competência
+          </h3>
+        </div>
+        <div className="card-b">
+          {loadingLancs && <div className="muted">Carregando…</div>}
+          {!loadingLancs && porCompetencia.length === 0 && (
+            <div className="muted">
+              Nenhum lançamento de comissão ainda — aparece aqui após o fechamento da competência
+              pela Matriz.
+            </div>
+          )}
+          {!loadingLancs && porCompetencia.length > 0 && (
+            <div style={{ overflowX: "auto" }}>
+              <table className="table-pipe mtable" style={{ minWidth: 600 }}>
+                <thead>
+                  <tr>
+                    <th>Competência</th>
+                    <th style={{ textAlign: "right" }}>Créditos</th>
+                    <th style={{ textAlign: "right" }}>Débitos</th>
+                    <th style={{ textAlign: "right" }}>Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {porCompetencia.map((c) => (
+                    <tr key={c.competencia}>
+                      <td>
+                        <strong>{c.competencia}</strong>
+                      </td>
+                      <td style={{ textAlign: "right" }}>{fmtBRL(c.creditos)}</td>
+                      <td style={{ textAlign: "right" }}>{fmtBRL(c.debitos)}</td>
+                      <td style={{ textAlign: "right" }}>
+                        <strong>{fmtBRL(c.saldo)}</strong>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </AppShell>
   );
 }
