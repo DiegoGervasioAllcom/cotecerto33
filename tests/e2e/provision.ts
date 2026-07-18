@@ -40,7 +40,9 @@ function uniq(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e5)}`;
 }
 function uniqDoc(): string {
-  return String(Date.now()).slice(-11).padStart(11, "9");
+  // 11 dígitos únicos mesmo sob criação concorrente (ex.: `Promise.all` de
+  // várias personas no mesmo milissegundo) — timestamp + sufixo aleatório.
+  return `${Date.now()}${Math.floor(Math.random() * 1e6)}`.slice(-11).padStart(11, "9");
 }
 
 export type VendedorComLead = {
@@ -120,4 +122,104 @@ export async function limparVendedorComLead(v: VendedorComLead): Promise<void> {
   await admin.from("user_roles").delete().eq("user_id", v.userId);
   await admin.auth.admin.deleteUser(v.userId);
   await admin.from("empresas").delete().eq("id", v.empresaId);
+}
+
+export type PersonaRole = "master" | "supervisor" | "franqueado";
+export type PersonaModalidade = "individual" | "full";
+
+export type Persona = {
+  email: string;
+  senha: string;
+  userId: string;
+  empresaId: string;
+};
+
+/**
+ * Busca (ou cria, se não existir nenhum) um `modelos_franquia` com a
+ * `modalidade` pedida. O seed do G2.1 já traz um modelo Individual pronto;
+ * para Full, criamos um modelo dedicado caso não exista nenhum ainda —
+ * assim o `useGroupScope` (que lê `modelos_franquia.modalidade` via
+ * `empresa.modelo_id`) resolve `isFranqFull=true` para essa empresa.
+ */
+async function obterModeloId(modalidade: PersonaModalidade): Promise<string> {
+  const { data: existente } = await admin
+    .from("modelos_franquia")
+    .select("id")
+    .eq("modalidade", modalidade)
+    .limit(1)
+    .maybeSingle();
+  if (existente) return existente.id;
+
+  const { data: criado, error } = await admin
+    .from("modelos_franquia")
+    .insert({
+      nome: uniq(`Franqueada ${modalidade} E2E`),
+      tipo: "franqueada",
+      modalidade,
+      perc_comissao_padrao: modalidade === "full" ? 25 : 15,
+    })
+    .select("id")
+    .single();
+  if (error || !criado) throw new Error(`criar modelo_franquia (${modalidade}): ${error?.message}`);
+  return criado.id;
+}
+
+/**
+ * Cria uma persona (usuário + empresa aprovada + role) para os specs de
+ * navegação (T3). Para `franqueado`, vincula a empresa a um `modelos_franquia`
+ * da modalidade pedida (Individual por padrão, Full se especificado) — é essa
+ * coluna que decide qual das 3 experiências de nav (`venLike`/`grpLike`) o
+ * `useGroupScope`/`AppShell` mostra.
+ */
+export async function criarPersona(opts: {
+  role: PersonaRole;
+  modalidade?: PersonaModalidade;
+}): Promise<Persona> {
+  const { role, modalidade } = opts;
+  const senha = "Teste@123!";
+  const email = `${uniq(`${role}-e2e`)}@teste.local`;
+
+  let modeloId: string | null = null;
+  if (role === "franqueado") {
+    modeloId = await obterModeloId(modalidade ?? "individual");
+  }
+
+  const { data: emp, error: eEmp } = await admin
+    .from("empresas")
+    .insert({
+      nome: uniq(`Empresa ${role} E2E`),
+      tipo: "pj",
+      documento: uniqDoc(),
+      status: "aprovada",
+      ...(modeloId ? { modelo_id: modeloId } : {}),
+    })
+    .select("id")
+    .single();
+  if (eEmp || !emp) throw new Error(`criar empresa (${role}): ${eEmp?.message}`);
+
+  const { data: userData, error: eUser } = await admin.auth.admin.createUser({
+    email,
+    password: senha,
+    email_confirm: true,
+  });
+  if (eUser || !userData.user) throw new Error(`criar usuário (${role}): ${eUser?.message}`);
+  const userId = userData.user.id;
+
+  const { error: eProfile } = await admin
+    .from("profiles")
+    .update({ empresa_id: emp.id, status: "aprovada" })
+    .eq("id", userId);
+  if (eProfile) throw new Error(`atualizar profile (${role}): ${eProfile.message}`);
+
+  const { error: eRole } = await admin.from("user_roles").insert({ user_id: userId, role });
+  if (eRole) throw new Error(`inserir role (${role}): ${eRole.message}`);
+
+  return { email, senha, userId, empresaId: emp.id };
+}
+
+/** Remove os dados criados por `criarPersona` (best-effort; `db reset` também resolve). */
+export async function limparPersona(p: Persona): Promise<void> {
+  await admin.from("user_roles").delete().eq("user_id", p.userId);
+  await admin.auth.admin.deleteUser(p.userId);
+  await admin.from("empresas").delete().eq("id", p.empresaId);
 }
