@@ -2004,6 +2004,10 @@ export type Database = {
         Args: { p_janela_seg?: number };
         Returns: number;
       };
+      fechar_comissao_competencia: {
+        Args: { p_competencia: string };
+        Returns: Json;
+      };
       fn_comissao_clt: {
         Args: { p_competencia: string; p_vendedor: string };
         Returns: {
@@ -2028,6 +2032,12 @@ export type Database = {
         Returns: {
           fonte: string;
           pct: number;
+        }[];
+      };
+      fn_rede_subordinados: {
+        Args: { p_user_id: string };
+        Returns: {
+          id: string;
         }[];
       };
       has_role: {
