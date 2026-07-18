@@ -2004,6 +2004,10 @@ export type Database = {
         Args: { p_janela_seg?: number };
         Returns: number;
       };
+      fechar_campanha_elite: {
+        Args: { p_ano: number; p_trimestre: number };
+        Returns: Json;
+      };
       fechar_comissao_competencia: {
         Args: { p_competencia: string };
         Returns: Json;
@@ -2027,6 +2031,10 @@ export type Database = {
         }[];
       };
       fn_competencia: { Args: { ts: string }; Returns: string };
+      fn_competencias_trimestre: {
+        Args: { p_ano: number; p_trimestre: number };
+        Returns: string[];
+      };
       fn_pct_comissao_efetivo: {
         Args: { p_empresa_id: string };
         Returns: {
@@ -2040,6 +2048,7 @@ export type Database = {
           id: string;
         }[];
       };
+      fn_trimestre: { Args: { p_competencia: string }; Returns: number };
       has_role: {
         Args: { _role: Database["public"]["Enums"]["perfil"]; _user_id: string };
         Returns: boolean;
