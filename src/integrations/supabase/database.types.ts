@@ -3,6 +3,36 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      campanhas_elite: {
+        Row: {
+          ativa: boolean;
+          criado_em: string;
+          faixas: Json;
+          id: string;
+          nome: string;
+          periodo: string | null;
+          tipo: string;
+        };
+        Insert: {
+          ativa?: boolean;
+          criado_em?: string;
+          faixas: Json;
+          id?: string;
+          nome: string;
+          periodo?: string | null;
+          tipo: string;
+        };
+        Update: {
+          ativa?: boolean;
+          criado_em?: string;
+          faixas?: Json;
+          id?: string;
+          nome?: string;
+          periodo?: string | null;
+          tipo?: string;
+        };
+        Relationships: [];
+      };
       clientes: {
         Row: {
           criado_em: string;
@@ -147,6 +177,30 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      comissao_regras: {
+        Row: {
+          atualizado_em: string;
+          descricao: string | null;
+          id: string;
+          papel: string;
+          parametros: Json;
+        };
+        Insert: {
+          atualizado_em?: string;
+          descricao?: string | null;
+          id?: string;
+          papel: string;
+          parametros?: Json;
+        };
+        Update: {
+          atualizado_em?: string;
+          descricao?: string | null;
+          id?: string;
+          papel?: string;
+          parametros?: Json;
+        };
+        Relationships: [];
       };
       configuracoes_gerais: {
         Row: {
@@ -1879,7 +1933,9 @@ export type Database = {
       };
       iniciar_atendimento: { Args: { p_lead_id: string }; Returns: undefined };
       jsonb_clt_regras_ok: { Args: { j: Json }; Returns: boolean };
+      jsonb_comissao_regras_ok: { Args: { j: Json }; Returns: boolean };
       jsonb_criterios_ok: { Args: { j: Json }; Returns: boolean };
+      jsonb_faixas_bonus_ok: { Args: { j: Json }; Returns: boolean };
       jsonb_is_pair_array: { Args: { j: Json }; Returns: boolean };
       lancar_ajuste_comissao: {
         Args: {
