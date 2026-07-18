@@ -61,6 +61,31 @@ function Page() {
   const [err, setErr] = useState<string | null>(null);
 
   const [matrizId, setMatrizId] = useState<string | null>(null);
+  const [saldoGrupo, setSaldoGrupo] = useState<{ competencia: string; saldo: number } | null>(null);
+
+  // Comissão do grupo (fatia G4.6): saldo real da competência mais recente
+  // disponível em v_comissao_por_competencia para o próprio usuário logado
+  // (RLS já escopa beneficiario_id = auth.uid()). Sem lançamento fechado
+  // ainda, não inventamos número — fica "—".
+  useEffect(() => {
+    if (!isGroupView) return;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data } = await supabase
+        .from("v_comissao_por_competencia")
+        .select("competencia,saldo")
+        .eq("beneficiario_id", u.user.id)
+        .order("competencia", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data?.competencia != null) {
+        setSaldoGrupo({ competencia: data.competencia, saldo: Number(data.saldo ?? 0) });
+      } else {
+        setSaldoGrupo(null);
+      }
+    })();
+  }, [isGroupView]);
 
   async function load() {
     setLoading(true);
@@ -760,8 +785,12 @@ function Page() {
               </svg>
             </div>
             <div className="lbl">COMISSÃO DO GRUPO</div>
-            <div className="val">—</div>
-            <div className="meta">cálculo no G4 · {groupPct}% sobre a equipe</div>
+            <div className="val">{saldoGrupo ? BRL(saldoGrupo.saldo) : "—"}</div>
+            <div className="meta">
+              {saldoGrupo
+                ? `saldo em ${saldoGrupo.competencia} · ${groupPct}% sobre a equipe`
+                : `competência ainda não fechada · ${groupPct}% sobre a equipe`}
+            </div>
           </div>
         )}
       </div>
