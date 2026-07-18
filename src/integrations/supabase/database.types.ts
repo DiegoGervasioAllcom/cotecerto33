@@ -82,9 +82,12 @@ export type Database = {
         Row: {
           atualizado_em: string;
           fator_novas: Json;
+          fator_novas_num: Json;
           fator_remalho: Json;
+          fator_remalho_num: Json;
           id: string;
           progressiva: Json;
+          progressiva_num: Json;
           regras: Json;
           seguradora_adic: Json;
           seguradora_planos: Json;
@@ -92,9 +95,12 @@ export type Database = {
         Insert: {
           atualizado_em?: string;
           fator_novas?: Json;
+          fator_novas_num?: Json;
           fator_remalho?: Json;
+          fator_remalho_num?: Json;
           id?: string;
           progressiva?: Json;
+          progressiva_num?: Json;
           regras?: Json;
           seguradora_adic?: Json;
           seguradora_planos?: Json;
@@ -102,9 +108,12 @@ export type Database = {
         Update: {
           atualizado_em?: string;
           fator_novas?: Json;
+          fator_novas_num?: Json;
           fator_remalho?: Json;
+          fator_remalho_num?: Json;
           id?: string;
           progressiva?: Json;
+          progressiva_num?: Json;
           regras?: Json;
           seguradora_adic?: Json;
           seguradora_planos?: Json;
@@ -1995,6 +2004,24 @@ export type Database = {
         Args: { p_janela_seg?: number };
         Returns: number;
       };
+      fn_comissao_clt: {
+        Args: { p_competencia: string; p_vendedor: string };
+        Returns: {
+          competencia: string;
+          fator_aplicado: number;
+          fator_novas: number;
+          fator_remanejo: number;
+          pct_faixa: number;
+          producao_novas: number;
+          producao_remanejo: number;
+          producao_total: number;
+          regra: Json;
+          valor_base: number;
+          valor_elite: number;
+          valor_final: number;
+          vendedor_id: string;
+        }[];
+      };
       fn_competencia: { Args: { ts: string }; Returns: string };
       fn_pct_comissao_efetivo: {
         Args: { p_empresa_id: string };
@@ -2012,6 +2039,8 @@ export type Database = {
       jsonb_comissao_regras_ok: { Args: { j: Json }; Returns: boolean };
       jsonb_criterios_ok: { Args: { j: Json }; Returns: boolean };
       jsonb_faixas_bonus_ok: { Args: { j: Json }; Returns: boolean };
+      jsonb_faixas_pct_ok: { Args: { j: Json }; Returns: boolean };
+      jsonb_fator_faixas_ok: { Args: { j: Json }; Returns: boolean };
       jsonb_is_pair_array: { Args: { j: Json }; Returns: boolean };
       lancar_ajuste_comissao: {
         Args: {
