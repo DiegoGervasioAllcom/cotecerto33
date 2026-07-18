@@ -113,48 +113,74 @@ export type Database = {
       };
       comissao_lancamentos: {
         Row: {
+          beneficiario_id: string | null;
+          competencia: string | null;
           criado_em: string;
           criado_por: string | null;
           descricao: string;
           empresa_id: string | null;
           id: string;
           origem: string;
+          papel: string | null;
           proposta_id: string | null;
           referencia: string | null;
+          regra: Json | null;
           seguradora: string | null;
           tipo: string;
           valor: number;
           vendedor_id: string;
         };
         Insert: {
+          beneficiario_id?: string | null;
+          competencia?: string | null;
           criado_em?: string;
           criado_por?: string | null;
           descricao: string;
           empresa_id?: string | null;
           id?: string;
           origem?: string;
+          papel?: string | null;
           proposta_id?: string | null;
           referencia?: string | null;
+          regra?: Json | null;
           seguradora?: string | null;
           tipo: string;
           valor: number;
           vendedor_id: string;
         };
         Update: {
+          beneficiario_id?: string | null;
+          competencia?: string | null;
           criado_em?: string;
           criado_por?: string | null;
           descricao?: string;
           empresa_id?: string | null;
           id?: string;
           origem?: string;
+          papel?: string | null;
           proposta_id?: string | null;
           referencia?: string | null;
+          regra?: Json | null;
           seguradora?: string | null;
           tipo?: string;
           valor?: number;
           vendedor_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "comissao_lancamentos_beneficiario_id_fkey";
+            columns: ["beneficiario_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comissao_lancamentos_beneficiario_id_fkey";
+            columns: ["beneficiario_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
           {
             foreignKeyName: "comissao_lancamentos_empresa_id_fkey";
             columns: ["empresa_id"];
@@ -1772,6 +1798,48 @@ export type Database = {
       };
     };
     Views: {
+      v_comissao_por_competencia: {
+        Row: {
+          beneficiario_id: string | null;
+          competencia: string | null;
+          empresa_id: string | null;
+          qtd_creditos: number | null;
+          qtd_debitos: number | null;
+          saldo: number | null;
+          total_creditos: number | null;
+          total_debitos: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comissao_lancamentos_beneficiario_id_fkey";
+            columns: ["beneficiario_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comissao_lancamentos_beneficiario_id_fkey";
+            columns: ["beneficiario_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "comissao_lancamentos_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comissao_lancamentos_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       v_franquia_kpis: {
         Row: {
           cidade: string | null;
@@ -1926,6 +1994,14 @@ export type Database = {
       expirar_leads_nao_atendidos: {
         Args: { p_janela_seg?: number };
         Returns: number;
+      };
+      fn_competencia: { Args: { ts: string }; Returns: string };
+      fn_pct_comissao_efetivo: {
+        Args: { p_empresa_id: string };
+        Returns: {
+          fonte: string;
+          pct: number;
+        }[];
       };
       has_role: {
         Args: { _role: Database["public"]["Enums"]["perfil"]; _user_id: string };

@@ -114,8 +114,10 @@ function Page() {
     })();
   }, [period.ini, period.fim]);
 
-  const comOf = (p: Proposta) =>
-    Number(p.comissao_valor ?? Number(p.premio ?? p.valor ?? 0) * 0.16);
+  // comissao_valor é gravado na transmissão com o % efetivo (empresa → modelo;
+  // RPC transmitir_proposta / trigger da 048). Sem valor gravado, não inventamos
+  // percentual aqui — o lançamento correto vive em comissao_lancamentos.
+  const comOf = (p: Proposta) => Number(p.comissao_valor ?? 0);
 
   const kpis = useMemo(() => {
     const ativas = emitidas.filter((p) => !p.cancelada_em);
@@ -204,7 +206,7 @@ function Page() {
           profiles[p.responsavel_id || ""]?.nome || "",
           empresas[p.empresa_id || ""]?.nome || "",
           fmtBRL(Number(p.premio ?? p.valor ?? 0)),
-          (p.comissao_pct ?? 16) + "%",
+          p.comissao_pct != null ? p.comissao_pct + "%" : "—",
           fmtBRL(comOf(p)),
           p.cancelada_em ? "Estornada" : p.pago_em ? "Paga" : "Pendente",
           p.emitida_em ? new Date(p.emitida_em).toLocaleDateString("pt-BR") : "",
