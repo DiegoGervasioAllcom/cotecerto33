@@ -1567,6 +1567,153 @@ export type Database = {
           },
         ];
       };
+      premiacao_campanhas: {
+        Row: {
+          ativa: boolean;
+          competencia: string | null;
+          criado_em: string;
+          criado_por: string | null;
+          descricao: string | null;
+          id: string;
+          nome: string;
+          seguradora_id: string | null;
+        };
+        Insert: {
+          ativa?: boolean;
+          competencia?: string | null;
+          criado_em?: string;
+          criado_por?: string | null;
+          descricao?: string | null;
+          id?: string;
+          nome: string;
+          seguradora_id?: string | null;
+        };
+        Update: {
+          ativa?: boolean;
+          competencia?: string | null;
+          criado_em?: string;
+          criado_por?: string | null;
+          descricao?: string | null;
+          id?: string;
+          nome?: string;
+          seguradora_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "premiacao_campanhas_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "premiacao_campanhas_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "premiacao_campanhas_seguradora_id_fkey";
+            columns: ["seguradora_id"];
+            isOneToOne: false;
+            referencedRelation: "seguradoras";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      premiacao_lancamentos: {
+        Row: {
+          campanha_id: string;
+          competencia: string | null;
+          criado_em: string;
+          criado_por: string | null;
+          empresa_id: string | null;
+          id: string;
+          observacao: string | null;
+          pago_em: string | null;
+          status: string;
+          valor: number;
+          vendedor_id: string;
+        };
+        Insert: {
+          campanha_id: string;
+          competencia?: string | null;
+          criado_em?: string;
+          criado_por?: string | null;
+          empresa_id?: string | null;
+          id?: string;
+          observacao?: string | null;
+          pago_em?: string | null;
+          status?: string;
+          valor: number;
+          vendedor_id: string;
+        };
+        Update: {
+          campanha_id?: string;
+          competencia?: string | null;
+          criado_em?: string;
+          criado_por?: string | null;
+          empresa_id?: string | null;
+          id?: string;
+          observacao?: string | null;
+          pago_em?: string | null;
+          status?: string;
+          valor?: number;
+          vendedor_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "premiacao_lancamentos_campanha_id_fkey";
+            columns: ["campanha_id"];
+            isOneToOne: false;
+            referencedRelation: "premiacao_campanhas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "premiacao_lancamentos_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "premiacao_lancamentos_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "premiacao_lancamentos_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "premiacao_lancamentos_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+          {
+            foreignKeyName: "premiacao_lancamentos_vendedor_id_fkey";
+            columns: ["vendedor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "premiacao_lancamentos_vendedor_id_fkey";
+            columns: ["vendedor_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       presence_eventos: {
         Row: {
           criado_em: string;
