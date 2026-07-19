@@ -4,15 +4,14 @@
 // da seção 5 do MAPA_PROTOTIPO_PERFIS.md, persistindo hierarquia (superior_id)
 // e configuração de comissão/remuneração.
 import { useMemo, useState } from "react";
-import {
-  Icon,
-  FAIXAS,
-  FIELD_LABELS,
-  type Pendente,
-  type Modelo,
-  type Superior,
-  type FranquiaAprovada,
-} from "@/routes/_authenticated/operacao/acessos";
+import { Icon } from "@/components/operacao/acessos/icon";
+import { FAIXAS, FIELD_LABELS } from "@/components/operacao/acessos/constants";
+import type {
+  Pendente,
+  Modelo,
+  Superior,
+  FranquiaAprovada,
+} from "@/components/operacao/acessos/types";
 import { MaskedInput } from "@/components/masked-input";
 import { parseBRL, parsePct, maskCpfCnpj, maskTelefone } from "@/lib/masks";
 import { supabase } from "@/integrations/supabase/client";

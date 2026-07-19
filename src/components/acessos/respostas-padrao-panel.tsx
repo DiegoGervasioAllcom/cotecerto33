@@ -3,7 +3,7 @@
 // `seguradora_id` NULL = geral (vale pra todas as seguradoras). Escrita
 // restrita à matriz via RLS.
 import { useCallback, useEffect, useState } from "react";
-import { Icon } from "@/routes/_authenticated/operacao/acessos";
+import { Icon } from "@/components/operacao/acessos/icon";
 import { supabase } from "@/integrations/supabase/client";
 
 const TITULO_MAX = 100;
