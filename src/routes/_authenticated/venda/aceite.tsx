@@ -21,6 +21,7 @@ type Row = {
   valor: number | null;
   criado_em: string;
   cotacoes: { segurado: { nome: string | null }[] | null } | null;
+  leads: { origem: string | null } | null;
 };
 
 const fmtBRL = (n: number | null) =>
@@ -41,7 +42,7 @@ function Page() {
       .from("propostas")
       .select(
         "id,numero,status,seguradora,premio,valor,criado_em," +
-          "cotacoes(segurado:cotacao_segurado(nome))",
+          "cotacoes(segurado:cotacao_segurado(nome)),leads(origem)",
       )
       .eq("status", "gerada")
       .order("criado_em", { ascending: true });
@@ -65,11 +66,32 @@ function Page() {
       p_proposta_id: id,
       p_obs: obs[id] || undefined,
     });
-    setBusy(null);
     if (error) {
+      setBusy(null);
       setErr(error.message);
       return;
     }
+
+    // G6.2: amarra tipo_venda='renovacao' quando o lead de origem da proposta
+    // veio do fluxo de renovação (origem='renovacao'). O motor de comissão
+    // (G4) usa propostas.tipo_venda para aplicar o fator de renovação — a RPC
+    // transmitir_proposta não define esse campo, então fechamos aqui via
+    // update direto (permitido pela RLS "prop_iud": responsavel_id/matriz).
+    const row = rows.find((r) => r.id === id);
+    if (row?.leads?.origem === "renovacao") {
+      const { error: tipoErr } = await supabase
+        .from("propostas")
+        .update({ tipo_venda: "renovacao" })
+        .eq("id", id);
+      if (tipoErr)
+        // Transmissão OK, só a marcação de renovação falhou — deixar explícito
+        // (senão a comissão sai com o fator errado no fechamento do G4).
+        setErr(
+          `Proposta transmitida, mas falhou ao marcá-la como renovação (corrija o tipo antes do fechamento): ${tipoErr.message}`,
+        );
+    }
+
+    setBusy(null);
     await load();
   }
 

@@ -22,6 +22,7 @@ type Proposta = {
   tipo_venda: string | null;
   empresa_id: string | null;
   responsavel_id: string | null;
+  lead_id: string | null;
   cotacoes: {
     segurado: { nome: string | null }[] | null;
   } | null;
@@ -57,6 +58,9 @@ function Page() {
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [iniciadas, setIniciadas] = useState<Set<string>>(new Set());
+  const [iniciando, setIniciando] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -77,7 +81,7 @@ function Page() {
         supabase
           .from("propostas")
           .select(
-            "id,apolice_numero,numero,seguradora,premio,valor,vencimento,emitida_em,cancelada_em,tipo_venda,empresa_id,responsavel_id," +
+            "id,apolice_numero,numero,seguradora,premio,valor,vencimento,emitida_em,cancelada_em,tipo_venda,empresa_id,responsavel_id,lead_id," +
               "cotacoes(segurado:cotacao_segurado(nome))",
           )
           .not("vencimento", "is", null)
@@ -103,7 +107,8 @@ function Page() {
       ]);
 
       if (vencendo.error) setErr(vencendo.error.message);
-      setRows((vencendo.data ?? []) as unknown as Proposta[]);
+      const propostas = (vencendo.data ?? []) as unknown as Proposta[];
+      setRows(propostas);
       setRenovadas(renov.count ?? 0);
       setPerdidas(perd.error ? 0 : (perd.count ?? 0));
       const em: Record<string, Empresa> = {};
@@ -112,9 +117,49 @@ function Page() {
       const pm: Record<string, Profile> = {};
       for (const p of (profs.data ?? []) as Profile[]) pm[p.id] = p;
       setProfiles(pm);
+
+      // Quais dessas propostas já têm lead de renovação iniciado (pelo cron
+      // ou por clique manual no botão "Iniciar renovação").
+      if (propostas.length > 0) {
+        const { data: existentes } = await supabase
+          .from("leads")
+          .select("renovacao_proposta_id")
+          .in(
+            "renovacao_proposta_id",
+            propostas.map((p) => p.id),
+          )
+          .not("renovacao_proposta_id", "is", null);
+        setIniciadas(new Set((existentes ?? []).map((l) => l.renovacao_proposta_id as string)));
+      } else {
+        setIniciadas(new Set());
+      }
+
       setLoading(false);
     })();
   }, [windowDays]);
+
+  async function iniciarRenovacao(p: Proposta) {
+    setMsg(null);
+    setErr(null);
+    setIniciando(p.id);
+    try {
+      // RPC security definer: resolve o cliente do lead de origem, cria o lead
+      // de renovação e deixa a distribuição padrão agir — sem esbarrar na RLS
+      // de insert de leads (o distribuidor pode alocar fora da subárvore de um
+      // master). Idempotente (dedup pela própria RPC).
+      const { error: rpcErr } = await supabase.rpc("iniciar_renovacao", {
+        p_proposta_id: p.id,
+      });
+      if (rpcErr) {
+        setErr(rpcErr.message);
+        return;
+      }
+      setIniciadas((prev) => new Set(prev).add(p.id));
+      setMsg("Renovação iniciada — o lead entrou na distribuição padrão.");
+    } finally {
+      setIniciando(null);
+    }
+  }
 
   const kpis = useMemo(() => {
     const total = renovadas + perdidas;
@@ -189,13 +234,26 @@ function Page() {
         </div>
       </div>
 
+      {msg && (
+        <div className="alert alert-ok" style={{ marginBottom: 12 }}>
+          {msg}
+        </div>
+      )}
+      {err && (
+        <div className="alert alert-err" style={{ marginBottom: 12 }}>
+          {err}
+        </div>
+      )}
+
       <div className="audit-note" style={{ marginBottom: 16 }}>
         <svg width="16" height="16">
           <use href="#i-refresh" />
         </svg>{" "}
         <strong style={{ marginRight: 4 }}>Gatilho automático.</strong> 60 dias antes do vencimento,
         o sistema cria um lead <strong style={{ margin: "0 4px" }}>"Renovação"</strong> na coluna
-        "Novo" do pipeline e atribui ao vendedor da apólice — sem ninguém precisar lembrar.
+        "Novo" do pipeline e entra na{" "}
+        <strong style={{ margin: "0 4px" }}>distribuição padrão</strong> — não vai automaticamente
+        para o vendedor da apólice original; o CRM decide quem atende, sem ninguém precisar lembrar.
       </div>
 
       <div className="mkpi-grid">
@@ -262,26 +320,27 @@ function Page() {
               <th>Vendedor</th>
               <th>Franquia</th>
               <th>Status</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={9} className="muted" style={{ padding: 16 }}>
+                <td colSpan={10} className="muted" style={{ padding: 16 }}>
                   Carregando…
                 </td>
               </tr>
             )}
-            {!loading && err && (
+            {!loading && err && rows.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ color: "var(--alert)", padding: 16 }}>
+                <td colSpan={10} style={{ color: "var(--alert)", padding: 16 }}>
                   {err}
                 </td>
               </tr>
             )}
-            {!loading && !err && rows.length === 0 && (
+            {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={9} className="muted" style={{ padding: 16 }}>
+                <td colSpan={10} className="muted" style={{ padding: 16 }}>
                   Nenhuma apólice vencendo nos próximos {windowDays} dias.
                 </td>
               </tr>
@@ -290,7 +349,8 @@ function Page() {
               const cliente = r.cotacoes?.segurado?.[0]?.nome || "—";
               const dias = daysUntil(r.vencimento);
               const sla = dias === null ? "" : dias <= 15 ? "alert" : dias <= 45 ? "warn" : "ok";
-              const chip = dias !== null && dias <= 60 ? "Lead criado" : "Monitorando";
+              const jaIniciada = iniciadas.has(r.id);
+              const chip = jaIniciada ? "Lead criado" : "Monitorando";
               return (
                 <tr key={r.id}>
                   <td>
@@ -319,6 +379,24 @@ function Page() {
                     >
                       {chip}
                     </span>
+                  </td>
+                  <td>
+                    {jaIniciada ? (
+                      <small className="muted">Renovação já iniciada</small>
+                    ) : (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        disabled={iniciando === r.id || !r.lead_id}
+                        onClick={() => iniciarRenovacao(r)}
+                        title={
+                          !r.lead_id
+                            ? "Sem lead de origem vinculado a esta apólice"
+                            : "Cria agora o lead de renovação (distribuição padrão)"
+                        }
+                      >
+                        {iniciando === r.id ? "Iniciando…" : "Iniciar renovação"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

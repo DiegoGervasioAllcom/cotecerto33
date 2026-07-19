@@ -2296,6 +2296,7 @@ export type Database = {
         Returns: boolean;
       };
       iniciar_atendimento: { Args: { p_lead_id: string }; Returns: undefined };
+      iniciar_renovacao: { Args: { p_proposta_id: string }; Returns: string };
       jsonb_clt_regras_ok: { Args: { j: Json }; Returns: boolean };
       jsonb_comissao_regras_ok: { Args: { j: Json }; Returns: boolean };
       jsonb_criterios_ok: { Args: { j: Json }; Returns: boolean };
