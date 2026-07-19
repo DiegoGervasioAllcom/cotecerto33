@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
-type PerdaMotivo = { id: number; nome: string };
-type PerdaSubmotivo = {
+export type PerdaMotivo = { id: number; nome: string };
+export type PerdaSubmotivo = {
   id: number;
   motivo_id: number;
   nome: string;
