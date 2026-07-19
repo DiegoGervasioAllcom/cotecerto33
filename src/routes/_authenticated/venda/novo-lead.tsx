@@ -1,20 +1,31 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { printHtml, escapeHtml, fmtBRL } from "@/lib/print";
+import { onlyDigits, maskCpfCnpj } from "@/lib/masks";
 import {
-  onlyDigits,
-  maskCpfCnpj,
-  maskTelefone as maskTelefoneCentral,
-  maskCep as maskCepCentral,
-} from "@/lib/masks";
-import { seguradoSchema } from "@/lib/schemas/cotacaoSegurado.schema";
-import { seguroSchema } from "@/lib/schemas/cotacaoSeguro.schema";
-import { veiculoSchema } from "@/lib/schemas/cotacaoVeiculo.schema";
-import { perfilSchema } from "@/lib/schemas/cotacaoPerfil.schema";
-import { coberturasSchema } from "@/lib/schemas/cotacaoCoberturas.schema";
+  maskCel,
+  maskFixo,
+  maskCep,
+  maskPlaca,
+  maskAno,
+  maskBRL,
+  maskKm,
+} from "@/components/venda/novo-lead/masks";
+import {
+  STEPS,
+  SEGURADORAS,
+  type Form,
+  type BonusFieldKey,
+} from "@/components/venda/novo-lead/types";
+import { useClassificarPerda } from "@/components/venda/novo-lead/hooks/useClassificarPerda";
+import { useCepLookup } from "@/components/venda/novo-lead/hooks/useCepLookup";
+import { useFipe } from "@/components/venda/novo-lead/hooks/useFipe";
+import { useValidacaoEtapas } from "@/components/venda/novo-lead/hooks/useValidacaoEtapas";
+import { useSimulacaoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import { useCotacaoRascunho } from "@/components/venda/novo-lead/hooks/useCotacaoRascunho";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
@@ -26,236 +37,9 @@ export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   component: Page,
 });
 
-// ---------- máscaras ----------
-// onlyDigits/maskCpfCnpj/maskTelefone/maskCep centralizados em "@/lib/masks".
-function maskCel(raw: string) {
-  return maskTelefoneCentral(raw);
-}
-function maskFixo(raw: string) {
-  const d = onlyDigits(raw).slice(0, 10);
-  return d.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
-}
-function maskCep(raw: string) {
-  return maskCepCentral(raw);
-}
-function maskPlaca(raw: string) {
-  // Mercosul: AAA0A00 | Antigo: AAA0000
-  const v = (raw || "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 7);
-  if (v.length <= 3) return v;
-  return v.slice(0, 3) + "-" + v.slice(3);
-}
-function maskAno(raw: string) {
-  return onlyDigits(raw).slice(0, 4);
-}
-function maskBRL(raw: string) {
-  const d = onlyDigits(raw);
-  if (!d) return "";
-  const n = parseInt(d, 10);
-  return (
-    "R$ " + Math.floor(n / 100).toLocaleString("pt-BR") + "," + String(n % 100).padStart(2, "0")
-  );
-}
-function maskKm(raw: string) {
-  const d = onlyDigits(raw);
-  return d ? Number(d).toLocaleString("pt-BR") + " km" : "";
-}
-
-type Form = {
-  // Segurado
-  cpf: string;
-  pessoa: string;
-  nome: string;
-  nomeSocial: string;
-  nasc: string;
-  sexo: string;
-  estadoCivil: string;
-  celular: string;
-  telRes: string;
-  email: string;
-  cep: string;
-  logradouro: string;
-  bairro: string;
-  cidade: string;
-  uf: string;
-  sms: "sim" | "nao";
-  // Seguro
-  tipoSeguro: string;
-  ramo: string;
-  categoria: string;
-  vigIni: string;
-  vigFim: string;
-  ciaAtual: string;
-  apoliceAtual: string;
-  ciAtual: string;
-  classeBonus: string;
-  seguradorasSel: string[];
-  tipoCalculo: string;
-  grupoProducao: string;
-  campanha: string;
-  observacoesCot: string;
-  // Renovação (conditional)
-  seguradoraAnterior: string;
-  sucursalAnterior: string;
-  apoliceAnterior: string;
-  coberturaAnterior: string;
-  statusApoliceAnterior: string;
-  itemApoliceAnterior: string;
-  inicioVigenciaAnterior: string;
-  fimVigenciaAnterior: string;
-  renovacaoMesmoVeiculo: string;
-  renovacaoInclusaoCasco: string;
-  qtdSinistrosParcialAnterior: string;
-  ciApoliceAnterior: string;
-  classeBonusAnterior: string;
-  comissaoApoliceAnterior: string;
-  bonusRenovacaoTodasSeguradoras: string;
-  bonusAllianz: string;
-  bonusSuhai: string;
-  bonusPortoAzulItau: string;
-  bonusMapfre: string;
-  bonusTokio: string;
-  bonusHdi: string;
-  bonusBradesco: string;
-  bonusYelumAliroIndiana: string;
-  // Veículo
-  placa: string;
-  chassi: string;
-  renavam: string;
-  marca: string;
-  modelo: string;
-  anoModelo: string;
-  anoFab: string;
-  combustivel: string;
-  cor: string;
-  zeroKm: boolean;
-  blindado: boolean;
-  alienado: boolean;
-  banco: string;
-  usoComercial: string;
-  kmMensal: string;
-  // Perfil
-  condutorMesmo: "sim" | "nao";
-  condCpf: string;
-  condNome: string;
-  condNasc: string;
-  condSexo: string;
-  condEstadoCivil: string;
-  profissao: string;
-  cepPernoite: string;
-  garagemResid: boolean;
-  garagemTrab: boolean;
-  garagemEsc: boolean;
-  jovens1825: "sim" | "nao";
-  // Coberturas
-  tipoCobertura: string;
-  casco: string;
-  cascoValor: string;
-  franquia: string;
-  appMorte: string;
-  appInval: string;
-  dmh: string;
-  rcfDm: string;
-  rcfDc: string;
-  vidros: boolean;
-  carroReserva: string;
-  assist24: string;
-};
-
-type BonusFieldKey =
-  | "bonusRenovacaoTodasSeguradoras"
-  | "bonusAllianz"
-  | "bonusSuhai"
-  | "bonusPortoAzulItau"
-  | "bonusMapfre"
-  | "bonusTokio"
-  | "bonusHdi"
-  | "bonusBradesco"
-  | "bonusYelumAliroIndiana";
-
-const STEPS = ["Segurado", "Seguro", "Veículo", "Perfil", "Coberturas", "Cálculo"];
-const SEGURADORAS = ["Porto Seguro", "Azul Seguros", "Bradesco Auto", "HDI", "Allianz"];
-
 function Page() {
   const [step, setStep] = useState(0);
-  const [erros, setErros] = useState<Record<string, string>>({});
-  const [cepLoading, setCepLoading] = useState(false);
-  const [marcas, setMarcas] = useState<{ codigo: string; nome: string }[]>([]);
-  const [modelos, setModelos] = useState<{ codigo: number; nome: string }[]>([]);
-  const [fipeValor, setFipeValor] = useState<string>("");
-  const [calculando, setCalculando] = useState(false);
-  const [resultados, setResultados] = useState<
-    { cia: string; premio: number; cobertura: string }[]
-  >([]);
   const [seguradorasDb, setSeguradorasDb] = useState<string[]>([]);
-  const navigate = useNavigate();
-
-  // ----- Classificar perda -----
-  type PerdaMotivo = { id: number; nome: string };
-  type PerdaSubmotivo = {
-    id: number;
-    motivo_id: number;
-    nome: string;
-    destino_sugerido: "Remalho" | "Descarte";
-  };
-  const [perdaOpen, setPerdaOpen] = useState(false);
-  const [perdaMotivos, setPerdaMotivos] = useState<PerdaMotivo[]>([]);
-  const [perdaSubs, setPerdaSubs] = useState<PerdaSubmotivo[]>([]);
-  const [perdaForm, setPerdaForm] = useState<{ motivo: string; sub: string; obs: string }>({
-    motivo: "",
-    sub: "",
-    obs: "",
-  });
-  const [perdaSaving, setPerdaSaving] = useState(false);
-
-  useEffect(() => {
-    if (!perdaOpen) return;
-    if (perdaMotivos.length) return;
-    void (async () => {
-      const [m, s] = await Promise.all([
-        supabase.from("perda_motivos").select("id,nome").eq("ativo", true).order("ordem"),
-        supabase
-          .from("perda_submotivos")
-          .select("id,motivo_id,nome,destino_sugerido")
-          .eq("ativo", true)
-          .order("ordem"),
-      ]);
-      if (m.data) setPerdaMotivos(m.data as PerdaMotivo[]);
-      if (s.data) setPerdaSubs(s.data as PerdaSubmotivo[]);
-    })();
-  }, [perdaOpen, perdaMotivos.length]);
-
-  async function abrirPerda() {
-    if (!cotacaoId) {
-      try {
-        await persistir();
-      } catch {
-        /* noop */
-      }
-    }
-    setPerdaForm({ motivo: "", sub: "", obs: "" });
-    setPerdaOpen(true);
-  }
-
-  async function confirmarPerda() {
-    if (!cotacaoId || !perdaForm.motivo || !perdaForm.sub) return;
-    setPerdaSaving(true);
-    const { error } = await supabase.rpc("classificar_perda_cotacao", {
-      p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
-      p_motivo: perdaForm.motivo,
-      p_submotivo: perdaForm.sub,
-      p_observacao: perdaForm.obs || undefined,
-    });
-    setPerdaSaving(false);
-    if (error) {
-      alert("Erro ao classificar perda: " + error.message);
-      return;
-    }
-    setPerdaOpen(false);
-    navigate({ to: "/venda/pipeline" });
-  }
 
   useEffect(() => {
     supabase
@@ -363,504 +147,48 @@ function Page() {
     assist24: "Básica",
   });
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
+  const { cepLoading, lookupCep } = useCepLookup(setF);
+  const { marcas, setMarcas, modelos, setModelos, fipeValor, setFipeValor } = useFipe(
+    f.marca,
+    f.modelo,
+    f.anoModelo,
+    f.combustivel,
+  );
+  const { erros, validarEtapa } = useValidacaoEtapas(f, marcas, modelos, fipeValor);
+  const { calculando, resultados, setResultados, simularCalculo, podeCalcular } =
+    useSimulacaoCalculo(f, fipeValor);
 
-  // Valida só ao avançar (não no autosave). Retorna true se pode avançar.
-  function validarEtapa(atual: number): boolean {
-    if (atual === 0) {
-      const r = seguradoSchema.safeParse({
-        cpf: f.cpf,
-        pessoa: f.pessoa,
-        nome: f.nome,
-        nomeSocial: f.nomeSocial,
-        sexo: f.sexo,
-        estadoCivil: f.estadoCivil,
-        celular: f.celular,
-        telRes: f.telRes,
-        email: f.email,
-        cep: f.cep,
-        logradouro: f.logradouro,
-        bairro: f.bairro,
-        cidade: f.cidade,
-        uf: f.uf,
-      });
-      if (!r.success) {
-        const novos: Record<string, string> = {};
-        for (const issue of r.error.issues) {
-          const campo = String(issue.path[0] ?? "");
-          if (campo && !novos[campo]) novos[campo] = issue.message;
-        }
-        setErros(novos);
-        return false;
-      }
-      setErros({});
-      return true;
-    }
-    if (atual === 1) {
-      const r = seguroSchema.safeParse({
-        tipoSeguro: f.tipoSeguro,
-        categoria: f.categoria,
-        ramo: f.ramo,
-        ciaAtual: f.ciaAtual,
-        ciAtual: f.ciAtual,
-        classeBonus: f.classeBonus,
-        apoliceAtual: f.apoliceAtual,
-      });
-      if (!r.success) {
-        const novos: Record<string, string> = {};
-        for (const issue of r.error.issues) {
-          const campo = String(issue.path[0] ?? "");
-          if (campo && !novos[campo]) novos[campo] = issue.message;
-        }
-        setErros(novos);
-        return false;
-      }
-      setErros({});
-      return true;
-    }
-    if (atual === 2) {
-      const r = veiculoSchema.safeParse({
-        placa: f.placa,
-        chassi: f.chassi,
-        renavam: f.renavam,
-        marcaCodigo: f.marca,
-        modeloCodigo: f.modelo,
-        marcaNome: marcas.find((m) => m.codigo === f.marca)?.nome || "",
-        modeloNome: modelos.find((m) => String(m.codigo) === f.modelo)?.nome || "",
-        anoModelo: f.anoModelo,
-        anoFab: f.anoFab,
-        combustivel: f.combustivel,
-        cor: f.cor,
-        banco: f.banco,
-        usoComercial: f.usoComercial,
-        kmMensal: f.kmMensal,
-        fipeValor: fipeValor,
-      });
-      if (!r.success) {
-        const novos: Record<string, string> = {};
-        for (const issue of r.error.issues) {
-          const campo = String(issue.path[0] ?? "");
-          if (campo && !novos[campo]) novos[campo] = issue.message;
-        }
-        setErros(novos);
-        return false;
-      }
-      setErros({});
-      return true;
-    }
-    if (atual === 3) {
-      const r = perfilSchema.safeParse({
-        condCpf: f.condCpf,
-        condNome: f.condNome,
-        condSexo: f.condSexo,
-        condEstadoCivil: f.condEstadoCivil,
-        profissao: f.profissao,
-        cepPernoite: f.cepPernoite,
-      });
-      if (!r.success) {
-        const novos: Record<string, string> = {};
-        for (const issue of r.error.issues) {
-          const campo = String(issue.path[0] ?? "");
-          if (campo && !novos[campo]) novos[campo] = issue.message;
-        }
-        setErros(novos);
-        return false;
-      }
-      setErros({});
-      return true;
-    }
-    if (atual === 4) {
-      const r = coberturasSchema.safeParse({
-        tipoCobertura: f.tipoCobertura,
-        casco: f.casco,
-        cascoValor: f.cascoValor,
-        franquia: f.franquia,
-        appMorte: f.appMorte,
-        appInvalidez: f.appInval,
-        dmh: f.dmh,
-        rcfDm: f.rcfDm,
-        rcfDc: f.rcfDc,
-        carroReserva: f.carroReserva,
-        assist24: f.assist24,
-      });
-      if (!r.success) {
-        const novos: Record<string, string> = {};
-        for (const issue of r.error.issues) {
-          const campo = String(issue.path[0] ?? "");
-          if (campo && !novos[campo]) novos[campo] = issue.message;
-        }
-        setErros(novos);
-        return false;
-      }
-      setErros({});
-      return true;
-    }
-    setErros({});
-    return true;
-  }
-
-  // ----- persistência: cotação no Supabase -----
   const { id: routeId, step: routeStep } = Route.useSearch();
-  const [cotacaoId, setCotacaoId] = useState<string | null>(routeId ?? null);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const firstRender = useRef(true);
-  const loadingRef = useRef<boolean>(!!routeId);
-  const [loading, setLoading] = useState<boolean>(!!routeId);
+  const { cotacaoId, saveState, lastSavedAt, loading, persistir } = useCotacaoRascunho({
+    f,
+    setF,
+    step,
+    setStep,
+    marcas,
+    setMarcas,
+    modelos,
+    setModelos,
+    fipeValor,
+    setFipeValor,
+    setResultados,
+    routeId,
+    routeStep,
+  });
 
-  function buildPayload(extra?: { premios?: typeof resultados }) {
-    return {
-      step_atual: step,
-      segurado: {
-        cpf: f.cpf,
-        pessoa: f.pessoa,
-        nome: f.nome,
-        nome_social: f.nomeSocial,
-        nasc: f.nasc,
-        sexo: f.sexo,
-        estado_civil: f.estadoCivil,
-        celular: f.celular,
-        tel_res: f.telRes,
-        email: f.email,
-        cep: f.cep,
-        logradouro: f.logradouro,
-        bairro: f.bairro,
-        cidade: f.cidade,
-        uf: f.uf,
-        sms_optin: f.sms === "sim",
-      },
-      seguro: {
-        tipo_seguro: f.tipoSeguro,
-        ramo: f.ramo,
-        categoria: f.categoria,
-        vig_ini: f.vigIni,
-        vig_fim: f.vigFim,
-        cia_atual: f.ciaAtual,
-        apolice_atual: f.apoliceAtual,
-        ci_atual: f.ciAtual,
-        classe_bonus: f.classeBonus,
-        seguradoras_sel: f.seguradorasSel,
-        tipo_calculo: f.tipoCalculo,
-        tipo_cobertura: f.tipoCobertura,
-        grupo_producao: f.grupoProducao,
-        campanha: f.campanha,
-        observacoes: f.observacoesCot,
-      },
-      veiculo: {
-        placa: f.placa,
-        chassi: f.chassi,
-        renavam: f.renavam,
-        marca_codigo: f.marca,
-        marca_nome: marcas.find((m) => m.codigo === f.marca)?.nome || "",
-        modelo_codigo: f.modelo,
-        modelo_nome: modelos.find((m) => String(m.codigo) === f.modelo)?.nome || "",
-        ano_modelo: f.anoModelo,
-        ano_fab: f.anoFab,
-        combustivel: f.combustivel,
-        cor: f.cor,
-        zero_km: f.zeroKm,
-        blindado: f.blindado,
-        alienado: f.alienado,
-        banco: f.banco,
-        uso_comercial: f.usoComercial,
-        km_mensal: f.kmMensal,
-        fipe_valor: fipeValor,
-      },
-      perfil: {
-        condutor_mesmo: f.condutorMesmo === "sim",
-        cond_cpf: f.condCpf,
-        cond_nome: f.condNome,
-        cond_nasc: f.condNasc,
-        cond_sexo: f.condSexo,
-        cond_estado_civil: f.condEstadoCivil,
-        profissao: f.profissao,
-        cep_pernoite: f.cepPernoite,
-        garagem_resid: f.garagemResid,
-        garagem_trab: f.garagemTrab,
-        garagem_esc: f.garagemEsc,
-        jovens_18_25: f.jovens1825 === "sim",
-      },
-      coberturas: {
-        tipo_cobertura: f.tipoCobertura,
-        casco: f.casco,
-        casco_valor: f.cascoValor,
-        franquia: f.franquia,
-        app_morte: f.appMorte,
-        app_invalidez: f.appInval,
-        dmh: f.dmh,
-        rcf_dm: f.rcfDm,
-        rcf_dc: f.rcfDc,
-        vidros: f.vidros,
-        carro_reserva: f.carroReserva,
-        assist_24: f.assist24,
-      },
-      ...(extra?.premios
-        ? {
-            premios: extra.premios.map((p) => {
-              const legado = p as { cia?: string; seguradora?: string };
-              return {
-                seguradora: legado.cia ?? legado.seguradora,
-                premio: p.premio,
-                cobertura: p.cobertura,
-              };
-            }),
-          }
-        : {}),
-    };
-  }
+  const {
+    perdaOpen,
+    setPerdaOpen,
+    perdaMotivos,
+    perdaSubs,
+    perdaForm,
+    setPerdaForm,
+    perdaSaving,
+    abrirPerda,
+    confirmarPerda,
+  } = useClassificarPerda(cotacaoId, persistir);
 
-  async function persistir(extra?: { premios?: typeof resultados }) {
-    // só persiste se tiver algo identificador mínimo
-    if (!f.cpf && !f.nome && !cotacaoId) return;
-    setSaveState("saving");
-    const { data, error } = await supabase.rpc("salvar_cotacao_rascunho", {
-      p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
-      p_payload: buildPayload(extra) as never,
-    });
-    if (error) {
-      console.error("[cotacao] save error", error);
-      setSaveState("error");
-      return;
-    }
-    if (data && !cotacaoId) setCotacaoId(data as string);
-    setSaveState("saved");
-    setLastSavedAt(new Date());
-  }
-
-  // auto-save com debounce
-  useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false;
-      return;
-    }
-    if (loadingRef.current) return;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      void persistir();
-    }, 1500);
-    return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f, step]);
-
-  // carregar rascunho existente quando ?id=
-  useEffect(() => {
-    if (!routeId) return;
-    let cancel = false;
-    (async () => {
-      const { data, error } = await supabase
-        .from("cotacoes")
-        .select(
-          "id,step_atual,ramo,segurado:cotacao_segurado(*),seguro:cotacao_seguro(*),veiculo:cotacao_veiculo(*),perfil:cotacao_perfil(*),coberturas:cotacao_coberturas(*),premios:cotacao_premios(seguradora,cobertura,premio)",
-        )
-        .eq("id", routeId)
-        .maybeSingle();
-      if (cancel) return;
-      if (error || !data) {
-        loadingRef.current = false;
-        setLoading(false);
-        return;
-      }
-      const s = data.segurado ?? ({} as NonNullable<typeof data.segurado>);
-      const sg = data.seguro ?? ({} as NonNullable<typeof data.seguro>);
-      const v = data.veiculo ?? ({} as NonNullable<typeof data.veiculo>);
-      const p = data.perfil ?? ({} as NonNullable<typeof data.perfil>);
-      const c = data.coberturas ?? ({} as NonNullable<typeof data.coberturas>);
-      const pr = data.premios || [];
-      setStep(
-        routeStep != null && !Number.isNaN(routeStep) ? routeStep : Number(data.step_atual ?? 0),
-      );
-      setF((prev) => ({
-        ...prev,
-        cpf: s.cpf_cnpj ? maskCpfCnpj(s.cpf_cnpj) : "",
-        pessoa: s.pessoa ?? prev.pessoa,
-        nome: s.nome ?? "",
-        nomeSocial: s.nome_social ?? "",
-        nasc: s.nascimento ?? "",
-        sexo: s.sexo ?? "",
-        estadoCivil: s.estado_civil ?? "",
-        celular: s.celular ? maskCel(s.celular) : "",
-        telRes: s.tel_res ? maskFixo(s.tel_res) : "",
-        email: s.email ?? "",
-        cep: s.cep ? maskCep(s.cep) : "",
-        logradouro: s.logradouro ?? "",
-        bairro: s.bairro ?? "",
-        cidade: s.cidade ?? "",
-        uf: s.uf ?? "",
-        sms: s.sms_optin ? "sim" : "nao",
-        tipoSeguro: sg.tipo_seguro ?? prev.tipoSeguro,
-        ramo: sg.ramo ?? prev.ramo,
-        categoria: sg.categoria ?? prev.categoria,
-        vigIni: sg.vig_ini ?? "",
-        vigFim: sg.vig_fim ?? "",
-        ciaAtual: sg.cia_atual ?? "",
-        apoliceAtual: sg.apolice_atual ?? "",
-        ciAtual: sg.ci_atual ?? "",
-        classeBonus: sg.classe_bonus ?? "0",
-        seguradorasSel: Array.isArray(sg.seguradoras_sel)
-          ? sg.seguradoras_sel
-          : prev.seguradorasSel,
-        tipoCalculo: sg.tipo_calculo ?? prev.tipoCalculo,
-        tipoCobertura: sg.tipo_cobertura ?? prev.tipoCobertura,
-        grupoProducao: sg.grupo_producao ?? prev.grupoProducao,
-        campanha: sg.campanha ?? prev.campanha,
-        observacoesCot: sg.observacoes ?? prev.observacoesCot,
-        placa: v.placa ?? "",
-        chassi: v.chassi ?? "",
-        renavam: v.renavam ?? "",
-        marca: v.marca_codigo ?? "",
-        modelo: v.modelo_codigo ?? "",
-        anoModelo: v.ano_modelo ?? "",
-        anoFab: v.ano_fab ?? "",
-        combustivel: v.combustivel ?? prev.combustivel,
-        cor: v.cor ?? "",
-        zeroKm: !!v.zero_km,
-        blindado: !!v.blindado,
-        alienado: !!v.alienado,
-        banco: v.banco ?? "",
-        usoComercial: v.uso_comercial ?? prev.usoComercial,
-        kmMensal: v.km_mensal ?? "",
-        condutorMesmo: p.condutor_mesmo === false ? "nao" : "sim",
-        condCpf: p.cond_cpf ? maskCpfCnpj(p.cond_cpf) : "",
-        condNome: p.cond_nome ?? "",
-        condNasc: p.cond_nasc ?? "",
-        condSexo: p.cond_sexo ?? "",
-        condEstadoCivil: p.cond_estado_civil ?? "",
-        profissao: p.profissao ?? "",
-        cepPernoite: p.cep_pernoite ? maskCep(p.cep_pernoite) : "",
-        garagemResid: p.garagem_resid ?? prev.garagemResid,
-        garagemTrab: !!p.garagem_trab,
-        garagemEsc: !!p.garagem_esc,
-        jovens1825: p.jovens_18_25 ? "sim" : "nao",
-        casco: c.casco ?? prev.casco,
-        cascoValor: c.casco_valor ?? "",
-        franquia: c.franquia ?? prev.franquia,
-        appMorte: c.app_morte ?? "",
-        appInval: c.app_invalidez ?? "",
-        dmh: c.dmh ?? "",
-        rcfDm: c.rcf_dm ?? "",
-        rcfDc: c.rcf_dc ?? "",
-        vidros: c.vidros ?? prev.vidros,
-        carroReserva: c.carro_reserva ?? prev.carroReserva,
-        assist24: c.assist_24 ?? prev.assist24,
-      }));
-      if (v.fipe_valor) setFipeValor(v.fipe_valor);
-      if (v.marca_codigo && v.marca_nome) {
-        const marcaCodigo = v.marca_codigo;
-        const marcaNome = v.marca_nome;
-        setMarcas((m) =>
-          m.some((x) => x.codigo === marcaCodigo)
-            ? m
-            : [...m, { codigo: marcaCodigo, nome: marcaNome }],
-        );
-      }
-      if (v.modelo_codigo && v.modelo_nome) {
-        const modeloCodigo = v.modelo_codigo;
-        const modeloNome = v.modelo_nome;
-        setModelos((m) =>
-          m.some((x) => String(x.codigo) === String(modeloCodigo))
-            ? m
-            : [...m, { codigo: Number(modeloCodigo), nome: modeloNome }],
-        );
-      }
-      if (pr.length)
-        setResultados(
-          pr.map((x) => ({
-            cia: x.seguradora ?? "",
-            premio: Number(x.premio),
-            cobertura: x.cobertura ?? "",
-          })),
-        );
-      setCotacaoId(routeId);
-      setLastSavedAt(new Date());
-      setSaveState("saved");
-      // libera autosave após dois ticks pra evitar disparo pelo setF
-      setTimeout(() => {
-        loadingRef.current = false;
-        setLoading(false);
-      }, 50);
-    })();
-    return () => {
-      cancel = true;
-    };
-  }, [routeId]);
-
-  async function lookupCep(cep: string, prefix: "" | "cond" = "") {
-    const d = onlyDigits(cep);
-    if (d.length !== 8) return;
-    setCepLoading(true);
-    try {
-      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`);
-      const j = await r.json();
-      if (!j.erro && !prefix) {
-        setF((p) => ({
-          ...p,
-          logradouro: j.logradouro || "",
-          bairro: j.bairro || "",
-          cidade: j.localidade || "",
-          uf: j.uf || "",
-        }));
-      }
-    } catch {
-      /* noop */
-    } finally {
-      setCepLoading(false);
-    }
-  }
-
-  // FIPE: marcas
-  useEffect(() => {
-    fetch("https://parallelum.com.br/fipe/api/v1/carros/marcas")
-      .then((r) => r.json())
-      .then(setMarcas)
-      .catch(() => setMarcas([]));
-  }, []);
-  // FIPE: modelos quando marca muda
-  useEffect(() => {
-    if (!f.marca) {
-      setModelos([]);
-      return;
-    }
-    fetch(`https://parallelum.com.br/fipe/api/v1/carros/marcas/${f.marca}/modelos`)
-      .then((r) => r.json())
-      .then((j) => setModelos(j.modelos || []))
-      .catch(() => setModelos([]));
-  }, [f.marca]);
-  // FIPE: valor quando modelo+ano
-  useEffect(() => {
-    if (!f.marca || !f.modelo || !f.anoModelo) {
-      setFipeValor("");
-      return;
-    }
-    const combCode = f.combustivel === "Diesel" ? 3 : f.combustivel === "Álcool" ? 2 : 1;
-    fetch(
-      `https://parallelum.com.br/fipe/api/v1/carros/marcas/${f.marca}/modelos/${f.modelo}/anos/${f.anoModelo}-${combCode}`,
-    )
-      .then((r) => r.json())
-      .then((j) => setFipeValor(j.Valor || ""))
-      .catch(() => setFipeValor(""));
-  }, [f.marca, f.modelo, f.anoModelo, f.combustivel]);
-
-  function simularCalculo() {
-    const alvos = (f.seguradorasSel ?? []).filter(Boolean);
-    if (!alvos.length) {
-      setResultados([]);
-      return;
-    }
-    setCalculando(true);
-    setResultados([]);
-    setTimeout(() => {
-      const base = fipeValor ? Number(onlyDigits(fipeValor)) / 100 : 60000;
-      const fator =
-        f.tipoCobertura === "Compreensiva" ? 0.035 : f.tipoCobertura === "RCF" ? 0.012 : 0.02;
-      const novos = alvos.map((cia, i) => ({
-        cia,
-        premio: Math.round(base * fator * (0.85 + i * 0.07)),
-        cobertura: f.tipoCobertura,
-      }));
-      setResultados(novos);
-      setCalculando(false);
+  function doSimularCalculo() {
+    simularCalculo((novos) => {
       void persistir({
         premios: novos.map((r) => ({
           cia: r.cia,
@@ -868,17 +196,8 @@ function Page() {
           cobertura: r.cobertura,
         })) as never,
       });
-    }, 900);
+    });
   }
-
-  const podeCalcular = !!(
-    f.cpf &&
-    f.nome &&
-    f.marca &&
-    f.modelo &&
-    f.anoModelo &&
-    (f.seguradorasSel?.length ?? 0) > 0
-  );
 
   return (
     <AppShell title="Novo lead">
@@ -2269,7 +1588,7 @@ function Page() {
                 <button
                   className="btn btn-ghost btn-sm"
                   disabled={!podeCalcular || calculando}
-                  onClick={simularCalculo}
+                  onClick={doSimularCalculo}
                 >
                   <svg width="13" height="13">
                     <use href="#i-refresh" />
@@ -2338,7 +1657,7 @@ function Page() {
                   <button
                     className="btn btn-yellow"
                     disabled={!podeCalcular}
-                    onClick={simularCalculo}
+                    onClick={doSimularCalculo}
                   >
                     <svg width="14" height="14">
                       <use href="#i-bolt" />
@@ -2515,7 +1834,7 @@ function Page() {
                     onClick={() => {
                       if (!validarEtapa(4)) return;
                       setStep(5);
-                      if (podeCalcular) simularCalculo();
+                      if (podeCalcular) doSimularCalculo();
                     }}
                   >
                     <svg width="14" height="14">
@@ -2799,7 +2118,7 @@ function Page() {
               style={!podeCalcular ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
               onClick={() => {
                 setStep(5);
-                simularCalculo();
+                doSimularCalculo();
               }}
             >
               <svg width="14" height="14">
