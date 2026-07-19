@@ -1136,6 +1136,7 @@ export type Database = {
           observacao_perda: string | null;
           origem: string | null;
           perdida_em: string | null;
+          renovacao_proposta_id: string | null;
           responsavel_id: string | null;
           status_pipeline: Database["public"]["Enums"]["lead_status"];
           submotivo_perda: string | null;
@@ -1165,6 +1166,7 @@ export type Database = {
           observacao_perda?: string | null;
           origem?: string | null;
           perdida_em?: string | null;
+          renovacao_proposta_id?: string | null;
           responsavel_id?: string | null;
           status_pipeline?: Database["public"]["Enums"]["lead_status"];
           submotivo_perda?: string | null;
@@ -1194,6 +1196,7 @@ export type Database = {
           observacao_perda?: string | null;
           origem?: string | null;
           perdida_em?: string | null;
+          renovacao_proposta_id?: string | null;
           responsavel_id?: string | null;
           status_pipeline?: Database["public"]["Enums"]["lead_status"];
           submotivo_perda?: string | null;
@@ -1221,6 +1224,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "v_franquia_kpis";
             referencedColumns: ["empresa_id"];
+          },
+          {
+            foreignKeyName: "leads_renovacao_proposta_id_fkey";
+            columns: ["renovacao_proposta_id"];
+            isOneToOne: false;
+            referencedRelation: "propostas";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -2205,6 +2215,7 @@ export type Database = {
         Args: { p_id: string; p_obs?: string; p_pct_novo: number };
         Returns: undefined;
       };
+      criar_leads_renovacao: { Args: never; Returns: Json };
       desarquivar_lead: { Args: { p_lead: string }; Returns: undefined };
       desbloquear_lead: { Args: { p_lead: string }; Returns: undefined };
       desligar_usuario: {
