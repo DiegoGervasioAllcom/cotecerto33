@@ -2154,12 +2154,21 @@ export type Database = {
       };
     };
     Functions: {
+      _aplicar_desconto_premio: {
+        Args: { p_cotacao_id: string; p_pct: number; p_seguradora_id: string };
+        Returns: undefined;
+      };
+      aceitar_desconto: { Args: { p_id: string }; Returns: undefined };
       admin_atualizar_usuario: {
         Args: { p_empresa_id: string; p_nome: string; p_user_id: string };
         Returns: undefined;
       };
       admin_set_usuario_status: {
         Args: { p_ativo: boolean; p_motivo?: string; p_user_id: string };
+        Returns: undefined;
+      };
+      aprovar_desconto: {
+        Args: { p_id: string; p_pct_concedido: number };
         Returns: undefined;
       };
       aprovar_empresa: { Args: { p_empresa_id: string }; Returns: undefined };
@@ -2182,6 +2191,7 @@ export type Database = {
         Args: { p_motivo?: string; p_proposta_id: string };
         Returns: undefined;
       };
+      cancelar_desconto: { Args: { p_id: string }; Returns: undefined };
       classificar_perda_cotacao: {
         Args: {
           p_cotacao_id: string;
@@ -2189,6 +2199,10 @@ export type Database = {
           p_observacao?: string;
           p_submotivo: string;
         };
+        Returns: undefined;
+      };
+      contrapropor_desconto: {
+        Args: { p_id: string; p_obs?: string; p_pct_novo: number };
         Returns: undefined;
       };
       desarquivar_lead: { Args: { p_lead: string }; Returns: undefined };
@@ -2204,6 +2218,7 @@ export type Database = {
           empresa_id: string;
         }[];
       };
+      escalar_desconto: { Args: { p_id: string }; Returns: undefined };
       expirar_leads_nao_atendidos: {
         Args: { p_janela_seg?: number };
         Returns: number;
@@ -2239,12 +2254,24 @@ export type Database = {
         Args: { p_ano: number; p_trimestre: number };
         Returns: string[];
       };
+      fn_dentro_alcada_desconto: {
+        Args: { p_aprovador: string; p_pct: number; p_seguradora: string };
+        Returns: boolean;
+      };
+      fn_modelo_alcada_desconto: {
+        Args: { p_profile_id: string };
+        Returns: string;
+      };
       fn_pct_comissao_efetivo: {
         Args: { p_empresa_id: string };
         Returns: {
           fonte: string;
           pct: number;
         }[];
+      };
+      fn_pode_ver_solicitacao_desconto: {
+        Args: { p_solicitante: string };
+        Returns: boolean;
       };
       fn_rede_subordinados: {
         Args: { p_user_id: string };
@@ -2288,6 +2315,10 @@ export type Database = {
         Args: { p_pago?: boolean; p_proposta_id: string };
         Returns: undefined;
       };
+      negar_desconto: {
+        Args: { p_id: string; p_obs?: string };
+        Returns: undefined;
+      };
       presence_set: {
         Args: { p_status: string; p_user_agent?: string };
         Returns: undefined;
@@ -2320,6 +2351,14 @@ export type Database = {
       };
       salvar_cotacao_rascunho: {
         Args: { p_cotacao_id: string; p_payload: Json };
+        Returns: string;
+      };
+      solicitar_desconto: {
+        Args: {
+          p_cotacao_id: string;
+          p_pct_pedido: number;
+          p_seguradora_id: string;
+        };
         Returns: string;
       };
       solicitar_vendedor: {
