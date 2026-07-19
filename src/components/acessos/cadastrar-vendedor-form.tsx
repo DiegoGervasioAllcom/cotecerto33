@@ -3,7 +3,7 @@
 // não cria o usuário diretamente (isso reusa o fluxo de criação de usuário
 // já existente, feito pela Matriz após aprovar).
 import { useCallback, useEffect, useState } from "react";
-import { Icon } from "@/routes/_authenticated/operacao/acessos";
+import { Icon } from "@/components/operacao/acessos/icon";
 import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj, maskTelefone } from "@/lib/masks";
 import {

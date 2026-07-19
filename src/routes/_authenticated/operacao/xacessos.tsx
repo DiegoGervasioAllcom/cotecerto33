@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
-import { Icon } from "@/routes/_authenticated/operacao/acessos";
+import { Icon } from "@/components/operacao/acessos/icon";
 import { CadastrarVendedorForm } from "@/components/acessos/cadastrar-vendedor-form";
 
 /**

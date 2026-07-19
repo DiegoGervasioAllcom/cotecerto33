@@ -4,7 +4,7 @@
 // A criação efetiva do usuário reusa o fluxo já existente de "Usuários" —
 // esta tela só resolve o pedido, não cria o profile/auth.
 import { useCallback, useEffect, useState } from "react";
-import { Icon } from "@/routes/_authenticated/operacao/acessos";
+import { Icon } from "@/components/operacao/acessos/icon";
 import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj, maskTelefone } from "@/lib/masks";
 

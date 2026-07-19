@@ -4,7 +4,7 @@
 // escalado direto à Matriz). Grava/limpa em `desconto_politicas` via RLS
 // (escrita restrita à matriz).
 import { useCallback, useEffect, useState } from "react";
-import { Icon } from "@/routes/_authenticated/operacao/acessos";
+import { Icon } from "@/components/operacao/acessos/icon";
 import { supabase } from "@/integrations/supabase/client";
 
 type Seguradora = { id: string; nome: string };
