@@ -28,6 +28,8 @@ type Solicitacao = {
   cotacao: { numero: number | null; criado_em: string | null } | null;
 };
 
+type RespostaPadrao = { id: string; titulo: string; texto: string };
+
 type TrilhaItem = {
   id: string;
   acao: string;
@@ -72,6 +74,7 @@ function AcaoModal({
   showPct,
   pctDefault,
   showObs,
+  seguradoraId,
   busy,
   err,
   onClose,
@@ -81,6 +84,7 @@ function AcaoModal({
   showPct: boolean;
   pctDefault?: number;
   showObs: boolean;
+  seguradoraId?: string;
   busy: boolean;
   err: string | null;
   onClose: () => void;
@@ -89,6 +93,38 @@ function AcaoModal({
   const [pct, setPct] = useState(pctDefault != null ? String(pctDefault) : "");
   const [obs, setObs] = useState("");
   const [localErr, setLocalErr] = useState<string | null>(null);
+  const [respostas, setRespostas] = useState<RespostaPadrao[]>([]);
+  const [respostaSel, setRespostaSel] = useState("");
+
+  useEffect(() => {
+    if (!showObs) return;
+    let active = true;
+    (async () => {
+      let query = supabase
+        .from("respostas_padrao")
+        .select("id,titulo,texto")
+        .eq("ativo", true)
+        .order("titulo");
+      query = seguradoraId
+        ? query.or(`seguradora_id.is.null,seguradora_id.eq.${seguradoraId}`)
+        : query.is("seguradora_id", null);
+      const { data, error } = await query;
+      if (!active) return;
+      if (!error) setRespostas(data ?? []);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [showObs, seguradoraId]);
+
+  function inserirResposta(id: string) {
+    setRespostaSel(id);
+    if (!id) return;
+    const r = respostas.find((x) => x.id === id);
+    if (!r) return;
+    setObs((prev) => (prev.trim() ? `${prev.trim()}\n${r.texto}` : r.texto));
+    setRespostaSel("");
+  }
 
   function handleConfirm() {
     setLocalErr(null);
@@ -139,6 +175,21 @@ function AcaoModal({
           {showObs && (
             <div className="field-group">
               <label>Observação {showPct ? "(opcional)" : ""}</label>
+              {respostas.length > 0 && (
+                <select
+                  className="input input-mini"
+                  style={{ marginBottom: 6 }}
+                  value={respostaSel}
+                  onChange={(e) => inserirResposta(e.target.value)}
+                >
+                  <option value="">Inserir resposta padrão…</option>
+                  {respostas.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.titulo}
+                    </option>
+                  ))}
+                </select>
+              )}
               <textarea
                 className="input"
                 rows={3}
@@ -515,6 +566,7 @@ function Page() {
           titulo={`Contrapropor — ${acao.sol.seguradora?.nome ?? ""}`}
           showPct
           showObs
+          seguradoraId={acao.sol.seguradora_id}
           busy={busy}
           err={actionErr}
           onClose={closeAcao}
@@ -526,6 +578,7 @@ function Page() {
           titulo={`Negar pedido — ${acao.sol.seguradora?.nome ?? ""}`}
           showPct={false}
           showObs
+          seguradoraId={acao.sol.seguradora_id}
           busy={busy}
           err={actionErr}
           onClose={closeAcao}

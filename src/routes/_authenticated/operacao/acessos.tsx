@@ -8,6 +8,7 @@ import { modeloFranquiaNomeSchema } from "@/lib/schemas/catalogos.schema";
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 import { SolicitacoesVendedorTab } from "@/components/acessos/solicitacoes-vendedor-tab";
 import { DescontoPoliticaPanel } from "@/components/acessos/desconto-politica-panel";
+import { RespostasPadraoPanel } from "@/components/acessos/respostas-padrao-panel";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
   head: () => ({ meta: [{ title: "Acessos e permissões · CoteCerto" }] }),
@@ -587,6 +588,7 @@ function PersoGeral({
         <ModeloCltPanel clt={clt} setClt={setClt} onToast={onToast} onError={onError} />
       )}
       <DescontoPoliticaPanel />
+      <RespostasPadraoPanel />
     </>
   );
 }
