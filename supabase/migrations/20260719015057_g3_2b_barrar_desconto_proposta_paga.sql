@@ -44,6 +44,10 @@ begin
 
   -- G3.2b: proposta já paga para essa cotação/seguradora -> barrar (opção a).
   -- Não confunde com proposta cancelada (cancelada_em not null é ignorada).
+  -- Nota: "and seguradora = _seg_nome" é redundante hoje, pois propostas tem
+  -- índice único parcial por cotacao_id (uma proposta por cotação) — mantido
+  -- de forma defensiva para continuar correto caso esse modelo mude no
+  -- futuro (ex.: múltiplas propostas por cotação).
   select exists (
     select 1
       from public.propostas

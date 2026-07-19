@@ -762,6 +762,62 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
         .single();
       expect(Number(premio2?.premio)).toBe(500);
     });
+
+    it("aprovar aplica o desconto normalmente quando a proposta paga foi cancelada (guard não barra)", async () => {
+      const supervisor = await criarPersonaComEmpresa("supervisor", {
+        emailPrefix: uniq("g32b-cancel-sup"),
+      });
+      const vendedor = await criarPersonaComEmpresa("vendedor", {
+        emailPrefix: uniq("g32b-cancel-vend"),
+        empresaId: supervisor.empresaId,
+        superiorId: supervisor.userId,
+      });
+      await upsertPolitica("supervisor", seguradoras[9].id, 10);
+
+      const cot = await criarCotacaoComPremio({
+        empresaId: vendedor.empresaId,
+        responsavelId: vendedor.userId,
+        seguradoraNome: seguradoras[9].nome,
+        premio: 1000,
+      });
+
+      const s = await vendedor.client.rpc("solicitar_desconto", {
+        p_cotacao_id: cot.cotacaoId,
+        p_seguradora_id: seguradoras[9].id,
+        p_pct_pedido: 10,
+      });
+      expect(s.error).toBeNull();
+
+      // Proposta paga E cancelada: o guard ignora pagamentos de propostas
+      // canceladas (cancelada_em not null), então o desconto deve ser aplicado.
+      await admin
+        .from("propostas")
+        .update({
+          pago_em: new Date().toISOString(),
+          cancelada_em: new Date().toISOString(),
+        })
+        .eq("id", cot.propostaId);
+
+      const a = await supervisor.client.rpc("aprovar_desconto", {
+        p_id: s.data as string,
+        p_pct_concedido: 10,
+      });
+      expect(a.error).toBeNull();
+
+      const { data: proposta } = await admin
+        .from("propostas")
+        .select("premio")
+        .eq("id", cot.propostaId)
+        .single();
+      expect(Number(proposta?.premio)).toBe(900);
+
+      const { data: sol } = await admin
+        .from("desconto_solicitacoes")
+        .select("status")
+        .eq("id", s.data as string)
+        .single();
+      expect(sol?.status).toBe("aprovado");
+    });
   });
 
   describe("guarda: seguradora sem prêmio selecionado", () => {
