@@ -167,15 +167,14 @@ function Page() {
           <div className="card-b">Carregando…</div>
         </div>
       ) : total === 0 ? (
-        <div className="card">
-          <div className="card-b" style={{ padding: 40, textAlign: "center" }}>
-            <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>
-              Nenhum lead aguardando atendimento 🎉
-            </div>
-            <div className="muted">
-              Aguarde a Matriz distribuir novos leads ou crie um manualmente.
-            </div>
+        <div className="empty-state">
+          <div className="ico">
+            <svg width={28} height={28}>
+              <use href="#i-check-circle" />
+            </svg>
           </div>
+          <h3>Nenhum lead aguardando atendimento</h3>
+          <p>Aguarde a Matriz distribuir novos leads ou crie um manualmente.</p>
         </div>
       ) : (
         <div className="atender-grid">

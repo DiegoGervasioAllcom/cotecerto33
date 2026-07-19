@@ -139,44 +139,36 @@ function Page() {
           </div>
         </div>
         <div className="row" style={{ gap: 8 }}>
-          <button className="btn btn-primary" onClick={nova}>
-            + Nova mensagem
+          <button className="btn btn-yellow" onClick={nova}>
+            <svg width={14} height={14}>
+              <use href="#i-plus" />
+            </svg>{" "}
+            Nova mensagem
           </button>
         </div>
       </div>
 
-      <div
-        className="kpis"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0,180px))",
-          gap: 12,
-          marginBottom: 12,
-        }}
-      >
-        <div className="card" style={{ borderLeft: "4px solid var(--accent, #f59e0b)" }}>
-          <div className="card-b">
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{kpis.total}</div>
-            <div className="muted">Mensagens</div>
-          </div>
+      <div className="summary-chips">
+        <div className="sum-chip">
+          <div className="sc-val">{kpis.total}</div>
+          <div className="sc-lbl">Mensagens</div>
         </div>
-        <div className="card" style={{ borderLeft: "4px solid #16a34a" }}>
-          <div className="card-b">
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{kpis.oficiais}</div>
-            <div className="muted">Oficiais (visíveis)</div>
-          </div>
+        <div className="sum-chip ok">
+          <div className="sc-val">{kpis.oficiais}</div>
+          <div className="sc-lbl">Oficiais (visíveis)</div>
         </div>
-        <div className="card" style={{ borderLeft: "4px solid #2563eb" }}>
-          <div className="card-b">
-            <div style={{ fontSize: 24, fontWeight: 700 }}>{kpis.categorias}</div>
-            <div className="muted">Categorias</div>
-          </div>
+        <div className="sum-chip info">
+          <div className="sc-val">{kpis.categorias}</div>
+          <div className="sc-lbl">Categorias</div>
         </div>
       </div>
 
-      <div className="alert alert-info" style={{ marginBottom: 12 }}>
-        Só mensagens <strong>oficiais</strong> aparecem para os vendedores. Padronize a comunicação
-        da marca e evite promessas indevidas de cobertura.
+      <div className="audit-note" style={{ marginBottom: 12 }}>
+        <svg width={16} height={16}>
+          <use href="#i-shield" />
+        </svg>{" "}
+        Só mensagens <strong style={{ margin: "0 4px" }}>oficiais</strong> aparecem para os
+        vendedores. Padronize a comunicação da marca e evite promessas indevidas de cobertura.
       </div>
 
       {err && <div className="alert alert-err">{err}</div>}
@@ -192,8 +184,8 @@ function Page() {
               className="grid-2"
               style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
             >
-              <div>
-                <div className="label">Etapa / Título</div>
+              <div className="field-group">
+                <label>Etapa / Título</label>
                 <input
                   className="input"
                   value={editing.titulo ?? ""}
@@ -201,8 +193,8 @@ function Page() {
                   placeholder="Ex.: Dia 1 — WhatsApp inicial"
                 />
               </div>
-              <div>
-                <div className="label">Categoria</div>
+              <div className="field-group">
+                <label>Categoria</label>
                 <input
                   className="input"
                   list="msg-categorias"
@@ -217,8 +209,8 @@ function Page() {
                 </datalist>
               </div>
             </div>
-            <div>
-              <div className="label">Objetivo</div>
+            <div className="field-group">
+              <label>Objetivo</label>
               <input
                 className="input"
                 value={editing.objetivo ?? ""}
@@ -226,8 +218,8 @@ function Page() {
                 placeholder="O que esta mensagem deve provocar no cliente"
               />
             </div>
-            <div>
-              <div className="label">Conteúdo</div>
+            <div className="field-group">
+              <label>Conteúdo</label>
               <textarea
                 className="input"
                 rows={6}
@@ -260,7 +252,7 @@ function Page() {
                 <button className="btn" onClick={() => setEditing(null)}>
                   Cancelar
                 </button>
-                <button className="btn btn-primary" disabled={busy} onClick={salvar}>
+                <button className="btn btn-yellow" disabled={busy} onClick={salvar}>
                   {busy ? "Salvando…" : "Salvar"}
                 </button>
               </div>
@@ -298,34 +290,36 @@ function Page() {
                   <td style={{ color: "#2563eb" }}>{m.categoria ?? "—"}</td>
                   <td style={{ color: "var(--muted)" }}>{m.objetivo ?? "—"}</td>
                   <td>
-                    <span className={`chip ${oficial ? "chip-success" : "chip-slate"}`}>
+                    <span className={`chip ${oficial ? "chip-ok" : "chip-slate"}`}>
                       {oficial ? "Oficial" : m.escopo === "global" ? "Inativa" : "Pessoal"}
                     </span>
                   </td>
                   <td style={{ textAlign: "right" }}>
-                    <div className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
+                    <div className="row-actions" style={{ justifyContent: "flex-end" }}>
                       {canEdit && (
                         <>
-                          <button
-                            className="btn btn-icon"
-                            title="Editar"
-                            onClick={() => setEditing(m)}
-                          >
-                            ✎
+                          <button className="ic-mini" title="Editar" onClick={() => setEditing(m)}>
+                            <svg width={15} height={15}>
+                              <use href="#i-edit" />
+                            </svg>
                           </button>
                           <button
-                            className="btn btn-icon"
+                            className="ic-mini"
                             title={m.ativo ? "Desativar" : "Ativar"}
                             onClick={() => toggleAtivo(m)}
                           >
-                            ✓
+                            <svg width={15} height={15}>
+                              <use href="#i-check" />
+                            </svg>
                           </button>
                           <button
-                            className="btn btn-icon"
+                            className="ic-mini danger"
                             title="Excluir"
                             onClick={() => excluir(m.id)}
                           >
-                            🗑
+                            <svg width={15} height={15}>
+                              <use href="#i-trash" />
+                            </svg>
                           </button>
                         </>
                       )}

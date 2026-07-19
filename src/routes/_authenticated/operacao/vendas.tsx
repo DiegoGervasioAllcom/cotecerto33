@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj, maskTelefone as maskPhone } from "@/lib/masks";
+import { useGroupScope } from "@/lib/group-scope";
 
 export const Route = createFileRoute("/_authenticated/operacao/vendas")({
   head: () => ({ meta: [{ title: "Controle de Vendas · CoteCerto" }] }),
@@ -71,6 +72,7 @@ function classify(p: Proposta): Tab {
 }
 
 function Page() {
+  const { isGroupView } = useGroupScope();
   const [periodOffset, setPeriodOffset] = useState(0);
   const period = useMemo(() => monthRange(periodOffset), [periodOffset]);
   const [rows, setRows] = useState<Proposta[]>([]);
@@ -222,8 +224,17 @@ function Page() {
         <div>
           <h1>Controle de Vendas</h1>
           <div className="sub">
-            O <strong>extrato geral da operação</strong> — da transmissão à baixa financeira, num só
-            lugar
+            {isGroupView ? (
+              <>
+                O <strong>extrato do seu grupo</strong> — da transmissão à baixa financeira, num só
+                lugar
+              </>
+            ) : (
+              <>
+                O <strong>extrato geral da operação</strong> — da transmissão à baixa financeira,
+                num só lugar
+              </>
+            )}
           </div>
         </div>
         <div className="tools">
