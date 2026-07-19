@@ -1274,6 +1274,7 @@ export type Database = {
           categoria: string | null;
           conteudo: string;
           criado_em: string;
+          dia: number | null;
           escopo: Database["public"]["Enums"]["msg_escopo"];
           id: string;
           objetivo: string | null;
@@ -1286,6 +1287,7 @@ export type Database = {
           categoria?: string | null;
           conteudo: string;
           criado_em?: string;
+          dia?: number | null;
           escopo?: Database["public"]["Enums"]["msg_escopo"];
           id?: string;
           objetivo?: string | null;
@@ -1298,6 +1300,7 @@ export type Database = {
           categoria?: string | null;
           conteudo?: string;
           criado_em?: string;
+          dia?: number | null;
           escopo?: Database["public"]["Enums"]["msg_escopo"];
           id?: string;
           objetivo?: string | null;
