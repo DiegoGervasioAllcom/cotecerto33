@@ -718,6 +718,175 @@ export type Database = {
           },
         ];
       };
+      desconto_politicas: {
+        Row: {
+          atualizado_em: string;
+          condicoes: string | null;
+          id: string;
+          modelo: string;
+          pct_maximo: number;
+          seguradora_id: string;
+        };
+        Insert: {
+          atualizado_em?: string;
+          condicoes?: string | null;
+          id?: string;
+          modelo: string;
+          pct_maximo: number;
+          seguradora_id: string;
+        };
+        Update: {
+          atualizado_em?: string;
+          condicoes?: string | null;
+          id?: string;
+          modelo?: string;
+          pct_maximo?: number;
+          seguradora_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "desconto_politicas_seguradora_id_fkey";
+            columns: ["seguradora_id"];
+            isOneToOne: false;
+            referencedRelation: "seguradoras";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      desconto_solicitacoes: {
+        Row: {
+          cotacao_id: string;
+          criado_em: string;
+          id: string;
+          nivel_atual: string | null;
+          pct_concedido: number | null;
+          pct_pedido: number;
+          resolvido_em: string | null;
+          seguradora_id: string;
+          solicitante_id: string;
+          status: string;
+        };
+        Insert: {
+          cotacao_id: string;
+          criado_em?: string;
+          id?: string;
+          nivel_atual?: string | null;
+          pct_concedido?: number | null;
+          pct_pedido: number;
+          resolvido_em?: string | null;
+          seguradora_id: string;
+          solicitante_id: string;
+          status?: string;
+        };
+        Update: {
+          cotacao_id?: string;
+          criado_em?: string;
+          id?: string;
+          nivel_atual?: string | null;
+          pct_concedido?: number | null;
+          pct_pedido?: number;
+          resolvido_em?: string | null;
+          seguradora_id?: string;
+          solicitante_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "desconto_solicitacoes_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "cotacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desconto_solicitacoes_nivel_atual_fkey";
+            columns: ["nivel_atual"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desconto_solicitacoes_nivel_atual_fkey";
+            columns: ["nivel_atual"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "desconto_solicitacoes_seguradora_id_fkey";
+            columns: ["seguradora_id"];
+            isOneToOne: false;
+            referencedRelation: "seguradoras";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desconto_solicitacoes_solicitante_id_fkey";
+            columns: ["solicitante_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desconto_solicitacoes_solicitante_id_fkey";
+            columns: ["solicitante_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      desconto_trilha: {
+        Row: {
+          acao: string;
+          autor_id: string | null;
+          criado_em: string;
+          id: string;
+          observacao: string | null;
+          pct: number | null;
+          solicitacao_id: string;
+        };
+        Insert: {
+          acao: string;
+          autor_id?: string | null;
+          criado_em?: string;
+          id?: string;
+          observacao?: string | null;
+          pct?: number | null;
+          solicitacao_id: string;
+        };
+        Update: {
+          acao?: string;
+          autor_id?: string | null;
+          criado_em?: string;
+          id?: string;
+          observacao?: string | null;
+          pct?: number | null;
+          solicitacao_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "desconto_trilha_autor_id_fkey";
+            columns: ["autor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desconto_trilha_autor_id_fkey";
+            columns: ["autor_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "desconto_trilha_solicitacao_id_fkey";
+            columns: ["solicitacao_id"];
+            isOneToOne: false;
+            referencedRelation: "desconto_solicitacoes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       distribuicao_config: {
         Row: {
           atualizado_em: string;
@@ -1638,6 +1807,41 @@ export type Database = {
             columns: ["oportunidade_id"];
             isOneToOne: false;
             referencedRelation: "oportunidades";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      respostas_padrao: {
+        Row: {
+          ativo: boolean;
+          criado_em: string;
+          id: string;
+          seguradora_id: string | null;
+          texto: string;
+          titulo: string;
+        };
+        Insert: {
+          ativo?: boolean;
+          criado_em?: string;
+          id?: string;
+          seguradora_id?: string | null;
+          texto: string;
+          titulo: string;
+        };
+        Update: {
+          ativo?: boolean;
+          criado_em?: string;
+          id?: string;
+          seguradora_id?: string | null;
+          texto?: string;
+          titulo?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "respostas_padrao_seguradora_id_fkey";
+            columns: ["seguradora_id"];
+            isOneToOne: false;
+            referencedRelation: "seguradoras";
             referencedColumns: ["id"];
           },
         ];
