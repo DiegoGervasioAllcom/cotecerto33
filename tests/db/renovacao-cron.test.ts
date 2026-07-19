@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { admin, criarEmpresa, criarPersonaComEmpresa, uniq, type Db } from "../helpers/supabase";
+import {
+  admin,
+  criarEmpresa,
+  criarPersonaComEmpresa,
+  loginMatriz,
+  uniq,
+  type Db,
+} from "../helpers/supabase";
 
 /**
  * G6.1 — job de renovação: cria lead de renovação 60 dias antes do
@@ -161,5 +168,39 @@ describe("criar_leads_renovacao()", () => {
     const { error } = await vend.client.rpc("criar_leads_renovacao");
     expect(error).not.toBeNull();
     expect(error?.message).toMatch(/permiss/i);
+  });
+
+  describe("iniciar_renovacao() — botão manual (G6.2)", () => {
+    it("Matriz inicia a renovação de uma apólice → cria 1 lead vinculado; chamar de novo devolve o mesmo (dedup)", async () => {
+      const matriz = await loginMatriz();
+      const propId = await criarPropostaComVencimento(isoInDays(90)); // fora da janela do cron
+      const r1 = await matriz.rpc("iniciar_renovacao", { p_proposta_id: propId });
+      expect(r1.error).toBeNull();
+      expect(r1.data).toBeTruthy();
+      if (r1.data) leadIds.push(r1.data as string);
+
+      const { count } = await admin
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("renovacao_proposta_id", propId);
+      expect(count).toBe(1);
+
+      // idempotente: 2ª chamada devolve o mesmo lead, sem duplicar.
+      const r2 = await matriz.rpc("iniciar_renovacao", { p_proposta_id: propId });
+      expect(r2.error).toBeNull();
+      expect(r2.data).toBe(r1.data);
+    });
+
+    it("NEGATIVO: usuário de outra rede não pode iniciar a renovação da apólice", async () => {
+      const propId = await criarPropostaComVencimento(isoInDays(45));
+      const forasteiro = await criarPersonaComEmpresa("vendedor", {
+        emailPrefix: uniq("renov-forasteiro"),
+      });
+      const { error } = await forasteiro.client.rpc("iniciar_renovacao", {
+        p_proposta_id: propId,
+      });
+      expect(error).not.toBeNull();
+      expect(error?.message).toMatch(/permiss/i);
+    });
   });
 });
