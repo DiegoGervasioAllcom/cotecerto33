@@ -41,8 +41,25 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Unit tests
-        run: bun run test:unit
+      # T9 — gate de cobertura: test:coverage roda os unit tests E aplica os
+      # thresholds definidos em vitest.config.ts (falha o job se a cobertura da
+      # lógica pura cair abaixo do piso). O resumo textual vai para o painel do
+      # PR/run via $GITHUB_STEP_SUMMARY.
+      - name: Unit tests + cobertura (gate)
+        run: |
+          set -o pipefail
+          bun run test:coverage 2>&1 | tee coverage-output.txt
+
+      - name: Publicar resumo de cobertura no PR
+        if: always()
+        run: |
+          {
+            echo "## Cobertura (lógica de negócio pura — T9)"
+            echo '```'
+            sed -n '/Coverage report/,/^Lines/p' coverage-output.txt || true
+            echo '```'
+            echo "_Regras de negócio do servidor (RPCs/RLS/triggers) são cobertas pelos jobs \`db-tests\` e \`e2e\`._"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   db-tests:
     runs-on: ubuntu-latest
