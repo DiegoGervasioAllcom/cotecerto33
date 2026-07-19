@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { printHtml, escapeHtml, fmtBRL } from "@/lib/print";
 import { maskCpfCnpj } from "@/lib/masks";
+import { SolicitarDescontoModal } from "@/components/venda/solicitar-desconto-modal";
 
 export const Route = createFileRoute("/_authenticated/venda/cotacoes/$id")({
   head: () => ({ meta: [{ title: "Comparativo · CoteCerto" }] }),
@@ -37,6 +38,30 @@ type Data = {
   premios: Premio[];
 };
 
+type Solicitacao = {
+  id: string;
+  seguradora_id: string;
+  pct_pedido: number;
+  pct_concedido: number | null;
+  status: string;
+  criado_em: string;
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pendente: "Pendente",
+  aguardando_aceite: "Aguardando seu aceite",
+  aprovado: "Aprovado",
+  negado: "Negado",
+  cancelado: "Cancelado",
+};
+const STATUS_CHIP: Record<string, string> = {
+  pendente: "chip-yellow",
+  aguardando_aceite: "chip-info",
+  aprovado: "chip-ok",
+  negado: "chip-alert",
+  cancelado: "chip-outline",
+};
+
 const money = (n: number | null) =>
   n != null
     ? Number(n).toLocaleString("pt-BR", {
@@ -55,6 +80,21 @@ function Page() {
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [seguradoras, setSeguradoras] = useState<{ id: string; nome: string }[]>([]);
+  const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
+  const [descontoModal, setDescontoModal] = useState<Premio | null>(null);
+  const [busySolId, setBusySolId] = useState<string | null>(null);
+
+  const loadSolicitacoes = useCallback(async () => {
+    const { data: sols } = await supabase
+      .from("desconto_solicitacoes")
+      .select("id,seguradora_id,pct_pedido,pct_concedido,status,criado_em")
+      // mais recente primeiro: solicitacaoFor() usa .find() e deve pegar o
+      // último pedido por seguradora (ex.: negado -> novo pedido -> aprovado).
+      .eq("cotacao_id", id)
+      .order("criado_em", { ascending: false });
+    setSolicitacoes((sols as Solicitacao[]) ?? []);
+  }, [id]);
 
   useEffect(() => {
     (async () => {
@@ -71,9 +111,44 @@ function Page() {
         .maybeSingle();
       if (error) setErr(error.message);
       setData(d as unknown as Data);
+      const { data: segs } = await supabase.from("seguradoras").select("id,nome");
+      setSeguradoras(segs ?? []);
+      await loadSolicitacoes();
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, loadSolicitacoes]);
+
+  const seguradoraId = (nome: string) => seguradoras.find((s) => s.nome === nome)?.id ?? null;
+  const solicitacaoFor = (nome: string) => {
+    const sid = seguradoraId(nome);
+    if (!sid) return null;
+    return (
+      solicitacoes.find(
+        (s) => s.seguradora_id === sid && ["pendente", "aguardando_aceite"].includes(s.status),
+      ) ?? solicitacoes.find((s) => s.seguradora_id === sid)
+    );
+  };
+
+  async function handleAceitar(solId: string) {
+    setBusySolId(solId);
+    const { error } = await supabase.rpc("aceitar_desconto", { p_id: solId });
+    setBusySolId(null);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    await loadSolicitacoes();
+  }
+  async function handleCancelar(solId: string) {
+    setBusySolId(solId);
+    const { error } = await supabase.rpc("cancelar_desconto", { p_id: solId });
+    setBusySolId(null);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    await loadSolicitacoes();
+  }
 
   if (loading)
     return (
@@ -315,6 +390,59 @@ function Page() {
                     </td>
                   ))}
                 </tr>
+                <tr className="actions-row">
+                  <td className="cov-name">
+                    <small>Desconto adicional</small>
+                  </td>
+                  {offers.map((o) => {
+                    const sol = solicitacaoFor(o.seguradora);
+                    const emAndamento =
+                      sol && ["pendente", "aguardando_aceite"].includes(sol.status);
+                    return (
+                      <td key={o.id}>
+                        {sol && (
+                          <div style={{ marginBottom: 6 }}>
+                            <span className={`chip ${STATUS_CHIP[sol.status] ?? "chip-outline"}`}>
+                              {sol.status === "aprovado"
+                                ? `Aprovado ${sol.pct_concedido ?? sol.pct_pedido}%`
+                                : (STATUS_LABEL[sol.status] ?? sol.status)}
+                            </span>
+                          </div>
+                        )}
+                        {emAndamento ? (
+                          <div className="ins-actions">
+                            {sol!.status === "aguardando_aceite" && (
+                              <button
+                                className="btn btn-yellow btn-sm"
+                                type="button"
+                                disabled={busySolId === sol!.id}
+                                onClick={() => handleAceitar(sol!.id)}
+                              >
+                                Aceitar
+                              </button>
+                            )}
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              type="button"
+                              disabled={busySolId === sol!.id}
+                              onClick={() => handleCancelar(sol!.id)}
+                            >
+                              {sol!.status === "aguardando_aceite" ? "Recusar" : "Cancelar"}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            type="button"
+                            onClick={() => setDescontoModal(o)}
+                          >
+                            Solicitar desconto adicional
+                          </button>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
               </tbody>
             </table>
             <div className="compare-foot">
@@ -384,6 +512,19 @@ function Page() {
             </div>
           </div>
         </>
+      )}
+
+      {descontoModal && (
+        <SolicitarDescontoModal
+          cotacaoId={data.id}
+          seguradoraNome={descontoModal.seguradora}
+          seguradoraId={seguradoraId(descontoModal.seguradora)}
+          premio={Number(descontoModal.premio)}
+          onClose={() => setDescontoModal(null)}
+          onSent={() => {
+            loadSolicitacoes();
+          }}
+        />
       )}
     </AppShell>
   );
