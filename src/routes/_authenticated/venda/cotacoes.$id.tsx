@@ -162,6 +162,9 @@ function Page() {
         <ProtoIcons />
         <div className="alert alert-err">{err || "Cotação não encontrada."}</div>
         <Link to="/venda/cotacoes" className="btn">
+          <svg width={14} height={14}>
+            <use href="#i-chevron-left" />
+          </svg>{" "}
           Voltar para lista
         </Link>
       </AppShell>
@@ -265,10 +268,16 @@ function Page() {
         </div>
         <div className="tools">
           <button className="btn btn-ghost" onClick={() => nav({ to: "/venda/cotacoes" })}>
-            ‹ Voltar para lista
+            <svg width={14} height={14}>
+              <use href="#i-chevron-left" />
+            </svg>{" "}
+            Voltar para lista
           </button>
           <Link to="/venda/novo-lead" search={{ id: data.id }} className="btn btn-ghost">
-            + Comparar com mais seguradoras
+            <svg width={14} height={14}>
+              <use href="#i-plus" />
+            </svg>{" "}
+            Comparar com mais seguradoras
           </Link>
         </div>
       </div>

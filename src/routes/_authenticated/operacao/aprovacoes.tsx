@@ -441,7 +441,11 @@ function Page() {
       <div className="page-head">
         <div>
           <h1>Aprovações</h1>
-          <div className="sub">Pedidos de desconto adicional pendentes da sua decisão</div>
+          <div className="sub">
+            {role === "matriz"
+              ? "Pedidos de desconto endereçados à Matriz (última instância) e respostas-padrão"
+              : "Pedidos que sobem para você — aprove dentro da sua alçada ou escale ao superior"}
+          </div>
         </div>
       </div>
 

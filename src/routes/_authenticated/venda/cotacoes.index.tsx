@@ -124,7 +124,10 @@ function Page() {
         </div>
         <div className="tools">
           <Link to="/venda/novo-lead" className="btn btn-yellow">
-            + Nova cotação
+            <svg width={14} height={14}>
+              <use href="#i-plus" />
+            </svg>{" "}
+            Nova cotação
           </Link>
         </div>
       </div>
