@@ -11,15 +11,33 @@ export default defineConfig({
     env: loadEnv("", process.cwd(), ""),
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
-      include: ["src/**"],
-      // Fora do denominador: tipos/roteador gerados e primitivas de UI (shadcn) —
-      // não são alvo de teste unitário e só inflam a métrica.
-      exclude: [
-        "src/integrations/supabase/database.types.ts",
-        "src/routeTree.gen.ts",
-        "src/components/ui/**",
+      reporter: ["text", "text-summary", "json-summary", "html"],
+      // O gate de cobertura (T9) protege a LÓGICA DE NEGÓCIO PURA do lado
+      // cliente — máscaras/parse de moeda e os schemas Zod de cotação/cadastro,
+      // que um dev poderia quebrar silenciosamente. As regras de negócio do
+      // servidor (RPCs/triggers/RLS no Postgres) são cobertas pelos jobs
+      // `db-tests` e `e2e` no CI, não por cobertura de TS. Por isso o
+      // denominador é só o conjunto testável abaixo — medir `src/**` inteiro
+      // (telas, wrappers de Supabase) só produziria uma métrica enganosa.
+      include: [
+        "src/lib/masks.ts",
+        "src/lib/veiculo.ts",
+        "src/lib/schemas/cadastro.schema.ts",
+        "src/lib/schemas/catalogos.schema.ts",
+        "src/lib/schemas/cotacaoSegurado.schema.ts",
+        "src/lib/schemas/cotacaoSeguro.schema.ts",
+        "src/lib/schemas/cotacaoVeiculo.schema.ts",
+        "src/lib/schemas/cotacaoPerfil.schema.ts",
+        "src/lib/schemas/cotacaoCoberturas.schema.ts",
       ],
+      // Piso que trava a cobertura atual e barra regressões. Ver comentário
+      // acima: escopo intencionalmente restrito à lógica pura testável.
+      thresholds: {
+        statements: 80,
+        branches: 70,
+        functions: 85,
+        lines: 80,
+      },
     },
     projects: [
       {
