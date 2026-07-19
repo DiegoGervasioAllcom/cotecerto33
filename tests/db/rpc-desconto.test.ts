@@ -612,6 +612,158 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
     });
   });
 
+  describe("G3.2b: barra desconto em proposta já paga", () => {
+    it("aprovar continua funcionando normalmente ANTES do pagamento (regressão)", async () => {
+      const supervisor = await criarPersonaComEmpresa("supervisor", {
+        emailPrefix: uniq("g32b-ok-sup"),
+      });
+      const vendedor = await criarPersonaComEmpresa("vendedor", {
+        emailPrefix: uniq("g32b-ok-vend"),
+        empresaId: supervisor.empresaId,
+        superiorId: supervisor.userId,
+      });
+      await upsertPolitica("supervisor", seguradoras[6].id, 10);
+
+      const cot = await criarCotacaoComPremio({
+        empresaId: vendedor.empresaId,
+        responsavelId: vendedor.userId,
+        seguradoraNome: seguradoras[6].nome,
+        premio: 1000,
+      });
+
+      const s = await vendedor.client.rpc("solicitar_desconto", {
+        p_cotacao_id: cot.cotacaoId,
+        p_seguradora_id: seguradoras[6].id,
+        p_pct_pedido: 10,
+      });
+      expect(s.error).toBeNull();
+
+      const a = await supervisor.client.rpc("aprovar_desconto", {
+        p_id: s.data as string,
+        p_pct_concedido: 10,
+      });
+      expect(a.error).toBeNull();
+
+      const { data: proposta } = await admin
+        .from("propostas")
+        .select("premio")
+        .eq("id", cot.propostaId)
+        .single();
+      expect(Number(proposta?.premio)).toBe(900);
+
+      const { data: sol } = await admin
+        .from("desconto_solicitacoes")
+        .select("status")
+        .eq("id", s.data as string)
+        .single();
+      expect(sol?.status).toBe("aprovado");
+    });
+
+    it("aprovar falha quando a proposta já está paga; não altera premio/comissao_valor nem status", async () => {
+      const supervisor = await criarPersonaComEmpresa("supervisor", {
+        emailPrefix: uniq("g32b-paga-sup"),
+      });
+      const vendedor = await criarPersonaComEmpresa("vendedor", {
+        emailPrefix: uniq("g32b-paga-vend"),
+        empresaId: supervisor.empresaId,
+        superiorId: supervisor.userId,
+      });
+      await upsertPolitica("supervisor", seguradoras[7].id, 10);
+
+      const cot = await criarCotacaoComPremio({
+        empresaId: vendedor.empresaId,
+        responsavelId: vendedor.userId,
+        seguradoraNome: seguradoras[7].nome,
+        premio: 1000,
+      });
+      await admin.from("propostas").update({ comissao_pct: 16 }).eq("id", cot.propostaId);
+
+      const s = await vendedor.client.rpc("solicitar_desconto", {
+        p_cotacao_id: cot.cotacaoId,
+        p_seguradora_id: seguradoras[7].id,
+        p_pct_pedido: 10,
+      });
+      expect(s.error).toBeNull();
+
+      // Marca a proposta como paga ANTES de aprovar o desconto.
+      await admin
+        .from("propostas")
+        .update({ pago_em: new Date().toISOString() })
+        .eq("id", cot.propostaId);
+
+      const a = await supervisor.client.rpc("aprovar_desconto", {
+        p_id: s.data as string,
+        p_pct_concedido: 10,
+      });
+      expect(a.error).not.toBeNull();
+      expect(a.error?.message).toMatch(/proposta já paga/i);
+
+      // Nada mudou: premio/comissao_valor intactos, status permanece pendente.
+      const { data: proposta } = await admin
+        .from("propostas")
+        .select("premio, comissao_valor")
+        .eq("id", cot.propostaId)
+        .single();
+      expect(Number(proposta?.premio)).toBe(1000);
+      expect(proposta?.comissao_valor == null || Number(proposta?.comissao_valor) === 160).toBe(
+        true,
+      );
+
+      const { data: sol } = await admin
+        .from("desconto_solicitacoes")
+        .select("status, pct_concedido")
+        .eq("id", s.data as string)
+        .single();
+      expect(sol?.status).toBe("pendente");
+
+      // O mesmo guard vale para aceitar_desconto (via contraproposta).
+      const cot2 = await criarCotacaoComPremio({
+        empresaId: vendedor.empresaId,
+        responsavelId: vendedor.userId,
+        seguradoraNome: seguradoras[8].nome,
+        premio: 500,
+      });
+      await upsertPolitica("supervisor", seguradoras[8].id, 10);
+
+      const s2 = await vendedor.client.rpc("solicitar_desconto", {
+        p_cotacao_id: cot2.cotacaoId,
+        p_seguradora_id: seguradoras[8].id,
+        p_pct_pedido: 15,
+      });
+      expect(s2.error).toBeNull();
+
+      const c2 = await supervisor.client.rpc("contrapropor_desconto", {
+        p_id: s2.data as string,
+        p_pct_novo: 8,
+      });
+      expect(c2.error).toBeNull();
+
+      await admin
+        .from("propostas")
+        .update({ pago_em: new Date().toISOString() })
+        .eq("id", cot2.propostaId);
+
+      const acc2 = await vendedor.client.rpc("aceitar_desconto", { p_id: s2.data as string });
+      expect(acc2.error).not.toBeNull();
+      expect(acc2.error?.message).toMatch(/proposta já paga/i);
+
+      const { data: sol2 } = await admin
+        .from("desconto_solicitacoes")
+        .select("status")
+        .eq("id", s2.data as string)
+        .single();
+      expect(sol2?.status).toBe("aguardando_aceite");
+
+      const { data: premio2 } = await admin
+        .from("cotacao_premios")
+        .select("premio")
+        .eq("cotacao_id", cot2.cotacaoId)
+        .eq("selecionada", true)
+        .single();
+      expect(Number(premio2?.premio)).toBe(500);
+    });
+  });
+
   describe("guarda: seguradora sem prêmio selecionado", () => {
     it("aprovar falha ALTO (não silencioso) quando nenhum prêmio selecionado casa com a seguradora do pedido", async () => {
       const supervisor = await criarPersonaComEmpresa("supervisor", {
