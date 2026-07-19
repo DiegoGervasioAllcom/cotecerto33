@@ -77,6 +77,7 @@ const MATRIZ_COMANDO_GROUP: Group = {
 const MATRIZ_OPERACAO_GROUP: Group = {
   label: "OPERAÇÃO",
   items: [
+    { to: "/operacao/aprovacoes", label: "Aprovações", icon: ClipboardCheck },
     { to: "/operacao/franquias", label: "Franquias", icon: Building2 },
     { to: "/operacao/vendedores", label: "Vendedores", icon: Briefcase },
     { to: "/operacao/supervisao", label: "Supervisão", icon: ShieldCheck },
@@ -102,7 +103,7 @@ const GRUPO_GROUP: Group = {
   label: "GRUPO",
   items: [
     { to: "/comando/visao-geral", label: "Visão geral", icon: LayoutDashboard },
-    { to: "/operacao/aprovacoes", label: "Aprovações", icon: ClipboardCheck, soon: true },
+    { to: "/operacao/aprovacoes", label: "Aprovações", icon: ClipboardCheck },
     { to: "/operacao/vendedores", label: "Vendedores", icon: Briefcase },
     { to: "/operacao/supervisao", label: "Supervisão", icon: ShieldCheck },
     { to: "/operacao/pipeline-geral", label: "Pipeline geral", icon: GitBranch },
