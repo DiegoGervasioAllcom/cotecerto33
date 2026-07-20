@@ -145,6 +145,18 @@ function Page() {
   );
   const fnW = (n: number) => `${Math.round((n / funilMax) * 100)}%`;
 
+  const funilTransicoes = [
+    { de: "Leads", para: "Cotações", de_v: dash.funil.leads, para_v: dash.funil.cotacoes },
+    { de: "Cotações", para: "Propostas", de_v: dash.funil.cotacoes, para_v: dash.funil.propostas },
+    { de: "Propostas", para: "Fechados", de_v: dash.funil.propostas, para_v: dash.funil.fechados },
+  ]
+    .filter((t) => t.de_v > 0)
+    .map((t) => ({ ...t, r: Math.round((t.para_v / t.de_v) * 100) }));
+  const funilFraco =
+    funilTransicoes.length > 0 ? funilTransicoes.reduce((min, t) => (t.r < min.r ? t : min)) : null;
+
+  const missaoCompleta = missoesDone === missoes.length;
+
   // Tendência: viewBox 720x200; eixo x: 30..690, y: 30..170
   const trend = dash.tendencia.length
     ? dash.tendencia
@@ -306,6 +318,7 @@ function Page() {
                   </div>
                 </div>
               ))}
+              {missaoCompleta && <div className="coach-tip">🎉 Missão do dia concluída!</div>}
             </div>
           </div>
 
@@ -369,6 +382,14 @@ function Page() {
                   </div>
                 </div>
               </div>
+              {funilFraco && (
+                <div className="coach-tip">
+                  <strong>
+                    Seu ponto fraco: {funilFraco.de} → {funilFraco.para} ({funilFraco.r}%).
+                  </strong>{" "}
+                  Foque aqui para não perder venda.
+                </div>
+              )}
             </div>
           </div>
 
