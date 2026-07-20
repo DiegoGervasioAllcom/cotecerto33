@@ -2416,6 +2416,20 @@ export type Database = {
         Returns: undefined;
       };
       criar_leads_renovacao: { Args: never; Returns: Json };
+      definir_negociacao_status: {
+        Args: { p_proposta_id: string; p_status: string };
+        Returns: {
+          id: string;
+          negociacao_status: string;
+        }[];
+      };
+      definir_prazo_resposta: {
+        Args: { p_prazo?: string; p_proposta_id: string };
+        Returns: {
+          id: string;
+          prazo_resposta: string;
+        }[];
+      };
       desarquivar_lead: { Args: { p_lead: string }; Returns: undefined };
       desbloquear_lead: { Args: { p_lead: string }; Returns: undefined };
       desligar_usuario: {
