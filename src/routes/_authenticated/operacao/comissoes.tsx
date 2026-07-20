@@ -910,9 +910,7 @@ function Page() {
                               </small>
                             </td>
                             <td>
-                              <small>
-                                {(l.criado_por && profiles[l.criado_por]?.nome) || "—"}
-                              </small>
+                              <small>{(l.criado_por && profiles[l.criado_por]?.nome) || "—"}</small>
                             </td>
                             <td>
                               <span
