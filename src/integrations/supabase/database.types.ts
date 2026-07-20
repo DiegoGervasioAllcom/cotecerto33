@@ -1845,6 +1845,50 @@ export type Database = {
           },
         ];
       };
+      proposta_versoes: {
+        Row: {
+          criado_em: string;
+          criado_por: string | null;
+          forma_pagamento: string | null;
+          id: string;
+          nota: string;
+          parcelas: number | null;
+          premio: number | null;
+          proposta_id: string;
+          versao: number;
+        };
+        Insert: {
+          criado_em?: string;
+          criado_por?: string | null;
+          forma_pagamento?: string | null;
+          id?: string;
+          nota: string;
+          parcelas?: number | null;
+          premio?: number | null;
+          proposta_id: string;
+          versao: number;
+        };
+        Update: {
+          criado_em?: string;
+          criado_por?: string | null;
+          forma_pagamento?: string | null;
+          id?: string;
+          nota?: string;
+          parcelas?: number | null;
+          premio?: number | null;
+          proposta_id?: string;
+          versao?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "proposta_versoes_proposta_id_fkey";
+            columns: ["proposta_id"];
+            isOneToOne: false;
+            referencedRelation: "propostas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       propostas: {
         Row: {
           aceita_em: string | null;
@@ -1862,9 +1906,11 @@ export type Database = {
           forma_pagamento: string | null;
           id: string;
           lead_id: string | null;
+          negociacao_status: string;
           numero: string | null;
           oportunidade_id: string | null;
           pago_em: string | null;
+          prazo_resposta: string | null;
           premio: number | null;
           responsavel_id: string | null;
           seguradora: string | null;
@@ -1891,9 +1937,11 @@ export type Database = {
           forma_pagamento?: string | null;
           id?: string;
           lead_id?: string | null;
+          negociacao_status?: string;
           numero?: string | null;
           oportunidade_id?: string | null;
           pago_em?: string | null;
+          prazo_resposta?: string | null;
           premio?: number | null;
           responsavel_id?: string | null;
           seguradora?: string | null;
@@ -1920,9 +1968,11 @@ export type Database = {
           forma_pagamento?: string | null;
           id?: string;
           lead_id?: string | null;
+          negociacao_status?: string;
           numero?: string | null;
           oportunidade_id?: string | null;
           pago_em?: string | null;
+          prazo_resposta?: string | null;
           premio?: number | null;
           responsavel_id?: string | null;
           seguradora?: string | null;
@@ -2506,6 +2556,19 @@ export type Database = {
       registrar_venda: {
         Args: { lead_id: string; observacao?: string; valor: number };
         Returns: string;
+      };
+      registrar_versao_proposta: {
+        Args: {
+          p_forma_pagamento: string;
+          p_nota: string;
+          p_parcelas: number;
+          p_premio: number;
+          p_proposta_id: string;
+        };
+        Returns: {
+          id: string;
+          versao: number;
+        }[];
       };
       resolver_solicitacao_vendedor: {
         Args: { p_aprovar: boolean; p_id: string; p_observacao?: string };
