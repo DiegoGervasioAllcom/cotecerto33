@@ -369,6 +369,15 @@ function Page() {
               </div>
             </div>
           ))}
+          {funil.rows[funil.worstIdx] && funil.rows[funil.worstIdx].den > 0 && (
+            <div className="coach-tip">
+              <strong>
+                Maior perda: {funil.rows[funil.worstIdx].etapa} ({funil.rows[funil.worstIdx].pct}
+                %).
+              </strong>{" "}
+              É aqui que o time mais deixa venda na mesa — priorize a ação.
+            </div>
+          )}
         </div>
       </div>
 
