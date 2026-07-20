@@ -1,8 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  NegociacaoPropostaPanel,
+  negociacaoChip,
+} from "@/components/venda/negociacao-proposta-panel";
 
 export const Route = createFileRoute("/_authenticated/venda/propostas")({
   head: () => ({ meta: [{ title: "Propostas · CoteCerto" }] }),
@@ -22,6 +26,8 @@ type Row = {
   criado_em: string;
   transmitida_em: string | null;
   cotacao_id: string | null;
+  negociacao_status: string;
+  prazo_resposta: string | null;
   cotacoes: { segurado: { nome: string | null }[] | null } | null;
 };
 
@@ -36,25 +42,28 @@ function statusChip(s: string) {
 
 function Page() {
   const { selected } = Route.useSearch();
+  const navigate = useNavigate({ from: "/venda/propostas" });
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
+  async function loadRows() {
+    const { data, error } = await supabase
+      .from("propostas")
+      .select(
+        "id,numero,status,seguradora,premio,valor,criado_em,transmitida_em,cotacao_id," +
+          "negociacao_status,prazo_resposta,cotacoes(segurado:cotacao_segurado(nome))",
+      )
+      .order("criado_em", { ascending: false })
+      .limit(200);
+    if (error) setErr(error.message);
+    setRows((data ?? []) as unknown as Row[]);
+    setLoading(false);
+  }
+
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase
-        .from("propostas")
-        .select(
-          "id,numero,status,seguradora,premio,valor,criado_em,transmitida_em,cotacao_id," +
-            "cotacoes(segurado:cotacao_segurado(nome))",
-        )
-        .order("criado_em", { ascending: false })
-        .limit(200);
-      if (error) setErr(error.message);
-      setRows((data ?? []) as unknown as Row[]);
-      setLoading(false);
-    })();
+    void loadRows();
   }, []);
 
   useEffect(() => {
@@ -63,6 +72,9 @@ function Page() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [selected, loading, rows.length]);
 
+  const totalValor = rows.reduce((a, r) => a + (r.premio ?? r.valor ?? 0), 0);
+  const selectedRow = rows.find((r) => r.id === selected) ?? null;
+
   return (
     <AppShell title="Propostas">
       <ProtoIcons />
@@ -70,7 +82,7 @@ function Page() {
         <div>
           <h1>Propostas</h1>
           <div className="sub">
-            Geradas automaticamente quando você seleciona um prêmio em uma cotação
+            {rows.length} proposta{rows.length !== 1 ? "s" : ""} · valor total {fmtBRL(totalValor)}
           </div>
         </div>
       </div>
@@ -99,8 +111,10 @@ function Page() {
                 <th>Seguradora</th>
                 <th>Prêmio</th>
                 <th>Status</th>
+                <th>Negociação</th>
                 <th>Gerada em</th>
                 <th>Transmitida</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -110,14 +124,16 @@ function Page() {
                   ref={(el) => {
                     rowRefs.current[r.id] = el;
                   }}
-                  style={
-                    selected === r.id
+                  style={{
+                    cursor: "pointer",
+                    ...(selected === r.id
                       ? {
                           outline: "2px solid var(--brand, #2563eb)",
                           background: "rgba(37,99,235,.06)",
                         }
-                      : undefined
-                  }
+                      : {}),
+                  }}
+                  onClick={() => navigate({ search: (s) => ({ ...s, selected: r.id }) })}
                 >
                   <td>
                     <strong>{r.numero || "—"}</strong>
@@ -126,15 +142,43 @@ function Page() {
                   <td>{r.seguradora || "—"}</td>
                   <td>{fmtBRL(r.premio ?? r.valor)}</td>
                   <td>{statusChip(r.status)}</td>
+                  <td>{negociacaoChip(r.negociacao_status)}</td>
                   <td>{new Date(r.criado_em).toLocaleDateString("pt-BR")}</td>
                   <td>
                     {r.transmitida_em ? new Date(r.transmitida_em).toLocaleString("pt-BR") : "—"}
+                  </td>
+                  <td>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate({ search: (s) => ({ ...s, selected: r.id }) });
+                      }}
+                    >
+                      Negociar
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {selectedRow && (
+        <NegociacaoPropostaPanel
+          proposta={{
+            id: selectedRow.id,
+            numero: selectedRow.numero,
+            seguradora: selectedRow.seguradora,
+            premio: selectedRow.premio,
+            valor: selectedRow.valor,
+            negociacao_status: selectedRow.negociacao_status,
+            prazo_resposta: selectedRow.prazo_resposta,
+            segurado: selectedRow.cotacoes?.segurado?.[0]?.nome ?? null,
+          }}
+          onChanged={() => void loadRows()}
+        />
       )}
     </AppShell>
   );
