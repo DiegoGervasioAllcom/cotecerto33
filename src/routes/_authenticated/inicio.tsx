@@ -54,7 +54,8 @@ interface DashData {
   missao: { contatos: number; cotacoes: number; propostas: number; followups: number };
   funil: { leads: number; cotacoes: number; propostas: number; fechados: number };
   posicao: { rank: number; total: number; minhaConv: number; mediaConv: number };
-  leadsParados: { id: string; nome: string; dias: number; status: string }[];
+  leadsParados: { id: string; nome: string; dias: number; status: string; valor: number }[];
+  propostasSemResposta: { id: string; segurado: string; dias: number; valor: number }[];
   tendencia: { dia: string; leads: number; cotacoes: number; fechados: number }[];
   conquistas: { id: string; icon: string; nome: string; ok: boolean }[];
 }
@@ -99,6 +100,7 @@ function Page() {
     funil: { leads: 0, cotacoes: 0, propostas: 0, fechados: 0 },
     posicao: { rank: 0, total: 0, minhaConv: 0, mediaConv: 0 },
     leadsParados: [],
+    propostasSemResposta: [],
     tendencia: [],
     conquistas: [],
   };
@@ -156,6 +158,34 @@ function Page() {
     funilTransicoes.length > 0 ? funilTransicoes.reduce((min, t) => (t.r < min.r ? t : min)) : null;
 
   const missaoCompleta = missoesDone === missoes.length;
+
+  // TODO Q3: cotações expirando depende de campo de expiração/valor inexistente no schema
+  type AcaoRetorno = {
+    id: string;
+    titulo: string;
+    sub: string;
+    valor: number;
+    kind: "lead" | "proposta";
+  };
+  const acoesRetorno: AcaoRetorno[] = [
+    ...dash.leadsParados.map((l) => ({
+      id: `lead-${l.id}`,
+      titulo: `Retomar lead parado: ${l.nome || "Lead sem nome"}`,
+      sub: `há ${l.dias}d · "${l.status}"`,
+      valor: l.valor,
+      kind: "lead" as const,
+    })),
+    ...dash.propostasSemResposta.map((p) => ({
+      id: `proposta-${p.id}`,
+      titulo: `Cobrar resposta da proposta ${p.segurado}`,
+      sub: `sem retorno há ${p.dias}d`,
+      valor: p.valor,
+      kind: "proposta" as const,
+    })),
+  ].sort((a, b) => b.valor - a.valor);
+  const retornoTotal = acoesRetorno.reduce((s, a) => s + a.valor, 0);
+  const acoesVisiveis = acoesRetorno.slice(0, 8);
+  const acoesRestantes = Math.max(0, acoesRetorno.length - acoesVisiveis.length);
 
   // Tendência: viewBox 720x200; eixo x: 30..690, y: 30..170
   const trend = dash.tendencia.length
@@ -393,41 +423,52 @@ function Page() {
             </div>
           </div>
 
-          {/* LEADS PARADOS */}
-          <div className="card">
+          {/* O QUE FAZER AGORA (COM RETORNO) */}
+          <div className="card card-yellow">
             <div className="card-h">
               <h3>
                 <svg width="16" height="16">
                   <use href="#i-clock" />
                 </svg>{" "}
-                Leads parados
+                O que fazer agora (com retorno)
               </h3>
-              <span className="small muted">+5 dias sem mexer</span>
+              {acoesVisiveis.length > 0 && (
+                <span className="chip chip-ok">retorno potencial {BRL(retornoTotal)}</span>
+              )}
             </div>
             <div className="card-b">
-              {dash.leadsParados.length === 0 && (
+              {acoesVisiveis.length === 0 && (
                 <p className="small muted" style={{ margin: 0 }}>
-                  Nenhum lead parado. 🎯
+                  Nada pendente com retorno agora. 🎯
                 </p>
               )}
-              {dash.leadsParados.map((l) => (
-                <div key={l.id} className="task-item">
-                  <div className="ic">
-                    <svg width="16" height="16">
-                      <use href="#i-alert" />
-                    </svg>
-                  </div>
-                  <div className="body">
-                    <h4>{l.nome || "Lead sem nome"}</h4>
-                    <p>
-                      parado há {l.dias} dias — "{l.status}"
+              {acoesVisiveis.length > 0 && (
+                <div className="actions-list">
+                  {acoesVisiveis.map((a) => (
+                    <Link
+                      key={a.id}
+                      to={a.kind === "lead" ? "/venda/pipeline" : "/venda/pipeline"}
+                      className="action-row"
+                    >
+                      <div className={`ic-square ${a.kind === "lead" ? "warn" : "alert"}`}>
+                        <svg width="18" height="18">
+                          <use href={a.kind === "lead" ? "#i-alert-triangle" : "#i-file"} />
+                        </svg>
+                      </div>
+                      <div className="body">
+                        <h4>{a.titulo}</h4>
+                        <p>{a.sub}</p>
+                      </div>
+                      <div className="meta ok">{BRL(a.valor)}</div>
+                    </Link>
+                  ))}
+                  {acoesRestantes > 0 && (
+                    <p className="small muted" style={{ margin: 0 }}>
+                      +{acoesRestantes} ações
                     </p>
-                  </div>
-                  <Link to="/venda/pipeline" className="meta ok">
-                    retomar agora
-                  </Link>
+                  )}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -693,7 +734,7 @@ async function carregar(userId: string): Promise<DashData> {
   // 4) Leads parados
   const { data: parados } = await supabase
     .from("leads")
-    .select("id,nome,status_pipeline,atualizado_em")
+    .select("id,nome,status_pipeline,atualizado_em,valor")
     .eq("responsavel_id", userId)
     .not("status_pipeline", "in", "(ganho,perdido)")
     .lt("atualizado_em", cincoDiasAtras)
@@ -704,6 +745,24 @@ async function carregar(userId: string): Promise<DashData> {
     nome: l.nome,
     dias: Math.max(5, Math.floor((Date.now() - new Date(l.atualizado_em).getTime()) / 86400000)),
     status: String(l.status_pipeline),
+    valor: Number(l.valor) || 0,
+  }));
+
+  // 4b) Propostas sem resposta (aguardando/em_negociacao há 3+ dias)
+  const tresDiasAtras = new Date(now.getTime() - 3 * 86400000).toISOString();
+  const { data: semResposta } = await supabase
+    .from("propostas")
+    .select("id,numero,premio,valor,negociacao_status,atualizado_em")
+    .eq("responsavel_id", userId)
+    .in("negociacao_status", ["aguardando", "em_negociacao"])
+    .lt("atualizado_em", tresDiasAtras)
+    .order("atualizado_em", { ascending: true })
+    .limit(10);
+  const propostasSemResposta = (semResposta ?? []).map((p) => ({
+    id: p.id,
+    segurado: p.numero ?? `proposta #${p.id.slice(0, 8)}`,
+    dias: Math.max(3, Math.floor((Date.now() - new Date(p.atualizado_em).getTime()) / 86400000)),
+    valor: Number(p.premio ?? p.valor) || 0,
   }));
 
   // 5) Posição na equipe (propostas transmitidas no mês)
@@ -847,6 +906,7 @@ async function carregar(userId: string): Promise<DashData> {
     funil,
     posicao,
     leadsParados,
+    propostasSemResposta,
     tendencia: dias.map((d) => ({
       dia: d.dia,
       leads: d.leads,

@@ -275,6 +275,39 @@ function Page() {
         </div>
       )}
 
+      {!loading && kpi && kpi.leads_mes > 0 && kpi.vendas_mes === 0 && (
+        <div className="card card-yellow" style={{ marginTop: 0, marginBottom: 14 }}>
+          <div className="card-b">
+            <div className="row" style={{ gap: 12 }}>
+              <div
+                className="ic-square warn"
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(255,182,0,.22)",
+                  color: "var(--slate)",
+                }}
+              >
+                <svg width="18" height="18">
+                  <use href="#i-alert-triangle"></use>
+                </svg>
+              </div>
+              <div>
+                <strong>Vendedor travado.</strong>{" "}
+                <span className="muted">
+                  Recebeu {kpi.leads_mes} lead{kpi.leads_mes === 1 ? "" : "s"} este mês e ainda não
+                  converteu nenhuma venda. Vale revisar a carga de leads e acompanhar de perto.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!loading && kpi && (
         <>
           <div
