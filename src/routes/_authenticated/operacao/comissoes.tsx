@@ -39,6 +39,7 @@ type Lanc = {
   seguradora: string | null;
   origem: string;
   criado_em: string;
+  criado_por: string | null;
 };
 
 type SaldoRow = {
@@ -434,7 +435,7 @@ function Page() {
         supabase
           .from("comissao_lancamentos")
           .select(
-            "id,vendedor_id,empresa_id,proposta_id,tipo,valor,descricao,referencia,seguradora,origem,criado_em",
+            "id,vendedor_id,empresa_id,proposta_id,tipo,valor,descricao,referencia,seguradora,origem,criado_em,criado_por",
           )
           .order("criado_em", { ascending: false })
           .limit(5000),
@@ -628,8 +629,8 @@ function Page() {
               <use href="#i-lock" />
             </svg>{" "}
             <strong style={{ marginRight: 4 }}>Trava de auditoria ativa.</strong> Toda alteração de
-            comissão fica registrada com autor, data e valor anterior. Comissão gera conflito — aqui
-            nada se altera sem rastro.
+            comissão fica registrada como um lançamento com autor, data e valor do ajuste. Comissão
+            gera conflito — aqui nada se altera sem rastro.
           </div>
 
           {err && <div style={{ color: "var(--alert)", marginBottom: 12 }}>{err}</div>}
@@ -860,6 +861,94 @@ function Page() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* HISTÓRICO DE ALTERAÇÕES (lançamentos manuais/ajuste) */}
+          <div className="card" style={{ marginTop: 18 }}>
+            <div className="card-h">
+              <h3>
+                <svg width="16" height="16">
+                  <use href="#i-lock" />
+                </svg>{" "}
+                Histórico de alterações
+              </h3>
+            </div>
+            <div className="card-b">
+              {(() => {
+                const manuais = lancs
+                  .filter((l) => l.origem === "manual" || l.origem === "ajuste")
+                  .slice()
+                  .sort(
+                    (a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime(),
+                  );
+                if (manuais.length === 0) {
+                  return (
+                    <div className="muted">Nenhuma alteração manual registrada neste período.</div>
+                  );
+                }
+                return (
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="table-pipe mtable" style={{ minWidth: 900 }}>
+                      <thead>
+                        <tr>
+                          <th>Data</th>
+                          <th>Autor</th>
+                          <th>Tipo</th>
+                          <th>Beneficiário</th>
+                          <th>Descrição</th>
+                          <th>Referência</th>
+                          <th style={{ textAlign: "right" }}>Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {manuais.map((l) => (
+                          <tr key={l.id}>
+                            <td>
+                              <small className="muted">
+                                {new Date(l.criado_em).toLocaleDateString("pt-BR")}
+                              </small>
+                            </td>
+                            <td>
+                              <small>
+                                {(l.criado_por && profiles[l.criado_por]?.nome) || "—"}
+                              </small>
+                            </td>
+                            <td>
+                              <span
+                                className={
+                                  "chip " + (l.tipo === "credito" ? "chip-ok" : "chip-alert")
+                                }
+                              >
+                                {l.tipo === "credito" ? "Crédito" : "Débito"}
+                              </span>
+                            </td>
+                            <td>
+                              <small>{profiles[l.vendedor_id]?.nome || "—"}</small>
+                            </td>
+                            <td>
+                              <small>{l.descricao}</small>
+                            </td>
+                            <td>
+                              <small className="muted">{l.referencia || "—"}</small>
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              <strong
+                                style={{
+                                  color: l.tipo === "credito" ? "var(--ok)" : "var(--alert)",
+                                }}
+                              >
+                                {l.tipo === "credito" ? "+" : "-"}
+                                {fmtBRL(l.valor)}
+                              </strong>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
