@@ -1,0 +1,12 @@
+-- S-crítica: a tela "Classificar acesso" (matriz) precisa substituir a role
+-- gravada em user_roles no cadastro (cadastrar_franquia grava sempre
+-- 'vendedor'), mas a tabela só tinha `grant select ... to authenticated`
+-- (20240101000001_init.sql). Sem grant de insert/update/delete, mesmo com a
+-- policy "user_roles_matriz_admin" (for all, using/with check has_role
+-- matriz) já existente, o Postgres bloqueia a escrita antes de avaliar RLS
+-- (erro "permission denied for table user_roles", 42501).
+--
+-- A policy já restringe quem pode escrever (só matriz); este grant apenas
+-- libera a operação no nível de privilégios de tabela para o role
+-- `authenticated` em geral.
+grant insert, update, delete on public.user_roles to authenticated;

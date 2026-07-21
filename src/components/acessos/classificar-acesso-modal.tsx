@@ -14,7 +14,7 @@ import type {
 } from "@/components/operacao/acessos/types";
 import { MaskedInput } from "@/components/masked-input";
 import { parseBRL, parsePct, maskCpfCnpj, maskTelefone } from "@/lib/masks";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, type Perfil } from "@/integrations/supabase/client";
 import {
   pctSchema,
   valorNaoNegativoSchema,
@@ -26,6 +26,27 @@ import {
 
 type TipoPJ = "franquia" | "master";
 type TipoPF = "vendedor_clt" | "vendedor_franquia" | "supervisor_matriz";
+
+// Substitui a(s) role(s) do usuário em user_roles pela role definitiva da
+// classificação. Necessário porque cadastrar_franquia grava 'vendedor' para
+// todo mundo e a tabela é UNIQUE(user_id, role) — useAuth() espera no máximo
+// 1 linha (.maybeSingle()), então nunca inserir sem antes remover a anterior.
+async function substituirRole(profileId: string, role: Perfil) {
+  const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", profileId);
+  if (delErr) throw new Error(delErr.message);
+  const { error: insErr } = await supabase.from("user_roles").insert({ user_id: profileId, role });
+  if (insErr) throw new Error(insErr.message);
+}
+
+async function substituirRolePorEmpresa(empresaId: string, role: Perfil) {
+  const { data: prof, error: profErr } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("empresa_id", empresaId)
+    .single();
+  if (profErr) throw new Error(profErr.message);
+  await substituirRole(prof.id, role);
+}
 
 export function ClassificarAcessoModal({
   pendente,
@@ -115,6 +136,7 @@ export function ClassificarAcessoModal({
             .update({ superior_id: clSuperior || null })
             .eq("empresa_id", pendente.id);
           if (e2) throw new Error(e2.message);
+          await substituirRolePorEmpresa(pendente.id, "franqueado");
         };
         const m = modelosFranquia.find((x) => x.id === clFranquia);
         await onLiberar(persist, m ? ` (${m.nome})` : "");
@@ -131,6 +153,7 @@ export function ClassificarAcessoModal({
           .update({ perc_equipe: com.value, royalties_fpp: roy.value })
           .eq("id", pendente.id);
         if (error) throw new Error(error.message);
+        await substituirRolePorEmpresa(pendente.id, "master");
       };
       await onLiberar(persist, " (Master franqueado)");
       return;
@@ -167,6 +190,7 @@ export function ClassificarAcessoModal({
           })
           .eq("empresa_id", pendente.id);
         if (error) throw new Error(error.message);
+        await substituirRolePorEmpresa(pendente.id, "vendedor");
       };
       await onLiberar(persist, " (Vendedor CLT)");
       return;
@@ -179,6 +203,9 @@ export function ClassificarAcessoModal({
       }
       const franquia = franquiasAprovadas.find((f) => f.id === clFranquiaVinculo);
       const persist = async () => {
+        // Precisa substituir a role ANTES de mudar empresa_id, pois a busca
+        // do profile ainda depende de pendente.id (empresa_id atual).
+        await substituirRolePorEmpresa(pendente.id, "vendedor");
         const { error } = await supabase
           .from("profiles")
           .update({ empresa_id: clFranquiaVinculo, superior_id: franquia?.donoProfileId ?? null })
@@ -200,6 +227,7 @@ export function ClassificarAcessoModal({
         .update({ comissao_modelo: com.value, royalties: roy.value })
         .eq("empresa_id", pendente.id);
       if (error) throw new Error(error.message);
+      await substituirRolePorEmpresa(pendente.id, "supervisor");
       if (clMsFranq.length > 0) {
         const { data: supProfile, error: e2 } = await supabase
           .from("profiles")
