@@ -95,6 +95,7 @@ export function useValidacaoEtapas(
         condutoresQueUtilizam: f.condutoresQueUtilizam,
         cepCirculacao: f.cepCirculacao,
         numPassageiros: f.numPassageiros,
+        leilao: f.leilao,
         isencaoImposto: f.isencaoImposto,
         valorAdaptacaoPcd: f.valorAdaptacaoPcd,
         antifurto: f.antifurto,

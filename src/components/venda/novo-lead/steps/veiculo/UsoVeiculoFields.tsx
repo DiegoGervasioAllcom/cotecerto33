@@ -6,7 +6,6 @@ import {
   TIPO_USO,
   USO_TRABALHO,
   USO_ESTUDO,
-  CATEGORIA_TAXI,
   UTIL_LOCADORA,
 } from "@/components/venda/novo-lead/enumsQuiver";
 import type { Form } from "@/components/venda/novo-lead/types";
@@ -18,7 +17,6 @@ type Props = {
 
 export function UsoVeiculoFields({ f, up }: Props) {
   const isParticular = f.tipoUso === "Particular";
-  const isTaxi = f.tipoUso === "Táxi";
   const isLocadoraContrato = f.tipoUso === "Locadora (Contrato)";
 
   return (
@@ -48,22 +46,6 @@ export function UsoVeiculoFields({ f, up }: Props) {
             >
               <option value="nao">Não</option>
               <option value="sim">Sim</option>
-            </select>
-          </div>
-        )}
-
-        {isTaxi && (
-          <div className="field-group">
-            <label>Categoria de táxi</label>
-            <select
-              className="input"
-              value={f.categoriaTaxi}
-              onChange={(e) => up("categoriaTaxi", e.target.value)}
-            >
-              <option value="">Selecione</option>
-              {CATEGORIA_TAXI.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
             </select>
           </div>
         )}

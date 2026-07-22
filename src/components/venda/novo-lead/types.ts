@@ -83,6 +83,7 @@ export type Form = {
   numPassageiros: string;
   // Veículo — dados complementares
   chassiRemarcado: "sim" | "nao";
+  leilao: string;
   isencaoImposto: string;
   pcdCnhEspecial: "sim" | "nao";
   valorAdaptacaoPcd: string;

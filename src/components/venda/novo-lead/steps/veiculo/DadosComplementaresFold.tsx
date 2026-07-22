@@ -4,7 +4,12 @@
 // doc/EXTERNAL_API_GUIDE.md, seção veiculo, campos antifurto*/bloqueador*/
 // rastreador*/alarmeSonoro*/dispositivosComuns*).
 import { useState } from "react";
-import { ANTIFURTO_TIPOS, ISENCAO_IMPOSTO } from "@/components/venda/novo-lead/enumsQuiver";
+import {
+  ANTIFURTO_TIPOS,
+  ISENCAO_IMPOSTO,
+  CATEGORIA_TAXI,
+  LEILAO,
+} from "@/components/venda/novo-lead/enumsQuiver";
 import { maskBRL } from "@/components/venda/novo-lead/masks";
 import type { Form } from "@/components/venda/novo-lead/types";
 
@@ -84,6 +89,31 @@ export function DadosComplementaresFold({ f, up }: Props) {
               onChange={(e) => up("antifurto", e.target.value)}
             >
               {ANTIFURTO_TIPOS.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field-group">
+            <label>Histórico de leilão</label>
+            <select
+              className="input"
+              value={f.leilao}
+              onChange={(e) => up("leilao", e.target.value)}
+            >
+              {LEILAO.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field-group full">
+            <label>Qual a categoria do Táxi/Veículo?</label>
+            <select
+              className="input"
+              value={f.categoriaTaxi}
+              onChange={(e) => up("categoriaTaxi", e.target.value)}
+            >
+              <option value="">Selecione</option>
+              {CATEGORIA_TAXI.map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>

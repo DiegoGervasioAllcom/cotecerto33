@@ -100,3 +100,12 @@ export const TIPOS_USO_COM_CONDUTORES = [
   "Transporte por aplicativos - Veículo próprio",
   "Transporte de funcionários",
 ] as const;
+
+// Campo só do protótipo v10 — sem contrapartida na Quiver hoje (não existe
+// no validator nem no guia). Mantido por decisão do usuário para fidelidade
+// visual; não é enviado em montarPayloadQuiver() até a Quiver suportar.
+export const LEILAO = [
+  "Não possui histórico de leilão",
+  "Leilão de indenização integral",
+  "Outros tipos de leilão (administrativa, financeira, renovação de frota, etc.)",
+] as const;

@@ -125,6 +125,7 @@ function Page() {
     cepCirculacao: "",
     numPassageiros: "5",
     chassiRemarcado: "nao",
+    leilao: "Não possui histórico de leilão",
     isencaoImposto: "Sem isenção",
     pcdCnhEspecial: "nao",
     valorAdaptacaoPcd: "",

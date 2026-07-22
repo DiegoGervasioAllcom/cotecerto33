@@ -596,6 +596,7 @@ export type Database = {
           kit_acessorios: boolean | null;
           kit_gas: boolean | null;
           km_mensal: string | null;
+          leilao: string | null;
           marca_codigo: string | null;
           marca_nome: string | null;
           modelo_codigo: string | null;
@@ -647,6 +648,7 @@ export type Database = {
           kit_acessorios?: boolean | null;
           kit_gas?: boolean | null;
           km_mensal?: string | null;
+          leilao?: string | null;
           marca_codigo?: string | null;
           marca_nome?: string | null;
           modelo_codigo?: string | null;
@@ -698,6 +700,7 @@ export type Database = {
           kit_acessorios?: boolean | null;
           kit_gas?: boolean | null;
           km_mensal?: string | null;
+          leilao?: string | null;
           marca_codigo?: string | null;
           marca_nome?: string | null;
           modelo_codigo?: string | null;

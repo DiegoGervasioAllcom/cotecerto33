@@ -34,6 +34,7 @@ export const veiculoSchema = z.object({
   condutoresQueUtilizam: optionalMax(100, "Campo muito longo."),
   cepCirculacao: optionalMax(20, "CEP de circulação inválido."),
   numPassageiros: optionalMax(10, "Número de passageiros inválido."),
+  leilao: optionalMax(150, "Campo muito longo."),
   isencaoImposto: optionalMax(50, "Isenção de imposto muito longa."),
   valorAdaptacaoPcd: optionalMax(50, "Valor de adaptação PcD muito longo."),
   antifurto: optionalMax(50, "Antifurto muito longo."),

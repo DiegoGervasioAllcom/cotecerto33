@@ -130,8 +130,13 @@ function montarPayloadQuiver(cot: CotacaoRow) {
       ...((v.tipo_uso as string) === "Particular" || !v.tipo_uso
         ? { usoComercialDoisOuMaisDias: simNao(v.uso_comercial_dois_dias as boolean) }
         : {}),
-      ...(v.categoria_taxi ? { categoriaTaxiVeiculo: v.categoria_taxi as string } : {}),
-      ...(v.utilizacao_locadora
+      // categoriaTaxi/utilizacaoLocadora ficam sempre editáveis na UI (igual
+      // ao protótipo), mas a Quiver rejeita se enviados com tipoUso diferente
+      // do exigido — por isso o guard também confere tipo_uso, não só o valor.
+      ...(v.tipo_uso === "Táxi" && v.categoria_taxi
+        ? { categoriaTaxiVeiculo: v.categoria_taxi as string }
+        : {}),
+      ...(v.tipo_uso === "Locadora (Contrato)" && v.utilizacao_locadora
         ? { utilizacaoLocadoraContrato: v.utilizacao_locadora as string }
         : {}),
       ...(v.isencao_imposto ? { isencaoImposto: v.isencao_imposto as string } : {}),
