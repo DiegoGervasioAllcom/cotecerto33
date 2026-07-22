@@ -21,6 +21,8 @@ NAME="cotecerto-app"
 HOST_BIND="127.0.0.1:3001:3000"           # porta 3000 do host é do Kong -> app na 3001
 SUPA_ENV="/home/alldev/supabase/docker/.env"
 SUPA_URL="https://supabase-cotecerto.sandboxallcom.com"
+QUIVER_ENV="/home/alldev/.quiver-webhook.env"
+QUIVER_URL="https://quiver-bot.sandboxallcom.com"
 HEALTH_URL="http://127.0.0.1:3001/"
 
 echo "==> imagem alvo: ${IMAGE}"
@@ -31,6 +33,22 @@ SR=$(sudo grep -E '^SERVICE_ROLE_KEY=' "$SUPA_ENV" | cut -d= -f2- || true)
 if [ -z "${SR}" ]; then
   echo "ERRO: SERVICE_ROLE_KEY não encontrado em ${SUPA_ENV}" >&2
   exit 1
+fi
+
+# Segredo do webhook da Quiver (opcional: se o arquivo ainda não existir, sobe
+# sem ele — a integração de cotação real fica indisponível até ser criado,
+# mas não bloqueia o deploy do resto do app). Ver docs/RUNBOOK_DEPLOY.md §4.
+QUIVER_ENV_ARGS=()
+if [ -f "$QUIVER_ENV" ]; then
+  # shellcheck disable=SC1090
+  source "$QUIVER_ENV"
+  QUIVER_ENV_ARGS=(
+    -e "SELF_QUIVER_API_URL=${QUIVER_URL}"
+    -e "SELF_QUIVER_WEBHOOK_CLIENT_KEY=${QUIVER_KEY:-}"
+    -e "SELF_QUIVER_WEBHOOK_CLIENT_SECRET=${QUIVER_SECRET:-}"
+  )
+else
+  echo "AVISO: ${QUIVER_ENV} não encontrado — subindo sem integração Quiver (ver RUNBOOK §4)." >&2
 fi
 
 # guarda a imagem atual (para rollback manual, se preciso)
@@ -47,6 +65,7 @@ sudo docker run -d --name "$NAME" --restart unless-stopped \
   -p "$HOST_BIND" \
   -e SELF_SUPABASE_URL="$SUPA_URL" \
   -e SELF_SUPABASE_SERVICE_ROLE_KEY="$SR" \
+  "${QUIVER_ENV_ARGS[@]}" \
   "$IMAGE" >/dev/null
 
 echo "==> health check (${HEALTH_URL})"

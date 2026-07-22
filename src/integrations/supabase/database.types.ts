@@ -652,6 +652,9 @@ export type Database = {
           numero: number;
           observacao_perda: string | null;
           perdida_em: string | null;
+          quiver_enviado_em: string | null;
+          quiver_mensagem: string | null;
+          quiver_resultado_raw: Json | null;
           ramo: string;
           responsavel_id: string | null;
           status: Database["public"]["Enums"]["cotacao_status"];
@@ -670,6 +673,9 @@ export type Database = {
           numero?: number;
           observacao_perda?: string | null;
           perdida_em?: string | null;
+          quiver_enviado_em?: string | null;
+          quiver_mensagem?: string | null;
+          quiver_resultado_raw?: Json | null;
           ramo?: string;
           responsavel_id?: string | null;
           status?: Database["public"]["Enums"]["cotacao_status"];
@@ -688,6 +694,9 @@ export type Database = {
           numero?: number;
           observacao_perda?: string | null;
           perdida_em?: string | null;
+          quiver_enviado_em?: string | null;
+          quiver_mensagem?: string | null;
+          quiver_resultado_raw?: Json | null;
           ramo?: string;
           responsavel_id?: string | null;
           status?: Database["public"]["Enums"]["cotacao_status"];
@@ -2570,6 +2579,10 @@ export type Database = {
         Args: { p_empresa: string; p_lead: string; p_responsavel?: string };
         Returns: undefined;
       };
+      registrar_premios_quiver: {
+        Args: { p_cotacao_id: string; p_payload: Json };
+        Returns: undefined;
+      };
       registrar_tentativa_login: {
         Args: {
           p_email: string;
@@ -2627,7 +2640,14 @@ export type Database = {
       };
     };
     Enums: {
-      cotacao_status: "rascunho" | "calculada" | "proposta" | "aceita" | "perdida";
+      cotacao_status:
+        | "rascunho"
+        | "calculada"
+        | "proposta"
+        | "aceita"
+        | "perdida"
+        | "enviada_quiver"
+        | "erro_quiver";
       empresa_status: "pendente" | "aprovada" | "recusada" | "suspensa";
       empresa_tipo: "pj" | "pf" | "matriz";
       lead_status:
@@ -2774,7 +2794,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      cotacao_status: ["rascunho", "calculada", "proposta", "aceita", "perdida"],
+      cotacao_status: [
+        "rascunho",
+        "calculada",
+        "proposta",
+        "aceita",
+        "perdida",
+        "enviada_quiver",
+        "erro_quiver",
+      ],
       empresa_status: ["pendente", "aprovada", "recusada", "suspensa"],
       empresa_tipo: ["pj", "pf", "matriz"],
       lead_status: [
