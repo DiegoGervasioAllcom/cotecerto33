@@ -898,3 +898,14 @@ textarea.input:focus {
   border: 1px solid var(--border);
   background: var(--white);
 }
+
+/* ---------- Preferência de tamanho de fonte (menu do usuário) ----------
+   Usa `zoom` porque o design system trabalha com `px` fixo (não `rem`):
+   um font-size no root não cascatearia. `zoom` é suportado em Chromium/
+   Safari, mas não é padrão CSS (Firefox não suporta) — limitação aceita. */
+html.font-sm {
+  zoom: 0.9;
+}
+html.font-lg {
+  zoom: 1.12;
+}
