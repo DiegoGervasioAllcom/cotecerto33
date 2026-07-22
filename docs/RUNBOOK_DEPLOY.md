@@ -157,6 +157,22 @@ Credenciais do admin semeado: `desenvolvimento@suppercerto.com.br` / `Supper@123
 
 ## 4. Fase 2 — App (container)
 
+> **Segredo do webhook da Quiver (uma vez só):** o app integra com a API de
+> cotação real (`https://quiver-bot.sandboxallcom.com`) — ver
+> `src/lib/quiver-webhook.ts`. Gere um segredo forte e salve num arquivo só
+> seu no servidor (ex.: `/home/alldev/.quiver-webhook.env`), e configure os
+> **mesmos valores** do lado da Quiver (`WEBHOOK_URL` apontando pra
+> `https://cote-certo.sandboxallcom.com/api/webhooks/quiver`,
+> `WEBHOOK_CLIENT_KEY`, `WEBHOOK_CLIENT_SECRET`) — sem isso o webhook nunca
+> autentica (401) e nenhuma cotação recebe resultado.
+> ```bash
+> cat > /home/alldev/.quiver-webhook.env <<EOF
+> QUIVER_KEY=$(openssl rand -hex 16)
+> QUIVER_SECRET=$(openssl rand -hex 32)
+> EOF
+> chmod 600 /home/alldev/.quiver-webhook.env
+> ```
+
 ```bash
 # 1) login no GHCR (cole o PAT no prompt Password: — fica escondido)
 sudo docker login ghcr.io -u DiegoGervasioAllcom
@@ -164,12 +180,16 @@ sudo docker login ghcr.io -u DiegoGervasioAllcom
 # 2) baixar a imagem
 sudo docker pull ghcr.io/diegogervasioallcom/cotecerto33:latest
 
-# 3) subir o container (porta 3001 só no localhost; service_role lida do .env sem imprimir)
+# 3) subir o container (porta 3001 só no localhost; service_role e segredo da Quiver lidos de arquivo, sem imprimir)
 SR=$(sudo grep -E '^SERVICE_ROLE_KEY=' /home/alldev/supabase/docker/.env | cut -d= -f2-)
+source /home/alldev/.quiver-webhook.env
 sudo docker run -d --name cotecerto-app --restart unless-stopped \
   -p 127.0.0.1:3001:3000 \
   -e SELF_SUPABASE_URL="https://supabase-cotecerto.sandboxallcom.com" \
   -e SELF_SUPABASE_SERVICE_ROLE_KEY="$SR" \
+  -e SELF_QUIVER_API_URL="https://quiver-bot.sandboxallcom.com" \
+  -e SELF_QUIVER_WEBHOOK_CLIENT_KEY="$QUIVER_KEY" \
+  -e SELF_QUIVER_WEBHOOK_CLIENT_SECRET="$QUIVER_SECRET" \
   ghcr.io/diegogervasioallcom/cotecerto33:latest
 
 # 4) testar localmente (antes de tocar no nginx) — esperar HTTP 200
@@ -247,10 +267,14 @@ Equivalente manual (o que o script faz por baixo):
 sudo docker pull ghcr.io/diegogervasioallcom/cotecerto33:latest
 sudo docker stop cotecerto-app && sudo docker rm cotecerto-app
 SR=$(sudo grep -E '^SERVICE_ROLE_KEY=' /home/alldev/supabase/docker/.env | cut -d= -f2-)
+source /home/alldev/.quiver-webhook.env  # QUIVER_KEY / QUIVER_SECRET (ver §4)
 sudo docker run -d --name cotecerto-app --restart unless-stopped \
   -p 127.0.0.1:3001:3000 \
   -e SELF_SUPABASE_URL="https://supabase-cotecerto.sandboxallcom.com" \
   -e SELF_SUPABASE_SERVICE_ROLE_KEY="$SR" \
+  -e SELF_QUIVER_API_URL="https://quiver-bot.sandboxallcom.com" \
+  -e SELF_QUIVER_WEBHOOK_CLIENT_KEY="$QUIVER_KEY" \
+  -e SELF_QUIVER_WEBHOOK_CLIENT_SECRET="$QUIVER_SECRET" \
   ghcr.io/diegogervasioallcom/cotecerto33:latest
 curl -sS -o /dev/null -w "HTTP %{http_code}\n" http://127.0.0.1:3001/
 ```
