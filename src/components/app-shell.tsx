@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home,
@@ -30,11 +30,13 @@ import {
   AlertTriangle,
   Search,
   Bell,
+  HelpCircle,
 } from "lucide-react";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 import { useAuth } from "@/lib/auth";
 import { usePresence } from "@/lib/use-presence";
 import { useGroupScope } from "@/lib/group-scope";
+import { useNavBadges } from "@/lib/nav-badges";
 import type { Perfil } from "@/integrations/supabase/client";
 import { UserMenu, useAccessibilityPrefs } from "@/components/user-menu";
 
@@ -167,6 +169,12 @@ export function AppShell({
   const grpLike = !franqPend && isGroupView;
   const isMatriz = role === "matriz";
 
+  const { leadsPendentes, aprovacoesPendentes, leadMaisAntigoElapsed } = useNavBadges({
+    isMatriz,
+    grpLike,
+  });
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+
   const visibleGroups: Group[] = [
     ...(isMatriz ? [MATRIZ_COMANDO_GROUP, MATRIZ_OPERACAO_GROUP] : []),
     ...(venLike ? [VENDA_GROUP] : []),
@@ -180,7 +188,7 @@ export function AppShell({
       <aside className="sidebar">
         <div className="brand">
           <img src={logoAsset.url} alt="CoteCerto" className="logo-img" />
-          <div className="sublabel">{brandLabel}</div>
+          <div className="sublabel">SUPPER · {brandLabel}</div>
         </div>
         <div className="nav-group">
           {visibleGroups.map((group) => (
@@ -189,11 +197,18 @@ export function AppShell({
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const active = pathname === item.to || pathname.startsWith(item.to + "/");
+                const badgeCount =
+                  item.to === "/comando/leads"
+                    ? leadsPendentes
+                    : item.to === "/operacao/aprovacoes"
+                      ? aprovacoesPendentes
+                      : null;
                 return (
                   <Link key={item.to} to={item.to} className={`nav-item${active ? " active" : ""}`}>
                     <Icon className="ic" />
                     <span>{item.label}</span>
                     {item.soon && <span className="soon-tag">EM FORMULAÇÃO</span>}
+                    {!!badgeCount && badgeCount > 0 && <span className="badge">{badgeCount}</span>}
                   </Link>
                 );
               })}
@@ -235,6 +250,24 @@ export function AppShell({
               }
             />
           </div>
+          {isMatriz && !!leadsPendentes && leadsPendentes > 0 && (
+            <button
+              type="button"
+              className="react-pill"
+              onClick={() => navigate({ to: "/comando/leads" })}
+            >
+              <Share2 style={{ width: 15, height: 15 }} />
+              <span>Distribuir agora</span>
+              <span className="rp-count">{leadsPendentes}</span>
+              {leadMaisAntigoElapsed && <span className="rp-time">{leadMaisAntigoElapsed}</span>}
+            </button>
+          )}
+          {(isMatriz || grpLike) && (
+            <button type="button" className="btn btn-yellow" onClick={() => setTutorialOpen(true)}>
+              <HelpCircle style={{ width: 15, height: 15 }} />
+              <span>Tutorial</span>
+            </button>
+          )}
           <UserMenu
             profile={profile}
             empresa={empresa}
@@ -245,6 +278,45 @@ export function AppShell({
         </div>
         <div className="page active">{children}</div>
       </main>
+
+      {tutorialOpen && (
+        <div
+          className="modal-host"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setTutorialOpen(false);
+          }}
+        >
+          <div className="modal">
+            <div className="modal-h">
+              <h3>Como usar o painel</h3>
+              <div className="x" onClick={() => setTutorialOpen(false)}>
+                ×
+              </div>
+            </div>
+            <div className="modal-b">
+              <p>
+                Use o menu lateral para navegar entre as áreas do sistema: Leads (novos contatos
+                aguardando distribuição), Aprovações (pedidos de desconto pendentes de decisão),
+                Vendedores e Franquias (gestão da rede) e Relatórios (indicadores de performance).
+              </p>
+              <p>
+                Os badges amarelos ao lado de alguns itens indicam quantidade de pendências que
+                aguardam sua ação. A pílula vermelha no topo aparece quando há leads aguardando
+                distribuição há mais tempo.
+              </p>
+              <p>
+                Cada tela reflete o escopo de dados do seu perfil — o que você vê já está filtrado
+                de acordo com as permissões da sua conta.
+              </p>
+            </div>
+            <div className="modal-f">
+              <button className="btn btn-yellow" onClick={() => setTutorialOpen(false)}>
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
