@@ -5,7 +5,11 @@
 // e configuração de comissão/remuneração.
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/operacao/acessos/icon";
-import { FAIXAS, FIELD_LABELS } from "@/components/operacao/acessos/constants";
+import {
+  FAIXAS,
+  FORM_FIELDS_BY_TIPO,
+  FORM_INTERNAL_KEYS,
+} from "@/components/operacao/acessos/constants";
 import type {
   Pendente,
   Modelo,
@@ -110,9 +114,18 @@ export function ClassificarAcessoModal({
 
   const formRows = useMemo(() => {
     const dados = (pendente.dados_cadastro ?? {}) as Record<string, unknown>;
-    const entries = Object.entries(dados).filter(([, v]) => v != null && v !== "");
-    return entries.map(([k, v]) => [FIELD_LABELS[k] ?? k, String(v)] as [string, string]);
-  }, [pendente]);
+    const hasValue = (k: string) => dados[k] != null && dados[k] !== "";
+    const order = FORM_FIELDS_BY_TIPO[isPF ? "pf" : "pj"];
+    const rows: [string, string][] = order
+      .filter(([k]) => hasValue(k))
+      .map(([k, label]) => [label, String(dados[k])]);
+    const known = new Set<string>([...order.map(([k]) => k), ...FORM_INTERNAL_KEYS]);
+    for (const [k, v] of Object.entries(dados)) {
+      if (known.has(k) || v == null || v === "") continue;
+      rows.push([k, String(v)]);
+    }
+    return rows;
+  }, [pendente, isPF]);
 
   async function handleLiberar() {
     setLocalErr(null);
