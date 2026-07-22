@@ -9,6 +9,7 @@ import {
   FAIXAS,
   FORM_FIELDS_BY_TIPO,
   FORM_INTERNAL_KEYS,
+  MODELO_PARAMS_LABELS,
 } from "@/components/operacao/acessos/constants";
 import type {
   Pendente,
@@ -83,6 +84,10 @@ export function ClassificarAcessoModal({
   );
   const [isenta, setIsenta] = useState(false);
   const [clLeads, setClLeads] = useState(FAIXAS[1][1]);
+  const [clFrBonus, setClFrBonus] = useState("");
+  const [clFrDiapg, setClFrDiapg] = useState("10");
+  const [clFrFaixaval, setClFrFaixaval] = useState("");
+  const [clFrFaixapct, setClFrFaixapct] = useState("");
   const [clMmCom, setClMmCom] = useState("20%");
   const [clMmRoy, setClMmRoy] = useState("");
 
@@ -92,10 +97,6 @@ export function ClassificarAcessoModal({
   const [clEquipe, setClEquipe] = useState("");
   const [clSalario, setClSalario] = useState("");
   const [cltLeads, setCltLeads] = useState(FAIXAS[1][1]);
-  const [clBonus, setClBonus] = useState("");
-  const [clDiapg, setClDiapg] = useState("10");
-  const [clFaixaval, setClFaixaval] = useState("");
-  const [clFaixapct, setClFaixapct] = useState("");
   const [clFranquiaVinculo, setClFranquiaVinculo] = useState("");
   const [clMsCom, setClMsCom] = useState("");
   const [clMsRoy, setClMsRoy] = useState("");
@@ -138,10 +139,26 @@ export function ClassificarAcessoModal({
         }
         const leads = checkOptionalNumber(clLeads, Number, leadsDiaSchema);
         if (leads.error) return setLocalErr(leads.error);
+        const bonus = checkOptionalNumber(clFrBonus, parseBRL, valorNaoNegativoSchema);
+        if (bonus.error) return setLocalErr(bonus.error);
+        const dia = checkOptionalNumber(clFrDiapg, Number, diaPagamentoSchema);
+        if (dia.error) return setLocalErr(dia.error);
+        const faixaVal = checkOptionalNumber(clFrFaixaval, parseBRL, valorNaoNegativoSchema);
+        if (faixaVal.error) return setLocalErr(faixaVal.error);
+        const faixaPct = checkOptionalNumber(clFrFaixapct, parsePct, pctSchema);
+        if (faixaPct.error) return setLocalErr(faixaPct.error);
         const persist = async () => {
           const { error: e1 } = await supabase
             .from("empresas")
-            .update({ modelo_id: clFranquia, isenta, leads_dia: leads.value })
+            .update({
+              modelo_id: clFranquia,
+              isenta,
+              leads_dia: leads.value,
+              bonus_campanha: bonus.value,
+              dia_pagamento: dia.value,
+              faixa_elite_valor: faixaVal.value,
+              faixa_elite_pct: faixaPct.value,
+            })
             .eq("id", pendente.id);
           if (e1) throw new Error(e1.message);
           const { error: e2 } = await supabase
@@ -178,14 +195,6 @@ export function ClassificarAcessoModal({
       if (salario.error) return setLocalErr(salario.error);
       const leads = checkOptionalNumber(cltLeads, Number, leadsDiaSchema);
       if (leads.error) return setLocalErr(leads.error);
-      const bonus = checkOptionalNumber(clBonus, parseBRL, valorNaoNegativoSchema);
-      if (bonus.error) return setLocalErr(bonus.error);
-      const dia = checkOptionalNumber(clDiapg, Number, diaPagamentoSchema);
-      if (dia.error) return setLocalErr(dia.error);
-      const faixaVal = checkOptionalNumber(clFaixaval, parseBRL, valorNaoNegativoSchema);
-      if (faixaVal.error) return setLocalErr(faixaVal.error);
-      const faixaPct = checkOptionalNumber(clFaixapct, parsePct, pctSchema);
-      if (faixaPct.error) return setLocalErr(faixaPct.error);
       const equipe = checkOptionalEquipe(clEquipe);
       if (equipe.error) return setLocalErr(equipe.error);
       const persist = async () => {
@@ -196,10 +205,6 @@ export function ClassificarAcessoModal({
             equipe: equipe.value,
             salario_base: salario.value,
             leads_dia: leads.value,
-            bonus_campanha: bonus.value,
-            dia_pagamento: dia.value,
-            faixa_elite_valor: faixaVal.value,
-            faixa_elite_pct: faixaPct.value,
           })
           .eq("empresa_id", pendente.id);
         if (error) throw new Error(error.message);
@@ -357,7 +362,12 @@ export function ClassificarAcessoModal({
 
               {tipoPJ === "franquia" ? (
                 <>
-                  <div className="acc-sec-t">Modelo de franquia</div>
+                  <div className="acc-sec-t">
+                    Modelo de franquia{" "}
+                    <span className="muted small" style={{ fontWeight: 500 }}>
+                      — Individual (Smart, Conecta, Light, Link, Flex) ou Full (com equipe)
+                    </span>
+                  </div>
                   <div className="acc-pills">
                     {modelosFranquia.length === 0 && (
                       <span className="muted small">
@@ -374,7 +384,33 @@ export function ClassificarAcessoModal({
                       </button>
                     ))}
                   </div>
-                  <div className="acc-grid" style={{ marginTop: 10 }}>
+                  {(() => {
+                    const modelo = modelosFranquia.find((m) => m.id === clFranquia);
+                    const isFull = modelo?.modalidade === "full";
+                    return (
+                      <div className="clt-note" style={{ marginTop: 10 }}>
+                        <Icon id="info" size={15} />
+                        <div>
+                          {isFull ? (
+                            <>
+                              <strong>Modelo Full:</strong> o franqueado terá{" "}
+                              <strong>vendedores abaixo</strong> — recebe a área de franqueado
+                              completa (cadastra vendedores, ranking e acompanhamento da equipe).
+                            </>
+                          ) : (
+                            <>
+                              <strong>Modelo Individual:</strong> o franqueado opera como{" "}
+                              <strong>um vendedor</strong> (atende, cota e vê seus resultados). Sem
+                              cadastro de vendedores nem ranking de equipe — o título de franquia é
+                              estratégia comercial.
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="acc-sec-t">Supervisão</div>
+                  <div className="acc-grid">
                     <div className="field-group">
                       <label>Reporta a</label>
                       <select
@@ -417,6 +453,67 @@ export function ClassificarAcessoModal({
                         />
                         Franquia isenta
                       </label>
+                    </div>
+                  </div>
+                  <div className="acc-sec-t">
+                    Parâmetros{" "}
+                    <span className="muted small" style={{ fontWeight: 500 }}>
+                      — definidos pelo modelo em Personalização geral
+                    </span>
+                  </div>
+                  <div className="acc-grid">
+                    {MODELO_PARAMS_LABELS.map(([k, label]) => (
+                      <div className="field-group" key={k}>
+                        <label>{label}</label>
+                        <div className="input" style={{ background: "var(--offwhite)" }}>
+                          {modelosFranquia.find((m) => m.id === clFranquia)?.params?.[k] ?? "—"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="acc-sec-t">Condições adicionais</div>
+                  <div className="acc-grid">
+                    <div className="field-group">
+                      <label>Dia de pagamento</label>
+                      <input
+                        className="input"
+                        value={clFrDiapg}
+                        onChange={(e) =>
+                          setClFrDiapg(e.target.value.replace(/\D/g, "").slice(0, 2))
+                        }
+                        placeholder="10"
+                        maxLength={2}
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label>Bônus de campanha</label>
+                      <MaskedInput
+                        mask="brl"
+                        className="input"
+                        value={clFrBonus}
+                        onValueChange={setClFrBonus}
+                        placeholder="R$ 0,00"
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label>Faixa: acima de (R$)</label>
+                      <MaskedInput
+                        mask="brl"
+                        className="input"
+                        value={clFrFaixaval}
+                        onValueChange={setClFrFaixaval}
+                        placeholder="ex.: 50.000"
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label>…comissão passa a</label>
+                      <MaskedInput
+                        mask="pct"
+                        className="input"
+                        value={clFrFaixapct}
+                        onValueChange={setClFrFaixapct}
+                        placeholder="ex.: 55%"
+                      />
                     </div>
                   </div>
                 </>
@@ -525,45 +622,12 @@ export function ClassificarAcessoModal({
                         ))}
                       </select>
                     </div>
-                    <div className="field-group">
-                      <label>Bônus de campanha</label>
-                      <MaskedInput
-                        mask="brl"
-                        className="input"
-                        value={clBonus}
-                        onValueChange={setClBonus}
-                        placeholder="R$ 0,00"
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Dia de pagamento</label>
-                      <input
-                        className="input"
-                        value={clDiapg}
-                        onChange={(e) => setClDiapg(e.target.value.replace(/\D/g, "").slice(0, 2))}
-                        placeholder="10"
-                        maxLength={2}
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>Faixa Elite: acima de (R$)</label>
-                      <MaskedInput
-                        mask="brl"
-                        className="input"
-                        value={clFaixaval}
-                        onValueChange={setClFaixaval}
-                        placeholder="R$ 50.000,00"
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label>…comissão passa a</label>
-                      <MaskedInput
-                        mask="pct"
-                        className="input"
-                        value={clFaixapct}
-                        onValueChange={setClFaixapct}
-                        placeholder="55%"
-                      />
+                  </div>
+                  <div className="clt-note">
+                    <Icon id="info" size={15} />
+                    <div>
+                      Remuneração pelo <strong>Modelo CLT</strong> (progressiva + fator + Ituran).
+                      Edite as tabelas em Personalização geral › Modelo CLT.
                     </div>
                   </div>
                 </>

@@ -920,6 +920,7 @@ export type Database = {
       empresas: {
         Row: {
           aprovada_em: string | null;
+          bonus_campanha: number | null;
           celular: string | null;
           cidade: string | null;
           contato_emergencia: string | null;
@@ -927,9 +928,12 @@ export type Database = {
           dados_bancarios: string | null;
           dados_cadastro: Json;
           data_nascimento: string | null;
+          dia_pagamento: number | null;
           documento: string;
           email: string | null;
           endereco: string | null;
+          faixa_elite_pct: number | null;
+          faixa_elite_valor: number | null;
           id: string;
           isenta: boolean | null;
           leads_dia: number | null;
@@ -954,6 +958,7 @@ export type Database = {
         };
         Insert: {
           aprovada_em?: string | null;
+          bonus_campanha?: number | null;
           celular?: string | null;
           cidade?: string | null;
           contato_emergencia?: string | null;
@@ -961,9 +966,12 @@ export type Database = {
           dados_bancarios?: string | null;
           dados_cadastro?: Json;
           data_nascimento?: string | null;
+          dia_pagamento?: number | null;
           documento: string;
           email?: string | null;
           endereco?: string | null;
+          faixa_elite_pct?: number | null;
+          faixa_elite_valor?: number | null;
           id?: string;
           isenta?: boolean | null;
           leads_dia?: number | null;
@@ -988,6 +996,7 @@ export type Database = {
         };
         Update: {
           aprovada_em?: string | null;
+          bonus_campanha?: number | null;
           celular?: string | null;
           cidade?: string | null;
           contato_emergencia?: string | null;
@@ -995,9 +1004,12 @@ export type Database = {
           dados_bancarios?: string | null;
           dados_cadastro?: Json;
           data_nascimento?: string | null;
+          dia_pagamento?: number | null;
           documento?: string;
           email?: string | null;
           endereco?: string | null;
+          faixa_elite_pct?: number | null;
+          faixa_elite_valor?: number | null;
           id?: string;
           isenta?: boolean | null;
           leads_dia?: number | null;
