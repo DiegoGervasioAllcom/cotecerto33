@@ -71,6 +71,40 @@ export type Form = {
   banco: string;
   usoComercial: string;
   kmMensal: string;
+  // Veículo — uso (espelha a API real da Quiver, ver enumsQuiver.ts)
+  tipoUso: string;
+  usoTrabalho: string;
+  usoEstudo: string;
+  usoComercialDoisDias: "sim" | "nao";
+  categoriaTaxi: string;
+  utilizacaoLocadora: string;
+  condutoresQueUtilizam: string;
+  cepCirculacao: string;
+  numPassageiros: string;
+  // Veículo — dados complementares
+  chassiRemarcado: "sim" | "nao";
+  leilao: string;
+  isencaoImposto: string;
+  pcdCnhEspecial: "sim" | "nao";
+  valorAdaptacaoPcd: string;
+  possuiAntifurtoPorto: "sim" | "nao";
+  hdiSegurosBasico: "sim" | "nao";
+  antifurto: string;
+  antifurtoDetalhes: Record<string, string>;
+  // Veículo — blindagem, kit gás, acessórios
+  blindagemAtiva: "sim" | "nao";
+  coberturaBlindagem: string;
+  valorBlindagem: string;
+  comFranquiaBlindagem: "sim" | "nao";
+  kitGasAtivo: "sim" | "nao";
+  coberturaKitGas: "sim" | "nao";
+  valorKitGas: string;
+  comFranquiaKitGas: "sim" | "nao";
+  acessoriosAtivo: "sim" | "nao";
+  kitAcessoriosAtivo: "sim" | "nao";
+  opcionaisAtivo: "sim" | "nao";
+  equipamentosAtivo: "sim" | "nao";
+  acessoriosDetalhes: Record<string, string>;
   // Perfil
   condutorMesmo: "sim" | "nao";
   condCpf: string;
