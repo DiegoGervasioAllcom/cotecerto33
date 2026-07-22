@@ -1,5 +1,8 @@
 import { onlyDigits } from "@/lib/masks";
-import { maskPlaca, maskAno, maskKm } from "@/components/venda/novo-lead/masks";
+import { maskPlaca, maskAno, maskKm, maskCep } from "@/components/venda/novo-lead/masks";
+import { UsoVeiculoFields } from "@/components/venda/novo-lead/steps/veiculo/UsoVeiculoFields";
+import { DadosComplementaresFold } from "@/components/venda/novo-lead/steps/veiculo/DadosComplementaresFold";
+import { AcessoriosFold } from "@/components/venda/novo-lead/steps/veiculo/AcessoriosFold";
 import type { Form } from "@/components/venda/novo-lead/types";
 
 type Props = {
@@ -233,7 +236,31 @@ export function StepVeiculo({ f, up, erros, marcas, modelos, fipeValor }: Props)
             placeholder="1.000 km"
           />
         </div>
+        <div className="field-group">
+          <label>CEP de circulação</label>
+          <input
+            className="input"
+            value={f.cepCirculacao}
+            inputMode="numeric"
+            onChange={(e) => up("cepCirculacao", maskCep(e.target.value))}
+            placeholder="00000-000"
+          />
+        </div>
+        <div className="field-group">
+          <label>Nº de passageiros</label>
+          <input
+            className="input"
+            value={f.numPassageiros}
+            inputMode="numeric"
+            maxLength={2}
+            onChange={(e) => up("numPassageiros", onlyDigits(e.target.value).slice(0, 2))}
+          />
+        </div>
       </div>
+
+      <UsoVeiculoFields f={f} up={up} />
+      <DadosComplementaresFold f={f} up={up} />
+      <AcessoriosFold f={f} up={up} />
     </>
   );
 }

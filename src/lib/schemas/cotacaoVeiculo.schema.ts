@@ -25,6 +25,21 @@ export const veiculoSchema = z.object({
   usoComercial: optionalMax(50, "Campo muito longo."),
   kmMensal: optionalMax(100, "KM mensal muito longo."),
   fipeValor: optionalMax(100, "Valor FIPE muito longo."),
+  // Uso do veículo / dados complementares (espelha cotacao_veiculo — G2.1)
+  tipoUso: optionalMax(100, "Tipo de uso muito longo."),
+  usoTrabalho: optionalMax(150, "Campo muito longo."),
+  usoEstudo: optionalMax(150, "Campo muito longo."),
+  categoriaTaxi: optionalMax(50, "Categoria de táxi muito longa."),
+  utilizacaoLocadora: optionalMax(100, "Campo muito longo."),
+  condutoresQueUtilizam: optionalMax(100, "Campo muito longo."),
+  cepCirculacao: optionalMax(20, "CEP de circulação inválido."),
+  numPassageiros: optionalMax(10, "Número de passageiros inválido."),
+  isencaoImposto: optionalMax(50, "Isenção de imposto muito longa."),
+  valorAdaptacaoPcd: optionalMax(50, "Valor de adaptação PcD muito longo."),
+  antifurto: optionalMax(50, "Antifurto muito longo."),
+  coberturaBlindagem: optionalMax(150, "Cobertura de blindagem muito longa."),
+  valorBlindagem: optionalMax(50, "Valor de blindagem muito longo."),
+  valorKitGas: optionalMax(50, "Valor de kit gás muito longo."),
 });
 
 export type VeiculoFormValues = z.infer<typeof veiculoSchema>;

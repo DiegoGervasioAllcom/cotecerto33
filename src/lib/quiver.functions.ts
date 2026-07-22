@@ -112,20 +112,63 @@ function montarPayloadQuiver(cot: CotacaoRow) {
     },
     veiculo: {
       placa: v.placa ?? "",
-      // TODO Fase 2: chassiRemarcado/antifurto/tipoUso/usoTrabalho/usoEstudo/
-      // usoComercialDoisOuMaisDias/cepCirculacao ainda não têm coluna própria
-      // — usando os defaults do "Exemplo A" do guia (fluxo Particular simples).
-      chassiRemarcado: "Não",
+      chassiRemarcado: simNao(v.chassi_remarcado as boolean),
       financiado: simNao(alienado),
       ...(alienado && v.banco ? { alienacaoFiduciaria: v.banco as string } : {}),
-      antifurto: "Não",
+      antifurto: (v.antifurto as string) || "Não",
+      // sub-campos por seguradora (bloqueadorAllianz, rastreadorPorto etc.)
+      ...((v.antifurto_detalhes as Record<string, string> | null) ?? {}),
+      ...(v.possui_antifurto_porto != null
+        ? { possuiAntifurtoPorto: simNao(v.possui_antifurto_porto as boolean) }
+        : {}),
       cepPernoite: onlyDigits(p.cep_pernoite as string),
-      cepCirculacao: onlyDigits(p.cep_pernoite as string),
+      cepCirculacao: onlyDigits((v.cep_circulacao as string) || (p.cep_pernoite as string)),
       kmMes: onlyDigits(v.km_mensal as string),
-      tipoUso: "Particular",
-      usoTrabalho: "Não trabalha",
-      usoEstudo: "Não estuda",
-      usoComercialDoisOuMaisDias: "Não",
+      tipoUso: (v.tipo_uso as string) || "Particular",
+      usoTrabalho: (v.uso_trabalho as string) || "Não trabalha",
+      usoEstudo: (v.uso_estudo as string) || "Não estuda",
+      ...((v.tipo_uso as string) === "Particular" || !v.tipo_uso
+        ? { usoComercialDoisOuMaisDias: simNao(v.uso_comercial_dois_dias as boolean) }
+        : {}),
+      ...(v.categoria_taxi ? { categoriaTaxiVeiculo: v.categoria_taxi as string } : {}),
+      ...(v.utilizacao_locadora
+        ? { utilizacaoLocadoraContrato: v.utilizacao_locadora as string }
+        : {}),
+      ...(v.condutores_que_utilizam
+        ? { condutoresQueUtilizam: v.condutores_que_utilizam as string }
+        : {}),
+      ...(v.isencao_imposto ? { isencaoImposto: v.isencao_imposto as string } : {}),
+      ...(v.pcd_cnh_especial != null
+        ? { pcdCnhEspecial: simNao(v.pcd_cnh_especial as boolean) }
+        : {}),
+      ...(v.pcd_cnh_especial && v.valor_adaptacao_pcd
+        ? { valorAdaptacaoPcd: v.valor_adaptacao_pcd as string }
+        : {}),
+      ...(v.blindagem != null ? { blindagem: simNao(v.blindagem as boolean) } : {}),
+      ...(v.blindagem
+        ? {
+            coberturaBlindagem: v.cobertura_blindagem as string,
+            valorBlindagem: v.valor_blindagem as string,
+            comFranquia: simNao(v.com_franquia_blindagem as boolean),
+          }
+        : {}),
+      ...(v.kit_gas != null ? { kitGas: simNao(v.kit_gas as boolean) } : {}),
+      ...(v.kit_gas
+        ? {
+            coberturaKitGas: simNao(v.cobertura_kit_gas as boolean),
+            ...(v.cobertura_kit_gas ? { valorKitGas: v.valor_kit_gas as string } : {}),
+            comFranquiaKitGas: simNao(v.com_franquia_kit_gas as boolean),
+          }
+        : {}),
+      ...(v.acessorios != null ? { acessorios: simNao(v.acessorios as boolean) } : {}),
+      ...(v.acessorios
+        ? {
+            kitacessorios: simNao(v.kit_acessorios as boolean),
+            opcionais: simNao(v.opcionais as boolean),
+            equipamentos: simNao(v.equipamentos as boolean),
+            ...((v.acessorios_detalhes as Record<string, string> | null) ?? {}),
+          }
+        : {}),
     },
     complementares: {
       // TODO Fase 3: tipoGaragem/relacaoSeguradoProprietario/tipoResidencia/

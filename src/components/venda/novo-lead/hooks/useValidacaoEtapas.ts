@@ -87,6 +87,20 @@ export function useValidacaoEtapas(
         usoComercial: f.usoComercial,
         kmMensal: f.kmMensal,
         fipeValor: fipeValor,
+        tipoUso: f.tipoUso,
+        usoTrabalho: f.usoTrabalho,
+        usoEstudo: f.usoEstudo,
+        categoriaTaxi: f.categoriaTaxi,
+        utilizacaoLocadora: f.utilizacaoLocadora,
+        condutoresQueUtilizam: f.condutoresQueUtilizam,
+        cepCirculacao: f.cepCirculacao,
+        numPassageiros: f.numPassageiros,
+        isencaoImposto: f.isencaoImposto,
+        valorAdaptacaoPcd: f.valorAdaptacaoPcd,
+        antifurto: f.antifurto,
+        coberturaBlindagem: f.coberturaBlindagem,
+        valorBlindagem: f.valorBlindagem,
+        valorKitGas: f.valorKitGas,
       });
       if (!r.success) {
         const novos: Record<string, string> = {};
