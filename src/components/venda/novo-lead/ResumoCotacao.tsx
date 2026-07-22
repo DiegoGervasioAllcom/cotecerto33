@@ -1,4 +1,3 @@
-import { SEGURADORAS } from "@/components/venda/novo-lead/types";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 
@@ -36,11 +35,23 @@ export function ResumoCotacao({
           <use href="#i-clock" />
         </svg>
         <h3>Resumo da cotação</h3>
+        {podeCalcular && (
+          <span className="chip chip-ok" style={{ marginLeft: "auto" }}>
+            Pronto
+          </span>
+        )}
       </div>
       <div className="body">
         {f.nome || f.cpf || f.marca || f.tipoCobertura || f.placa || f.condNome ? (
           <div style={{ display: "grid", gap: 10, fontSize: 13 }}>
-            {(f.nome || f.cpf || f.celular || f.cidade) && (
+            {(f.nome ||
+              f.cpf ||
+              f.celular ||
+              f.cidade ||
+              f.nasc ||
+              f.sexo ||
+              f.estadoCivil ||
+              f.cep) && (
               <div style={{ display: "grid", gap: 4 }}>
                 <div
                   className="muted small"
@@ -48,14 +59,29 @@ export function ResumoCotacao({
                 >
                   Segurado
                 </div>
+                {f.cpf && (
+                  <div>
+                    <b>{f.pessoa === "Jurídica" ? "CNPJ" : "CPF"}:</b> {f.cpf}
+                  </div>
+                )}
                 {f.nome && (
                   <div>
                     <b>Nome:</b> {f.nome}
                   </div>
                 )}
-                {f.cpf && (
+                {f.nasc && (
                   <div>
-                    <b>{f.pessoa === "Jurídica" ? "CNPJ" : "CPF"}:</b> {f.cpf}
+                    <b>Nascimento:</b> {f.nasc}
+                  </div>
+                )}
+                {f.sexo && (
+                  <div>
+                    <b>Sexo:</b> {f.sexo}
+                  </div>
+                )}
+                {f.estadoCivil && (
+                  <div>
+                    <b>Estado civil:</b> {f.estadoCivil}
                   </div>
                 )}
                 {f.celular && (
@@ -63,9 +89,14 @@ export function ResumoCotacao({
                     <b>Celular:</b> {f.celular}
                   </div>
                 )}
-                {(f.cidade || f.uf) && (
+                {f.cep && (
                   <div>
-                    <b>Cidade/UF:</b> {f.cidade}
+                    <b>CEP:</b> {f.cep}
+                  </div>
+                )}
+                {f.cidade && (
+                  <div>
+                    <b>Cidade:</b> {f.cidade}
                     {f.uf ? `/${f.uf}` : ""}
                   </div>
                 )}
@@ -277,7 +308,7 @@ export function ResumoCotacao({
           <svg width="12" height="12">
             <use href="#i-shield" />
           </svg>{" "}
-          {SEGURADORAS.length} seguradoras no cálculo
+          {f.seguradorasSel.length} seguradoras no cálculo
         </span>
       </div>
       <div className="footer">

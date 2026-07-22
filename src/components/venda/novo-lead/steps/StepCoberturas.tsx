@@ -21,7 +21,7 @@ export function StepCoberturas({ f, up, erros }: Props) {
             {["Compreensiva", "Incêndio + Roubo", "RCF"].map((t) => (
               <span
                 key={t}
-                className={"chip " + (f.tipoCobertura === t ? "chip-slate" : "chip-outline")}
+                className={"chip " + (f.tipoCobertura === t ? "chip-yellow" : "chip-outline")}
                 style={{ cursor: "pointer" }}
                 onClick={() => up("tipoCobertura", t)}
               >

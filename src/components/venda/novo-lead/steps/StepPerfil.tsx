@@ -11,7 +11,7 @@ type Props = {
 export function StepPerfil({ f, up, erros }: Props) {
   return (
     <>
-      <h2>Perfil do Condutor</h2>
+      <h2>Perfil</h2>
       <div className="sub">Quem dirige o veículo na maior parte do tempo e detalhes de uso.</div>
       <div className="wizard-grid">
         <div className="field-group full">

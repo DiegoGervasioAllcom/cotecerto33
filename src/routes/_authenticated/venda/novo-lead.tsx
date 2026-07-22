@@ -238,7 +238,7 @@ function Page() {
 
       <Stepper step={step} setStep={setStep} podeCalcular={podeCalcular} />
 
-      <div className="lead-shell">
+      <div className="lead-shell" style={step === 5 ? { display: "block" } : undefined}>
         <div className="wizard-card">
           {step === 0 && (
             <StepSegurado
@@ -288,19 +288,21 @@ function Page() {
           />
         </div>
 
-        <ResumoCotacao
-          f={f}
-          marcas={marcas}
-          modelos={modelos}
-          fipeValor={fipeValor}
-          podeCalcular={podeCalcular}
-          setStep={setStep}
-          doSimularCalculo={doSimularCalculo}
-          persistir={persistir}
-          saveState={saveState}
-          lastSavedAt={lastSavedAt}
-          cotacaoId={cotacaoId}
-        />
+        {step !== 5 && (
+          <ResumoCotacao
+            f={f}
+            marcas={marcas}
+            modelos={modelos}
+            fipeValor={fipeValor}
+            podeCalcular={podeCalcular}
+            setStep={setStep}
+            doSimularCalculo={doSimularCalculo}
+            persistir={persistir}
+            saveState={saveState}
+            lastSavedAt={lastSavedAt}
+            cotacaoId={cotacaoId}
+          />
+        )}
       </div>
       {perdaOpen && (
         <ClassificarPerdaModal
