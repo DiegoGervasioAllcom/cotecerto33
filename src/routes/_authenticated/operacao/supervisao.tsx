@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { printHtml } from "@/lib/print";
 
 export const Route = createFileRoute("/_authenticated/operacao/supervisao")({
   head: () => ({ meta: [{ title: "Supervisão · CoteCerto" }] }),
@@ -281,6 +282,33 @@ function Page() {
   const kpiGanhos = comp.map((c) => c.ganhos);
   const kpiConv = comp.map((c) => c.conv);
 
+  function exportar() {
+    const tFunil = `<table><thead><tr><th>Etapa</th><th class="num">Conversão</th><th class="num">Tempo médio</th></tr></thead><tbody>${funil.rows
+      .map(
+        (r) =>
+          `<tr><td>${r.etapa}</td><td class="num">${r.pct}%</td><td class="num">${fmtDuracao(r.tempo)}</td></tr>`,
+      )
+      .join("")}</tbody></table>`;
+    const tComp = `<table><thead><tr><th>Vendedor</th><th>Unidade</th><th class="num">Volume</th><th class="num">Cotações</th><th class="num">Propostas</th><th class="num">Apólices</th><th class="num">Conversão</th></tr></thead><tbody>${
+      comp
+        .map(
+          (c) =>
+            `<tr><td>${c.nome}</td><td>${c.unidade || "—"}</td><td class="num">${c.volume}</td><td class="num">${c.cotacoes}</td><td class="num">${c.propostas}</td><td class="num">${c.ganhos}</td><td class="num">${c.conv}%</td></tr>`,
+        )
+        .join("") ||
+      `<tr><td colspan="7" style="text-align:center;color:#94a3b8">Sem vendedores com atividade no período</td></tr>`
+    }</tbody></table>`;
+    const body = `
+      <h1>Supervisão</h1>
+      <div class="sub">Período: <b>${range.label}</b></div>
+      <h2>Caça-gargalos — jornada do lead</h2>
+      ${tFunil}
+      <h2>Comparativo de vendedores</h2>
+      ${tComp}
+    `;
+    printHtml(`Supervisão · ${range.label}`, body);
+  }
+
   return (
     <AppShell title="Supervisão">
       <ProtoIcons />
@@ -291,9 +319,9 @@ function Page() {
             Onde a operação perde tempo e leads — e como está cada vendedor, para agir rápido
           </div>
         </div>
-        <div className="row" style={{ gap: 8 }}>
+        <div className="tools">
           <select
-            className="input"
+            className="select-mini"
             value={offset}
             onChange={(e) => setOffset(Number(e.target.value))}
           >
@@ -301,6 +329,12 @@ function Page() {
             <option value={1}>Mês passado</option>
             <option value={2}>Mês retrasado</option>
           </select>
+          <button className="btn btn-ghost" onClick={exportar}>
+            <svg width="14" height="14">
+              <use href="#i-download"></use>
+            </svg>{" "}
+            Exportar
+          </button>
         </div>
       </div>
 
@@ -309,7 +343,12 @@ function Page() {
 
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="card-h">
-          <strong>Caça-gargalos — jornada do lead</strong>
+          <h3>
+            <svg width="16" height="16">
+              <use href="#i-gauge"></use>
+            </svg>{" "}
+            Caça-gargalos — jornada do lead
+          </h3>
           {funil.rows[funil.worstIdx] && (
             <span className="chip chip-alert">
               Maior gargalo: {funil.rows[funil.worstIdx].etapa}
@@ -322,55 +361,31 @@ function Page() {
             <strong>tempo médio</strong> gasto nela.
           </p>
           {funil.rows.map((r, i) => (
-            <div
-              key={r.etapa}
-              className="row"
-              style={{
-                alignItems: "center",
-                gap: 12,
-                padding: "8px 0",
-                borderBottom: "1px dashed var(--border, #e5e7eb)",
-                background: i === funil.worstIdx ? "rgba(239,68,68,.04)" : undefined,
-              }}
-            >
-              <div style={{ width: 220, fontWeight: 600 }}>{r.etapa}</div>
-              <div
-                style={{
-                  flex: 1,
-                  background: "#f1f5f9",
-                  borderRadius: 6,
-                  height: 22,
-                  position: "relative",
-                }}
-              >
+            <div key={r.etapa} className={`gargalo-row${i === funil.worstIdx ? " worst" : ""}`}>
+              <div className="gr-etapa">{r.etapa}</div>
+              <div className="gr-track">
                 <div
+                  className="gr-fill"
                   style={{
-                    width: `${Math.max(2, r.pct)}%`,
-                    height: "100%",
-                    borderRadius: 6,
-                    background: r.pct >= 70 ? "#16a34a" : r.pct >= 50 ? "#f59e0b" : "#ef4444",
-                    color: "#fff",
-                    fontSize: 12,
-                    textAlign: "center",
-                    lineHeight: "22px",
+                    width: `${Math.max(14, r.pct)}%`,
+                    background:
+                      r.pct < 50 ? "var(--alert)" : r.pct < 70 ? "var(--yellow)" : "var(--ok)",
                   }}
                 >
                   {r.pct}%
                 </div>
               </div>
-              <div
-                style={{
-                  width: 100,
-                  textAlign: "right",
-                  color: r.over ? "#ef4444" : "var(--muted)",
-                }}
-              >
-                {fmtDuracao(r.tempo)} {r.over ? "⚠" : ""}
+              <div className={`gr-tempo${r.over ? " over" : ""}`}>
+                {fmtDuracao(r.tempo)}
+                {r.over ? " ⚠" : ""}
               </div>
             </div>
           ))}
           {funil.rows[funil.worstIdx] && funil.rows[funil.worstIdx].den > 0 && (
             <div className="coach-tip">
+              <svg width="13" height="13">
+                <use href="#i-spark"></use>
+              </svg>{" "}
               <strong>
                 Maior perda: {funil.rows[funil.worstIdx].etapa} ({funil.rows[funil.worstIdx].pct}
                 %).
@@ -383,7 +398,12 @@ function Page() {
 
       <div className="card">
         <div className="card-h">
-          <strong>Comparativo de vendedores</strong>
+          <h3>
+            <svg width="16" height="16">
+              <use href="#i-users"></use>
+            </svg>{" "}
+            Comparativo de vendedores
+          </h3>
           <span className="small muted">top 5 por volume · vermelho = ponto fraco</span>
         </div>
         <div className="card-b" style={{ overflowX: "auto" }}>
@@ -392,66 +412,73 @@ function Page() {
               Sem vendedores com atividade no período.
             </div>
           ) : (
-            <table className="table-pipe" style={{ minWidth: 720, width: "100%" }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left" }}>KPI por vendedor</th>
-                  {comp.map((c) => (
-                    <th key={c.uid} style={{ textAlign: "left" }}>
-                      {c.nome}
-                      <br />
-                      <span style={{ fontWeight: 400, opacity: 0.7, fontSize: 11 }}>
-                        {c.unidade || "—"}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <Row
-                  label="Volume de leads"
-                  values={comp.map((c) => c.volume)}
-                  render={(v) => v}
-                  cls={(v) => bestWorstClass(kpiVolume, v, true)}
-                />
-                <Row
-                  label="Tempo 1º contato"
-                  values={comp.map((c) => c.tempoContato)}
-                  render={(v) => fmtDuracao(v)}
-                  cls={(v) => bestWorstClass(kpiContato as number[], v ?? Infinity, false)}
-                />
-                <Row
-                  label="Contatos efetivos"
-                  values={comp.map((c) => c.contatos)}
-                  render={(v) => v}
-                  cls={(v) => bestWorstClass(kpiContatos, v, true)}
-                />
-                <Row
-                  label="Cotações enviadas"
-                  values={comp.map((c) => c.cotacoes)}
-                  render={(v) => v}
-                  cls={(v) => bestWorstClass(kpiCot, v, true)}
-                />
-                <Row
-                  label="Propostas"
-                  values={comp.map((c) => c.propostas)}
-                  render={(v) => v}
-                  cls={(v) => bestWorstClass(kpiProp, v, true)}
-                />
-                <Row
-                  label="Apólices emitidas"
-                  values={comp.map((c) => c.ganhos)}
-                  render={(v) => v}
-                  cls={(v) => bestWorstClass(kpiGanhos, v, true)}
-                />
-                <Row
-                  label="Taxa de conversão"
-                  values={comp.map((c) => c.conv)}
-                  render={(v) => `${v}%`}
-                  cls={(v) => bestWorstClass(kpiConv, v, true)}
-                />
-              </tbody>
-            </table>
+            <>
+              <table className="cmp-table" style={{ minWidth: 720 }}>
+                <thead>
+                  <tr>
+                    <th>KPI por vendedor</th>
+                    {comp.map((c) => (
+                      <th key={c.uid}>
+                        {c.nome}
+                        <br />
+                        <span style={{ fontWeight: 400, opacity: 0.8, fontSize: 11 }}>
+                          {c.unidade || "—"}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <Row
+                    label="Volume de leads"
+                    values={comp.map((c) => c.volume)}
+                    render={(v) => v}
+                    cls={(v) => bestWorstClass(kpiVolume, v, true)}
+                  />
+                  <Row
+                    label="Tempo 1º contato"
+                    values={comp.map((c) => c.tempoContato)}
+                    render={(v) => fmtDuracao(v)}
+                    cls={(v) => bestWorstClass(kpiContato as number[], v ?? Infinity, false)}
+                  />
+                  <Row
+                    label="Contatos efetivos"
+                    values={comp.map((c) => c.contatos)}
+                    render={(v) => v}
+                    cls={(v) => bestWorstClass(kpiContatos, v, true)}
+                  />
+                  <Row
+                    label="Cotações enviadas"
+                    values={comp.map((c) => c.cotacoes)}
+                    render={(v) => v}
+                    cls={(v) => bestWorstClass(kpiCot, v, true)}
+                  />
+                  <Row
+                    label="Propostas"
+                    values={comp.map((c) => c.propostas)}
+                    render={(v) => v}
+                    cls={(v) => bestWorstClass(kpiProp, v, true)}
+                  />
+                  <Row
+                    label="Apólices emitidas"
+                    values={comp.map((c) => c.ganhos)}
+                    render={(v) => v}
+                    cls={(v) => bestWorstClass(kpiGanhos, v, true)}
+                  />
+                  <Row
+                    label="Taxa de conversão"
+                    values={comp.map((c) => c.conv)}
+                    render={(v) => `${v}%`}
+                    cls={(v) => bestWorstClass(kpiConv, v, true)}
+                    highlight
+                  />
+                </tbody>
+              </table>
+              <p className="small muted" style={{ margin: "12px 0 0" }}>
+                Cada linha destaca o <strong style={{ color: "var(--alert)" }}>mais fraco</strong> e
+                o <strong style={{ color: "var(--ok)" }}>melhor</strong> do grupo.
+              </p>
+            </>
           )}
         </div>
       </div>
@@ -464,26 +491,22 @@ function Row<T>({
   values,
   render,
   cls,
+  highlight,
 }: {
   label: string;
   values: T[];
   render: (v: T) => ReactNode;
   cls: (v: T) => string;
+  highlight?: boolean;
 }) {
   return (
-    <tr>
-      <th style={{ textAlign: "left" }}>{label}</th>
-      {values.map((v, i) => {
-        const c = cls(v);
-        const bg =
-          c === "best" ? "rgba(22,163,74,.10)" : c === "weak" ? "rgba(239,68,68,.10)" : undefined;
-        const color = c === "best" ? "#16a34a" : c === "weak" ? "#ef4444" : undefined;
-        return (
-          <td key={i} style={{ background: bg, color, fontWeight: c ? 700 : undefined }}>
-            {render(v)}
-          </td>
-        );
-      })}
+    <tr className={highlight ? "conv-row" : undefined}>
+      <th>{label}</th>
+      {values.map((v, i) => (
+        <td key={i} className={cls(v)}>
+          {render(v)}
+        </td>
+      ))}
     </tr>
   );
 }

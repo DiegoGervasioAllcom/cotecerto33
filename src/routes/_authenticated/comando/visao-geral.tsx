@@ -527,47 +527,22 @@ function Page() {
             )}
           </div>
         </div>
-        <div className="tools" style={{ gap: 8, flexWrap: "wrap" }}>
-          <div
-            className="seg"
-            role="tablist"
-            style={{
-              display: "inline-flex",
-              border: "1px solid var(--border)",
-              borderRadius: 8,
-              overflow: "hidden",
-            }}
+        <div className="tools">
+          <select
+            className="select-mini"
+            value={periodo}
+            onChange={(e) => setPeriodo(e.target.value as Periodo)}
           >
-            {(
-              [
-                ["mes_atual", "Mês atual"],
-                ["mes_passado", "Mês passado"],
-                ["mes_retrasado", "Mês retrasado"],
-                ["ult_90", "Últimos 90 dias"],
-              ] as [Periodo, string][]
-            ).map(([k, lbl]) => (
-              <button
-                key={k}
-                className="btn btn-sm"
-                onClick={() => setPeriodo(k)}
-                style={{
-                  borderRadius: 0,
-                  border: "none",
-                  background: periodo === k ? "var(--slate)" : "transparent",
-                  color: periodo === k ? "#fff" : "var(--text)",
-                  padding: "6px 10px",
-                  fontWeight: 600,
-                }}
-              >
-                {lbl}
-              </button>
-            ))}
-          </div>
-          <button className="btn btn-yellow" onClick={() => exportarRelatorio()}>
+            <option value="mes_atual">Mês atual</option>
+            <option value="mes_passado">Mês passado</option>
+            <option value="mes_retrasado">Mês retrasado</option>
+            <option value="ult_90">Últimos 90 dias</option>
+          </select>
+          <button className="btn btn-ghost" onClick={() => exportarRelatorio()}>
             <svg width="14" height="14">
               <use href="#i-download"></use>
             </svg>{" "}
-            Exportar relatório
+            Exportar
           </button>
           <button className="btn btn-slate" onClick={() => navigate({ to: "/comando/leads" })}>
             <svg width="14" height="14">
