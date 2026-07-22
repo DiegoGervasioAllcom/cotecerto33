@@ -94,7 +94,7 @@ export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
             {["Masculino", "Feminino"].map((s) => (
               <span
                 key={s}
-                className={"chip " + (f.sexo === s ? "chip-slate" : "chip-outline")}
+                className={"chip " + (f.sexo === s ? "chip-yellow" : "chip-outline")}
                 style={{ cursor: "pointer" }}
                 onClick={() => up("sexo", s)}
               >

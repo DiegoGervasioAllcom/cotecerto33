@@ -11,15 +11,23 @@ export function Stepper({ step, setStep, podeCalcular }: Props) {
     <div className="stepper">
       {STEPS.map((label, i) => (
         <span key={label} style={{ display: "contents" }}>
+          {i > 0 && <div className={"line " + (i < step ? "done" : "")} />}
           <div
-            className={"step " + (i === step ? "current" : "")}
+            className={"step " + (i < step ? "done" : i === step ? "current" : "")}
             onClick={() => setStep(i)}
             style={{ cursor: "pointer" }}
           >
-            <div className="n">{i + 1}</div>
+            <div className="n">
+              {i < step ? (
+                <svg width="14" height="14">
+                  <use href="#i-check" />
+                </svg>
+              ) : (
+                i + 1
+              )}
+            </div>
             <div className="lbl">{label}</div>
           </div>
-          {i < STEPS.length - 1 && <div className="line " />}
         </span>
       ))}
       {podeCalcular && (
