@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { useGroupScope } from "@/lib/group-scope";
 
 export const Route = createFileRoute("/_authenticated/operacao/pipeline-geral")({
   head: () => ({ meta: [{ title: "Pipeline geral · CoteCerto" }] }),
@@ -51,6 +52,7 @@ function age(d: string) {
 
 function Page() {
   const navigate = useNavigate();
+  const { isGroupView } = useGroupScope();
   const [stages, setStages] = useState<Stage[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
@@ -194,9 +196,25 @@ function Page() {
         <div>
           <h1>Pipeline geral</h1>
           <div className="sub">
-            Todos os leads da operação num só funil — a Matriz vê tudo e age onde precisa
+            {isGroupView
+              ? "Os leads do seu grupo num só funil — acompanhe e cobre onde precisa"
+              : "Todos os leads da operação num só funil — a Matriz vê tudo e age onde precisa"}
           </div>
         </div>
+        {!isGroupView && (
+          <div className="tools">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => navigate({ to: "/comando/leads" })}
+            >
+              <svg width="14" height="14">
+                <use href="#i-layers"></use>
+              </svg>{" "}
+              Central de Leads
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="filters-bar">

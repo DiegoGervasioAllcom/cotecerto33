@@ -1,9 +1,12 @@
-// Menu do usuário no topbar (avatar + nome) — abre um dropdown com atalhos
-// de acessibilidade (fonte, alto contraste), link de configurações (Matriz) e sair.
-// Reaproveita as classes `.user-menu`/`.um-*` já existentes em src/styles/proto.css.
-import { useEffect, useRef, useState } from "react";
+// Menu do usuário — vive no rodapé da sidebar (bloco "side-user" + sino),
+// igual ao protótipo: clicar no bloco abre um dropdown fixed ancorado acima
+// dele (ver toggleUserMenu() no protótipo v10) com atalhos de acessibilidade
+// (fonte, alto contraste), link de configurações (Matriz) e sair.
+// Reaproveita as classes `.side-user`/`.side-bell`/`.user-menu`/`.um-*` já
+// existentes em src/styles/proto.css.
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut, Bell } from "lucide-react";
 import type { Empresa, Perfil, Profile } from "@/integrations/supabase/client";
 
 const FONT_SIZE_KEY = "cotecerto:fontSize";
@@ -47,24 +50,28 @@ function initials(name: string | null | undefined) {
   return (first + last).toUpperCase() || "?";
 }
 
-export function UserMenu({
+export function SidebarUserMenu({
   profile,
   empresa,
   role,
   brandLabel,
+  isFranqIndividual,
   onSignOut,
 }: {
   profile: Profile | null;
   empresa: Empresa | null;
   role: Perfil | null;
   brandLabel: string;
+  isFranqIndividual: boolean;
   onSignOut: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [fontSize, setFontSize] = useState<FontSize>("md");
   const [highContrast, setHighContrast] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const [popStyle, setPopStyle] = useState<CSSProperties>({});
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -76,13 +83,34 @@ export function UserMenu({
   useEffect(() => {
     if (!open) return;
     function onClickOutside(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        triggerRef.current &&
+        !triggerRef.current.contains(target) &&
+        popRef.current &&
+        !popRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
+
+  function handleToggle() {
+    setOpen((v) => {
+      const next = !v;
+      if (next && triggerRef.current) {
+        const r = triggerRef.current.getBoundingClientRect();
+        setPopStyle({
+          left: r.left,
+          bottom: window.innerHeight - r.top + 8,
+          width: r.width,
+        });
+      }
+      return next;
+    });
+  }
 
   function handleFontSize(size: FontSize) {
     setFontSize(size);
@@ -97,27 +125,26 @@ export function UserMenu({
   }
 
   return (
-    <div ref={wrapRef} style={{ position: "relative" }}>
-      <button
-        type="button"
-        className="user-cluster"
-        onClick={() => setOpen((v) => !v)}
-        title="Menu do usuário"
-      >
-        <div className="user-info">
-          <div className="nm">{profile?.nome ?? "Usuário"}</div>
-          <div className="co">
-            {empresa?.nome ?? "—"} · {brandLabel}
-          </div>
-        </div>
+    <>
+      <div ref={triggerRef} className="side-user" onClick={handleToggle} title="Sua conta">
         <div className="avatar">{initials(profile?.nome)}</div>
-      </button>
+        <div className="who">
+          {profile?.nome ?? "Usuário"}
+          {isFranqIndividual && " · individual"}
+          <small>{brandLabel}</small>
+        </div>
+        <button
+          type="button"
+          className="side-bell"
+          title="Notificações"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Bell style={{ width: 18, height: 18 }} />
+        </button>
+      </div>
 
       {open && (
-        <div
-          className="user-menu"
-          style={{ position: "absolute", top: "calc(100% + 8px)", right: 0 }}
-        >
+        <div ref={popRef} className="user-menu" style={popStyle}>
           <div className="um-head">
             <div className="um-av">{initials(profile?.nome)}</div>
             <div>
@@ -256,6 +283,6 @@ export function UserMenu({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

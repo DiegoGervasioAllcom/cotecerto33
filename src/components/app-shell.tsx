@@ -29,7 +29,6 @@ import {
   Activity,
   AlertTriangle,
   Search,
-  Bell,
   HelpCircle,
 } from "lucide-react";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
@@ -38,7 +37,7 @@ import { usePresence } from "@/lib/use-presence";
 import { useGroupScope } from "@/lib/group-scope";
 import { useNavBadges } from "@/lib/nav-badges";
 import type { Perfil } from "@/integrations/supabase/client";
-import { UserMenu, useAccessibilityPrefs } from "@/components/user-menu";
+import { SidebarUserMenu, useAccessibilityPrefs } from "@/components/user-menu";
 
 type Item = {
   to: string;
@@ -130,14 +129,6 @@ const BRAND_LABEL: Record<Perfil, string> = {
   vendedor: "CORRETOR",
 };
 
-function initials(name: string | null | undefined) {
-  if (!name) return "?";
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase() || "?";
-}
-
 export function AppShell({
   title,
   crumbs,
@@ -216,19 +207,14 @@ export function AppShell({
           ))}
         </div>
         <div className="sidebar-foot">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div className="side-user" style={{ flex: 1 }} title={profile?.nome ?? "Usuário"}>
-              <div className="avatar">{initials(profile?.nome)}</div>
-              <div className="who">
-                {profile?.nome ?? "Usuário"}
-                {isFranqIndividual && " · individual"}
-                <small>{brandLabel}</small>
-              </div>
-            </div>
-            <div className="side-bell" title="Notificações" aria-hidden="true">
-              <Bell style={{ width: 18, height: 18 }} />
-            </div>
-          </div>
+          <SidebarUserMenu
+            profile={profile}
+            empresa={empresa}
+            role={role}
+            brandLabel={brandLabel}
+            isFranqIndividual={isFranqIndividual}
+            onSignOut={handleSignOut}
+          />
           <div style={{ marginTop: 8 }}>CoteCerto 3.3</div>
         </div>
       </aside>
@@ -268,13 +254,6 @@ export function AppShell({
               <span>Tutorial</span>
             </button>
           )}
-          <UserMenu
-            profile={profile}
-            empresa={empresa}
-            role={role}
-            brandLabel={brandLabel}
-            onSignOut={handleSignOut}
-          />
         </div>
         <div className="page active">{children}</div>
       </main>

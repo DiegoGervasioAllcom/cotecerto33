@@ -1132,6 +1132,10 @@ textarea.input:focus {
   color: var(--slate);
   font-weight: 600;
   cursor: pointer;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .kanban {
   display: grid;

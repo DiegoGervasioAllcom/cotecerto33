@@ -288,7 +288,7 @@ function Page() {
             {headerStats.count} leads ativos · valor estimado {money(headerStats.total)}
           </div>
         </div>
-        <div className="tools" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="tools">
           <div className="toggle">
             <button className={view === "kanban" ? "on" : ""} onClick={() => setView("kanban")}>
               <svg width={13} height={13}>
@@ -303,7 +303,7 @@ function Page() {
               Tabela
             </button>
           </div>
-          <Link to="/venda/novo-lead" className="btn btn-primary">
+          <Link to="/venda/novo-lead" className="btn btn-yellow">
             <svg width={14} height={14}>
               <use href="#i-plus" />
             </svg>{" "}
