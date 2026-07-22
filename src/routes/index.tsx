@@ -1,5 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
+import { useGroupScope } from "@/lib/group-scope";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -7,8 +8,9 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { loading, session, profile, role } = useAuth();
+  const { loading: groupLoading, isGroupView } = useGroupScope();
 
-  if (loading) {
+  if (loading || (session && groupLoading)) {
     return (
       <div className="auth-stage">
         <div className="auth-bg" />
@@ -19,6 +21,9 @@ function Index() {
 
   if (!session) return <Navigate to="/auth" />;
   if (profile?.status === "pendente") return <Navigate to="/auth/pendente" />;
-  if (role === "matriz") return <Navigate to="/comando/visao-geral" />;
+  // Matriz, Master, Supervisor e Franquia Full caem na visão de grupo;
+  // Vendedor e Franquia Individual caem em /inicio (mesma lógica de
+  // useGroupScope/isGroupView usada na navegação lateral).
+  if (role === "matriz" || isGroupView) return <Navigate to="/comando/visao-geral" />;
   return <Navigate to="/inicio" />;
 }

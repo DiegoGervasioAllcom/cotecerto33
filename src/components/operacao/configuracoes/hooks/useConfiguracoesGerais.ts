@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_CFG } from "../constants";
 import type { Cfg, Integracao, ModalKind, RoleCount } from "../types";
 
-export function useConfiguracoesGerais() {
+export function useConfiguracoesGerais(enabled = true) {
   const [cfg, setCfg] = useState<Cfg>(DEFAULT_CFG);
   const [dist, setDist] = useState<{
     modo: string;
@@ -74,8 +74,9 @@ export function useConfiguracoesGerais() {
   }
 
   useEffect(() => {
+    if (!enabled) return;
     void load();
-  }, []);
+  }, [enabled]);
 
   async function update(patch: Partial<Cfg>, key: string) {
     setSavingKey(key);

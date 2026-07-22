@@ -7,6 +7,7 @@ import { PerfilRow } from "@/components/operacao/configuracoes/perfil-row";
 import { SeguradorasModal } from "@/components/operacao/configuracoes/seguradoras-modal";
 import { UsuariosModal } from "@/components/operacao/configuracoes/usuarios-modal";
 import { UsuariosSistemaModal } from "@/components/operacao/configuracoes/usuarios-sistema-modal";
+import { useRequireRole } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações · CoteCerto" }] }),
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/operacao/configuracoes")({
 });
 
 function Page() {
+  const denied = useRequireRole("matriz");
   const nav = useNavigate();
   const {
     cfg,
@@ -32,7 +34,9 @@ function Page() {
     roleCount,
     modoLabel,
     rolesTotal,
-  } = useConfiguracoesGerais();
+  } = useConfiguracoesGerais(!denied);
+
+  if (denied) return denied;
 
   return (
     <AppShell title="Configurações">

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { useRequireRole } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/franquias/")({
   head: () => ({ meta: [{ title: "Franquias · CoteCerto" }] }),
@@ -57,6 +58,7 @@ function metaBar(vendas: number, meta: number | null) {
 }
 
 function Page() {
+  const denied = useRequireRole("matriz");
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [resps, setResps] = useState<Record<string, string>>({});
@@ -64,6 +66,7 @@ function Page() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    if (denied) return;
     (async () => {
       const { data, error } = await supabase
         .from("v_franquia_kpis")
@@ -90,7 +93,9 @@ function Page() {
       }
       setLoading(false);
     })();
-  }, []);
+  }, [denied]);
+
+  if (denied) return denied;
 
   return (
     <AppShell title="Franquias">

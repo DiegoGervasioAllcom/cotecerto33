@@ -27,7 +27,7 @@ function toTrio(x: unknown): Trio {
   return ["", "", ""];
 }
 
-export function useAcessosData() {
+export function useAcessosData(enabled = true) {
   const [tab, setTab] = useState<Tab>("pend");
   const [pendentes, setPendentes] = useState<Pendente[]>([]);
   const [deslig, setDeslig] = useState<Deslig[]>([]);
@@ -149,8 +149,9 @@ export function useAcessosData() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     void reload();
-  }, [reload]);
+  }, [reload, enabled]);
 
   useEffect(() => {
     if (!toast) return;

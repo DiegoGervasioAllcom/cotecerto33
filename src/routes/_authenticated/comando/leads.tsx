@@ -4,6 +4,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { useRequireRole } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/comando/leads")({
   head: () => ({ meta: [{ title: "Leads · CoteCerto" }] }),
@@ -127,6 +128,7 @@ const STAGE_META: Record<string, { titulo: string; descricao: string; icon: stri
 };
 
 function Page() {
+  const denied = useRequireRole("matriz");
   const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
@@ -178,12 +180,14 @@ function Page() {
     }
   }
   useEffect(() => {
+    if (denied) return;
     load();
-  }, []);
+  }, [denied]);
   useEffect(() => {
+    if (denied) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [denied]);
 
   const enriched = useMemo(
     () =>
@@ -355,6 +359,8 @@ function Page() {
     if (error) alert(error.message);
     else load();
   }
+
+  if (denied) return denied;
 
   return (
     <AppShell title="Leads">
