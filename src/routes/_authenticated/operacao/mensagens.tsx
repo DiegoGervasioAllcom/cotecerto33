@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { useRequireRole } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/mensagens")({
   head: () => ({ meta: [{ title: "Mensagens prontas · CoteCerto" }] }),
@@ -33,6 +34,7 @@ const CATEGORIAS = [
 ];
 
 function Page() {
+  const denied = useRequireRole("matriz");
   const [rows, setRows] = useState<Msg[]>([]);
   const [me, setMe] = useState<string | null>(null);
   const [isMatriz, setIsMatriz] = useState(false);
@@ -60,8 +62,9 @@ function Page() {
     setLoading(false);
   }
   useEffect(() => {
+    if (denied) return;
     load();
-  }, []);
+  }, [denied]);
 
   function nova() {
     setEditing({
@@ -127,6 +130,8 @@ function Page() {
     const cats = new Set(rows.map((r) => r.categoria).filter(Boolean));
     return { total, oficiais, categorias: cats.size };
   }, [rows]);
+
+  if (denied) return denied;
 
   return (
     <AppShell title="Mensagens prontas">

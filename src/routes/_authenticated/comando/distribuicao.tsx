@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { veiculoLabel } from "@/lib/veiculo";
+import { useRequireRole } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/comando/distribuicao")({
   head: () => ({ meta: [{ title: "Distribuição · CoteCerto" }] }),
@@ -58,6 +59,7 @@ const DEFAULT_CRIT: Criterios = {
 };
 
 function Page() {
+  const denied = useRequireRole("matriz");
   const navigate = useNavigate();
   const [cfg, setCfg] = useState<Config>({
     id: "default",
@@ -189,8 +191,9 @@ function Page() {
     setLoading(false);
   }
   useEffect(() => {
+    if (denied) return;
     load();
-  }, []);
+  }, [denied]);
 
   const tempoMedioManual = useMemo(() => {
     const distribuidosRecentes = fila.filter((l) => l.distribuido_em);
@@ -335,6 +338,8 @@ function Page() {
       }),
     );
   }
+
+  if (denied) return denied;
 
   return (
     <AppShell title="Distribuição">

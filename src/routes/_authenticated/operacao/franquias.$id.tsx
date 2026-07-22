@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { useRequireRole } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/franquias/$id")({
   head: () => ({ meta: [{ title: "Franquia · CoteCerto" }] }),
@@ -46,6 +47,7 @@ function statusChip(vendas: number, meta: number | null) {
 }
 
 function Page() {
+  const denied = useRequireRole("matriz");
   const { id } = Route.useParams();
   const [k, setK] = useState<Kpi | null>(null);
   const [resp, setResp] = useState<string>("—");
@@ -65,6 +67,7 @@ function Page() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (denied) return;
     (async () => {
       setLoading(true);
       const [{ data: kpi, error: e1 }, { data: profs }] = await Promise.all([
@@ -146,7 +149,7 @@ function Page() {
 
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, denied]);
 
   const max = useMemo(
     () =>
@@ -196,6 +199,8 @@ function Page() {
       </div>
     );
   }
+
+  if (denied) return denied;
 
   return (
     <AppShell title="Franquias">

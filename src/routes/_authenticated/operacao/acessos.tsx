@@ -7,6 +7,7 @@ import { useAcessosData } from "@/components/operacao/acessos/hooks/useAcessosDa
 import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
 import { DesligamentosTab } from "@/components/operacao/acessos/desligamentos-tab";
 import { PersoGeral } from "@/components/operacao/acessos/perso-geral";
+import { useRequireRole } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
   head: () => ({ meta: [{ title: "Acessos e permissões · CoteCerto" }] }),
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/operacao/acessos")({
 });
 
 function Page() {
+  const denied = useRequireRole("matriz");
   const {
     tab,
     setTab,
@@ -38,7 +40,9 @@ function Page() {
     closeModal,
     recusar,
     liberar,
-  } = useAcessosData();
+  } = useAcessosData(!denied);
+
+  if (denied) return denied;
 
   return (
     <AppShell title="Acessos e permissões">
