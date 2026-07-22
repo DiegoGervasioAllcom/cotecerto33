@@ -48,20 +48,41 @@ export const PARAMS = [
   { k: "royalties", l: "Royalties + FPP" },
 ];
 
-export const FIELD_LABELS: Record<string, string> = {
-  nome: "Nome / Razão Social",
-  documento: "Documento (CPF/CNPJ)",
-  rg: "RG",
-  data_nascimento: "Data de nascimento",
-  endereco: "Endereço completo",
-  socio_nome: "Sócio operador",
-  socio_cpf: "CPF do sócio",
-  socio_rg: "RG do sócio",
-  celular: "Celular",
-  telefone_recado: "Outro telefone / recado",
-  email: "E-mail",
-  pix_chave: "Chave Pix",
-  dados_bancarios: "Banco / Agência / Conta",
-  contato_emergencia: "Contato de emergência",
-  tipo: "Tipo de cadastro",
+// Campos puramente internos (id técnico, enum de roteamento) que nunca
+// aparecem no "Formulário completo" do protótipo — o tipo já vem como chip
+// no cabeçalho do modal, e o _user_id não interessa a quem está analisando.
+export const FORM_INTERNAL_KEYS = ["tipo", "_user_id"] as const;
+
+// Ordem e rótulos dos campos do "Formulário completo", espelhando os arrays
+// PJ/PF do protótipo v10 (ver PENDING[].form em cotecerto_prototipo_v10.html)
+// — cada tipo tem sua própria ordem e rótulos (ex.: "Chave Pix (conta PJ)"
+// só existe na variante PJ).
+export const FORM_FIELDS_BY_TIPO: Record<"pj" | "pf", Array<[string, string]>> = {
+  pj: [
+    ["nome", "Razão Social"],
+    ["documento", "CNPJ"],
+    ["endereco", "Endereço completo"],
+    ["socio_nome", "Nome do sócio operador"],
+    ["socio_cpf", "CPF do sócio operador"],
+    ["socio_rg", "RG do sócio operador"],
+    ["data_nascimento", "Data de nascimento"],
+    ["celular", "Celular"],
+    ["telefone_recado", "Outro telefone / recado"],
+    ["email", "E-mail"],
+    ["pix_chave", "Chave Pix (conta PJ)"],
+    ["dados_bancarios", "Banco / Agência / Conta (PJ)"],
+  ],
+  pf: [
+    ["nome", "Nome completo"],
+    ["documento", "CPF"],
+    ["rg", "RG"],
+    ["data_nascimento", "Data de nascimento"],
+    ["celular", "Celular"],
+    ["endereco", "Endereço completo"],
+    ["telefone_recado", "Outro telefone / recado"],
+    ["contato_emergencia", "Contato de emergência"],
+    ["email", "E-mail"],
+    ["pix_chave", "Chave Pix"],
+    ["dados_bancarios", "Banco / Agência / Conta"],
+  ],
 };
