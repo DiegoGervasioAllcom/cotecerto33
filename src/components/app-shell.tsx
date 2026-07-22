@@ -25,16 +25,18 @@ import {
   Mail,
   KeyRound,
   Settings,
-  LogOut,
   Briefcase,
   Activity,
   AlertTriangle,
+  Search,
+  Bell,
 } from "lucide-react";
 import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
 import { useAuth } from "@/lib/auth";
 import { usePresence } from "@/lib/use-presence";
 import { useGroupScope } from "@/lib/group-scope";
 import type { Perfil } from "@/integrations/supabase/client";
+import { UserMenu, useAccessibilityPrefs } from "@/components/user-menu";
 
 type Item = {
   to: string;
@@ -148,6 +150,7 @@ export function AppShell({
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   usePresence();
+  useAccessibilityPrefs();
 
   const handleSignOut = async () => {
     await signOut();
@@ -197,7 +200,22 @@ export function AppShell({
             </div>
           ))}
         </div>
-        <div className="sidebar-foot">CoteCerto 3.3</div>
+        <div className="sidebar-foot">
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="side-user" style={{ flex: 1 }} title={profile?.nome ?? "Usuário"}>
+              <div className="avatar">{initials(profile?.nome)}</div>
+              <div className="who">
+                {profile?.nome ?? "Usuário"}
+                {isFranqIndividual && " · individual"}
+                <small>{brandLabel}</small>
+              </div>
+            </div>
+            <div className="side-bell" title="Notificações" aria-hidden="true">
+              <Bell style={{ width: 18, height: 18 }} />
+            </div>
+          </div>
+          <div style={{ marginTop: 8 }}>CoteCerto 3.3</div>
+        </div>
       </aside>
 
       <main className="main">
@@ -206,19 +224,24 @@ export function AppShell({
             {crumbs && <div className="crumbs">{crumbs}</div>}
             <h1>{title}</h1>
           </div>
-          <button type="button" className="user-cluster" onClick={handleSignOut} title="Sair">
-            <div className="user-info">
-              <div className="nm">
-                {profile?.nome ?? "Usuário"}
-                {isFranqIndividual && " · individual"}
-              </div>
-              <div className="co">
-                {empresa?.nome ?? "—"} · {brandLabel}
-              </div>
-            </div>
-            <div className="avatar">{initials(profile?.nome)}</div>
-            <LogOut className="ic" style={{ width: 16, height: 16, color: "var(--muted)" }} />
-          </button>
+          <div className="search">
+            <Search className="si" />
+            <input
+              type="text"
+              placeholder={
+                venLike
+                  ? "Buscar cliente, placa, nº de cotação..."
+                  : "Buscar lead, vendedor, apólice..."
+              }
+            />
+          </div>
+          <UserMenu
+            profile={profile}
+            empresa={empresa}
+            role={role}
+            brandLabel={brandLabel}
+            onSignOut={handleSignOut}
+          />
         </div>
         <div className="page active">{children}</div>
       </main>
