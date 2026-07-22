@@ -48,6 +48,19 @@ export const PARAMS = [
   { k: "royalties", l: "Royalties + FPP" },
 ];
 
+// Preview somente leitura ao classificar uma Franquia — mostra os params já
+// configurados para o modelo em Personalização geral (protótipo v10 mostra
+// isso como parte da seção "Parâmetros" do modal de classificar). "leads"
+// fica de fora: já tem seu próprio select editável (Leads · média/dia útil).
+export const MODELO_PARAMS_LABELS: Array<[string, string]> = [
+  ["comVenda", "Comissão de venda"],
+  ["comRenov", "Comissão na renovação"],
+  ["incentivo", "Incentivo comercial"],
+  ["software", "Taxa de software"],
+  ["franquia", "Taxa de franquia"],
+  ["royalties", "Royalties + FPP"],
+];
+
 // Campos puramente internos (id técnico, enum de roteamento) que nunca
 // aparecem no "Formulário completo" do protótipo — o tipo já vem como chip
 // no cabeçalho do modal, e o _user_id não interessa a quem está analisando.
