@@ -134,10 +134,10 @@ function montarPayloadQuiver(cot: CotacaoRow) {
       ...(v.utilizacao_locadora
         ? { utilizacaoLocadoraContrato: v.utilizacao_locadora as string }
         : {}),
-      ...(v.condutores_que_utilizam
-        ? { condutoresQueUtilizam: v.condutores_que_utilizam as string }
-        : {}),
       ...(v.isencao_imposto ? { isencaoImposto: v.isencao_imposto as string } : {}),
+      ...(v.hdi_seguros_basico != null
+        ? { hdiSegurosBasico: simNao(v.hdi_seguros_basico as boolean) }
+        : {}),
       ...(v.pcd_cnh_especial != null
         ? { pcdCnhEspecial: simNao(v.pcd_cnh_especial as boolean) }
         : {}),
@@ -187,6 +187,14 @@ function montarPayloadQuiver(cot: CotacaoRow) {
         : {}),
       tipoResidencia: "Casa/sobrado",
       seguroCorretorProximo: "Não",
+      // condutoresQueUtilizam é campo de `complementares` na Quiver (não de
+      // `veiculo`, apesar de guardado em cotacao_veiculo) — só enviar quando
+      // aplicável evita HTTP 422 por campo desconhecido.
+      ...((v.tipo_uso === "Transporte por aplicativos - Veículo próprio" ||
+        v.tipo_uso === "Transporte de funcionários") &&
+      v.condutores_que_utilizam
+        ? { condutoresQueUtilizam: v.condutores_que_utilizam as string }
+        : {}),
       pessoas17a25: simNao(p.jovens_18_25 as boolean),
     },
     cobertura: {

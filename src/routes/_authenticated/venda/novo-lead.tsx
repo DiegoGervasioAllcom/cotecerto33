@@ -129,6 +129,7 @@ function Page() {
     pcdCnhEspecial: "nao",
     valorAdaptacaoPcd: "",
     possuiAntifurtoPorto: "nao",
+    hdiSegurosBasico: "nao",
     antifurto: "Não",
     antifurtoDetalhes: {},
     blindagemAtiva: "nao",

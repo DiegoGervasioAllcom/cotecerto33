@@ -8,8 +8,6 @@ import {
   USO_ESTUDO,
   CATEGORIA_TAXI,
   UTIL_LOCADORA,
-  CONDUTORES_QUE_UTILIZAM,
-  TIPOS_USO_COM_CONDUTORES,
 } from "@/components/venda/novo-lead/enumsQuiver";
 import type { Form } from "@/components/venda/novo-lead/types";
 
@@ -22,7 +20,6 @@ export function UsoVeiculoFields({ f, up }: Props) {
   const isParticular = f.tipoUso === "Particular";
   const isTaxi = f.tipoUso === "Táxi";
   const isLocadoraContrato = f.tipoUso === "Locadora (Contrato)";
-  const precisaCondutores = (TIPOS_USO_COM_CONDUTORES as readonly string[]).includes(f.tipoUso);
 
   return (
     <>
@@ -81,22 +78,6 @@ export function UsoVeiculoFields({ f, up }: Props) {
             >
               <option value="">Selecione</option>
               {UTIL_LOCADORA.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {precisaCondutores && (
-          <div className="field-group full">
-            <label>Condutores que utilizam o veículo</label>
-            <select
-              className="input"
-              value={f.condutoresQueUtilizam}
-              onChange={(e) => up("condutoresQueUtilizam", e.target.value)}
-            >
-              <option value="">Selecione</option>
-              {CONDUTORES_QUE_UTILIZAM.map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>

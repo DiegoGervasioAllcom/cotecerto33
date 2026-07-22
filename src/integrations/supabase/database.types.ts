@@ -591,6 +591,7 @@ export type Database = {
           cotacao_id: string;
           equipamentos: boolean | null;
           fipe_valor: string | null;
+          hdi_seguros_basico: boolean | null;
           isencao_imposto: string | null;
           kit_acessorios: boolean | null;
           kit_gas: boolean | null;
@@ -641,6 +642,7 @@ export type Database = {
           cotacao_id: string;
           equipamentos?: boolean | null;
           fipe_valor?: string | null;
+          hdi_seguros_basico?: boolean | null;
           isencao_imposto?: string | null;
           kit_acessorios?: boolean | null;
           kit_gas?: boolean | null;
@@ -691,6 +693,7 @@ export type Database = {
           cotacao_id?: string;
           equipamentos?: boolean | null;
           fipe_valor?: string | null;
+          hdi_seguros_basico?: boolean | null;
           isencao_imposto?: string | null;
           kit_acessorios?: boolean | null;
           kit_gas?: boolean | null;

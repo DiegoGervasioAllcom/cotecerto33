@@ -77,17 +77,6 @@ export function DadosComplementaresFold({ f, up }: Props) {
             </div>
           )}
           <div className="field-group">
-            <label>Antifurto da Porto Seguro?</label>
-            <select
-              className="input"
-              value={f.possuiAntifurtoPorto}
-              onChange={(e) => up("possuiAntifurtoPorto", e.target.value as "sim" | "nao")}
-            >
-              <option value="nao">Não</option>
-              <option value="sim">Sim</option>
-            </select>
-          </div>
-          <div className="field-group">
             <label>Antifurto</label>
             <select
               className="input"
@@ -99,6 +88,33 @@ export function DadosComplementaresFold({ f, up }: Props) {
               ))}
             </select>
           </div>
+
+          {f.antifurto !== "Não" && (
+            <>
+              <div className="field-group">
+                <label>Antifurto da Porto Seguro?</label>
+                <select
+                  className="input"
+                  value={f.possuiAntifurtoPorto}
+                  onChange={(e) => up("possuiAntifurtoPorto", e.target.value as "sim" | "nao")}
+                >
+                  <option value="nao">Não</option>
+                  <option value="sim">Sim</option>
+                </select>
+              </div>
+              <div className="field-group">
+                <label>HDI Seguros — básico</label>
+                <select
+                  className="input"
+                  value={f.hdiSegurosBasico}
+                  onChange={(e) => up("hdiSegurosBasico", e.target.value as "sim" | "nao")}
+                >
+                  <option value="nao">Não</option>
+                  <option value="sim">Sim</option>
+                </select>
+              </div>
+            </>
+          )}
 
           {f.antifurto === "Alarme Sonoro" && (
             <>

@@ -87,6 +87,7 @@ export type Form = {
   pcdCnhEspecial: "sim" | "nao";
   valorAdaptacaoPcd: string;
   possuiAntifurtoPorto: "sim" | "nao";
+  hdiSegurosBasico: "sim" | "nao";
   antifurto: string;
   antifurtoDetalhes: Record<string, string>;
   // Veículo — blindagem, kit gás, acessórios
