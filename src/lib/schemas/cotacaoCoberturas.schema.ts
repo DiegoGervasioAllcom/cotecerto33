@@ -21,6 +21,13 @@ export const coberturasSchema = z.object({
   rcfDc: optionalMax(100, "RCF — Danos corporais muito longo."),
   carroReserva: optionalMax(30, "Carro reserva muito longo."),
   assist24: optionalMax(30, "Assistência 24h muito longa."),
+  modalidade: optionalMax(50, "Modalidade muito longa."),
+  percentualAjuste: optionalMax(10, "Percentual de ajuste muito longo."),
+  franquiaPrimeiraOpcao: optionalMax(30, "Campo muito longo."),
+  franquiaSegundaOpcao: optionalMax(30, "Campo muito longo."),
+  danosMorais: optionalMax(100, "Danos morais muito longo."),
+  despesasExtras: optionalMax(30, "Despesas extras muito longo."),
+  maisAssistenciasSeguradora: optionalMax(50, "Campo muito longo."),
 });
 
 export type CoberturasFormValues = z.infer<typeof coberturasSchema>;

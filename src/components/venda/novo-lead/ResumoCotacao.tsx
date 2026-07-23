@@ -245,7 +245,7 @@ export function ResumoCotacao({
                 </div>
                 {f.tipoCobertura && (
                   <div>
-                    <b>Tipo:</b> {f.tipoCobertura}
+                    <b>Plano:</b> {f.tipoCobertura}
                   </div>
                 )}
                 {f.casco && (

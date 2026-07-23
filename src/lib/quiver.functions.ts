@@ -135,6 +135,7 @@ function montarPayloadQuiver(cot: CotacaoRow) {
 
   const condutorMesmo = (p.condutor_mesmo as boolean | null) ?? true;
   const alienado = (v.alienado as boolean | null) ?? false;
+  const seguradorasQuiver = mapSeguradoras(sg.seguradoras_sel as string[]);
 
   return {
     id: cot.id,
@@ -150,7 +151,7 @@ function montarPayloadQuiver(cot: CotacaoRow) {
     },
     seguro: {
       tipo: (sg.tipo_seguro as string) || "Seguro novo",
-      seguradorasDisponiveis: mapSeguradoras(sg.seguradoras_sel as string[]) || undefined,
+      seguradorasDisponiveis: seguradorasQuiver.length ? seguradorasQuiver : undefined,
     },
     veiculo: {
       placa: v.placa ?? "",
@@ -287,10 +288,35 @@ function montarPayloadQuiver(cot: CotacaoRow) {
       pessoas17a25: simNao(p.jovens_18_25 as boolean),
     },
     cobertura: {
+      plano: (c.tipo_cobertura as string) || "Fácil",
+      ...(c.modalidade ? { modalidade: c.modalidade as string } : {}),
+      ...(c.percentual_ajuste ? { percentualAjuste: c.percentual_ajuste as string } : {}),
+      ...(c.franquia_primeira_opcao
+        ? { franquiaPrimeiraOpcao: c.franquia_primeira_opcao as string }
+        : {}),
+      ...(c.franquia_segunda_opcao
+        ? { franquiaSegundaOpcao: c.franquia_segunda_opcao as string }
+        : {}),
       danosMateriaisTerceiros: c.rcf_dm ?? undefined,
       danosCorporaisTerceiros: c.rcf_dc ?? undefined,
       appMortePorPassageiro: c.app_morte ?? undefined,
       appInvalidezPorPassageiro: c.app_invalidez ?? undefined,
+      ...(c.danos_morais ? { danosMorais: c.danos_morais as string } : {}),
+      ...(c.despesas_extras ? { despesasExtras: c.despesas_extras as string } : {}),
+      ...(c.mais_assistencias
+        ? {
+            maisAssistencias: "Sim",
+            ...(() => {
+              // maisAssistenciasSeguradoras exige que a seguradora esteja em
+              // seguro.seguradorasDisponiveis (quando enviado) — omitir em vez
+              // de arriscar HTTP 422 se não conseguir canonicalizar/validar.
+              const canon = mapSeguradoras([c.mais_assistencias_seguradora as string])[0];
+              if (!canon) return {};
+              if (seguradorasQuiver.length && !seguradorasQuiver.includes(canon)) return {};
+              return { maisAssistenciasSeguradoras: canon };
+            })(),
+          }
+        : {}),
     },
   };
 }
