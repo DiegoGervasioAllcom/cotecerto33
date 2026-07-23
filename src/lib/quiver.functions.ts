@@ -67,14 +67,56 @@ function mapSeguradoras(sel: string[] | null | undefined): string[] {
     .filter((s): s is string => !!s);
 }
 
+// yyyy-mm-dd (<input type=date>) -> DD/MM/AAAA (formato exigido pelo validator
+// para proprietarioNascimento/principalCondutorNascimento).
+function toDDMMYYYY(v: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v ?? "");
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (v ?? "");
+}
+
+function normalizeText(v: string): string {
+  return v.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+// Replica a classificação de complementares.relacaoSeguradoComProprietario
+// do validator real (substring match case/acento-insensível) — decide se
+// os dados do proprietário são exigidos e se podem ser Pessoa Jurídica.
+const RELACOES_PROPRIETARIO_PF = [
+  "conjuge",
+  "ascendente",
+  "descendente",
+  "enteado",
+  "irmao",
+  "parente",
+];
+const RELACOES_PROPRIETARIO_PF_OU_PJ = [
+  "empregado",
+  "espolio",
+  "executivo",
+  "socio",
+  "outros",
+  "propria empresa",
+  "empresas do mesmo grupo",
+  "representantes legais",
+  "alugados",
+];
+function exigeDadosProprietario(relacao: string): boolean {
+  const n = normalizeText(relacao);
+  return (
+    RELACOES_PROPRIETARIO_PF.some((r) => n.includes(r)) ||
+    RELACOES_PROPRIETARIO_PF_OU_PJ.some((r) => n.includes(r))
+  );
+}
+function proprietarioPodeSerJuridica(relacao: string): boolean {
+  const n = normalizeText(relacao);
+  return RELACOES_PROPRIETARIO_PF_OU_PJ.some((r) => n.includes(r));
+}
+
 // Monta o payload no formato do EXTERNAL_API_GUIDE.md a partir das 5 tabelas
-// filhas de `cotacoes`. Vários campos que a Quiver aceita ainda não têm
-// coluna própria no schema (uso do veículo, antifurto, garagem detalhada,
-// proprietário do veículo, plano de cobertura etc. — ver Fases 2-4 do plano
-// "novo-lead: fechar com o protótipo v10"); esses ficam com o default mais
-// seguro/comum documentado no guia, e passam a vir do formulário real assim
-// que as colunas existirem — não precisa reescrever esta função, só
-// adicionar os campos que já vêm nas tabelas filhas.
+// filhas de `cotacoes`. O objeto `cobertura` (plano/franquia detalhados)
+// ainda não tem coluna própria no schema — ver Fase 4 do plano "novo-lead:
+// fechar com o protótipo v10"; fica com o default mais seguro/comum
+// documentado no guia até existir.
 type CotacaoRow = {
   id: string;
   segurado: Record<string, unknown> | null;
@@ -176,22 +218,64 @@ function montarPayloadQuiver(cot: CotacaoRow) {
         : {}),
     },
     complementares: {
-      // TODO Fase 3: tipoGaragem/relacaoSeguradoProprietario/tipoResidencia/
-      // seguroCorretorProximo ainda não têm coluna própria.
-      tipoGaragem: p.garagem_resid ? "Sim, com portão manual" : "Não",
-      relacaoSeguradoProprietario: "Sim",
+      tipoGaragem: (p.tipo_garagem as string) || "Não",
+      relacaoSeguradoProprietario: simNao((p.seg_proprietario as boolean | null) ?? true),
+      ...(p.seg_proprietario === false && p.relacao_com_proprietario
+        ? (() => {
+            const relacao = p.relacao_com_proprietario as string;
+            if (!exigeDadosProprietario(relacao)) {
+              return { relacaoSeguradoComProprietario: relacao };
+            }
+            const podeSerJuridica = proprietarioPodeSerJuridica(relacao);
+            const ehJuridica = podeSerJuridica && p.proprietario_tipo_pessoa === "Jurídica";
+            return {
+              relacaoSeguradoComProprietario: relacao,
+              ...(podeSerJuridica
+                ? { proprietarioTipoPessoa: (p.proprietario_tipo_pessoa as string) || "Física" }
+                : {}),
+              proprietarioNome: (p.proprietario_nome as string) ?? "",
+              ...(ehJuridica
+                ? { proprietarioCnpj: onlyDigits(p.proprietario_cnpj as string) }
+                : {
+                    proprietarioCpf: onlyDigits(p.proprietario_cpf as string),
+                    proprietarioSexo: (p.proprietario_sexo as string) ?? "",
+                    proprietarioNascimento: toDDMMYYYY(p.proprietario_nascimento as string),
+                    proprietarioEstadoCivil: (p.proprietario_estado_civil as string) ?? "",
+                    ...(p.proprietario_nome_social
+                      ? { proprietarioNomeSocial: p.proprietario_nome_social as string }
+                      : {}),
+                  }),
+            };
+          })()
+        : {}),
       principalCondutor: simNao(condutorMesmo),
       ...(!condutorMesmo
         ? {
+            principalCondutorRelacaoSegurado: (p.cond_relacao as string) || "Outro(s)",
             principalCondutorCpf: onlyDigits(p.cond_cpf as string),
             principalCondutorNome: p.cond_nome ?? "",
+            ...(p.cond_nome_social
+              ? { principalCondutorNomeSocial: p.cond_nome_social as string }
+              : {}),
             principalCondutorSexo: p.cond_sexo ?? "",
-            principalCondutorNascimento: p.cond_nasc ?? "",
+            principalCondutorNascimento: toDDMMYYYY(p.cond_nasc as string),
             principalCondutorEstadoCivil: p.cond_estado_civil ?? "",
           }
         : {}),
-      tipoResidencia: "Casa/sobrado",
-      seguroCorretorProximo: "Não",
+      tipoResidencia: (p.tipo_residencia as string) || "Casa",
+      // ramoAtividadeComercialProfissional/profissaoPrincipalCondutor: exigidos
+      // pela Quiver quando tipoUso <> "Particular", proibidos quando é
+      // "Particular" — nunca enviar os dois casos ao mesmo tempo.
+      ...(v.tipo_uso && v.tipo_uso !== "Particular"
+        ? {
+            ...(p.tipo_atividade_empresa
+              ? { tipoAtividadeEmpresa: p.tipo_atividade_empresa as string }
+              : {}),
+            ramoAtividadeComercialProfissional: (p.ramo_atividade as string) || "",
+            profissaoPrincipalCondutor: (p.profissao_principal_condutor as string) || "",
+          }
+        : {}),
+      seguroCorretorProximo: simNao(p.seguro_corretor_proximo as boolean),
       // condutoresQueUtilizam é campo de `complementares` na Quiver (não de
       // `veiculo`, apesar de guardado em cotacao_veiculo) — só enviar quando
       // aplicável evita HTTP 422 por campo desconhecido.

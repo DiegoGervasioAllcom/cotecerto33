@@ -223,16 +223,9 @@ export function ResumoCotacao({
                     <b>CEP pernoite:</b> {f.cepPernoite}
                   </div>
                 )}
-                {(f.garagemResid || f.garagemTrab || f.garagemEsc) && (
+                {f.tipoGaragem && (
                   <div>
-                    <b>Garagem:</b>{" "}
-                    {[
-                      f.garagemResid && "Resid.",
-                      f.garagemTrab && "Trab.",
-                      f.garagemEsc && "Escola",
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
+                    <b>Garagem:</b> {f.tipoGaragem}
                   </div>
                 )}
                 {f.jovens1825 === "sim" && (
