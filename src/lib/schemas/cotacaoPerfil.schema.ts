@@ -22,8 +22,23 @@ export const perfilSchema = z.object({
   condNome: optionalMax(150, "Nome do condutor muito longo."),
   condSexo: optionalMax(30, "Campo muito longo."),
   condEstadoCivil: optionalMax(30, "Campo muito longo."),
+  condRelacao: optionalMax(50, "Campo muito longo."),
+  condNomeSocial: optionalMax(150, "Nome social muito longo."),
+  condTempoHabilitacao: optionalMax(10, "Campo muito longo."),
   profissao: optionalMax(150, "Profissão muito longa."),
   cepPernoite: optionalDigitsExact([8], "CEP de pernoite inválido."),
+  tipoGaragem: optionalMax(100, "Campo muito longo."),
+  relacaoComProprietario: optionalMax(100, "Campo muito longo."),
+  proprietarioCpf: optionalDigitsExact([11], "CPF do proprietário inválido."),
+  proprietarioCnpj: optionalDigitsExact([14], "CNPJ do proprietário inválido."),
+  proprietarioNome: optionalMax(150, "Nome do proprietário muito longo."),
+  proprietarioNomeSocial: optionalMax(150, "Nome social muito longo."),
+  proprietarioSexo: optionalMax(30, "Campo muito longo."),
+  proprietarioEstadoCivil: optionalMax(30, "Campo muito longo."),
+  tipoResidencia: optionalMax(30, "Campo muito longo."),
+  tipoAtividadeEmpresa: optionalMax(30, "Campo muito longo."),
+  ramoAtividade: optionalMax(150, "Campo muito longo."),
+  profissaoPrincipalCondutor: optionalMax(150, "Profissão muito longa."),
 });
 
 export type PerfilFormValues = z.infer<typeof perfilSchema>;

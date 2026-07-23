@@ -121,8 +121,23 @@ export function useValidacaoEtapas(
         condNome: f.condNome,
         condSexo: f.condSexo,
         condEstadoCivil: f.condEstadoCivil,
+        condRelacao: f.condRelacao,
+        condNomeSocial: f.condNomeSocial,
+        condTempoHabilitacao: f.condTempoHabilitacao,
         profissao: f.profissao,
         cepPernoite: f.cepPernoite,
+        tipoGaragem: f.tipoGaragem,
+        relacaoComProprietario: f.relacaoComProprietario,
+        proprietarioCpf: f.proprietarioCpf,
+        proprietarioCnpj: f.proprietarioCnpj,
+        proprietarioNome: f.proprietarioNome,
+        proprietarioNomeSocial: f.proprietarioNomeSocial,
+        proprietarioSexo: f.proprietarioSexo,
+        proprietarioEstadoCivil: f.proprietarioEstadoCivil,
+        tipoResidencia: f.tipoResidencia,
+        tipoAtividadeEmpresa: f.tipoAtividadeEmpresa,
+        ramoAtividade: f.ramoAtividade,
+        profissaoPrincipalCondutor: f.profissaoPrincipalCondutor,
       });
       if (!r.success) {
         const novos: Record<string, string> = {};

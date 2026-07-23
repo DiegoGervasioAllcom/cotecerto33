@@ -112,12 +112,31 @@ export type Form = {
   condNasc: string;
   condSexo: string;
   condEstadoCivil: string;
+  condRelacao: string;
+  condNomeSocial: string;
+  condTempoHabilitacao: string;
   profissao: string;
   cepPernoite: string;
-  garagemResid: boolean;
-  garagemTrab: boolean;
-  garagemEsc: boolean;
+  tipoGaragem: string;
+  // Perfil — proprietário do veículo
+  segProprietario: boolean;
+  relacaoComProprietario: string;
+  proprietarioTipoPessoa: "Física" | "Jurídica";
+  proprietarioCpf: string;
+  proprietarioCnpj: string;
+  proprietarioNome: string;
+  proprietarioNomeSocial: string;
+  proprietarioSexo: string;
+  proprietarioNascimento: string;
+  proprietarioEstadoCivil: string;
+  // Perfil — residência e atividade (obrigatório na Quiver p/ uso não-particular)
+  tipoResidencia: string;
+  tipoAtividadeEmpresa: string;
+  ramoAtividade: string;
+  profissaoPrincipalCondutor: string;
+  seguroCorretorProximo: "sim" | "nao";
   jovens1825: "sim" | "nao";
+  jovens18a25Detalhes: { nome: string; idade: string; parentesco: string }[];
   // Coberturas
   tipoCobertura: string;
   casco: string;
