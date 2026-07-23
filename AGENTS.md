@@ -54,9 +54,11 @@ Sistema da Supper para o ciclo do corretor de seguros (lead → cotação → pr
 
 Agentes em `.claude/agents/` e skills em `.claude/skills/`. **Fluxo obrigatório para qualquer task do plano:**
 
-1. **`planejador`** produz o plano → **apresentar ao usuário e AGUARDAR aprovação** antes de implementar.
-2. Implementação pelo especialista da stack: **`banco`** (SQL/RLS/RPC, usa skill `nova-migration`), **`front`** (telas, usa skill `nova-tela`), **`infra`** (Docker/CI/deploy), **`testes`** (suítes, usa skill `teste-rls`).
-3. **`revisor`** audita o diff antes de commit — REPROVADO volta para o especialista.
+1. **`planejador`** produz o plano, apresenta ao usuário e **aguarda aprovação explícita antes de qualquer implementação**.
+2. Após a aprovação, o especialista da stack implementa usando a skill aplicável: **`banco`** (SQL/RLS/RPC, skill `nova-migration`), **`front`** (telas, skill `nova-tela`), **`infra`** (Docker/CI/deploy) ou **`testes`** (suítes, skill `teste-rls` quando houver RLS).
+3. **`testes`** cria ou ajusta os testes necessários e executa as validações proporcionais à mudança.
+4. **`revisor`** audita o diff e precisa aprová-lo. Se reprovar, o trabalho volta ao especialista para correção, passa novamente pelos testes e retorna ao `revisor`.
+5. **Nenhum commit, push ou Pull Request pode ser criado antes da aprovação do `revisor`.**
 
 Economia de token (vale para todos): Grep/Glob antes de Read; protótipo (655 KB) só via grep recortado; arquivos grandes lidos por trecho; não reimprimir arquivos inteiros nas respostas.
 

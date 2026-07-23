@@ -84,9 +84,25 @@ jobs:
         with:
           version: "2.109.1"
 
+      - name: Preparar Supabase local
+        shell: bash
+        run: |
+          # Remove somente containers/volumes do project_id deste checkout. Isso
+          # torna retries idempotentes sem interferir em recursos de outros jobs.
+          supabase stop --no-backup || true
+
+          # Se a porta continuar publicada, ela pertence a outro recurso: falhe
+          # com diagnóstico em vez de matar containers/processos alheios.
+          if docker ps --format '{{.Ports}}' | grep -Eq '(^|[,:])54322->|:54322->'; then
+            echo "::error::A porta 54322 já está publicada por outro recurso no runner."
+            docker ps --filter publish=54322 \
+              --format 'container={{.Names}} image={{.Image}} ports={{.Ports}}'
+            exit 1
+          fi
+
       - name: Start Supabase (subconjunto de serviços)
         run: |
-          supabase start --exclude analytics,edge-runtime,functions,imgproxy,inbucket,meta,realtime,storage,studio,vector
+          supabase start --exclude edge-runtime,imgproxy,realtime,studio,vector
 
       - name: Exportar env do Supabase local
         run: |
@@ -104,7 +120,7 @@ jobs:
 
       - name: Stop Supabase
         if: always()
-        run: supabase stop
+        run: supabase stop --no-backup
 
   e2e:
     runs-on: ubuntu-latest
@@ -129,9 +145,25 @@ jobs:
         with:
           version: "2.109.1"
 
+      - name: Preparar Supabase local
+        shell: bash
+        run: |
+          # Remove somente containers/volumes do project_id deste checkout. Isso
+          # torna retries idempotentes sem interferir em recursos de outros jobs.
+          supabase stop --no-backup || true
+
+          # Se a porta continuar publicada, ela pertence a outro recurso: falhe
+          # com diagnóstico em vez de matar containers/processos alheios.
+          if docker ps --format '{{.Ports}}' | grep -Eq '(^|[,:])54322->|:54322->'; then
+            echo "::error::A porta 54322 já está publicada por outro recurso no runner."
+            docker ps --filter publish=54322 \
+              --format 'container={{.Names}} image={{.Image}} ports={{.Ports}}'
+            exit 1
+          fi
+
       - name: Start Supabase (subconjunto de serviços)
         run: |
-          supabase start --exclude analytics,edge-runtime,functions,imgproxy,inbucket,meta,realtime,storage,studio,vector
+          supabase start --exclude edge-runtime,imgproxy,realtime,studio,vector
 
       - name: Aplicar migrations + seed
         run: supabase db reset
@@ -157,4 +189,4 @@ jobs:
 
       - name: Stop Supabase
         if: always()
-        run: supabase stop
+        run: supabase stop --no-backup
