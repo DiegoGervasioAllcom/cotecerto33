@@ -13,6 +13,48 @@ type Props = {
   seguradoras: readonly string[];
 };
 
+const rowStyle = {
+  display: "flex",
+  alignItems: "flex-end",
+  gap: 14,
+  flexWrap: "wrap" as const,
+  padding: "8px 0",
+  borderBottom: "1px solid var(--border)",
+};
+
+function DescontoAgravoRadio({
+  seguradora,
+  value,
+  onChange,
+}: {
+  seguradora: string;
+  value: "Desconto" | "Agravo";
+  onChange: (v: "Desconto" | "Agravo") => void;
+}) {
+  return (
+    <div className="row" style={{ gap: 14, paddingBottom: 8 }}>
+      <label>
+        <input
+          type="radio"
+          name={`da_${seguradora}`}
+          checked={value === "Desconto"}
+          onChange={() => onChange("Desconto")}
+        />{" "}
+        Desconto
+      </label>
+      <label>
+        <input
+          type="radio"
+          name={`da_${seguradora}`}
+          checked={value === "Agravo"}
+          onChange={() => onChange("Agravo")}
+        />{" "}
+        Agravo
+      </label>
+    </div>
+  );
+}
+
 export function DescontosFold({ f, up, seguradoras }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -37,24 +79,31 @@ export function DescontosFold({ f, up, seguradoras }: Props) {
       </div>
       <div className="fold-b">
         {seguradoras.map((s) => (
-          <div key={s} className="wizard-grid cols-3" style={{ marginBottom: 10 }}>
-            <div className="field-group" style={{ margin: 0 }}>
-              <strong style={{ fontSize: 13 }}>{s}</strong>
+          <div key={s} style={rowStyle}>
+            <div
+              style={{
+                minWidth: 130,
+                fontWeight: 700,
+                color: "var(--slate)",
+                fontSize: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <svg width="13" height="13">
+                <use href="#i-shield" />
+              </svg>
+              {s}
             </div>
             {s === "Allianz" ? (
               <>
-                <div className="field-group" style={{ margin: 0 }}>
-                  <label>Desconto/Agravo</label>
-                  <select
-                    className="input"
-                    value={campo(s, "da", "Desconto")}
-                    onChange={(e) => setCampo(s, "da", e.target.value)}
-                  >
-                    <option>Desconto</option>
-                    <option>Agravo</option>
-                  </select>
-                </div>
-                <div className="field-group" style={{ margin: 0 }}>
+                <DescontoAgravoRadio
+                  seguradora={s}
+                  value={campo(s, "da", "Desconto") as "Desconto" | "Agravo"}
+                  onChange={(v) => setCampo(s, "da", v)}
+                />
+                <div className="field-group" style={{ margin: 0, maxWidth: 150 }}>
                   <label>Desconto CA (%)</label>
                   <input
                     className="input"
@@ -62,13 +111,18 @@ export function DescontosFold({ f, up, seguradoras }: Props) {
                     onChange={(e) => setCampo(s, "descCA", e.target.value)}
                   />
                 </div>
-                <div className="field-group" style={{ margin: 0 }}>
+                <div className="field-group" style={{ margin: 0, maxWidth: 160 }}>
                   <label>Saldo Conta Corrente</label>
-                  <input className="input" value="2.058,29" readOnly />
+                  <input
+                    className="input"
+                    value="2.058,29"
+                    readOnly
+                    style={{ background: "var(--offwhite)" }}
+                  />
                 </div>
               </>
             ) : s === "Aliro" ? (
-              <div className="field-group" style={{ margin: 0 }}>
+              <div className="field-group" style={{ margin: 0, maxWidth: 150 }}>
                 <label>Agravo extra</label>
                 <input
                   className="input"
@@ -77,7 +131,7 @@ export function DescontosFold({ f, up, seguradoras }: Props) {
                 />
               </div>
             ) : s === "Bradesco" ? (
-              <div className="field-group" style={{ margin: 0 }}>
+              <div className="field-group" style={{ margin: 0, maxWidth: 260 }}>
                 <label>Contrato</label>
                 <select
                   className="input"
@@ -90,7 +144,7 @@ export function DescontosFold({ f, up, seguradoras }: Props) {
                 </select>
               </div>
             ) : s === "HDI" ? (
-              <div className="field-group" style={{ margin: 0 }}>
+              <div className="field-group" style={{ margin: 0, maxWidth: 260 }}>
                 <label>Melhor data p/ pagamento (Débito em Conta)</label>
                 <select
                   className="input"
@@ -106,7 +160,7 @@ export function DescontosFold({ f, up, seguradoras }: Props) {
                 </select>
               </div>
             ) : s === "Mapfre" || s === "Yelum" ? (
-              <div className="field-group" style={{ margin: 0 }}>
+              <div className="field-group" style={{ margin: 0, maxWidth: 260 }}>
                 <label>Código Afinidade</label>
                 <select
                   className="input"
@@ -120,18 +174,12 @@ export function DescontosFold({ f, up, seguradoras }: Props) {
               </div>
             ) : s === "Suhai" ? (
               <>
-                <div className="field-group" style={{ margin: 0 }}>
-                  <label>Desconto/Agravo</label>
-                  <select
-                    className="input"
-                    value={campo(s, "da", "Desconto")}
-                    onChange={(e) => setCampo(s, "da", e.target.value)}
-                  >
-                    <option>Desconto</option>
-                    <option>Agravo</option>
-                  </select>
-                </div>
-                <div className="field-group" style={{ margin: 0 }}>
+                <DescontoAgravoRadio
+                  seguradora={s}
+                  value={campo(s, "da", "Desconto") as "Desconto" | "Agravo"}
+                  onChange={(v) => setCampo(s, "da", v)}
+                />
+                <div className="field-group" style={{ margin: 0, maxWidth: 150 }}>
                   <label>Desconto</label>
                   <input
                     className="input"
@@ -142,7 +190,7 @@ export function DescontosFold({ f, up, seguradoras }: Props) {
               </>
             ) : (
               <>
-                <div className="field-group" style={{ margin: 0 }}>
+                <div className="field-group" style={{ margin: 0, maxWidth: 150 }}>
                   <label>Desconto</label>
                   <input
                     className="input"
@@ -150,7 +198,7 @@ export function DescontosFold({ f, up, seguradoras }: Props) {
                     onChange={(e) => setCampo(s, "desc", maskBRL(e.target.value))}
                   />
                 </div>
-                <div className="field-group" style={{ margin: 0 }}>
+                <div className="field-group" style={{ margin: 0, maxWidth: 150 }}>
                   <label>Agravo</label>
                   <input
                     className="input"

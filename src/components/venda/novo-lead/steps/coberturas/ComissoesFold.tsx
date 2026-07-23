@@ -33,18 +33,53 @@ export function ComissoesFold({ f, up, seguradoras }: Props) {
         </svg>
       </div>
       <div className="fold-b">
-        <div className="wizard-grid cols-3">
-          {seguradoras.map((s) => (
-            <div className="field-group" key={s}>
-              <label>Comissão — {s} (%)</label>
+        {seguradoras.map((s) => (
+          <div
+            key={s}
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: 14,
+              padding: "8px 0",
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
+            <div
+              style={{
+                minWidth: 130,
+                fontWeight: 700,
+                color: "var(--slate)",
+                fontSize: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <svg width="13" height="13">
+                <use href="#i-shield" />
+              </svg>
+              {s}
+            </div>
+            <div className="field-group" style={{ margin: 0, maxWidth: 160 }}>
+              <label>Comissão (%)</label>
               <input
                 className="input"
                 value={f.comissoes[s] ?? "25,00"}
                 onChange={(e) => setComissao(s, maskBRL(e.target.value))}
               />
             </div>
-          ))}
-        </div>
+            <button
+              type="button"
+              className="ic-btn"
+              title="Observação da comissão"
+              onClick={() => window.alert(`Observação de comissão · ${s}`)}
+            >
+              <svg width="14" height="14">
+                <use href="#i-message" />
+              </svg>
+            </button>
+          </div>
+        ))}
         <div
           style={{
             marginTop: 12,

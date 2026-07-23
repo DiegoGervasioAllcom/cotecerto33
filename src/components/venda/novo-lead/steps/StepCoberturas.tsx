@@ -231,6 +231,18 @@ export function StepCoberturas({ f, up, erros }: Props) {
         </div>
         <div className="wizard-grid" style={{ marginTop: 8 }}>
           <div className="field-group">
+            <label>Assistência 24h</label>
+            <select
+              className="input"
+              value={f.assist24}
+              onChange={(e) => up("assist24", e.target.value)}
+            >
+              <option>Básica</option>
+              <option>Intermediária</option>
+              <option>Premium</option>
+            </select>
+          </div>
+          <div className="field-group">
             <label>Carro reserva</label>
             <select
               className="input"
@@ -241,18 +253,6 @@ export function StepCoberturas({ f, up, erros }: Props) {
               <option>7 dias</option>
               <option>15 dias</option>
               <option>30 dias</option>
-            </select>
-          </div>
-          <div className="field-group">
-            <label>Assistência 24h</label>
-            <select
-              className="input"
-              value={f.assist24}
-              onChange={(e) => up("assist24", e.target.value)}
-            >
-              <option>Básica</option>
-              <option>Intermediária</option>
-              <option>Premium</option>
             </select>
           </div>
         </div>
