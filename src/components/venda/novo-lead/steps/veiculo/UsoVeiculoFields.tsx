@@ -21,7 +21,12 @@ export function UsoVeiculoFields({ f, up }: Props) {
 
   return (
     <>
-      <div className="sec-title">Uso do veículo</div>
+      <div
+        className="sec-title"
+        style={{ margin: "18px 0 4px", color: "var(--slate)", fontWeight: 700, fontSize: 14 }}
+      >
+        Uso do veículo
+      </div>
       <div className="wizard-grid">
         <div className="field-group full">
           <label>Finalidade de uso</label>

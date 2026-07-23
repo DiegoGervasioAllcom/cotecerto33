@@ -62,7 +62,12 @@ export function StepPerfil({ f, up, erros }: Props) {
         </div>
       </div>
 
-      <div className="sec-title">Proprietário do veículo</div>
+      <div
+        className="sec-title"
+        style={{ margin: "16px 0 6px", color: "var(--slate)", fontWeight: 700, fontSize: 14 }}
+      >
+        Proprietário do veículo
+      </div>
       <label
         className={`switch ${f.segProprietario ? "on" : ""}`}
         onClick={() => up("segProprietario", !f.segProprietario)}
@@ -211,7 +216,12 @@ export function StepPerfil({ f, up, erros }: Props) {
         </div>
       )}
 
-      <div className="sec-title">Principal condutor</div>
+      <div
+        className="sec-title"
+        style={{ margin: "18px 0 6px", color: "var(--slate)", fontWeight: 700, fontSize: 14 }}
+      >
+        Principal condutor
+      </div>
       <div className="wizard-grid">
         <div className="field-group full">
           <label>Condutor principal é o próprio segurado?</label>
@@ -388,7 +398,10 @@ export function StepPerfil({ f, up, erros }: Props) {
 
       {naoParticular && (
         <>
-          <div className="sec-title">
+          <div
+            className="sec-title"
+            style={{ margin: "18px 0 6px", color: "var(--slate)", fontWeight: 700, fontSize: 14 }}
+          >
             Atividade (uso não-particular){" "}
             <span className="lbl-soft">obrigatório para {f.tipoUso}</span>
           </div>
