@@ -164,6 +164,13 @@ export function useValidacaoEtapas(
         rcfDc: f.rcfDc,
         carroReserva: f.carroReserva,
         assist24: f.assist24,
+        modalidade: f.modalidade,
+        percentualAjuste: f.percentualAjuste,
+        franquiaPrimeiraOpcao: f.franquiaPrimeiraOpcao,
+        franquiaSegundaOpcao: f.franquiaSegundaOpcao,
+        danosMorais: f.danosMorais,
+        despesasExtras: f.despesasExtras,
+        maisAssistenciasSeguradora: f.maisAssistenciasSeguradora,
       });
       if (!r.success) {
         const novos: Record<string, string> = {};

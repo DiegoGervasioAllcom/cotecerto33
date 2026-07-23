@@ -175,7 +175,7 @@ function Page() {
     seguroCorretorProximo: "nao",
     jovens1825: "nao",
     jovens18a25Detalhes: [],
-    tipoCobertura: "Compreensiva",
+    tipoCobertura: "Fácil",
     casco: "100% Tabela FIPE",
     cascoValor: "",
     franquia: "Normal",
@@ -187,6 +187,18 @@ function Page() {
     vidros: true,
     carroReserva: "7 dias",
     assist24: "Básica",
+    modalidade: "Valor de Mercado",
+    percentualAjuste: "100",
+    franquiaPrimeiraOpcao: "Normal 100%",
+    franquiaSegundaOpcao: "Reduzida 50%",
+    danosMorais: "",
+    despesasExtras: "Não contratada",
+    pequenosReparos: false,
+    maisAssistencias: false,
+    maisAssistenciasSeguradora: "",
+    descontosAgravos: {},
+    comissoes: {},
+    condicoesEspeciais: { worksite: false, yelumVarejo: false, planosPopulares: false },
   });
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const { cepLoading, lookupCep } = useCepLookup(setF);

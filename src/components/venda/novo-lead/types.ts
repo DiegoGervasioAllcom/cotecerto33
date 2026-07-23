@@ -150,6 +150,26 @@ export type Form = {
   vidros: boolean;
   carroReserva: string;
   assist24: string;
+  // Coberturas — espelha o protótipo v10 e o objeto `cobertura` da Quiver
+  modalidade: string;
+  percentualAjuste: string;
+  franquiaPrimeiraOpcao: string;
+  franquiaSegundaOpcao: string;
+  danosMorais: string;
+  despesasExtras: string;
+  pequenosReparos: boolean;
+  maisAssistencias: boolean;
+  maisAssistenciasSeguradora: string;
+  // Coberturas — descontos/agravos/comissões por seguradora e condições
+  // especiais (não fazem parte do objeto `cobertura` da Quiver — uso
+  // interno de negociação com a matriz).
+  descontosAgravos: Record<string, Record<string, string>>;
+  comissoes: Record<string, string>;
+  condicoesEspeciais: {
+    worksite: boolean;
+    yelumVarejo: boolean;
+    planosPopulares: boolean;
+  };
 };
 
 export type BonusFieldKey =

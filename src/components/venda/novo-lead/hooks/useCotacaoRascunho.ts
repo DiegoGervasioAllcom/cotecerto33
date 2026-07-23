@@ -185,6 +185,18 @@ export function useCotacaoRascunho(params: {
         vidros: f.vidros,
         carro_reserva: f.carroReserva,
         assist_24: f.assist24,
+        modalidade: f.modalidade,
+        percentual_ajuste: f.percentualAjuste,
+        franquia_primeira_opcao: f.franquiaPrimeiraOpcao,
+        franquia_segunda_opcao: f.franquiaSegundaOpcao,
+        danos_morais: f.danosMorais,
+        despesas_extras: f.despesasExtras,
+        pequenos_reparos: f.pequenosReparos,
+        mais_assistencias: f.maisAssistencias,
+        mais_assistencias_seguradora: f.maisAssistenciasSeguradora,
+        descontos_agravos: f.descontosAgravos,
+        comissoes: f.comissoes,
+        condicoes_especiais: f.condicoesEspeciais,
       },
       ...(extra?.premios
         ? {
@@ -387,6 +399,22 @@ export function useCotacaoRascunho(params: {
         vidros: c.vidros ?? prev.vidros,
         carroReserva: c.carro_reserva ?? prev.carroReserva,
         assist24: c.assist_24 ?? prev.assist24,
+        modalidade: c.modalidade ?? prev.modalidade,
+        percentualAjuste: c.percentual_ajuste ?? prev.percentualAjuste,
+        franquiaPrimeiraOpcao: c.franquia_primeira_opcao ?? prev.franquiaPrimeiraOpcao,
+        franquiaSegundaOpcao: c.franquia_segunda_opcao ?? prev.franquiaSegundaOpcao,
+        danosMorais: c.danos_morais ?? "",
+        despesasExtras: c.despesas_extras ?? prev.despesasExtras,
+        pequenosReparos: !!c.pequenos_reparos,
+        maisAssistencias: !!c.mais_assistencias,
+        maisAssistenciasSeguradora: c.mais_assistencias_seguradora ?? "",
+        descontosAgravos: (c.descontos_agravos as Record<string, Record<string, string>>) ?? {},
+        comissoes: (c.comissoes as Record<string, string>) ?? {},
+        condicoesEspeciais: (c.condicoes_especiais as Form["condicoesEspeciais"] | null) ?? {
+          worksite: false,
+          yelumVarejo: false,
+          planosPopulares: false,
+        },
       }));
       if (v.fipe_valor) setFipeValor(v.fipe_valor);
       if (v.marca_codigo && v.marca_nome) {
