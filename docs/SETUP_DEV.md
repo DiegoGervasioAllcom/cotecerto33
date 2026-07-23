@@ -1,6 +1,6 @@
 # Guia de Instalação — Ambiente de Desenvolvimento CoteCerto
 
-**v1.0 · 13/07/2026** · Validado em macOS. Tempo estimado: ~15 min (primeira vez).
+**v1.1 · 23/07/2026** · Validado em macOS. Tempo estimado: ~15 min (primeira vez).
 
 ## Pré-requisitos
 
@@ -33,7 +33,7 @@ Preencher o `.env` com o mapeamento (a CLI atual chama as chaves de Publishable/
 | **Secret** key                         | `SELF_SUPABASE_SERVICE_ROLE_KEY`          |
 
 ```bash
-# 3. Aplicar as 39 migrations + seed num banco limpo
+# 3. Aplicar as 82 migrations atuais + seed num banco limpo
 supabase db reset
 
 # 4. Instalar dependências e subir o app
@@ -61,6 +61,10 @@ Abrir a URL que o vite imprimir (ex.: `http://localhost:3000`).
 | Studio local                   | `http://127.0.0.1:54323` (visualizar tabelas/dados no navegador)         |
 | `bun run test:unit`            | testes unitários (rodam offline)                                         |
 | `bun run test:db`              | testes de integração (exigem o Supabase local rodando)                   |
+| `bun run test:e2e`             | testes Playwright das jornadas e personas                                |
+| `bun run test:coverage`        | cobertura da lógica unitária                                             |
+| `bun run lint`                 | lint do repositório                                                      |
+| `bun run build`                | build de produção                                                        |
 | `bun run typecheck`            | checagem de tipos — deve passar antes de qualquer commit                 |
 
 ## Notas e soluções de problemas
@@ -70,3 +74,5 @@ Abrir a URL que o vite imprimir (ex.: `http://localhost:3000`).
 - **Aviso "shared defaults / do not use in production"** → esperado: as chaves locais são padrão da CLI, valem só na sua máquina.
 - As migrations históricas (`/migrations`, 000–039) são **read-only**; a fonte canônica é `supabase/migrations/`. O seed vive em `supabase/seed.sql`.
 - Regras completas para desenvolvimento: `AGENTS.md` na raiz.
+- A contagem muda com o projeto; confirme com
+  `find supabase/migrations -name '*.sql' | wc -l`.

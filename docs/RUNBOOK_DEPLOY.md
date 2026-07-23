@@ -13,14 +13,15 @@ o app é publicado **integrado** à infraestrutura já existente no servidor
 
 Um único servidor (AWS EC2, Ubuntu 24.04), atrás de **Cloudflare**, rodando:
 
-| Componente | Onde | Observação |
-|---|---|---|
-| **Supabase self-hosted** | `/home/alldev/supabase/docker` (docker compose) | Postgres `15.8.1.085`, Kong, GoTrue, PostgREST, Realtime, Storage, Pooler etc. |
-| **App CoteCerto** | container `cotecerto-app` (imagem GHCR) | servidor Nitro/Bun na porta **3000** do container → publicado em `127.0.0.1:3001` |
-| **nginx** | host (`/etc/nginx/sites-available/default`) | reverse proxy + TLS |
-| **certbot** | host | 2 certificados: `cote-certo...` (app) e `supabase-cotecerto...` (API) |
+| Componente               | Onde                                            | Observação                                                                        |
+| ------------------------ | ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Supabase self-hosted** | `/home/alldev/supabase/docker` (docker compose) | Postgres `15.8.1.085`, Kong, GoTrue, PostgREST, Realtime, Storage, Pooler etc.    |
+| **App CoteCerto**        | container `cotecerto-app` (imagem GHCR)         | servidor Nitro/Bun na porta **3000** do container → publicado em `127.0.0.1:3001` |
+| **nginx**                | host (`/etc/nginx/sites-available/default`)     | reverse proxy + TLS                                                               |
+| **certbot**              | host                                            | 2 certificados: `cote-certo...` (app) e `supabase-cotecerto...` (API)             |
 
 Domínios:
+
 - **`cote-certo.sandboxallcom.com`** → nginx → `127.0.0.1:3001` (app)
 - **`supabase-cotecerto.sandboxallcom.com`** → nginx → `localhost:3000` (Kong/Supabase)
 
@@ -53,14 +54,15 @@ Domínios:
 > Necessário **só na primeira vez** ou quando quiser reconstruir o schema do zero.
 > Para mudanças incrementais depois, ver §6.
 
-O schema é definido pelas 53 migrations em `supabase/migrations/` + `supabase/seed.sql`.
+O schema é definido pelas 82 migrations atuais em `supabase/migrations/` +
+`supabase/seed.sql`. Confirme a contagem antes de cada rebuild; esse número cresce.
 O procedimento gera um **artefato único** (`bootstrap_prod.sql`) validado localmente e o
 aplica no Postgres de produção.
 
 ### 3.1 Gerar e validar o artefato (na máquina de dev)
 
 ```bash
-# 1) aplica as 53 migrations + seed num banco limpo local (valida a ordem)
+# 1) aplica todas as migrations + seed num banco limpo local (valida a ordem)
 supabase start && supabase db reset
 
 # 2) monta o bootstrap: reset do schema public + migrations em ordem + seed
@@ -119,7 +121,7 @@ SQL
 sudo docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
   < ~/cotecerto_bootstrap_prod.sql 2>&1 | tail -20   # esperar SEM "ERROR:"
 
-# cria a tabela de histórico do Supabase e registra as 53 versões
+# cria a tabela de histórico do Supabase e registra todas as versões
 # (gerar o bloco com: for f in supabase/migrations/*.sql; do echo "insert ..."; done)
 # ver o gerador em §3.5
 
@@ -127,7 +129,7 @@ sudo docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1 
 sudo docker restart supabase-rest supabase-auth realtime-dev.supabase-realtime supabase-storage supabase-meta
 ```
 
-Validar (esperado `31 | 65 | 53 | 1`):
+Validar as contagens sem fixá-las na documentação:
 
 ```bash
 sudo docker exec -i supabase-db psql -U postgres -d postgres -tAc \
@@ -165,6 +167,7 @@ Credenciais do admin semeado: `desenvolvimento@suppercerto.com.br` / `Supper@123
 > `https://cote-certo.sandboxallcom.com/api/webhooks/quiver`,
 > `WEBHOOK_CLIENT_KEY`, `WEBHOOK_CLIENT_SECRET`) — sem isso o webhook nunca
 > autentica (401) e nenhuma cotação recebe resultado.
+>
 > ```bash
 > cat > /home/alldev/.quiver-webhook.env <<EOF
 > QUIVER_KEY=$(openssl rand -hex 16)
@@ -199,6 +202,7 @@ sudo docker logs --tail 15 cotecerto-app
 
 > Conferência opcional da anon key (a embutida na imagem tem que bater com a do
 > Supabase, senão o login não conecta):
+>
 > ```bash
 > BAKED=$(sudo docker exec cotecerto-app sh -c "grep -rhoE 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+' .output/public | sort -u | head -1")
 > ENVKEY=$(sudo grep -E '^ANON_KEY=' /home/alldev/supabase/docker/.env | cut -d= -f2-)
@@ -294,6 +298,7 @@ linha em `supabase_migrations.schema_migrations`. Rebuild completo (§3) só se 
 ## 7. Rollback
 
 **App:**
+
 ```bash
 # voltar pra imagem anterior (se souber a tag/digest) ou re-subir a última boa
 sudo docker stop cotecerto-app && sudo docker rm cotecerto-app
@@ -301,12 +306,14 @@ sudo docker stop cotecerto-app && sudo docker rm cotecerto-app
 ```
 
 **nginx (voltar ao estático anterior):**
+
 ```bash
 sudo cp $(ls -t /etc/nginx/sites-available/default.bak.* | head -1) /etc/nginx/sites-available/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
 **Banco:** restaurar o backup de §3.2:
+
 ```bash
 sudo docker exec -i supabase-db psql -U postgres -d postgres < ~/backup_prod_XXXX.sql
 ```
@@ -315,10 +322,10 @@ sudo docker exec -i supabase-db psql -U postgres -d postgres < ~/backup_prod_XXX
 
 ## 8. Gotchas conhecidos (aprendidos no deploy real)
 
-| Sintoma | Causa | Correção |
-|---|---|---|
-| `permission denied for table job` na migration 030 | `postgres` sem acesso a `cron.*` no self-hosted | GRANTs como `supabase_admin` (§3.3) |
+| Sintoma                                                                    | Causa                                                          | Correção                                                          |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `permission denied for table job` na migration 030                         | `postgres` sem acesso a `cron.*` no self-hosted                | GRANTs como `supabase_admin` (§3.3)                               |
 | `invalid command \restrict` / `unrecognized parameter transaction_timeout` | `pg_dump` (cliente PG17) gera SQL incompatível com Postgres 15 | não vendorizar a seção do `pg_dump`; gerar histórico à mão (§3.5) |
-| `unauthorized` no `docker pull` | login no GHCR não feito / PAT sem `read:packages` | `docker login ghcr.io` com PAT correto (§4) |
-| porta 3000 ocupada | Kong (Supabase) já usa a 3000 do host | publicar o app em **3001** |
-| login não conecta | anon key embutida ≠ anon key do Supabase | conferir fingerprint (§4) |
+| `unauthorized` no `docker pull`                                            | login no GHCR não feito / PAT sem `read:packages`              | `docker login ghcr.io` com PAT correto (§4)                       |
+| porta 3000 ocupada                                                         | Kong (Supabase) já usa a 3000 do host                          | publicar o app em **3001**                                        |
+| login não conecta                                                          | anon key embutida ≠ anon key do Supabase                       | conferir fingerprint (§4)                                         |
