@@ -6,7 +6,10 @@ type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 export const INITIAL_TUTORIAL_PROGRESS: TutorialProgress = { chapter: 0, step: 0 };
 
-export function isTutorialProgress(value: unknown, definition: TutorialDefinition): value is TutorialProgress {
+export function isTutorialProgress(
+  value: unknown,
+  definition: TutorialDefinition,
+): value is TutorialProgress {
   if (!value || typeof value !== "object") return false;
 
   const { chapter, step } = value as Record<string, unknown>;
@@ -17,7 +20,8 @@ export function isTutorialProgress(value: unknown, definition: TutorialDefinitio
     !Number.isInteger(step) ||
     chapter < 0 ||
     step < 0
-  ) return false;
+  )
+    return false;
 
   const currentChapter = definition.chapters[chapter];
   return Boolean(currentChapter && step < currentChapter.steps.length);
@@ -45,7 +49,11 @@ export function readTutorialProgress(
     // JSON inválido também é removido abaixo.
   }
 
-  try { storage.removeItem(key); } catch { /* armazenamento pode estar indisponível */ }
+  try {
+    storage.removeItem(key);
+  } catch {
+    /* armazenamento pode estar indisponível */
+  }
 
   return INITIAL_TUTORIAL_PROGRESS;
 }

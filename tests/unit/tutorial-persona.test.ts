@@ -4,13 +4,31 @@ import { resolveTutorialKind } from "@/components/tutorial/tutorial-persona";
 
 describe("roteiro por persona", () => {
   it.each([
-    [{ role: "matriz", isGroupView: false, isFranqIndividual: false, scopeLoading: false }, "matriz"],
-    [{ role: "vendedor", isGroupView: false, isFranqIndividual: false, scopeLoading: false }, "sales"],
+    [
+      { role: "matriz", isGroupView: false, isFranqIndividual: false, scopeLoading: false },
+      "matriz",
+    ],
+    [
+      { role: "vendedor", isGroupView: false, isFranqIndividual: false, scopeLoading: false },
+      "sales",
+    ],
     [{ role: "master", isGroupView: true, isFranqIndividual: false, scopeLoading: false }, "group"],
-    [{ role: "supervisor", isGroupView: true, isFranqIndividual: false, scopeLoading: false }, "group"],
-    [{ role: "franqueado", isGroupView: false, isFranqIndividual: true, scopeLoading: false }, "sales"],
-    [{ role: "franqueado", isGroupView: true, isFranqIndividual: false, scopeLoading: false }, "group"],
-    [{ role: "franqueado", isGroupView: false, isFranqIndividual: false, scopeLoading: true }, null],
+    [
+      { role: "supervisor", isGroupView: true, isFranqIndividual: false, scopeLoading: false },
+      "group",
+    ],
+    [
+      { role: "franqueado", isGroupView: false, isFranqIndividual: true, scopeLoading: false },
+      "sales",
+    ],
+    [
+      { role: "franqueado", isGroupView: true, isFranqIndividual: false, scopeLoading: false },
+      "group",
+    ],
+    [
+      { role: "franqueado", isGroupView: false, isFranqIndividual: false, scopeLoading: true },
+      null,
+    ],
   ] as const)("resolve %o para %s", (input, expected) => {
     expect(resolveTutorialKind(input)).toBe(expected);
   });
