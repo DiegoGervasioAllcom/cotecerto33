@@ -31,7 +31,26 @@ export function useSimulacaoCalculo(
   }, []);
 
   useEffect(() => {
-    if (cotacaoId) void carregarResultados(cotacaoId);
+    if (!cotacaoId) return;
+    void (async () => {
+      const { data } = await supabase
+        .from("cotacoes")
+        .select("status,quiver_mensagem")
+        .eq("id", cotacaoId)
+        .maybeSingle();
+      if (!data) return;
+      if (data.status === "calculada") {
+        await carregarResultados(cotacaoId);
+      } else if (data.status === "erro_quiver") {
+        setErro(data.quiver_mensagem || "A seguradora não retornou prêmios para esta cotação.");
+      } else if (data.status === "enviada_quiver") {
+        // reabriu a cotação enquanto o webhook da Quiver ainda não respondeu —
+        // retoma o polling em vez de deixar a tela parada em "Calcular agora".
+        setCalculando(true);
+        iniciarPolling(cotacaoId);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cotacaoId]);
 
   function pararPolling() {
