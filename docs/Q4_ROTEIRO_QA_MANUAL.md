@@ -7,21 +7,24 @@
 > As outras personas **não existem no seed** — você as cria pela própria aplicação (Bloco 0). Isso é proposital: o cadastro/aprovação de franquias e vendedores também é parte do teste.
 
 ## Como reportar um problema
+
 Para cada item, marque ✅ (ok) / ❌ (bug) / ⚠️ (estranho, mas funciona). Ao achar um bug, anote: **tela**, **perfil logado**, **passo**, **o que esperava**, **o que aconteceu** (e print se der). Junte tudo e me manda que eu trato.
 
 ## As 6 experiências (5 perfis; `franquia` bifurca)
-| Persona de teste | Perfil interno | Experiência | Tela inicial |
-|---|---|---|---|
-| Matriz | `matriz` | gestão total | Visão geral da Matriz |
-| Master franqueado | `master` | gestão de grupo | Visão geral do grupo |
-| Supervisor | `supervisor` | gestão de grupo | Visão geral do grupo |
-| Franquia **Full** | `franquia` (modelo Full) | gestão de grupo | Visão geral do grupo |
-| Franquia **Individual** | `franquia` (modelo Smart/Light/…) | vendedor | Cockpit do vendedor |
-| Vendedor | `vendedor` | vendedor | Cockpit do vendedor |
+
+| Persona de teste        | Perfil interno                    | Experiência     | Tela inicial          |
+| ----------------------- | --------------------------------- | --------------- | --------------------- |
+| Matriz                  | `matriz`                          | gestão total    | Visão geral da Matriz |
+| Master franqueado       | `master`                          | gestão de grupo | Visão geral do grupo  |
+| Supervisor              | `supervisor`                      | gestão de grupo | Visão geral do grupo  |
+| Franquia **Full**       | `franquia` (modelo Full)          | gestão de grupo | Visão geral do grupo  |
+| Franquia **Individual** | `franquia` (modelo Smart/Light/…) | vendedor        | Cockpit do vendedor   |
+| Vendedor                | `vendedor`                        | vendedor        | Cockpit do vendedor   |
 
 ---
 
 ## Bloco 0 — Matriz: montar a hierarquia (onboarding)
+
 Logado como **Matriz**. Isso já testa Acessos, Configurações e o cadastro/aprovação.
 
 - [ ] **Login** entra e cai na **Visão geral da Matriz** (não vê "Novo lead"). O selo da marca mostra MATRIZ.
@@ -37,6 +40,7 @@ Logado como **Matriz**. Isso já testa Acessos, Configurações e o cadastro/apr
 ---
 
 ## Bloco 1 — Vendedor: fluxo de venda ponta a ponta
+
 Faça **logout** e entre com o **vendedor** criado no Bloco 0.
 
 - [ ] Cai no **cockpit (Início)**: vê "Novo lead"; selo CORRETOR. KPIs do dia carregam sem erro.
@@ -59,6 +63,7 @@ Faça **logout** e entre com o **vendedor** criado no Bloco 0.
 ---
 
 ## Bloco 2 — Franquia Individual
+
 Logout → entre com a **franquia Individual**.
 
 - [ ] Tem a **mesma navegação do vendedor** (vê "Novo lead"); selo FRANQUEADO com "· individual".
@@ -68,6 +73,7 @@ Logout → entre com a **franquia Individual**.
 ---
 
 ## Bloco 3 — Grupo (Master / Supervisor / Franquia Full)
+
 Faça este bloco com **cada uma** das 3 personas de grupo (o comportamento é o mesmo; o alcance de rede muda).
 
 - [ ] Login cai na **Visão geral do grupo** (`xdash`); **não** vê "Novo lead" nem "Distribuição"; vê a nav de **Vendedores**.
@@ -82,6 +88,7 @@ Faça este bloco com **cada uma** das 3 personas de grupo (o comportamento é o 
 ---
 
 ## Bloco 4 — Matriz: telas de gestão
+
 Volte para a **Matriz** e valide as telas de comando (a Matriz vê **tudo**).
 
 - [ ] **Visão geral (Matriz)**: 9 KPIs, seletor de período, evolução mensal, alertas, rankings.
@@ -98,6 +105,7 @@ Volte para a **Matriz** e valide as telas de comando (a Matriz vê **tudo**).
 ---
 
 ## Bloco 5 — Regras de negócio críticas (validar o comportamento, não só a tela)
+
 - [ ] **Desconto multinível:** um vendedor pede desconto acima da alçada → sobe para o superior; sem política definida no nível, **escala até a Matriz**; aprovar **atualiza o prêmio** da proposta.
 - [ ] **Comissão (G4):** conferir que o valor bate com a regra (fator pela média do vendedor; override de base desconta royalties; bônus Elite trimestral entra sobre a comissão). Comparar um caso simples na mão.
 - [ ] **Renovação (G6):** apólice a 60 dias do vencimento vira lead **manual**; o lead entra na **distribuição padrão** (não vai direto pro vendedor original); apólice vencida sem ação → marcada como perdida.
@@ -106,17 +114,24 @@ Volte para a **Matriz** e valide as telas de comando (a Matriz vê **tudo**).
 
 ---
 
-## Limitações conhecidas (NÃO são bugs — já mapeadas no Q3)
-Estas telas foram entregues em versão simplificada frente ao protótipo; estão no backlog estrutural (`docs/Q3_DIVERGENCIAS_PROTOTIPO.md`). **Não reporte como bug:**
-- **Mensagens prontas:** é um CRUD simples; ainda não tem categorias/busca/botão WhatsApp nem variáveis preenchidas.
-- **Pipeline (vendedor):** sem alternância Kanban/Tabela e sem os filtros/《cards ricos》 do protótipo.
-- **Propostas:** sem a tela de negociação/versões (é lista read-only).
-- **Aceite:** sem a timeline e o card de conferência final com checkbox.
-- **Extrato:** sem o bloco de KPIs/estornos/campanha do protótipo.
-- **Comissões:** o texto fala em "trilha de auditoria (autor/data/valor)" mas a UI ainda não exibe esse histórico.
-- **Busca global** na topbar ainda não existe; **badge de contagem** em Aprovações ainda não aparece.
+## Regressões que devem ser reportadas
+
+As limitações estruturais registradas em 19/07 foram implementadas depois da
+primeira versão deste roteiro. Portanto, reporte como bug se faltar:
+
+- categorias, busca ou ação WhatsApp em Mensagens prontas;
+- tabela, filtros ou cards ricos no Pipeline;
+- negociação, versões ou status em Propostas;
+- timeline ou conferência obrigatória no Aceite;
+- KPIs, metas ou estornos no Extrato;
+- trilha de auditoria em Comissões;
+- busca, menu do usuário ou badges esperados na navegação.
+
+Também valide o ciclo assíncrono da Quiver. Falha externa deve produzir estado de
+erro compreensível, sem perder o rascunho nem duplicar uma solicitação.
 
 ---
 
 ## Resultado
+
 Ao terminar, me diga: (1) o que passou, (2) a lista de bugs achados (formato acima), (3) qualquer fluxo de onboarding que ficou confuso. A partir disso eu priorizo correções e a gente decide o que entra antes do go-live.

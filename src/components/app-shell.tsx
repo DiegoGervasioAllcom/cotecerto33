@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type MouseEvent, type ReactNode, useRef, useState } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home,
@@ -38,6 +38,8 @@ import { useGroupScope } from "@/lib/group-scope";
 import { useNavBadges } from "@/lib/nav-badges";
 import type { Perfil } from "@/integrations/supabase/client";
 import { SidebarUserMenu, useAccessibilityPrefs } from "@/components/user-menu";
+import { TutorialProvider } from "@/components/tutorial/tutorial-provider";
+import { resolveTutorialKind } from "@/components/tutorial/tutorial-persona";
 
 type Item = {
   to: string;
@@ -138,7 +140,7 @@ export function AppShell({
   crumbs?: string;
   children: ReactNode;
 }) {
-  const { role, profile, empresa, signOut } = useAuth();
+  const { role, profile, empresa, session, signOut } = useAuth();
   const { isGroupView, isFranqIndividual, loading: scopeLoading } = useGroupScope();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -165,6 +167,12 @@ export function AppShell({
     grpLike,
   });
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  const tutorialTriggerRef = useRef<HTMLElement | null>(null);
+
+  const openTutorial = (event: MouseEvent<HTMLButtonElement>) => {
+    tutorialTriggerRef.current = event.currentTarget;
+    setTutorialOpen(true);
+  };
 
   const visibleGroups: Group[] = [
     ...(isMatriz ? [MATRIZ_COMANDO_GROUP, MATRIZ_OPERACAO_GROUP] : []),
@@ -173,6 +181,12 @@ export function AppShell({
   ];
 
   const brandLabel = role ? BRAND_LABEL[role] : "";
+  const tutorialKind = resolveTutorialKind({
+    role,
+    isGroupView,
+    isFranqIndividual,
+    scopeLoading,
+  });
 
   return (
     <div className="app">
@@ -248,8 +262,8 @@ export function AppShell({
               {leadMaisAntigoElapsed && <span className="rp-time">{leadMaisAntigoElapsed}</span>}
             </button>
           )}
-          {(isMatriz || grpLike) && (
-            <button type="button" className="btn btn-yellow" onClick={() => setTutorialOpen(true)}>
+          {tutorialKind && (
+            <button type="button" className="btn btn-yellow" onClick={openTutorial}>
               <HelpCircle style={{ width: 15, height: 15 }} />
               <span>Tutorial</span>
             </button>
@@ -258,43 +272,13 @@ export function AppShell({
         <div className="page active">{children}</div>
       </main>
 
-      {tutorialOpen && (
-        <div
-          className="modal-host"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setTutorialOpen(false);
-          }}
-        >
-          <div className="modal">
-            <div className="modal-h">
-              <h3>Como usar o painel</h3>
-              <div className="x" onClick={() => setTutorialOpen(false)}>
-                ×
-              </div>
-            </div>
-            <div className="modal-b">
-              <p>
-                Use o menu lateral para navegar entre as áreas do sistema: Leads (novos contatos
-                aguardando distribuição), Aprovações (pedidos de desconto pendentes de decisão),
-                Vendedores e Franquias (gestão da rede) e Relatórios (indicadores de performance).
-              </p>
-              <p>
-                Os badges amarelos ao lado de alguns itens indicam quantidade de pendências que
-                aguardam sua ação. A pílula vermelha no topo aparece quando há leads aguardando
-                distribuição há mais tempo.
-              </p>
-              <p>
-                Cada tela reflete o escopo de dados do seu perfil — o que você vê já está filtrado
-                de acordo com as permissões da sua conta.
-              </p>
-            </div>
-            <div className="modal-f">
-              <button className="btn btn-yellow" onClick={() => setTutorialOpen(false)}>
-                Entendi
-              </button>
-            </div>
-          </div>
-        </div>
+      {tutorialOpen && tutorialKind && session?.user.id && (
+        <TutorialProvider
+          kind={tutorialKind}
+          userId={session.user.id}
+          returnFocusElement={tutorialTriggerRef.current}
+          onClose={() => setTutorialOpen(false)}
+        />
       )}
     </div>
   );

@@ -1,5 +1,9 @@
 # Mapa do Protótipo V10 por Perfil — telas, cliques e campos condicionais
 
+> Atualizado em 23/07/2026. Este documento descreve o comportamento esperado.
+> Hierarquia, modalidades Individual/Full, área de grupo, Aprovações e motor de
+> comissão já existem. Use `Q4_ROTEIRO_QA_MANUAL.md` para validar a implementação.
+
 **v1.0 · 13/07/2026** · Revisão profunda de `cotecerto_prototipo_v10.html` (655 KB, 12 blocos de script). Complementa a Análise de Lacunas: aqui está o comportamento exato que o sistema precisa reproduzir, perfil a perfil.
 
 ---
@@ -114,13 +118,23 @@ A abertura (`curTourCfg`) é personalizada por persona ("Olá, Ana!", "Olá, Dou
 - **Douglas (master):** xdash (operação própria + franquias, com os 20%) → Aprovações da rede → Vendas/Comissões consolidadas do grupo.
 - **Ana (matriz):** mdash → Leads/Distribuição → **Aprovações (última instância)** → Acessos e permissões (classificar cadastros + política de alçada) → Configurações (usuários, seguradoras, modelos).
 
-## 8. Impacto no que já documentamos
+## 8. Implementação em 23/07/2026
 
-O mapeamento **confirma os GAPs e as 63 tasks** — nada muda de escopo. Ele **detalha** o que algumas tasks precisam entregar:
+O catálogo consolidado possui **78 tasks**. Este mapa continua sendo a
+especificação comportamental, enquanto o estado de execução vive em
+`PLANO_TASKS_V10.md`.
 
-- **G1.4 (classificação de acesso):** implementar exatamente os 5 tipos e os campos condicionais da seção 5 — incluindo faixa Elite do CLT no próprio modal.
-- **G1.5 (lista de usuários):** modal "Usuários do sistema" (usuário · tipo · supervisão · status).
-- **G1.6 (área do grupo):** as 12 telas compartilhadas com escopo por `activeGroup()` e % por papel (20% fixo / personalizável / 0%).
-- **G2.2 (bifurcação):** a franquia Individual usa **todas** as telas do vendedor, inclusive o tutorial do vendedor.
-- **G3.4/G3.5:** inbox filtrada por nível + rede, e política por modelo × 7 seguradoras.
-- **G6.3/G6.4 (tutoriais):** são 3 roteiros (não 6) — vendedor/franquia-individual, matriz e grupo — com ~148 passos no total; a estimativa de 4–6 dias segue válida.
+- **G1.4:** entregue com os 5 tipos e campos condicionais; houve correções
+  posteriores para não vazar campos internos.
+- **G1.5:** lista central de usuários entregue. O mesmo identificador passou a
+  ser usado também nas fases recentes de integração do wizard/Quiver; consultar
+  o assunto do commit para desambiguar.
+- **G1.6:** fundação da área de grupo, xdash, xacessos e solicitação de vendedor
+  entregues.
+- **G2:** modalidade persistida e bifurcação Individual/Full entregues na base.
+- **G3.4/G3.5:** inbox por nível/rede e política de alçada entregues.
+- **G6.3/G6.4 (tutoriais):** permanecem parciais. Existem coach-tips e um modal,
+  mas não os 3 roteiros completos (~148 passos) do protótipo.
+
+Qualquer divergência entre este comportamento esperado e a aplicação deve ser
+registrada pelo roteiro `Q4_ROTEIRO_QA_MANUAL.md`.
