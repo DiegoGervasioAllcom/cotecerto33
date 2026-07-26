@@ -8,6 +8,7 @@ type Props = {
   f: Form;
   resultados: ResultadoCalculo[];
   calculando: boolean;
+  erro: string | null;
   podeCalcular: boolean;
   cotacaoId: string | null;
   doSimularCalculo: () => void;
@@ -17,6 +18,7 @@ export function StepCalculo({
   f,
   resultados,
   calculando,
+  erro,
   podeCalcular,
   cotacaoId,
   doSimularCalculo,
@@ -27,11 +29,13 @@ export function StepCalculo({
         <div>
           <h2 style={{ margin: 0 }}>Coberturas e valores</h2>
           <div className="sub" style={{ margin: 0 }}>
-            {resultados.length > 0
-              ? `${resultados.length} seguradoras calculadas · ${f.tipoCobertura || "Compreensiva"}`
-              : (f.seguradorasSel?.length ?? 0) > 0
-                ? `${f.seguradorasSel.length} seguradoras selecionadas · clique em Calcular agora`
-                : "Selecione seguradoras no passo Seguro"}
+            {calculando
+              ? "Calculando com as seguradoras… isso pode levar alguns minutos."
+              : resultados.length > 0
+                ? `${resultados.length} seguradoras calculadas · ${f.tipoCobertura || "Compreensiva"}`
+                : (f.seguradorasSel?.length ?? 0) > 0
+                  ? `${f.seguradorasSel.length} seguradoras selecionadas · clique em Calcular agora`
+                  : "Selecione seguradoras no passo Seguro"}
           </div>
         </div>
         <span className="spacer" style={{ flex: 1 }} />
@@ -113,6 +117,30 @@ export function StepCalculo({
           Imprimir
         </button>
       </div>
+
+      {erro && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "10px 14px",
+            borderRadius: 8,
+            background: "var(--alert-soft)",
+            color: "var(--alert)",
+            fontSize: 13,
+          }}
+        >
+          {erro}
+        </div>
+      )}
+
+      {calculando && (
+        <div style={{ padding: "12px 0", marginBottom: 8 }}>
+          <span className="muted small">
+            Enviamos a cotação para as seguradoras — o resultado chega em alguns minutos, sem
+            precisar ficar nesta tela.
+          </span>
+        </div>
+      )}
 
       {resultados.length === 0 && !calculando && (
         <div style={{ padding: "12px 0", marginBottom: 8 }}>
