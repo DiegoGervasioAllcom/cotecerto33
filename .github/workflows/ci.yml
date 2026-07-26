@@ -181,6 +181,12 @@ jobs:
             --override-name auth.service_role_key=SELF_SUPABASE_SERVICE_ROLE_KEY \
             | sed -E 's/="(.*)"$/=\1/' >> "$GITHUB_ENV"
 
+          # Segredo do webhook da Quiver (Fase 1/G1.5) — só usado pelos testes
+          # E2E deste job pra simular o callback da Quiver (tests/e2e/quiver-webhook.spec.ts);
+          # sem valor real de produção nenhum, é fixo/local só pra CI.
+          echo "SELF_QUIVER_WEBHOOK_CLIENT_KEY=ci-teste-key" >> "$GITHUB_ENV"
+          echo "SELF_QUIVER_WEBHOOK_CLIENT_SECRET=ci-teste-secret" >> "$GITHUB_ENV"
+
       - name: Install Playwright browsers (chromium)
         run: bunx playwright install --with-deps chromium
 
