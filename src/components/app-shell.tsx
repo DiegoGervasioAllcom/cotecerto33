@@ -31,7 +31,7 @@ import {
   Search,
   HelpCircle,
 } from "lucide-react";
-import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
+import logoUrl from "@/assets/cotecerto-logo.png";
 import { useAuth } from "@/lib/auth";
 import { usePresence } from "@/lib/use-presence";
 import { useGroupScope } from "@/lib/group-scope";
@@ -192,7 +192,7 @@ export function AppShell({
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
-          <img src={logoAsset.url} alt="CoteCerto" className="logo-img" />
+          <img src={logoUrl} alt="CoteCerto" className="logo-img" />
           <div className="sublabel">SUPPER · {brandLabel}</div>
         </div>
         <div className="nav-group">

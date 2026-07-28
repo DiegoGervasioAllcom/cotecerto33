@@ -12,4 +12,12 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    server: {
+      // O robô Playwright da Quiver roda em container Docker e chama o
+      // webhook de volta usando esse host — sem isso o Vite bloqueia com
+      // 403 "Blocked request" e a cotação nunca sai de enviada_quiver.
+      allowedHosts: ["host.docker.internal"],
+    },
+  },
 });

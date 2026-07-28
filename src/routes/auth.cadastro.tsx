@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { cadastrarFranquia } from "@/lib/cadastro.functions";
-import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
+import logoUrl from "@/assets/cotecerto-logo.png";
 import { onlyDigits, maskCpfCnpj, maskTelefone } from "@/lib/masks";
 import { cnpjCadastroSchema, cpfCadastroSchema } from "@/lib/schemas/cadastro.schema";
 
@@ -284,7 +284,7 @@ function CadastroPage() {
     <div className="auth-stage">
       <div className="auth-bg" />
       <div className="auth-brand">
-        <img src={logoAsset.url} alt="CoteCerto" className="auth-logo" />
+        <img src={logoUrl} alt="CoteCerto" className="auth-logo" />
       </div>
 
       {view === "model" && (

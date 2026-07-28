@@ -6,7 +6,7 @@ import {
   supabaseConfigError,
 } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
+import logoUrl from "@/assets/cotecerto-logo.png";
 
 export const Route = createFileRoute("/auth/")({
   head: () => ({
@@ -63,7 +63,7 @@ function AuthPage() {
     <div className="auth-stage">
       <div className="auth-bg" />
       <div className="auth-brand">
-        <img src={logoAsset.url} alt="CoteCerto" className="auth-logo" />
+        <img src={logoUrl} alt="CoteCerto" className="auth-logo" />
       </div>
       <div className="auth-card">
         <h3>Entrar na sua franquia</h3>
