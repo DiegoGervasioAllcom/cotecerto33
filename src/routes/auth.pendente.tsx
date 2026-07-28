@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
-import logoAsset from "@/assets/cotecerto-logo.png.asset.json";
+import logoUrl from "@/assets/cotecerto-logo.png";
 
 export const Route = createFileRoute("/auth/pendente")({
   head: () => ({ meta: [{ title: "Aguardando aprovação · CoteCerto" }] }),
@@ -15,7 +15,7 @@ function PendentePage() {
     <div className="auth-stage">
       <div className="auth-bg" />
       <div className="auth-brand">
-        <img src={logoAsset.url} alt="CoteCerto" className="auth-logo" />
+        <img src={logoUrl} alt="CoteCerto" className="auth-logo" />
       </div>
       <div className="auth-card" style={{ textAlign: "center" }}>
         <h3>Cadastro recebido</h3>
