@@ -60,12 +60,14 @@ de evidências liga cada grupo de tasks aos artefatos verificáveis.
 ## Sequência restante
 
 1. ~~Fechar o contrato ponta a ponta com a Quiver.~~ Concluído em 28/07 (fases 0–6 + fixes de payload/prêmios/resultado real).
-2. Rodar CI completa e reconstrução local do banco.
+2. ~~Rodar CI completa e reconstrução local do banco.~~ CI verde no merge da PR #92 (28/07, run `30391297112`); Docker/GHCR também verde.
 3. ~~Executar Q4 nas seis experiências.~~ Executado em 28/07 — aprovado sem divergências reais (confirmação verbal do dono do produto; sem evidência item a item registrada no repositório).
 4. Corrigir divergências reproduzidas (nenhuma reportada na execução de 28/07).
-5. Revisar segurança e segredos.
-6. Aplicar banco e imagem em produção.
-7. Executar smoke e registrar aceite.
+5. ~~Revisar segurança e segredos.~~ Feito (confirmação verbal do dono do produto).
+6. ~~Aplicar banco e imagem em produção.~~ Feito — produção em operação (confirmação verbal do dono do produto).
+7. ~~Executar smoke e registrar aceite.~~ Feito (confirmação verbal do dono do produto).
+
+Sequência restante concluída. V10 fechado para go-live.
 
 ## Regra de atualização
 
