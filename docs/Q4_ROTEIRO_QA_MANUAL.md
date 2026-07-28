@@ -1,5 +1,10 @@
 # Q4 — Roteiro de QA manual por perfil (antes do go-live)
 
+> **Status: executado e aprovado em 28/07/2026** — sem divergências reais
+> encontradas (confirmação verbal do dono do produto). Execução não
+> documentada item a item neste arquivo; os checkboxes abaixo permanecem
+> como checklist de referência, não como registro de evidência.
+
 **Objetivo:** validar, à mão, os fluxos das 6 experiências de usuário em staging, na ordem em que um cliente real usaria o sistema. Este é o último item da lista Qualidade do V10 — tudo que é automatizável já está coberto por CI (`ci`, `db-tests`, `e2e`, gate de cobertura T9).
 
 > **Ambiente:** `https://cote-certo.sandboxallcom.com`
