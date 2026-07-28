@@ -5,6 +5,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* O preflight do Tailwind zera <svg> para display:block. Nossos ícones de
+   sprite (<svg><use href="#i-..."/></svg>) são usados inline ao lado de
+   texto em títulos, botões e chips — sem isso eles quebram para a linha de
+   baixo em vez de ficar ao lado do texto. */
+svg:has(use) {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 /* ========================================================================
    CoteCerto 3.3 — Design System (espelho fiel do protótipo v9)
    ======================================================================== */
