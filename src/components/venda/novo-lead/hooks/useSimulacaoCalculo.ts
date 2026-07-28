@@ -3,7 +3,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { enviarCotacaoQuiver } from "@/lib/quiver.functions";
 import type { Form } from "../types";
 
-export type ResultadoCalculo = { cia: string; premio: number; cobertura: string };
+export type OpcaoPremio = {
+  tipo?: string;
+  avista?: string;
+  desconto?: string;
+  franquia?: string;
+  parcelas?: string;
+};
+
+export type ResultadoCalculo = {
+  index: number;
+  seguradora: string;
+  nome: string;
+  produto?: string;
+  opcoes: OpcaoPremio[];
+  formaPagamento?: string;
+  formasPagamento?: { opcoes: string[]; selecionada?: string };
+  coberturasBasicas?: Record<string, string>;
+  coberturasAdicionais?: Record<string, string>;
+  premiosPorFormaPagamento?: { formaPagamento: string; opcoes: OpcaoPremio[] }[];
+};
+
+export function premioNumerico(opcao?: OpcaoPremio): number {
+  const texto = opcao?.avista;
+  if (!texto) return Infinity;
+  const match = texto.match(/R\$\s*([\d.,]+)/);
+  if (!match) return Infinity;
+  const numero = Number(match[1].replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(numero) ? numero : Infinity;
+}
 
 const POLL_MS = 4000;
 
@@ -61,16 +89,33 @@ export function useSimulacaoCalculo(
   }
 
   async function carregarResultados(id: string) {
+    // Uma seguradora pode aparecer em vários cards (produtos distintos), então
+    // lemos direto de quiver_resultado_raw.cards[] em vez do join com
+    // cotacao_premios (que agrega por card, não por seguradora).
     const { data } = await supabase
-      .from("cotacao_premios")
-      .select("seguradora,cobertura,premio")
-      .eq("cotacao_id", id);
+      .from("cotacoes")
+      .select("quiver_resultado_raw")
+      .eq("id", id)
+      .maybeSingle();
+    const cards = (data?.quiver_resultado_raw as { cards?: unknown[] } | null)?.cards ?? [];
     setResultados(
-      (data ?? []).map((p) => ({
-        cia: p.seguradora ?? "",
-        premio: Number(p.premio),
-        cobertura: p.cobertura ?? "",
-      })),
+      cards.map((c, i) => {
+        const card = c as Record<string, unknown>;
+        return {
+          index: typeof card.index === "number" ? card.index : i,
+          seguradora: (card.seguradora as string) ?? "",
+          nome: (card.nome as string) ?? "",
+          produto: card.produto as string | undefined,
+          opcoes: (card.opcoes as OpcaoPremio[]) ?? [],
+          formaPagamento: card.formaPagamento as string | undefined,
+          formasPagamento: card.formasPagamento as ResultadoCalculo["formasPagamento"],
+          coberturasBasicas: card.coberturasBasicas as Record<string, string> | undefined,
+          coberturasAdicionais: card.coberturasAdicionais as Record<string, string> | undefined,
+          premiosPorFormaPagamento: card.premiosPorFormaPagamento as
+            | ResultadoCalculo["premiosPorFormaPagamento"]
+            | undefined,
+        };
+      }),
     );
   }
 
