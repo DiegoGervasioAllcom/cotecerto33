@@ -40,6 +40,11 @@ async function assertDonoCotacao(
 
 const onlyDigits = (v: string | null | undefined) => (v ?? "").replace(/\D/g, "");
 const simNao = (v: boolean | null | undefined) => (v ? "Sim" : "Não");
+// Campos de valor monetário (appMorte/appInvalidez/danosMorais) são salvos com a
+// máscara de exibição "R$ 50.000,00" (maskBRL, novo-lead/masks.ts); a Quiver exige
+// só o número (ex.: "10000,00" ou "10.000,00") e rejeita com HTTP 422 se receber o
+// prefixo "R$ " (jul/2026).
+const semPrefixoMoeda = (v: string | null | undefined) => (v ?? "").replace(/^R\$\s*/, "").trim();
 
 // Nome canônico aceito pela Quiver (seguro.seguradorasDisponiveis) a partir
 // do nome exibido no app. Cobre os 12 canônicos + variações mais comuns;
@@ -299,9 +304,11 @@ function montarPayloadQuiver(cot: CotacaoRow) {
         : {}),
       danosMateriaisTerceiros: c.rcf_dm ?? undefined,
       danosCorporaisTerceiros: c.rcf_dc ?? undefined,
-      appMortePorPassageiro: c.app_morte ?? undefined,
-      appInvalidezPorPassageiro: c.app_invalidez ?? undefined,
-      ...(c.danos_morais ? { danosMorais: c.danos_morais as string } : {}),
+      ...(c.app_morte ? { appMortePorPassageiro: semPrefixoMoeda(c.app_morte as string) } : {}),
+      ...(c.app_invalidez
+        ? { appInvalidezPorPassageiro: semPrefixoMoeda(c.app_invalidez as string) }
+        : {}),
+      ...(c.danos_morais ? { danosMorais: semPrefixoMoeda(c.danos_morais as string) } : {}),
       ...(c.despesas_extras ? { despesasExtras: c.despesas_extras as string } : {}),
       ...(c.mais_assistencias
         ? {
@@ -367,8 +374,18 @@ export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
     if (res.status !== 201) {
       let details: string[] = [];
       try {
-        const body = (await res.json()) as { details?: string[]; error?: string };
-        details = body.details ?? (body.error ? [body.error] : []);
+        // Formato real da API (validateCotacao.ts): { error: { code, message, details: string[] } }.
+        // Não é { details, error: string } — ler assim fazia `[body.error]` virar um array com o
+        // OBJETO de erro inteiro, e o .join(...) mais abaixo coagia isso pra "[object Object]"
+        // em vez da mensagem de validação real (ex.: "Campo veiculo.kmMes é obrigatório").
+        const body = (await res.json()) as {
+          error?: { code?: string; message?: string; details?: string[] };
+        };
+        details = body.error?.details?.length
+          ? body.error.details
+          : body.error?.message
+            ? [body.error.message]
+            : [];
       } catch {
         /* resposta sem JSON — segue sem detalhes */
       }
