@@ -2,7 +2,7 @@
 
 **Catálogo original:** `clickup_tasks_v10.csv` (78 tasks)
 
-**Estado consolidado:** 23/07/2026
+**Estado consolidado:** 28/07/2026
 
 ## Situação
 
@@ -28,9 +28,9 @@ de evidências liga cada grupo de tasks aos artefatos verificáveis.
 | G5 Telas      | concluída      | Premiações e Relatórios reais                     |
 | G6 Renovação  | concluída      | cron e início de renovação                        |
 | G7 Negociação | concluída      | versões, status e painel                          |
-| Tutoriais     | parcial        | coach-tips/modal; roteiros completos ausentes     |
-| Q Qualidade   | em aceite      | refactors feitos; Q3/Q4 exigem passe final        |
-| Quiver        | em integração  | infraestrutura e expansão do wizard em andamento  |
+| Tutoriais     | concluída      | engine + conteúdo por persona (24/07)             |
+| Q Qualidade   | aceite dado    | Q4 executado e aprovado (confirmação verbal do dono do produto em 28/07; sem evidência item a item no repositório) |
+| Quiver        | concluída      | fases 0–6 fechadas com testes (26/07) + 3 fixes pós-integração (27–28/07) |
 
 ## Matriz de evidências
 
@@ -55,13 +55,14 @@ de evidências liga cada grupo de tasks aos artefatos verificáveis.
 | Q1–Q2     | `b854e86`, `005e8ee`, `8cbe210`                                  | extração de hooks/componentes dos arquivos grandes                            |
 | Q3–Q4     | `1290cac`, `0394d6e` + correções de 19–23/07                     | `Q3_DIVERGENCIAS_PROTOTIPO.md` e `Q4_ROTEIRO_QA_MANUAL.md`                    |
 | Quiver    | `154664c`, `544886e`, `0f2b66e`, `2989a0e`                       | migrations Quiver/wizard de 22–23/07 e schemas Zod                            |
+| Quiver (fases 5–6 + fixes) | `bec190e`, `aadef5e`, `9fceb23`, `e2a457d`, `fbab8a4`    | cálculo real (25/07), testes RLS/E2E (26/07), fixes de payload/prêmios (27/07), dados reais no resultado do cálculo (28/07, PR #91) |
 
 ## Sequência restante
 
-1. Fechar o contrato ponta a ponta com a Quiver.
+1. ~~Fechar o contrato ponta a ponta com a Quiver.~~ Concluído em 28/07 (fases 0–6 + fixes de payload/prêmios/resultado real).
 2. Rodar CI completa e reconstrução local do banco.
-3. Executar Q4 nas seis experiências.
-4. Corrigir divergências reproduzidas.
+3. ~~Executar Q4 nas seis experiências.~~ Executado em 28/07 — aprovado sem divergências reais (confirmação verbal do dono do produto; sem evidência item a item registrada no repositório).
+4. Corrigir divergências reproduzidas (nenhuma reportada na execução de 28/07).
 5. Revisar segurança e segredos.
 6. Aplicar banco e imagem em produção.
 7. Executar smoke e registrar aceite.

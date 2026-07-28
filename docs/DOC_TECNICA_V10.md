@@ -69,6 +69,14 @@ recalcula valores.
 variáveis `SELF_QUIVER_*`. O wizard persiste os campos reais adicionados nas
 migrations de 22–23/07. Callback deve ser autenticado e idempotente.
 
+`registrar_premios_quiver` grava o payload bruto do webhook em
+`cotacoes.quiver_resultado_raw` (um card por seguradora/produto, não deduplicado
+por seguradora). `useSimulacaoCalculo.ts` lê `quiver_resultado_raw.cards[]`
+diretamente para montar o resultado do cálculo — não há mais join com
+`cotacao_premios` nem cálculo simulado no front; `StepCalculo.tsx` renderiza
+plano, franquia, coberturas e forma de pagamento como a Quiver retornou
+(`fbab8a4`, 28/07).
+
 ## Fluxo obrigatório de mudança
 
 1. Planejar e obter aprovação para task V10.

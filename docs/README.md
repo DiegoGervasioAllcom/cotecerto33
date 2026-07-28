@@ -1,6 +1,6 @@
 # Documentação do CoteCerto
 
-**Atualizado em:** 23/07/2026
+**Atualizado em:** 28/07/2026
 
 Esta pasta contém fontes vivas e insumos ainda relevantes. O estado do produto
 deve ser confirmado pelo código, migrations e testes da `main`.
