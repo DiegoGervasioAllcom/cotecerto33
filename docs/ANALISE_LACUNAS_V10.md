@@ -84,11 +84,15 @@ Engine de tutorial e conteúdo por persona implementados em 24/07 (`8bfa579`).
 
 ### Go-live
 
-- Aplicar migrations em produção somente após reset e testes locais.
-- Executar smoke de produção após banco e imagem.
-- Confirmar segredos Quiver e variáveis server-only.
+Concluído — confirmação verbal do dono do produto em 28/07/2026:
+
+- ~~Aplicar migrations em produção somente após reset e testes locais.~~ Feito; produção em operação.
+- ~~Executar smoke de produção após banco e imagem.~~ Feito.
+- ~~Confirmar segredos Quiver e variáveis server-only.~~ Feito.
 - ~~Registrar o resultado do Q4 e aprovar formalmente a liberação.~~ Aprovado
   verbalmente em 28/07 (sem registro formal por item).
+
+**V10 fechado para go-live.** Nenhuma lacuna aberta rastreada neste documento.
 
 ## Riscos atuais
 
