@@ -215,8 +215,6 @@ function Page() {
     f.combustivel,
   );
   const { erros, validarEtapa } = useValidacaoEtapas(f, marcas, modelos, fipeValor);
-  const { calculando, resultados, setResultados, simularCalculo, podeCalcular } =
-    useSimulacaoCalculo(f, fipeValor);
 
   const { id: routeId, step: routeStep } = Route.useSearch();
   const { cotacaoId, saveState, lastSavedAt, loading, persistir } = useCotacaoRascunho({
@@ -230,10 +228,16 @@ function Page() {
     setModelos,
     fipeValor,
     setFipeValor,
-    setResultados,
     routeId,
     routeStep,
   });
+  const {
+    calculando,
+    resultados,
+    erro: erroCalculo,
+    simularCalculo,
+    podeCalcular,
+  } = useSimulacaoCalculo(f, cotacaoId, persistir);
 
   const {
     perdaOpen,
@@ -248,15 +252,7 @@ function Page() {
   } = useClassificarPerda(cotacaoId, persistir);
 
   function doSimularCalculo() {
-    simularCalculo((novos) => {
-      void persistir({
-        premios: novos.map((r) => ({
-          cia: r.cia,
-          premio: r.premio,
-          cobertura: r.cobertura,
-        })) as never,
-      });
-    });
+    void simularCalculo();
   }
 
   return (
@@ -311,6 +307,7 @@ function Page() {
               f={f}
               resultados={resultados}
               calculando={calculando}
+              erro={erroCalculo}
               podeCalcular={podeCalcular}
               cotacaoId={cotacaoId}
               doSimularCalculo={doSimularCalculo}

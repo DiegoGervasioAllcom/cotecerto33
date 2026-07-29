@@ -29,6 +29,13 @@ abaixo precisam ser reproduzidas visualmente antes de virar correção:
 6. Wizard Quiver completo, especialmente retorno assíncrono e falha externa.
 7. Consistência de topbar/sidebar em rotas profundas.
 
+## Status de execução
+
+Q4 executado em 28/07/2026: aprovado, sem divergências reais encontradas nas
+seis pendências acima (confirmação verbal do dono do produto). Não há evidência
+formal por item (captura, perfil, rota, viewport) registrada neste repositório —
+a execução não ficou documentada passo a passo em `Q4_ROTEIRO_QA_MANUAL.md`.
+
 ## Critério de fechamento
 
 Executar o roteiro Q4 e anexar evidência para cada divergência real: perfil,

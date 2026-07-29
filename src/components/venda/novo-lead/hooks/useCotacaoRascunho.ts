@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj } from "@/lib/masks";
 import { maskCel, maskFixo, maskCep } from "../masks";
 import type { Form } from "../types";
-import type { ResultadoCalculo } from "./useSimulacaoCalculo";
 
 type MarcaOpt = { codigo: string; nome: string };
 type ModeloOpt = { codigo: number; nome: string };
@@ -24,7 +23,6 @@ export function useCotacaoRascunho(params: {
   setModelos: React.Dispatch<React.SetStateAction<ModeloOpt[]>>;
   fipeValor: string;
   setFipeValor: React.Dispatch<React.SetStateAction<string>>;
-  setResultados: React.Dispatch<React.SetStateAction<ResultadoCalculo[]>>;
   routeId: string | undefined;
   routeStep: number | undefined;
 }) {
@@ -39,7 +37,6 @@ export function useCotacaoRascunho(params: {
     setModelos,
     fipeValor,
     setFipeValor,
-    setResultados,
     routeId,
     routeStep,
   } = params;
@@ -52,7 +49,7 @@ export function useCotacaoRascunho(params: {
   const loadingRef = useRef<boolean>(!!routeId);
   const [loading, setLoading] = useState<boolean>(!!routeId);
 
-  function buildPayload(extra?: { premios?: ResultadoCalculo[] }) {
+  function buildPayload() {
     return {
       step_atual: step,
       segurado: {
@@ -198,28 +195,16 @@ export function useCotacaoRascunho(params: {
         comissoes: f.comissoes,
         condicoes_especiais: f.condicoesEspeciais,
       },
-      ...(extra?.premios
-        ? {
-            premios: extra.premios.map((p) => {
-              const legado = p as { cia?: string; seguradora?: string };
-              return {
-                seguradora: legado.cia ?? legado.seguradora,
-                premio: p.premio,
-                cobertura: p.cobertura,
-              };
-            }),
-          }
-        : {}),
     };
   }
 
-  async function persistir(extra?: { premios?: ResultadoCalculo[] }) {
+  async function persistir() {
     // só persiste se tiver algo identificador mínimo
     if (!f.cpf && !f.nome && !cotacaoId) return;
     setSaveState("saving");
     const { data, error } = await supabase.rpc("salvar_cotacao_rascunho", {
       p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
-      p_payload: buildPayload(extra) as never,
+      p_payload: buildPayload() as never,
     });
     if (error) {
       console.error("[cotacao] save error", error);
@@ -256,7 +241,7 @@ export function useCotacaoRascunho(params: {
       const { data, error } = await supabase
         .from("cotacoes")
         .select(
-          "id,step_atual,ramo,segurado:cotacao_segurado(*),seguro:cotacao_seguro(*),veiculo:cotacao_veiculo(*),perfil:cotacao_perfil(*),coberturas:cotacao_coberturas(*),premios:cotacao_premios(seguradora,cobertura,premio)",
+          "id,step_atual,ramo,segurado:cotacao_segurado(*),seguro:cotacao_seguro(*),veiculo:cotacao_veiculo(*),perfil:cotacao_perfil(*),coberturas:cotacao_coberturas(*)",
         )
         .eq("id", routeId)
         .maybeSingle();
@@ -271,7 +256,6 @@ export function useCotacaoRascunho(params: {
       const v = data.veiculo ?? ({} as NonNullable<typeof data.veiculo>);
       const p = data.perfil ?? ({} as NonNullable<typeof data.perfil>);
       const c = data.coberturas ?? ({} as NonNullable<typeof data.coberturas>);
-      const pr = data.premios || [];
       setStep(
         routeStep != null && !Number.isNaN(routeStep) ? routeStep : Number(data.step_atual ?? 0),
       );
@@ -435,14 +419,6 @@ export function useCotacaoRascunho(params: {
             : [...m, { codigo: Number(modeloCodigo), nome: modeloNome }],
         );
       }
-      if (pr.length)
-        setResultados(
-          pr.map((x) => ({
-            cia: x.seguradora ?? "",
-            premio: Number(x.premio),
-            cobertura: x.cobertura ?? "",
-          })),
-        );
       setCotacaoId(routeId);
       setLastSavedAt(new Date());
       setSaveState("saved");

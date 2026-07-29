@@ -1,6 +1,6 @@
 # Análise de Lacunas — CoteCerto V10
 
-**Corte:** 23/07/2026
+**Corte:** 28/07/2026
 
 **Evidência:** `main`, 82 migrations canônicas, 43 arquivos `*.test.ts`/`*.spec.ts`
 (47 arquivos no diretório `tests/`, contando helpers) e protótipo V10.
@@ -13,13 +13,16 @@ integridade, hierarquia, franquias Individual/Full, desconto multinível, motor 
 comissão, renovações, premiações, relatórios, negociação de propostas, testes,
 containerização e a primeira integração real com a Quiver.
 
-O produto está em fase de **integração final e QA**, não mais de construção dos
-pilares V10. A prontidão não é expressa em percentual até a execução completa do
-roteiro Q4; percentual sem aceite por perfil produziria falsa precisão.
+Entre 24 e 28/07 a integração Quiver foi fechada (fases 5–6, com testes de RLS/E2E
+e três fixes de payload/prêmios/dados reais no resultado), o tutorial por persona
+foi implementado, e o roteiro Q4 foi executado nas seis experiências — aprovado
+sem divergências reais (confirmação verbal do dono do produto, sem evidência
+item a item registrada no repositório). O produto é tratado como fechado para
+go-live da V10 a partir dessa execução.
 
 ## Entregue e comprovado no repositório
 
-| Frente                   | Estado em 23/07 | Evidência principal                                          |
+| Frente                   | Estado em 28/07 | Evidência principal                                          |
 | ------------------------ | --------------- | ------------------------------------------------------------ |
 | S1–S6 Segurança          | concluída       | RLS, `security_invoker`, grants e testes negativos           |
 | D1–D5 Integridade        | concluída       | checks, normalização, JSONB, Zod e testes                    |
@@ -32,7 +35,7 @@ roteiro Q4; percentual sem aceite por perfil produziria falsa precisão.
 | G7 Negociação            | concluída       | versões, status, RPCs e painel                               |
 | T/CI                     | operacional     | unit, DB, E2E, cobertura e workflows                         |
 | K/Deploy                 | operacional     | Docker/GHCR, deploy script e runbook                         |
-| Quiver                   | em integração   | webhook/API, status e expansão do wizard                     |
+| Quiver                   | concluída       | fases 0–6 com testes RLS/E2E + 3 fixes pós-integração         |
 
 ## Entregas recentes do wizard e Quiver
 
@@ -41,39 +44,55 @@ roteiro Q4; percentual sem aceite por perfil produziria falsa precisão.
 - Passo Perfil ampliado com proprietário, atividade e campos reais da API.
 - Passo Coberturas ampliado com plano, assistências, descontos e comissões.
 - Persistência, tipos Supabase e schemas Zod atualizados junto das migrations.
+- Cálculo real substituindo o mock (`bec190e`, 25/07) e testes RLS/E2E da
+  integração (`aadef5e`, 26/07).
+- Fixes de payload/parsing de erro (`9fceb23`) e de registro de prêmios com
+  card sem seguradora (`e2a457d`), ambos 27/07.
+- Tela de resultado do cálculo passou a exibir plano, franquia, coberturas e
+  forma de pagamento reais da Quiver em vez de valores simulados/hardcoded
+  (`fbab8a4`, PR #91, 28/07).
 
 ## Lacunas abertas
 
 ### Aceite manual por perfil
 
-Executar integralmente `Q4_ROTEIRO_QA_MANUAL.md` nas seis experiências: Matriz,
-Vendedor, Franquia Individual, Master, Supervisor e Franquia Full. O foco é
-isolamento RLS, navegação, escopo da rede e regras financeiras.
+`Q4_ROTEIRO_QA_MANUAL.md` foi executado em 28/07 nas seis experiências e
+aprovado sem divergências reais (confirmação verbal do dono do produto). Não
+há evidência item a item (captura, perfil, rota, viewport) registrada no
+repositório — a execução não ficou documentada passo a passo.
 
 ### Integração Quiver ponta a ponta
 
-Validar em ambiente integrado: envio, autenticação, callbacks, idempotência,
-falhas/retry e atualização da cotação. A infraestrutura existe, mas a conclusão
-depende do serviço externo e de credenciais corretas.
+Fechada com testes de RLS/E2E (`aadef5e`, 26/07) e três fixes subsequentes de
+payload, registro de prêmios e dados reais no resultado do cálculo (27–28/07).
+Dois gotchas de **ambiente de dev local** (não de produção) ficaram
+documentados em memória de sessão: o webhook de volta do robô Docker é
+bloqueado pelo `allowedHosts` do Vite (falta adicionar `host.docker.internal`
+— task pendente aberta), e o robô Playwright pode falhar por timing no portal
+real da Quiver (flakiness externa, projeto separado).
 
 ### Fidelidade final ao protótipo
 
 As principais divergências estruturais registradas no Q3 foram corrigidas entre
-19 e 23/07. Falta um passe visual completo em resoluções reais, incluindo estados
-vazios, loading, erro, modais e responsividade.
+19 e 23/07. O passe visual completo (as 7 pendências remanescentes do Q3) foi
+coberto pela execução do Q4 em 28/07, sem divergências reais reportadas —
+também sem evidência formal por item.
 
 ### Tutoriais por perfil
 
-Existem coach-tips e um modal simples, mas o código não contém os três roteiros
-longos descritos no protótipo. Ainda faltam os onboardings completos de
-Vendedor/Individual, Matriz e Grupo.
+Engine de tutorial e conteúdo por persona implementados em 24/07 (`8bfa579`).
 
 ### Go-live
 
-- Aplicar migrations em produção somente após reset e testes locais.
-- Executar smoke de produção após banco e imagem.
-- Confirmar segredos Quiver e variáveis server-only.
-- Registrar o resultado do Q4 e aprovar formalmente a liberação.
+Concluído — confirmação verbal do dono do produto em 28/07/2026:
+
+- ~~Aplicar migrations em produção somente após reset e testes locais.~~ Feito; produção em operação.
+- ~~Executar smoke de produção após banco e imagem.~~ Feito.
+- ~~Confirmar segredos Quiver e variáveis server-only.~~ Feito.
+- ~~Registrar o resultado do Q4 e aprovar formalmente a liberação.~~ Aprovado
+  verbalmente em 28/07 (sem registro formal por item).
+
+**V10 fechado para go-live.** Nenhuma lacuna aberta rastreada neste documento.
 
 ## Riscos atuais
 

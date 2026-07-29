@@ -30,6 +30,24 @@ if (!SERVICE) {
   );
 }
 
+const QUIVER_WEBHOOK_KEY =
+  env.SELF_QUIVER_WEBHOOK_CLIENT_KEY || process.env.SELF_QUIVER_WEBHOOK_CLIENT_KEY || "";
+const QUIVER_WEBHOOK_SECRET =
+  env.SELF_QUIVER_WEBHOOK_CLIENT_SECRET || process.env.SELF_QUIVER_WEBHOOK_CLIENT_SECRET || "";
+if (!QUIVER_WEBHOOK_KEY || !QUIVER_WEBHOOK_SECRET) {
+  throw new Error(
+    "Defina SELF_QUIVER_WEBHOOK_CLIENT_KEY/SECRET (local: .env; CI: já exportado pelo job `e2e`) — " +
+      "precisam bater com o que o dev server usado pelo webServer do Playwright está lendo.",
+  );
+}
+
+/** Headers do webhook da Quiver prontos pra usar em `request.post("/api/webhooks/quiver", ...)`. */
+export const QUIVER_WEBHOOK_HEADERS = {
+  "content-type": "application/json",
+  "x-client-key": QUIVER_WEBHOOK_KEY,
+  "x-client-secret": QUIVER_WEBHOOK_SECRET,
+};
+
 type Db = SupabaseClient<Database>;
 
 const admin: Db = createClient<Database>(URL, SERVICE, {
@@ -326,4 +344,72 @@ export async function limparPersona(p: Persona): Promise<void> {
   await admin.from("user_roles").delete().eq("user_id", p.userId);
   await admin.auth.admin.deleteUser(p.userId);
   await admin.from("empresas").delete().eq("id", p.empresaId);
+}
+
+export type CotacaoQuiverFixture = {
+  email: string;
+  senha: string;
+  userId: string;
+  empresaId: string;
+  cotacaoId: string;
+};
+
+/**
+ * Cria uma empresa aprovada + vendedor aprovado nela + uma cotação já
+ * `enviada_quiver` (simula que `enviarCotacaoQuiver` já rodou com sucesso),
+ * pronta pra receber o callback do webhook via `QUIVER_WEBHOOK_HEADERS`
+ * (ver quiver-webhook.spec.ts). Não preenche o wizard pela UI — o objeto
+ * deste teste é a reação da tela ao webhook, não o preenchimento em si.
+ */
+export async function criarCotacaoQuiverFixture(): Promise<CotacaoQuiverFixture> {
+  const senha = "Teste@123!";
+  const email = `${uniq("vend-quiver-e2e")}@teste.local`;
+
+  const { data: emp, error: eEmp } = await admin
+    .from("empresas")
+    .insert({
+      nome: uniq("Franquia Quiver E2E"),
+      tipo: "pj",
+      documento: uniqDoc(),
+      status: "aprovada",
+    })
+    .select("id")
+    .single();
+  if (eEmp || !emp) throw new Error(`criar empresa: ${eEmp?.message}`);
+
+  const { data: userData, error: eUser } = await admin.auth.admin.createUser({
+    email,
+    password: senha,
+    email_confirm: true,
+  });
+  if (eUser || !userData.user) throw new Error(`criar usuário: ${eUser?.message}`);
+  const userId = userData.user.id;
+
+  const { error: eProfile } = await admin
+    .from("profiles")
+    .update({ empresa_id: emp.id, status: "aprovada" })
+    .eq("id", userId);
+  if (eProfile) throw new Error(`atualizar profile: ${eProfile.message}`);
+
+  const { error: eRole } = await admin
+    .from("user_roles")
+    .insert({ user_id: userId, role: "vendedor" });
+  if (eRole) throw new Error(`inserir role: ${eRole.message}`);
+
+  const { data: cot, error: eCot } = await admin
+    .from("cotacoes")
+    .insert({ empresa_id: emp.id, responsavel_id: userId, status: "enviada_quiver" })
+    .select("id")
+    .single();
+  if (eCot || !cot) throw new Error(`criar cotação: ${eCot?.message}`);
+
+  return { email, senha, userId, empresaId: emp.id, cotacaoId: cot.id };
+}
+
+/** Remove os dados criados por `criarCotacaoQuiverFixture` (best-effort; `db reset` também resolve). */
+export async function limparCotacaoQuiverFixture(f: CotacaoQuiverFixture): Promise<void> {
+  await admin.from("cotacoes").delete().eq("id", f.cotacaoId);
+  await admin.from("user_roles").delete().eq("user_id", f.userId);
+  await admin.auth.admin.deleteUser(f.userId);
+  await admin.from("empresas").delete().eq("id", f.empresaId);
 }

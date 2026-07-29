@@ -1,13 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import { printHtml, escapeHtml, fmtBRL } from "@/lib/print";
-import { onlyDigits } from "@/lib/masks";
+import { printHtml, escapeHtml } from "@/lib/print";
 import type { Form } from "@/components/venda/novo-lead/types";
-import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import {
+  premioNumerico,
+  type ResultadoCalculo,
+} from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 
 type Props = {
   f: Form;
   resultados: ResultadoCalculo[];
   calculando: boolean;
+  erro: string | null;
   podeCalcular: boolean;
   cotacaoId: string | null;
   doSimularCalculo: () => void;
@@ -17,6 +20,7 @@ export function StepCalculo({
   f,
   resultados,
   calculando,
+  erro,
   podeCalcular,
   cotacaoId,
   doSimularCalculo,
@@ -27,11 +31,13 @@ export function StepCalculo({
         <div>
           <h2 style={{ margin: 0 }}>Coberturas e valores</h2>
           <div className="sub" style={{ margin: 0 }}>
-            {resultados.length > 0
-              ? `${resultados.length} seguradoras calculadas · ${f.tipoCobertura || "Compreensiva"}`
-              : (f.seguradorasSel?.length ?? 0) > 0
-                ? `${f.seguradorasSel.length} seguradoras selecionadas · clique em Calcular agora`
-                : "Selecione seguradoras no passo Seguro"}
+            {calculando
+              ? "Calculando com as seguradoras… isso pode levar alguns minutos."
+              : resultados.length > 0
+                ? `${resultados.length} seguradoras calculadas · ${f.tipoCobertura || "Compreensiva"}`
+                : (f.seguradorasSel?.length ?? 0) > 0
+                  ? `${f.seguradorasSel.length} seguradoras selecionadas · clique em Calcular agora`
+                  : "Selecione seguradoras no passo Seguro"}
           </div>
         </div>
         <span className="spacer" style={{ flex: 1 }} />
@@ -61,7 +67,9 @@ export function StepCalculo({
           className="btn btn-ghost btn-sm"
           disabled={resultados.length === 0}
           onClick={() => {
-            const sorted = [...resultados].sort((a, b) => a.premio - b.premio);
+            const sorted = [...resultados].sort(
+              (a, b) => premioNumerico(a.opcoes[0]) - premioNumerico(b.opcoes[0]),
+            );
             const head = `
               <div class="grid">
                 <div class="kv"><b>Cliente:</b> ${escapeHtml(f.nome || "—")}</div>
@@ -75,35 +83,43 @@ export function StepCalculo({
               </div>`;
             const cards = sorted
               .map((r) => {
-                const reduz = Math.round(r.premio * 1.18);
+                const rows = r.opcoes
+                  .map(
+                    (o) =>
+                      `<tr><td>${escapeHtml(o.tipo || "—")}</td><td>${escapeHtml(o.franquia || "—")}</td><td class="num"><strong>${escapeHtml(o.avista || "—")}</strong></td><td class="num">${escapeHtml(o.parcelas || "—")}</td></tr>`,
+                  )
+                  .join("");
                 return `<div class="card">
                   <div style="display:flex;justify-content:space-between;align-items:baseline">
-                    <strong style="font-size:14px">${escapeHtml(r.cia)}</strong>
-                    <span style="color:#64748b;font-size:11px">${escapeHtml(r.cobertura || f.tipoCobertura || "Compreensiva")}</span>
+                    <strong style="font-size:14px">${escapeHtml(r.seguradora)}</strong>
+                    <span style="color:#64748b;font-size:11px">${escapeHtml(r.produto ? `${r.produto} · ${r.nome}` : r.nome || "Compreensiva")}</span>
                   </div>
                   <table style="margin-top:8px">
                     <tr><th>Plano</th><th>Franquia</th><th class="num">À vista</th><th class="num">Parcelado</th></tr>
-                    <tr><td>Normal 100%</td><td>R$ ${Math.round(r.premio * 1.5).toLocaleString("pt-BR")}</td><td class="num"><strong>${fmtBRL(r.premio)}</strong></td><td class="num">10x ${fmtBRL(r.premio / 10)}</td></tr>
-                    <tr><td>Reduzida 50%</td><td>R$ ${Math.round(r.premio * 0.75).toLocaleString("pt-BR")}</td><td class="num"><strong>${fmtBRL(reduz)}</strong></td><td class="num">10x ${fmtBRL(reduz / 10)}</td></tr>
+                    ${rows}
                   </table>
                 </div>`;
               })
               .join("");
-            const cob = `
-              <h2>Coberturas</h2>
-              <table>
-                <tr><th>Item</th><th>Valor</th></tr>
-                <tr><td>Valor de mercado</td><td>100% FIPE</td></tr>
-                <tr><td>RCF · Danos materiais</td><td>R$ ${(Number(onlyDigits(f.rcfDm || "")) || 100000).toLocaleString("pt-BR")}</td></tr>
-                <tr><td>RCF · Danos corporais</td><td>R$ ${(Number(onlyDigits(f.rcfDc || "")) || 100000).toLocaleString("pt-BR")}</td></tr>
-                <tr><td>APP por passageiro</td><td>${f.appMorte ? "R$ " + Number(onlyDigits(f.appMorte)).toLocaleString("pt-BR") : "R$ 5.000"}</td></tr>
-                <tr><td>Assistência 24h</td><td>${escapeHtml(f.assist24 || "Padrão")}</td></tr>
-                <tr><td>Carro reserva</td><td>${escapeHtml(f.carroReserva || "30 dias")}</td></tr>
-                <tr><td>Vidros</td><td>${f.vidros ? "Sim" : "—"}</td></tr>
-              </table>`;
+            const cobRows = (r: ResultadoCalculo) =>
+              [
+                ...Object.entries(r.coberturasBasicas ?? {}),
+                ...Object.entries(r.coberturasAdicionais ?? {}),
+              ]
+                .map(
+                  ([label, valor]) =>
+                    `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(valor)}</td></tr>`,
+                )
+                .join("");
+            const cobBlocks = sorted
+              .map(
+                (r) =>
+                  `<h2>Coberturas · ${escapeHtml(r.seguradora)}</h2><table><tr><th>Item</th><th>Valor</th></tr>${cobRows(r) || `<tr><td colspan="2">Não informado pela seguradora</td></tr>`}</table>`,
+              )
+              .join("");
             printHtml(
               "Cotação · " + (f.nome || "Cliente"),
-              `<h1>Resumo da cotação</h1><div class="sub">${sorted.length} seguradora(s) calculada(s)</div>${head}<h2>Prêmios</h2>${cards}${cob}<p style="font-size:11px;color:#64748b">Cotação válida por 5 dias. Sujeita à aceitação da seguradora.</p>`,
+              `<h1>Resumo da cotação</h1><div class="sub">${sorted.length} seguradora(s) calculada(s)</div>${head}<h2>Prêmios</h2>${cards}${cobBlocks}<p style="font-size:11px;color:#64748b">Cotação válida por 5 dias. Sujeita à aceitação da seguradora.</p>`,
             );
           }}
         >
@@ -113,6 +129,30 @@ export function StepCalculo({
           Imprimir
         </button>
       </div>
+
+      {erro && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "10px 14px",
+            borderRadius: 8,
+            background: "var(--alert-soft)",
+            color: "var(--alert)",
+            fontSize: 13,
+          }}
+        >
+          {erro}
+        </div>
+      )}
+
+      {calculando && (
+        <div style={{ padding: "12px 0", marginBottom: 8 }}>
+          <span className="muted small">
+            Enviamos a cotação para as seguradoras — o resultado chega em alguns minutos, sem
+            precisar ficar nesta tela.
+          </span>
+        </div>
+      )}
 
       {resultados.length === 0 && !calculando && (
         <div style={{ padding: "12px 0", marginBottom: 8 }}>
@@ -128,103 +168,67 @@ export function StepCalculo({
       {resultados.length > 0 && (
         <div className="calc-grid">
           {resultados
-            .sort((a, b) => a.premio - b.premio)
+            .sort((a, b) => premioNumerico(a.opcoes[0]) - premioNumerico(b.opcoes[0]))
             .map((r) => {
-              const aVista = r.premio;
-              const reduz = Math.round(r.premio * 1.18);
-              const fmt = (n: number) =>
-                "R$ " +
-                n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-              const fr1 = Math.round(r.premio * 1.5).toLocaleString("pt-BR");
-              const fr2 = Math.round(r.premio * 0.75).toLocaleString("pt-BR");
+              const basicas = Object.entries(r.coberturasBasicas ?? {});
+              const adicionais = Object.entries(r.coberturasAdicionais ?? {});
               return (
-                <div className="calc-card" key={r.cia}>
+                <div className="calc-card" key={`${r.seguradora}-${r.index}`}>
                   <div className="calc-head">
                     <div className="calc-ins">
                       <svg width="16" height="16">
                         <use href="#i-shield" />
                       </svg>{" "}
-                      {r.cia}
+                      {r.seguradora}
                     </div>
-                    <select className="select-mini">
-                      <option>Customizado</option>
-                      <option>Plano Fácil</option>
-                      <option>Plano Pleno</option>
-                    </select>
+                    <span className="chip chip-slate">
+                      {r.produto ? `${r.produto} · ${r.nome}` : r.nome}
+                    </span>
                     <span className="chip chip-slate" style={{ marginLeft: "auto" }}>
-                      {r.cobertura || "Compreensiva"}
+                      {r.nome || "Compreensiva"}
                     </span>
                   </div>
                   <div className="calc-tiers">
-                    <div className="calc-tier">
-                      <div className="t-lbl">normal 100%</div>
-                      <div className="t-fr">Franquia R$ {fr1}</div>
-                      <div className="t-vista">à vista {fmt(aVista)}</div>
-                      <div className="t-parc">10x sem juros</div>
-                    </div>
-                    <div className="calc-tier">
-                      <div className="t-lbl">reduzida 50%</div>
-                      <div className="t-fr">Franquia R$ {fr2}</div>
-                      <div className="t-vista">à vista {fmt(reduz)}</div>
-                      <div className="t-parc">10x sem juros</div>
-                    </div>
+                    {r.opcoes.map((o, i) => (
+                      <div className="calc-tier" key={i}>
+                        <div className="t-lbl">{o.tipo || "—"}</div>
+                        <div className="t-fr">{o.franquia || "—"}</div>
+                        <div className="t-vista">{o.avista || "—"}</div>
+                        <div className="t-parc">{o.parcelas || "—"}</div>
+                        {o.desconto && <div className="chip chip-ok">{o.desconto}</div>}
+                      </div>
+                    ))}
                   </div>
                   <div className="calc-cobs">
                     <div className="cob-col">
                       <div className="cob-h">Coberturas básicas</div>
-                      <div className="cob-row">
-                        <span>Valor mercado</span>
-                        <b>100% FIPE</b>
-                      </div>
-                      <div className="cob-row">
-                        <span>Danos materiais</span>
-                        <b>
-                          R${" "}
-                          {Number(onlyDigits(f.rcfDm || ""))
-                            ? Number(onlyDigits(f.rcfDm)).toLocaleString("pt-BR")
-                            : "100.000"}
-                        </b>
-                      </div>
-                      <div className="cob-row">
-                        <span>Danos corporais</span>
-                        <b>
-                          R${" "}
-                          {Number(onlyDigits(f.rcfDc || ""))
-                            ? Number(onlyDigits(f.rcfDc)).toLocaleString("pt-BR")
-                            : "100.000"}
-                        </b>
-                      </div>
-                      <div className="cob-row">
-                        <span>APP / passageiro</span>
-                        <b>
-                          {f.appMorte
-                            ? "R$ " + Number(onlyDigits(f.appMorte)).toLocaleString("pt-BR")
-                            : "R$ 5.000"}
-                        </b>
-                      </div>
+                      {basicas.length === 0 && (
+                        <div className="cob-row muted small">Não informado pela seguradora</div>
+                      )}
+                      {basicas.map(([label, valor]) => (
+                        <div className="cob-row" key={label}>
+                          <span>{label}</span>
+                          <b>{valor}</b>
+                        </div>
+                      ))}
                     </div>
                     <div className="cob-col">
                       <div className="cob-h">Adicionais</div>
-                      <div className="cob-row">
-                        <span>Assistência</span>
-                        <b>{f.assist24 || "Padrão"}</b>
-                      </div>
-                      <div className="cob-row">
-                        <span>Carro reserva</span>
-                        <b>{f.carroReserva || "30 dias"}</b>
-                      </div>
-                      <div className="cob-row">
-                        <span>Vidros</span>
-                        <b>{f.vidros ? "Sim" : "—"}</b>
-                      </div>
+                      {adicionais.length === 0 && (
+                        <div className="cob-row muted small">Não informado pela seguradora</div>
+                      )}
+                      {adicionais.map(([label, valor]) => (
+                        <div className="cob-row" key={label}>
+                          <span>{label}</span>
+                          <b>{valor}</b>
+                        </div>
+                      ))}
                     </div>
                   </div>
                   <div className="calc-foot">
-                    <select className="select-mini" style={{ flex: 1 }}>
-                      <option>Débito em Conta</option>
-                      <option>Cartão de crédito</option>
-                      <option>Boleto</option>
-                    </select>
+                    <span className="chip chip-slate" style={{ flex: 1 }}>
+                      {r.formasPagamento?.selecionada ?? r.formaPagamento ?? "—"}
+                    </span>
                     <button className="ic-btn" title="Observações">
                       <svg width="15" height="15">
                         <use href="#i-message" />
