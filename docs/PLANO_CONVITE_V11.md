@@ -1,6 +1,9 @@
 # Plano — Frente 1 · Convite Supper
 
-**Aberto em:** 29/07/2026 · **Status:** aguardando aprovação para implementar
+**Aberto em:** 29/07/2026 · **Status:** C1–C11 entregues em 29/07/2026 (migrations
+`20260729173848` e `20260729185802`, `tests/db/convite-escopo-v11.test.ts`,
+`tests/e2e/convite.spec.ts`). Fora de escopo por dependerem da frente de e-mail:
+V11.1.6 ("Quero falar") e V11.1.7 (remover o autocadastro).
 
 **Branch:** `feat/v11-convite-supper` (da `main`, com a Frente 0 já mergeada no PR #97)
 
@@ -97,3 +100,39 @@ nem ninguém do time interno; a Full convida **só** o vendedor dela.
 
 C1 → C2 → C3 (banco inteiro primeiro, com C10 fechando) → C7/C8 (a rota, que é o item 1 do
 Handoff) → C4/C5 (o modal e as saídas de texto) → C9 → C11 → C6 (PDF por último).
+
+## Como ficou, e o que mudou em relação ao plano
+
+**Token.** Confirmado o desenho proposto: `codigo` (`SC-XXXXXX`) é rótulo humano para
+tela e histórico; o segredo na URL é um token de 32 bytes em base64url.
+
+**Pedido classificado por FK, não por jsonb.** `empresas.convite_id` liga o pedido ao
+convite. Assim a classificação tem um só lugar de verdade, o modal da Frente 2 lê por
+join, e a origem do pedido (Convite Supper × criação manual por exceção) sai de
+`convite_id is null` — o chip que a fila precisa mostrar.
+
+**PDF por primitivas do jsPDF, não rasterizado.** O critério de aceite pede link
+clicável; `html2canvas` viraria imagem e mataria o link. O teste E2E confere `/Annots`,
+`/URI` com a URL do convite e `/Image` para o logo, então uma troca por rasterização
+quebra o teste.
+
+**Formulário compartilhado.** `cadastro-campos.ts` e o componente `CamposCadastro` são
+usados pelo cadastro direto e pela rota do convite. As duas telas fazem as mesmas
+perguntas; duplicar era garantia de divergirem.
+
+## Erros encontrados durante a implementação
+
+Registrados porque são o tipo de coisa que volta:
+
+1. **Lógica ternária do SQL.** `p_perfil = 'vendedor'` com `p_perfil` NULL devolve NULL,
+   não FALSE, e `if not (NULL)` não dispara — um convite interno sem cargo e sem perfil
+   passava pela guarda. Todas as comparações de perfil usam `coalesce` agora.
+2. **`revoke all ... from public` derrubou o `service_role`.** A server function morria
+   com "permission denied" e o cadastro pelo convite não funcionava, embora o convite
+   abrisse. Grant explícito para `anon`, `authenticated` e `service_role`.
+3. **Classes erradas.** Usei `acc-grid`/`field-group` (telas de acessos) no palco de auth,
+   e inventei `modal-back`, que não existe no `proto.css` — o wrapper é `modal-host`.
+4. **Saudação duplicada.** "Aqui é X, Supper Certo da Supper Certo", porque o fallback do
+   cargo era o nome da empresa.
+
+Nenhum dos quatro apareceria sem abrir a tela e submeter de verdade.

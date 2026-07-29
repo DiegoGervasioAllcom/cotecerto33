@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useAreas } from "@/lib/use-areas";
 import { Icon } from "@/components/operacao/acessos/icon";
+import { baixarConvitePdf, type ConvitePdfDados } from "@/lib/convite-pdf";
 
 /**
  * Modal do Convite Supper (V11 · C4/C5).
@@ -89,6 +90,9 @@ export function ConvidarModal({ escopo, onClose }: { escopo: EscopoConvite; onCl
   const [fullSel, setFullSel] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [codigo, setCodigo] = useState<string | null>(null);
+  // Guardado para o PDF, que reaproveita exatamente o que foi gerado.
+  const [dadosPdf, setDadosPdf] = useState<ConvitePdfDados | null>(null);
+  const [baixando, setBaixando] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -204,6 +208,14 @@ export function ConvidarModal({ escopo, onClose }: { escopo: EscopoConvite; onCl
     );
 
     setCodigo(emitido.codigo);
+    setDadosPdf({
+      nome: nome.trim(),
+      perfil: declarado,
+      quem,
+      cargo: meuCargo,
+      link,
+      codigo: emitido.codigo,
+    });
     setMensagem(
       `Olá, ${nome.trim()}! Aqui é ${quem}, ${meuCargo} da Supper Certo.\n\n` +
         `Quero te convidar para se cadastrar na nossa plataforma como *${declarado}*. É rápido:\n` +
@@ -223,6 +235,20 @@ export function ConvidarModal({ escopo, onClose }: { escopo: EscopoConvite; onCl
       setAviso("Mensagem copiada — é só colar na conversa.");
     } catch {
       setAviso("Não conseguimos copiar automaticamente. Selecione o texto e copie.");
+    }
+  }
+
+  async function baixarPdf() {
+    if (!dadosPdf) return;
+    setBaixando(true);
+    setAviso(null);
+    try {
+      await baixarConvitePdf(dadosPdf);
+      setAviso("PDF baixado — anexe na conversa do WhatsApp.");
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao gerar o PDF.");
+    } finally {
+      setBaixando(false);
     }
   }
 
@@ -275,6 +301,7 @@ export function ConvidarModal({ escopo, onClose }: { escopo: EscopoConvite; onCl
                     setOpcaoSel(e.target.value);
                     setMensagem("");
                     setCodigo(null);
+                    setDadosPdf(null);
                   }}
                 >
                   <option value="">Selecione…</option>
@@ -343,6 +370,16 @@ export function ConvidarModal({ escopo, onClose }: { escopo: EscopoConvite; onCl
                   onClick={copiar}
                 >
                   Copiar
+                </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  type="button"
+                  style={{ marginLeft: 6 }}
+                  onClick={baixarPdf}
+                  disabled={baixando}
+                  data-testid="convite-pdf"
+                >
+                  {baixando ? "Gerando…" : "Baixar em PDF"}
                 </button>
               </label>
               <textarea

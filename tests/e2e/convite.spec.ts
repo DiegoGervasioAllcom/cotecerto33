@@ -140,6 +140,46 @@ test.describe("Convite Supper — emitir, abrir e cadastrar", () => {
   });
 });
 
+test.describe("Convite Supper — PDF da arte oficial", () => {
+  test("Baixar em PDF entrega um arquivo com o logo e o link clicável", async ({ page }, info) => {
+    await irParaAcessosComoMatriz(page);
+    await page.getByRole("button", { name: /Convidar · time interno/ }).click();
+
+    const modal = page.getByRole("dialog", { name: /time interno da Matriz/ });
+    await modal.locator("#cv-nome").fill(`Ana PDF ${Date.now()}`);
+    await modal.locator("#cv-perfil").selectOption({ label: "Matriz · Coordenador Comercial" });
+    await modal.getByRole("button", { name: "Gerar mensagem" }).click();
+    await expect(modal.getByTestId("convite-mensagem")).toBeVisible({ timeout: 15_000 });
+
+    const link = (await modal.getByTestId("convite-mensagem").inputValue()).match(
+      /https?:\/\/\S+/,
+    )?.[0];
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download", { timeout: 30_000 }),
+      modal.getByTestId("convite-pdf").click(),
+    ]);
+
+    // O nome do arquivo carrega o código, para quem gera vários se achar.
+    expect(download.suggestedFilename()).toMatch(/^convite-supper-.*-SC-[0-9A-Z]{6}\.pdf$/);
+
+    const destino = info.outputPath("convite.pdf");
+    await download.saveAs(destino);
+
+    const { readFileSync } = await import("node:fs");
+    const bytes = readFileSync(destino);
+    const cru = bytes.toString("latin1");
+
+    expect(cru.slice(0, 5), "não é um PDF").toBe("%PDF-");
+    // O critério de aceite do Handoff: arte oficial com logo e LINK CLICÁVEL.
+    // /Annots + /URI é o que faz o link ser navegável no leitor; se alguém trocar
+    // por rasterização (html2canvas), isto quebra — que é o ponto do teste.
+    expect(cru, "o PDF tem de ter anotação de link").toContain("/Annots");
+    expect(cru, "o link do convite tem de estar no PDF").toContain(link!);
+    expect(cru, "o logo tem de estar embutido").toContain("/Image");
+  });
+});
+
 test.describe("Convite Supper — links que não servem mais", () => {
   let expirado: ConviteFixture;
   let usado: ConviteFixture;
