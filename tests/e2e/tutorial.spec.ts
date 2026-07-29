@@ -125,6 +125,7 @@ async function monitorSupabaseMutations(page: Page) {
   const mutations: string[] = [];
   const readOnlyRpcs = new Set([
     "fn_areas_do_usuario",
+    "funis_por_canal_visao_geral",
     "normalizar_periodo_visao_geral",
     "saldo_comissao_visao_geral",
   ]);
