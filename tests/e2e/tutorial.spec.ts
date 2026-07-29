@@ -123,6 +123,11 @@ async function expectSpotlightAround(page: Page, target: Locator) {
 
 async function monitorSupabaseMutations(page: Page) {
   const mutations: string[] = [];
+  const readOnlyRpcs = new Set([
+    "fn_areas_do_usuario",
+    "normalizar_periodo_visao_geral",
+    "saldo_comissao_visao_geral",
+  ]);
   await page.route("**/rest/v1/**", async (route) => {
     const request = route.request();
     const method = request.method();
@@ -132,11 +137,11 @@ async function monitorSupabaseMutations(page: Page) {
       await route.continue();
       return;
     }
-    // Resolve as áreas do menu (V11) — RPC global, `stable`, só leitura, na mesma
-    // categoria do presence_set: não é ação de negócio do tutorial. O hook
-    // `useAreas` cacheia por sessão, então na prática não dispara durante o
-    // roteiro; a isenção existe para o teste não depender do estado do cache.
-    if (pathname.endsWith("/rest/v1/rpc/fn_areas_do_usuario")) {
+    // RPCs globais somente leitura não são ações de negócio do tutorial.
+    // O PostgREST usa POST mesmo quando a função apenas consulta; por isso
+    // elas precisam ser classificadas pela função, não pelo verbo HTTP.
+    const rpcName = pathname.match(/\/rest\/v1\/rpc\/([^/]+)$/)?.[1];
+    if (rpcName && readOnlyRpcs.has(rpcName)) {
       await route.continue();
       return;
     }

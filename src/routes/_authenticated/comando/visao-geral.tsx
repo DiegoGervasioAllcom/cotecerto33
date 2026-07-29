@@ -1,13 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { DashboardPeriodPicker } from "@/components/comando/dashboard-period-picker";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { selectCurrentDashboardPeriod } from "@/lib/dashboard-period";
 import { printHtml } from "@/lib/print";
 import { useGroupScope } from "@/lib/group-scope";
 import { useAuth } from "@/lib/auth";
-
-type Periodo = "mes_atual" | "mes_passado" | "mes_retrasado" | "ult_90";
 
 export const Route = createFileRoute("/_authenticated/comando/visao-geral")({
   head: () => ({ meta: [{ title: "Visão geral · CoteCerto" }] }),
@@ -52,84 +53,107 @@ function Page() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { isGroupView, group, groupPct } = useGroupScope();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [propostas, setPropostas] = useState<Proposta[]>([]);
   const [now, setNow] = useState(Date.now());
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const [periodWindow, setPeriodWindow] = useState(() => selectCurrentDashboardPeriod("mes"));
+  const customStart = periodWindow.preset === "personalizado" ? periodWindow.startDate : null;
+  const customEnd = periodWindow.preset === "personalizado" ? periodWindow.endDate : null;
 
-  const [matrizId, setMatrizId] = useState<string | null>(null);
-  const [saldoGrupo, setSaldoGrupo] = useState<{ competencia: string; saldo: number } | null>(null);
+  const normalizedPeriodQuery = useQuery({
+    queryKey: ["normalizar-periodo-visao-geral", periodWindow.preset, customStart, customEnd],
+    queryFn: async () => {
+      const args =
+        periodWindow.preset === "personalizado"
+          ? {
+              p_periodo: periodWindow.preset,
+              p_inicio: periodWindow.startDate,
+              p_fim: periodWindow.endDate,
+            }
+          : { p_periodo: periodWindow.preset };
+      const { data, error } = await supabase.rpc("normalizar_periodo_visao_geral", args).single();
+      if (error) throw error;
+      return data;
+    },
+  });
 
-  // Comissão do grupo (fatia G4.6): saldo real da competência mais recente
-  // disponível em v_comissao_por_competencia para o próprio usuário logado
-  // (RLS já escopa beneficiario_id = auth.uid()). Sem lançamento fechado
-  // ainda, não inventamos número — fica "—".
-  useEffect(() => {
-    if (!isGroupView) return;
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data } = await supabase
-        .from("v_comissao_por_competencia")
-        .select("competencia,saldo")
-        .eq("beneficiario_id", u.user.id)
-        .order("competencia", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data?.competencia != null) {
-        setSaldoGrupo({ competencia: data.competencia, saldo: Number(data.saldo ?? 0) });
-      } else {
-        setSaldoGrupo(null);
+  const normalizedPeriod = normalizedPeriodQuery.data;
+
+  // Dinheiro é agregado exclusivamente no servidor. A RPC aplica a janela
+  // canônica, auth.uid() e RLS; o React apenas exibe saldo e quantidade.
+  const saldoGrupoQuery = useQuery({
+    queryKey: ["saldo-grupo-visao-geral", normalizedPeriod?.inicio, normalizedPeriod?.fim],
+    enabled: isGroupView && Boolean(normalizedPeriod),
+    queryFn: async () => {
+      if (!normalizedPeriod) throw new Error("Período ainda não normalizado.");
+      const { data, error } = await supabase
+        .rpc("saldo_comissao_visao_geral", {
+          p_inicio: normalizedPeriod.inicio,
+          p_fim: normalizedPeriod.fim,
+        })
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const saldoGrupo = saldoGrupoQuery.data;
+
+  const dashboardQuery = useQuery({
+    queryKey: ["visao-geral", normalizedPeriod?.inicio, normalizedPeriod?.fim],
+    enabled: Boolean(normalizedPeriod),
+    queryFn: async () => {
+      if (!normalizedPeriod) throw new Error("Período ainda não normalizado.");
+      const { data: u, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      let matrizId: string | null = null;
+      if (u.user) {
+        const { data: me, error: profileError } = await supabase
+          .from("profiles")
+          .select("empresa_id")
+          .eq("id", u.user.id)
+          .maybeSingle();
+        if (profileError) throw profileError;
+        matrizId = me?.empresa_id ?? null;
       }
-    })();
-  }, [isGroupView]);
 
-  async function load() {
-    setLoading(true);
-    const since = new Date();
-    since.setMonth(since.getMonth() - 11);
-    since.setDate(1);
-    since.setHours(0, 0, 0, 0);
-    const { data: u } = await supabase.auth.getUser();
-    let mId: string | null = null;
-    if (u.user) {
-      const { data: me } = await supabase
-        .from("profiles")
-        .select("empresa_id")
-        .eq("id", u.user.id)
-        .maybeSingle();
-      mId = (me?.empresa_id as string) ?? null;
-      setMatrizId(mId);
-    }
-    const [l, e, pr, pp] = await Promise.all([
-      supabase
-        .from("leads")
-        .select(
-          "id,status_pipeline,empresa_id,responsavel_id,criado_em,distribuido_em,ultimo_atendimento_em,bloqueado,arquivado,valor",
-        )
-        .gte("criado_em", since.toISOString())
-        .limit(5000),
-      supabase.from("empresas").select("id,nome,tipo,parent_id").limit(500),
-      supabase.from("profiles").select("id,nome,empresa_id").limit(2000),
-      supabase
-        .from("propostas")
-        .select("id,status,valor,responsavel_id,criado_em,atualizado_em")
-        .gte("criado_em", since.toISOString())
-        .limit(5000),
-    ]);
-    if (l.error) setErr(l.error.message);
-    setLeads((l.data ?? []) as Lead[]);
-    setEmpresas((e.data ?? []) as Empresa[]);
-    setProfiles((pr.data ?? []) as Profile[]);
-    setPropostas((pp.data ?? []) as Proposta[]);
-    setLoading(false);
-  }
+      const [l, e, pr, pp] = await Promise.all([
+        supabase
+          .from("leads")
+          .select(
+            "id,status_pipeline,empresa_id,responsavel_id,criado_em,distribuido_em,ultimo_atendimento_em,bloqueado,arquivado,valor",
+          )
+          .gte("criado_em", normalizedPeriod.inicio)
+          .lt("criado_em", normalizedPeriod.fim)
+          .limit(5000),
+        supabase.from("empresas").select("id,nome,tipo,parent_id").limit(500),
+        supabase.from("profiles").select("id,nome,empresa_id").limit(2000),
+        supabase
+          .from("propostas")
+          .select("id,status,valor,responsavel_id,criado_em,atualizado_em")
+          .gte("criado_em", normalizedPeriod.inicio)
+          .lt("criado_em", normalizedPeriod.fim)
+          .limit(5000),
+      ]);
+      const queryError = l.error ?? e.error ?? pr.error ?? pp.error;
+      if (queryError) throw queryError;
+
+      return {
+        matrizId,
+        leads: (l.data ?? []) as Lead[],
+        empresas: (e.data ?? []) as Empresa[],
+        profiles: (pr.data ?? []) as Profile[],
+        propostas: (pp.data ?? []) as Proposta[],
+      };
+    },
+  });
+
+  const {
+    matrizId = null,
+    leads = [],
+    empresas = [],
+    profiles = [],
+    propostas = [],
+  } = dashboardQuery.data ?? {};
 
   useEffect(() => {
-    load();
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
@@ -147,80 +171,9 @@ function Page() {
   const groupLabel =
     group === "MASTER" ? "Master" : group === "SUPERVISOR" ? "Supervisor" : "Franqueado";
 
-  // Período selecionável
-  const [periodo, setPeriodo] = useState<Periodo>("mes_atual");
-  const { periodStart, periodEnd, periodLabel } = useMemo(() => {
-    const now = new Date();
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-    if (periodo === "mes_atual") {
-      start.setDate(1);
-      end.setMonth(start.getMonth() + 1, 0);
-      end.setHours(23, 59, 59, 999);
-      return {
-        periodStart: start,
-        periodEnd: end,
-        periodLabel: start.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
-      };
-    }
-    if (periodo === "mes_passado") {
-      start.setDate(1);
-      start.setMonth(start.getMonth() - 1);
-      const e = new Date(start);
-      e.setMonth(start.getMonth() + 1, 0);
-      e.setHours(23, 59, 59, 999);
-      return {
-        periodStart: start,
-        periodEnd: e,
-        periodLabel: start.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
-      };
-    }
-    if (periodo === "mes_retrasado") {
-      start.setDate(1);
-      start.setMonth(start.getMonth() - 2);
-      const e = new Date(start);
-      e.setMonth(start.getMonth() + 1, 0);
-      e.setHours(23, 59, 59, 999);
-      return {
-        periodStart: start,
-        periodEnd: e,
-        periodLabel: start.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
-      };
-    }
-    // últimos 90 dias
-    start.setDate(now.getDate() - 89);
-    return { periodStart: start, periodEnd: end, periodLabel: "Últimos 90 dias" };
-  }, [periodo]);
-
-  const todayStart = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-
-  const leadsMes = useMemo(
-    () =>
-      leads.filter((x) => {
-        const d = new Date(x.criado_em);
-        return d >= periodStart && d <= periodEnd && !x.arquivado;
-      }),
-    [leads, periodStart, periodEnd],
-  );
-  const leadsHoje = useMemo(
-    () => leads.filter((x) => new Date(x.criado_em) >= todayStart && !x.arquivado),
-    [leads, todayStart],
-  );
-
-  const propostasMes = useMemo(
-    () =>
-      propostas.filter((x) => {
-        const d = new Date(x.criado_em);
-        return d >= periodStart && d <= periodEnd;
-      }),
-    [propostas, periodStart, periodEnd],
-  );
+  const periodLabel = periodWindow.label;
+  const leadsMes = useMemo(() => leads.filter((x) => !x.arquivado), [leads]);
+  const propostasMes = propostas;
   const emitidasMes = propostasMes.filter(
     (x) => x.status === "gerada" || x.status === "transmitida",
   );
@@ -288,42 +241,44 @@ function Page() {
   const slaEstourado = pendentes.filter(
     (l) => (now - new Date(l.criado_em).getTime()) / 1000 > SLA_SECONDS,
   );
-  const fechadosHoje = leadsHoje.filter((l) => l.status_pipeline === "ganho");
-  const emTransmissao = propostas.filter((x) => x.status === "gerada");
-  const pendTransmHoje = propostas.filter(
-    (x) => x.status === "gerada" && new Date(x.atualizado_em || x.criado_em) >= todayStart,
-  );
+  const fechadosHoje = leadsMes.filter((l) => l.status_pipeline === "ganho");
+  const emTransmissao = propostasMes.filter((x) => x.status === "gerada");
+  const pendTransmHoje = propostasMes.filter((x) => x.status === "gerada");
 
   const recebidosMes = leadsMes.length;
   const distribuidosMes = distribuidos.length;
   const convMes = recebidosMes ? Math.round((emitidasMes.length / recebidosMes) * 100) : 0;
 
-  // Evolução mensal (últimos 6 meses)
+  // Evolução dentro da mesma janela usada pelos demais widgets.
   const evol = useMemo(() => {
     const out: { label: string; emitidas: number; pagas: number }[] = [];
-    const base = new Date();
-    base.setDate(1);
-    base.setHours(0, 0, 0, 0);
-    for (let i = 5; i >= 0; i--) {
-      const start = new Date(base);
-      start.setMonth(base.getMonth() - i);
-      const end = new Date(start);
-      end.setMonth(start.getMonth() + 1);
+    if (!normalizedPeriod) return out;
+    const periodStart = new Date(normalizedPeriod.inicio);
+    const periodEnd = new Date(normalizedPeriod.fim);
+    const totalDays = Math.max(
+      1,
+      Math.round((periodEnd.getTime() - periodStart.getTime()) / 86_400_000),
+    );
+    const bucketCount = Math.min(6, totalDays);
+    for (let i = 0; i < bucketCount; i++) {
+      const start = new Date(
+        periodStart.getTime() + Math.floor((totalDays * i) / bucketCount) * 86_400_000,
+      );
+      const end = new Date(
+        periodStart.getTime() + Math.floor((totalDays * (i + 1)) / bucketCount) * 86_400_000,
+      );
       const ps = propostas.filter((x) => {
         const d = new Date(x.criado_em);
         return d >= start && d < end;
       });
       out.push({
-        label: start
-          .toLocaleDateString("pt-BR", { month: "short" })
-          .replace(".", "")
-          .replace(/^\w/, (c) => c.toUpperCase()),
+        label: start.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
         emitidas: ps.filter((x) => x.status === "gerada" || x.status === "transmitida").length,
         pagas: ps.filter((x) => x.status === "transmitida").length,
       });
     }
     return out;
-  }, [propostas]);
+  }, [normalizedPeriod, propostas]);
   const maxEvol = Math.max(10, ...evol.flatMap((m) => [m.emitidas, m.pagas]));
 
   // Rankings
@@ -486,7 +441,7 @@ function Page() {
       <h2>Funil do período</h2>
       <div class="card">${pieFunilSVG()}</div>
 
-      <h2>Evolução mensal (últimos 6 meses)</h2>
+      <h2>Evolução no período</h2>
       <div class="card">
         <div style="display:flex;gap:14px;font-size:11px;color:#475569;margin-bottom:6px">
           <span><span style="display:inline-block;width:10px;height:10px;background:#475569;border-radius:2px;margin-right:4px"></span>Emitidas</span>
@@ -528,16 +483,6 @@ function Page() {
           </div>
         </div>
         <div className="tools">
-          <select
-            className="select-mini"
-            value={periodo}
-            onChange={(e) => setPeriodo(e.target.value as Periodo)}
-          >
-            <option value="mes_atual">Mês atual</option>
-            <option value="mes_passado">Mês passado</option>
-            <option value="mes_retrasado">Mês retrasado</option>
-            <option value="ult_90">Últimos 90 dias</option>
-          </select>
           <button className="btn btn-ghost" onClick={() => exportarRelatorio()}>
             <svg width="14" height="14">
               <use href="#i-download"></use>
@@ -553,15 +498,19 @@ function Page() {
         </div>
       </div>
 
-      {err && (
+      <DashboardPeriodPicker value={periodWindow} onChange={setPeriodWindow} />
+
+      {(normalizedPeriodQuery.error || dashboardQuery.error || saldoGrupoQuery.error) && (
         <div
           className="audit-note"
           style={{ background: "var(--alert-soft)", color: "var(--alert)", marginBottom: 12 }}
         >
-          {err}
+          {(normalizedPeriodQuery.error ?? dashboardQuery.error ?? saldoGrupoQuery.error)?.message}
         </div>
       )}
-      {loading && (
+      {(normalizedPeriodQuery.isLoading ||
+        dashboardQuery.isLoading ||
+        saldoGrupoQuery.isLoading) && (
         <div className="muted small" style={{ marginBottom: 12 }}>
           Carregando…
         </div>
@@ -574,8 +523,8 @@ function Page() {
               <use href="#i-target"></use>
             </svg>{" "}
             {isGroupView
-              ? "Resumo do dia — meta do grupo"
-              : "Resumo do dia — meta diária da Matriz"}
+              ? "Resumo do período — meta do grupo"
+              : "Resumo do período — meta da Matriz"}
           </h3>
           <span className="small muted">atualizado agora</span>
         </div>
@@ -587,7 +536,7 @@ function Page() {
             </div>
             <div className="sum-chip alert" style={{ cursor: "pointer" }}>
               <span className="sc-val">{pendTransmHoje.length}</span>
-              <span className="sc-lbl">Com pendência hoje</span>
+              <span className="sc-lbl">Com pendência no período</span>
             </div>
             <div
               className="sum-chip alert"
@@ -607,7 +556,7 @@ function Page() {
             </div>
             <div className="sum-chip info">
               <span className="sc-val">{fechadosHoje.length}</span>
-              <span className="sc-lbl">Fechados hoje</span>
+              <span className="sc-lbl">Fechados no período</span>
             </div>
           </div>
         </div>
@@ -665,7 +614,7 @@ function Page() {
           </div>
           <div className="lbl">LEADS RECEBIDOS</div>
           <div className="val">{recebidosMes}</div>
-          <div className="meta">no mês corrente</div>
+          <div className="meta">no período selecionado</div>
         </div>
         <div className="kpi k-info">
           <div className="ic-wrap">
@@ -697,7 +646,7 @@ function Page() {
           </div>
           <div className="lbl">TEMPO MÉD. 1º CONTATO</div>
           <div className="val">{(avg1Contato / 60).toFixed(1)} min</div>
-          <div className="meta">no mês</div>
+          <div className="meta">no período</div>
         </div>
         <div className="kpi">
           <div className="ic-wrap">
@@ -763,8 +712,10 @@ function Page() {
             <div className="val">{saldoGrupo ? BRL(saldoGrupo.saldo) : "—"}</div>
             <div className="meta">
               {saldoGrupo
-                ? `saldo em ${saldoGrupo.competencia} · ${groupPct}% sobre a equipe`
-                : `competência ainda não fechada · ${groupPct}% sobre a equipe`}
+                ? saldoGrupo.quantidade > 0
+                  ? `${saldoGrupo.quantidade} lançamento(s) no período · ${groupPct}% sobre a equipe`
+                  : `sem lançamentos no período · ${groupPct}% sobre a equipe`
+                : `sem lançamentos no período · ${groupPct}% sobre a equipe`}
             </div>
           </div>
         )}
@@ -778,7 +729,7 @@ function Page() {
                 <svg width="16" height="16">
                   <use href="#i-trending-up"></use>
                 </svg>{" "}
-                Evolução mensal
+                Evolução no período
               </h3>
               <div className="mchart-legend">
                 <span className="it">
@@ -868,7 +819,7 @@ function Page() {
                       </svg>
                     </div>
                     <div className="body">
-                      <h4>{pendTransmHoje.length} proposta(s) em transmissão hoje</h4>
+                      <h4>{pendTransmHoje.length} proposta(s) em transmissão no período</h4>
                       <p>Seguradora aguardando — resolver antes da emissão</p>
                     </div>
                     <div className="meta">Resolver</div>
@@ -919,7 +870,7 @@ function Page() {
                     </div>
                     <div className="body">
                       <h4>{naoPagasMes} vendas emitidas e não pagas</h4>
-                      <p>Acompanhar baixa financeira no mês</p>
+                      <p>Acompanhar baixa financeira no período</p>
                     </div>
                     <div className="meta muted">Cobrar</div>
                   </div>
@@ -1005,7 +956,7 @@ function Page() {
               ))}
               {rankVend.length === 0 && (
                 <div className="muted small" style={{ padding: 12 }}>
-                  Ainda não há atividade de vendedores no mês.
+                  Ainda não há atividade de vendedores no período.
                 </div>
               )}
             </div>

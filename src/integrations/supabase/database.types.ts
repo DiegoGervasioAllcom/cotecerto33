@@ -3053,6 +3053,18 @@ export type Database = {
         Args: { p_id: string; p_obs?: string };
         Returns: undefined;
       };
+      normalizar_periodo_visao_geral: {
+        Args: {
+          p_fim?: string;
+          p_inicio?: string;
+          p_periodo: string;
+          p_referencia?: string;
+        };
+        Returns: {
+          fim: string;
+          inicio: string;
+        }[];
+      };
       presence_set: {
         Args: { p_status: string; p_user_agent?: string };
         Returns: undefined;
@@ -3099,6 +3111,13 @@ export type Database = {
       resolver_solicitacao_vendedor: {
         Args: { p_aprovar: boolean; p_id: string; p_observacao?: string };
         Returns: undefined;
+      };
+      saldo_comissao_visao_geral: {
+        Args: { p_fim: string; p_inicio: string };
+        Returns: {
+          quantidade: number;
+          saldo: number;
+        }[];
       };
       salvar_cotacao_rascunho: {
         Args: { p_cotacao_id: string; p_payload: Json };
