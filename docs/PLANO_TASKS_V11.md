@@ -44,16 +44,55 @@ funcionando como exceção durante toda a transição.
 | V11.1.3 | front  | Saídas do convite: WhatsApp via wa.me, Copiar, **PDF com arte oficial e link clicável**, pré-visualização no modal | V11.1.2 |
 | V11.1.4 | front  | Rota **`/convite/{código}`** (item 1): valida token, abre cadastro pré-preenchido com perfil e vínculo em texto fixo | V11.1.1 |
 | V11.1.5 | front  | Erro amigável para link expirado/reusado, com opção de pedir novo convite                        | V11.1.4    |
-| V11.1.6 | front  | Botão **"Quero falar com a Cote Certo"** no login: nome, e-mail, tema, mensagem → e-mail à Matriz, sem persistir | V11.2.1 (e-mail) |
-| V11.1.7 | front  | Remover o cadastro espontâneo de `auth.cadastro.tsx`; criação direta pela Matriz vira exceção com log | V11.1.4, V11.2.3 |
+| V11.1.6 | front  | ⏸ **adiada** (depende de e-mail) · Botão **"Quero falar com a Cote Certo"** no login: nome, e-mail, tema, mensagem → e-mail à Matriz, sem persistir | V11.2.1 |
+| V11.1.7 | front  | ⏸ **adiada** (sem criar senha, não há como aprovar alguém) · Remover o cadastro espontâneo de `auth.cadastro.tsx`; criação direta pela Matriz vira exceção com log | V11.1.4, V11.2.2, V11.2.3 |
 | V11.1.8 | testes | E2E do convite: emitir → abrir link → cadastrar → cair na fila certa; e os casos de expirado e reuso | V11.1.4 |
 
 ## Frente 2 · Filas de aprovação, e-mails e senha
 
+> **E-mail adiado (decisão de 28/07/2026).** V11.2.1, V11.2.2 e V11.1.6 saem do caminho
+> crítico. Consequências, para não virar surpresa:
+>
+> - **O convite não trava.** As saídas do Convite Supper são WhatsApp, Copiar e PDF
+>   (V11.1.3) — nenhuma delas depende de e-mail. Frentes 1, 2 e 3 seguem.
+> - **V11.1.7 adia junto.** Sem a tela de criar senha, quem for aprovado não tem como
+>   definir a própria senha. Então o caminho atual de `auth.cadastro.tsx` (senha digitada
+>   por quem cadastra, `cadastro.functions.ts:41`) **continua no ar** como exceção até a
+>   frente de e-mail entrar. É o oposto do que a V11 quer, e é dívida consciente.
+> - **O pedido de DNS não adia.** SPF/DKIM/DMARC em `suppercerto.com.br` para o remetente
+>   `acesso@suppercerto.com.br` depende de terceiros e tem prazo próprio. Pedir agora.
+
+**Desenho decidido para quando a frente entrar:**
+
+Provider transacional com domínio verificado (Resend ou equivalente), usado por dois
+caminhos que o mesmo domínio atende:
+
+- **API HTTP**, chamada de server function no padrão de `src/lib/*.functions.ts` — para os
+  e-mails próprios: Convite Supper, boas-vindas com escopo no corpo, pendência com motivo,
+  recusa. Arte e conteúdo nossos.
+- **SMTP**, configurado no GoTrue do Supabase self-hosted — sem isso ele não envia nenhum
+  e-mail de auth.
+
+São **dois tokens diferentes**, não um:
+
+- **Convite** → token próprio, tabela própria (V11.1.1). Carrega perfil e vínculo e existe
+  antes de haver usuário; não há onde o Supabase Auth guardar isso.
+- **Criar senha** → `admin.auth.admin.generateLink()` gera o link, enviado no nosso
+  template. Hash e invalidação no uso vêm do GoTrue (atende o item 3 sem implementar
+  criptografia). **Gotcha:** a validade do link é config global do servidor, não por
+  e-mail — se as 48h brigarem com outro fluxo, aí sim token próprio.
+
+Dev local não precisa de provider: o Supabase CLI sobe **Mailpit em `127.0.0.1:54324`** e
+captura tudo. Provider só em staging e produção. Volume é de onboarding (dezenas/mês).
+
+Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side, no padrão
+`SELF_*` do `.env.example` (nunca `VITE_*`).
+
 | Task    | Tag    | Descrição                                                                                       | Depende de |
 | ------- | ------ | ----------------------------------------------------------------------------------------------- | ---------- |
-| V11.2.1 | infra  | **E-mails reais** (item 2): boas-vindas com escopo, pendência com motivo, recusa — pelos modelos de `MODELOS_EMAIL_ACESSO.html`. Nenhum e-mail carrega senha | — |
-| V11.2.2 | front  | **Tela Criar senha** (item 3): link 48h de uso único, hash bcrypt/argon2, política mínima 8+ com letras e números | V11.2.1 |
+| V11.2.1 | infra  | ⏸ **adiada** · **E-mails reais** (item 2): boas-vindas com escopo, pendência com motivo, recusa — pelos modelos de `MODELOS_EMAIL_ACESSO.html`, via API do provider. Nenhum e-mail carrega senha | — |
+| V11.2.2 | front  | ⏸ **adiada** · **Tela Criar senha** (item 3): `generateLink` + link 48h de uso único, política mínima 8+ com letras e números | V11.2.1 |
+| V11.2.0 | infra  | **Pedir agora:** SPF/DKIM/DMARC em `suppercerto.com.br` e confirmar o remetente `acesso@suppercerto.com.br` com a Lis. Prazo de terceiro, não de código | — |
 | V11.2.3 | banco  | Roteamento da fila pelo vínculo estruturado do pedido (trilha/perfil/vincTipo/vincId) — vendedor de Full **nunca** chega à Matriz | V11.1.1 |
 | V11.2.4 | front  | Pendentes em dois blocos: time interno no bloco Matriz, rede no bloco Externos                  | V11.2.3    |
 | V11.2.5 | front  | Fila própria da Franquia Full, que aprova o vendedor dela sem a Matriz                          | V11.2.3    |
@@ -138,19 +177,23 @@ funcionando como exceção durante toda a transição.
 
 ## Sequência recomendada
 
-1. **Frente 0 inteira.** Enum, cargos, canais, diretor e histórico são fundação de quase
-   toda task das outras frentes. Nenhuma tela antes disso.
-2. **V11.9.3 em paralelo** — pedir "Regras Decididas" agora, porque a Frente 4 trava sem ele.
-3. **Frente 1 + V11.2.1/V11.2.2** (convite, e-mails, senha), respeitando a ordem: o
-   autocadastro só sai em V11.1.7, depois da rota do convite estar funcionando.
-4. **Frente 2 e Frente 3** — filas e cadastros, que é onde o convite vira acesso.
-5. **Frente 8** junto da Frente 2: os menus dos perfis novos precisam existir para
-   testar as filas por perfil.
+**Ordem escolhida em 28/07/2026: começar pela hierarquia.** O detalhamento dessa primeira
+etapa está em `docs/PLANO_HIERARQUIA_V11.md`.
+
+1. **Hierarquia primeiro** — V11.0.2, V11.0.3, V11.0.8 e Frente 8. É a fundação de que
+   filas, alçada e menus dependem, e não depende de decisão de terceiro nenhuma.
+2. **Pedidos disparados em paralelo, porque têm prazo de terceiro:** V11.9.3 ("Regras
+   Decididas", que trava a Frente 4), V11.2.0 (DNS do e-mail) e V11.5.1 (endereço das
+   configurações da Full).
+3. **Resto da Frente 0** — canais (V11.0.4), diretor (V11.0.5) e histórico (V11.0.6).
+4. **Frente 1** (convite), que já funciona sem e-mail via WhatsApp/Copiar/PDF.
+5. **Frente 2 e Frente 3** — filas e cadastros, onde o convite vira acesso.
 6. **Frente 4** (régua) e **Frente 6** (governança), que dependem de histórico e diretor.
 7. **Frente 5** (Full) depois de V11.5.1 decidido pela Lis.
-8. **Frente 7** (visão geral) pode correr em paralelo a partir da Frente 2 — só depende
-   da taxonomia de canais.
-9. **Frente 9** por último, exceto V11.9.3 e V11.9.2 que são pedidos/decisões imediatos.
+8. **Frente 7** (visão geral) em paralelo a partir da taxonomia de canais.
+9. **E-mail (V11.2.1, V11.2.2, V11.1.6, V11.1.7)** quando a frente for retomada — e só
+   então o autocadastro sai do ar.
+10. **Frente 9** por último, exceto os pedidos do item 2.
 
 ## Decisões pendentes que bloqueiam tasks
 
@@ -159,4 +202,5 @@ funcionando como exceção durante toda a transição.
 | 1 | Documento "Regras Decididas" não veio no pacote                        | Frentes 4 e 2 (escopos) | Lis  |
 | 2 | Endereço único das configurações da Full (item 11 do Handoff)          | V11.5.2, V11.5.4    | Lis      |
 | 3 | Carteira de Recuperação: V11 sem referência visual, ou V12?            | V11.9.2             | Lis      |
-| 4 | Supervisor Vendas × Operacional: valores de enum ou cargos da tabela?  | V11.0.2 → cascata   | técnica  |
+| 4 | Supervisor Vendas × Operacional: valores de enum ou cargos da tabela?  | V11.0.2 → cascata   | técnica — recomendação híbrida em `PLANO_HIERARQUIA_V11.md`, aguardando aprovação |
+| 5 | Remetente `acesso@suppercerto.com.br` + SPF/DKIM/DMARC no domínio      | V11.2.1             | Lis / quem controla o DNS |
