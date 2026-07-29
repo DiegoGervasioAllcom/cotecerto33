@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { ConvidarModal, type EscopoConvite } from "@/components/acessos/convidar-modal";
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 import { SolicitacoesVendedorTab } from "@/components/acessos/solicitacoes-vendedor-tab";
 import { useAcessosData } from "@/components/operacao/acessos/hooks/useAcessosData";
@@ -51,6 +53,8 @@ function Page() {
       setPersoSub,
     });
 
+  const [convidando, setConvidando] = useState<EscopoConvite | null>(null);
+
   if (denied) return denied;
 
   return (
@@ -62,6 +66,16 @@ function Page() {
           <div className="sub">
             Aprove novos cadastros e classifique cada usuário por modelo de franquia
           </div>
+        </div>
+        {/* V11: todo cadastro nasce de um Convite Supper. Dois escopos aqui —
+            o time interno da Matriz e a rede externa (Master e Individual direta). */}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button className="btn btn-slate" type="button" onClick={() => setConvidando("interno")}>
+            Convidar · time interno
+          </button>
+          <button className="btn btn-yellow" type="button" onClick={() => setConvidando("externo")}>
+            Convidar · rede externa
+          </button>
         </div>
       </div>
 
@@ -137,6 +151,7 @@ function Page() {
           {toast.msg}
         </div>
       )}
+      {convidando && <ConvidarModal escopo={convidando} onClose={() => setConvidando(null)} />}
     </AppShell>
   );
 }
