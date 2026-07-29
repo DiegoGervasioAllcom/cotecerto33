@@ -1,180 +1,218 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TutorialChapterEnd } from "./tutorial-chapter-end";
 import { tutorialDefinitions } from "./tutorial-content";
 import {
+  resolveReturnFocusElement,
+  restoreTutorialFocus,
+  useFocusTrap,
+  type ReturnFocusElement,
+} from "./tutorial-focus";
+import { TutorialOverlay } from "./tutorial-overlay";
+import {
   INITIAL_TUTORIAL_PROGRESS,
-  readTutorialProgress,
+  readTutorialStoredState,
+  tutorialProgressStorageKey,
   type TutorialProgress,
+  type TutorialStoredState,
 } from "./tutorial-progress";
-import type { TutorialDefinition, TutorialKind, TutorialStep } from "./tutorial-types";
+import type {
+  TutorialDefinition,
+  TutorialKind,
+  TutorialPersona,
+  TutorialPreparation,
+} from "./tutorial-types";
+import { useTutorialStepEngine } from "./use-tutorial-step-engine";
 
-const VERSION = "v10";
-const storageKey = (userId: string, kind: TutorialKind) =>
-  `cotecerto:tutorial:${VERSION}:${userId}:${kind}`;
+// Mantém o import público já usado pela suíte sem misturar a implementação do foco ao provider.
+// eslint-disable-next-line react-refresh/only-export-components
+export { restoreTutorialFocus } from "./tutorial-focus";
 
-function readProgress(
+function readStoredState(
   userId: string,
   kind: TutorialKind,
   definition: TutorialDefinition,
-): TutorialProgress {
+): TutorialStoredState {
   try {
-    return readTutorialProgress(localStorage, storageKey(userId, kind), definition);
+    return readTutorialStoredState(
+      localStorage,
+      tutorialProgressStorageKey(userId, kind),
+      definition,
+    );
   } catch {
-    return INITIAL_TUTORIAL_PROGRESS;
+    return { status: "step", progress: INITIAL_TUTORIAL_PROGRESS };
   }
 }
-function writeProgress(userId: string, kind: TutorialKind, progress: TutorialProgress) {
+function writeStoredState(userId: string, kind: TutorialKind, state: TutorialStoredState) {
   try {
-    localStorage.setItem(storageKey(userId, kind), JSON.stringify(progress));
+    localStorage.setItem(tutorialProgressStorageKey(userId, kind), JSON.stringify(state));
   } catch {
     /* armazenamento pode estar indisponível */
   }
 }
 
-const focusableSelector =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-export function restoreTutorialFocus(element: HTMLElement | null) {
-  element?.focus();
-}
-
-function useFocusTrap(
-  containerRef: RefObject<HTMLElement | null>,
-  initialFocusRef: RefObject<HTMLElement | null>,
-) {
-  useLayoutEffect(() => {
-    initialFocusRef.current?.focus();
-  }, [initialFocusRef]);
-
-  useEffect(() => {
-    const trap = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
-      const container = containerRef.current;
-      if (!container) return;
-      const focusable = Array.from(container.querySelectorAll<HTMLElement>(focusableSelector));
-      if (focusable.length === 0) {
-        event.preventDefault();
-        container.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (event.shiftKey && (active === first || !container.contains(active))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (active === last || !container.contains(active))) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", trap);
-    return () => document.removeEventListener("keydown", trap);
-  }, [containerRef]);
-}
-
 export function TutorialProvider({
-  kind,
+  persona,
   userId,
   returnFocusElement,
+  onPreviewChange,
   onClose,
 }: {
-  kind: TutorialKind;
+  persona: TutorialPersona;
   userId: string;
-  returnFocusElement: HTMLElement | null;
+  returnFocusElement: ReturnFocusElement;
+  onPreviewChange: (preview: TutorialPreparation | undefined) => void;
   onClose: () => void;
 }) {
-  const navigate = useNavigate();
+  const kind = persona.kind;
   const definition = tutorialDefinitions[kind] as TutorialDefinition;
-  const saved = useMemo(() => readProgress(userId, kind, definition), [userId, kind, definition]);
-  const [welcome, setWelcome] = useState(true);
-  const [progress, setProgress] = useState<TutorialProgress>(saved);
-  const [spot, setSpot] = useState<DOMRect | null>(null);
+  const saved = useMemo(
+    () => readStoredState(userId, kind, definition),
+    [userId, kind, definition],
+  );
+  const savedProgress =
+    saved.status === "step"
+      ? saved.progress
+      : saved.status === "outro"
+        ? {
+            chapter: saved.chapter,
+            step: definition.chapters[saved.chapter].steps.length - 1,
+          }
+        : INITIAL_TUTORIAL_PROGRESS;
+  const [phase, setPhase] = useState<"welcome" | "step" | "outro">(
+    saved.status === "outro" ? "outro" : "welcome",
+  );
+  const [progress, setProgress] = useState<TutorialProgress>(savedProgress);
+  const [completed, setCompleted] = useState(saved.status === "completed");
   const current = definition.chapters[progress.chapter]?.steps[progress.step];
-  const total = definition.chapters.reduce((sum, chapter) => sum + chapter.steps.length, 0);
-  const currentNumber =
-    definition.chapters
-      .slice(0, progress.chapter)
-      .reduce((sum, chapter) => sum + chapter.steps.length, 0) +
-    progress.step +
-    1;
+  const chapter = definition.chapters[progress.chapter];
+  const isLastChapter = progress.chapter === definition.chapters.length - 1;
+  const isLastStep = progress.step === chapter.steps.length - 1;
 
-  const persist = (next: TutorialProgress) => {
-    setProgress(next);
-    writeProgress(userId, kind, next);
-  };
-  const close = () => onClose();
-  const start = (chapter = progress.chapter, step = progress.step) => {
-    persist({ chapter, step });
-    setWelcome(false);
-  };
-  const next = () => {
+  const persist = useCallback(
+    (next: TutorialProgress) => {
+      setProgress(next);
+      setCompleted(false);
+      writeStoredState(userId, kind, { status: "step", progress: next });
+    },
+    [kind, userId],
+  );
+  const close = useCallback(() => onClose(), [onClose]);
+  const handleMove = useCallback(
+    (next: TutorialProgress) => {
+      persist(next);
+      setPhase("step");
+    },
+    [persist],
+  );
+  const { spot, isTransitioning, isTransitionLocked, moveTo } = useTutorialStepEngine({
+    active: phase === "step",
+    current,
+    userId,
+    onMove: handleMove,
+  });
+  const start = useCallback(
+    (chapter = progress.chapter, step = progress.step) => {
+      moveTo({ chapter, step });
+    },
+    [moveTo, progress.chapter, progress.step],
+  );
+  const next = useCallback(() => {
+    if (isTransitionLocked()) return;
     const chapter = definition.chapters[progress.chapter];
     if (progress.step + 1 < chapter.steps.length)
-      return persist({ chapter: progress.chapter, step: progress.step + 1 });
-    if (progress.chapter + 1 < definition.chapters.length)
-      return persist({ chapter: progress.chapter + 1, step: 0 });
-    close();
-  };
-  const previous = () =>
-    progress.step > 0
-      ? persist({ chapter: progress.chapter, step: progress.step - 1 })
-      : progress.chapter > 0
-        ? persist({
-            chapter: progress.chapter - 1,
-            step: definition.chapters[progress.chapter - 1].steps.length - 1,
-          })
-        : undefined;
-
-  useEffect(() => {
-    if (!welcome && current?.route) void navigate({ to: current.route });
-  }, [welcome, current?.route, navigate]);
-
-  useLayoutEffect(() => {
-    if (welcome || !current) return;
-    const place = () => {
-      const target = current.target ? document.querySelector(current.target) : null;
-      if (target instanceof HTMLElement) {
-        target.scrollIntoView({ block: "center", inline: "center" });
-        setSpot(target.getBoundingClientRect());
-      } else setSpot(null);
-    };
-    const timer = window.setTimeout(place, 120);
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
-    };
-  }, [welcome, current]);
+      return moveTo({ chapter: progress.chapter, step: progress.step + 1 });
+    if (isLastChapter) {
+      setCompleted(true);
+      writeStoredState(userId, kind, { status: "completed" });
+    } else {
+      writeStoredState(userId, kind, { status: "outro", chapter: progress.chapter });
+    }
+    setPhase("outro");
+  }, [
+    definition.chapters,
+    isLastChapter,
+    isTransitionLocked,
+    kind,
+    moveTo,
+    progress.chapter,
+    progress.step,
+    userId,
+  ]);
+  const previous = useCallback(() => {
+    if (isTransitionLocked()) return;
+    if (progress.step > 0) {
+      moveTo({ chapter: progress.chapter, step: progress.step - 1 });
+      return;
+    }
+    if (progress.chapter > 0) {
+      moveTo({
+        chapter: progress.chapter - 1,
+        step: definition.chapters[progress.chapter - 1].steps.length - 1,
+      });
+    }
+  }, [definition.chapters, isTransitionLocked, moveTo, progress.chapter, progress.step]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (event.key === "Escape") close();
-      if (!welcome && event.key === "ArrowRight") next();
-      if (!welcome && event.key === "ArrowLeft") previous();
+      if (phase === "step" && !isTransitionLocked() && event.key === "ArrowRight") next();
+      if (phase === "step" && !isTransitionLocked() && event.key === "ArrowLeft") previous();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  });
+  }, [close, isTransitionLocked, next, phase, previous]);
 
   useEffect(() => {
-    return () => restoreTutorialFocus(returnFocusElement);
+    onPreviewChange(phase === "step" ? current?.prepare : undefined);
+    return () => onPreviewChange(undefined);
+  }, [current?.prepare, onPreviewChange, phase]);
+
+  useEffect(() => {
+    return () => restoreTutorialFocus(resolveReturnFocusElement(returnFocusElement));
   }, [returnFocusElement]);
 
-  if (welcome)
-    return <Welcome definition={definition} progress={progress} onStart={start} onClose={close} />;
+  if (phase === "welcome")
+    return (
+      <Welcome
+        definition={definition}
+        persona={persona}
+        progress={progress}
+        completed={completed}
+        onStart={start}
+        onClose={close}
+      />
+    );
+  if (phase === "outro") {
+    return (
+      <TutorialChapterEnd
+        chapter={chapter}
+        isLastChapter={isLastChapter}
+        onClose={close}
+        onNextChapter={() => moveTo({ chapter: progress.chapter + 1, step: 0 })}
+        onShowIndex={() => {
+          setProgress(INITIAL_TUTORIAL_PROGRESS);
+          if (!completed) {
+            writeStoredState(userId, kind, {
+              status: "step",
+              progress: INITIAL_TUTORIAL_PROGRESS,
+            });
+          }
+          setPhase("welcome");
+        }}
+      />
+    );
+  }
   if (!current) return null;
   return (
-    <Overlay
+    <TutorialOverlay
       definition={definition}
+      persona={persona}
       step={current}
       progress={progress}
-      total={total}
-      number={currentNumber}
       spot={spot}
+      isTransitioning={isTransitioning}
+      isLastChapter={isLastChapter}
+      isLastStep={isLastStep}
       onPrevious={previous}
       onNext={next}
       onClose={close}
@@ -184,18 +222,36 @@ export function TutorialProvider({
 
 function Welcome({
   definition,
+  persona,
   progress,
+  completed,
   onStart,
   onClose,
 }: {
   definition: TutorialDefinition;
+  persona: TutorialPersona;
   progress: TutorialProgress;
+  completed: boolean;
   onStart: (chapter?: number, step?: number) => void;
   onClose: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<HTMLButtonElement>(null);
   useFocusTrap(containerRef, startRef);
+  const modules = definition.chapters.reduce<
+    {
+      module: string;
+      chapters: { chapter: TutorialDefinition["chapters"][number]; index: number }[];
+    }[]
+  >((groups, chapter, index) => {
+    const currentGroup = groups.at(-1);
+    if (currentGroup?.module === chapter.module) {
+      currentGroup.chapters.push({ chapter, index });
+    } else {
+      groups.push({ module: chapter.module, chapters: [{ chapter, index }] });
+    }
+    return groups;
+  }, []);
   return (
     <div
       ref={containerRef}
@@ -207,25 +263,32 @@ function Welcome({
     >
       <div className="tour-welcome">
         <div className="tw-h">
-          <div className="ravatar">{definition.avatar}</div>
-          <div className="eyebrow">{definition.eyebrow}</div>
-          <h2 id="tutorial-title">{definition.title}</h2>
-          <p>{definition.intro}</p>
+          <div className="ravatar">{persona.avatar}</div>
+          <div className="eyebrow">{persona.eyebrow}</div>
+          <h2 id="tutorial-title">{persona.title}</h2>
+          <p>{persona.intro}</p>
         </div>
         <div className="tw-b">
           <div className="sec-label">ESCOLHA UM CAPÍTULO PARA COMEÇAR</div>
           <div className="modules">
-            {definition.chapters.map((chapter, index) => (
-              <div className="mod" key={chapter.id}>
-                <h4>{chapter.module}</h4>
-                <button type="button" className="chapter" onClick={() => onStart(index, 0)}>
-                  <span className="n">{chapter.id}</span>
-                  <span className="info">
-                    <h5>{chapter.title}</h5>
-                    <span className="hk">{chapter.hook}</span>
-                  </span>
-                  <span className="dur">{chapter.duration}</span>
-                </button>
+            {modules.map((module) => (
+              <div className="mod" key={module.module}>
+                <h4>{module.module}</h4>
+                {module.chapters.map(({ chapter, index }) => (
+                  <button
+                    key={chapter.id}
+                    type="button"
+                    className="chapter"
+                    onClick={() => onStart(index, 0)}
+                  >
+                    <span className="n">{chapter.id}</span>
+                    <span className="info">
+                      <h5>{chapter.title}</h5>
+                      <span className="hk">{chapter.hook}</span>
+                    </span>
+                    <span className="dur">{chapter.duration}</span>
+                  </button>
+                ))}
               </div>
             ))}
           </div>
@@ -236,117 +299,9 @@ function Welcome({
           </button>
           <span className="spc" />
           <button ref={startRef} type="button" className="start" onClick={() => onStart()}>
-            Começar{progress.chapter || progress.step ? " de onde parei" : " do início"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Overlay({
-  definition,
-  step,
-  progress,
-  total,
-  number,
-  spot,
-  onPrevious,
-  onNext,
-  onClose,
-}: {
-  definition: TutorialDefinition;
-  step: TutorialStep;
-  progress: TutorialProgress;
-  total: number;
-  number: number;
-  spot: DOMRect | null;
-  onPrevious: () => void;
-  onNext: () => void;
-  onClose: () => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
-  useFocusTrap(containerRef, closeRef);
-  const preferred = step.position ?? "right";
-  const style =
-    !spot || preferred === "center"
-      ? { right: 24, bottom: 24 }
-      : preferred === "left"
-        ? { left: Math.max(10, spot.left - 396), top: Math.max(10, spot.top) }
-        : preferred === "top"
-          ? { left: Math.max(10, spot.left), top: Math.max(10, spot.top - 300) }
-          : preferred === "bottom"
-            ? { left: Math.max(10, spot.left), top: spot.bottom + 16 }
-            : { left: spot.right + 16, top: Math.max(10, spot.top) };
-  const chapter = definition.chapters[progress.chapter];
-  return (
-    <div ref={containerRef} className="tour-host active" aria-live="polite" tabIndex={-1}>
-      <div className="tour-backdrop" />
-      {spot && (
-        <div
-          className="tour-spotlight"
-          style={{
-            top: spot.top - 8,
-            left: spot.left - 8,
-            width: spot.width + 16,
-            height: spot.height + 16,
-          }}
-        />
-      )}
-      <div
-        className={`tour-tip pos-${spot ? preferred : "corner"}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="tutorial-step-title"
-        style={style}
-      >
-        <span className="arrow" />
-        <div className="tip-head">
-          <div className="avatar">{definition.avatar}</div>
-          <div className="who">
-            <small>
-              CAP. {chapter.id} · {chapter.title}
-            </small>
-            <strong>CoteCerto</strong>
-          </div>
-          <div className="progress">
-            {number} / {total}
-          </div>
-          <button
-            ref={closeRef}
-            type="button"
-            className="x"
-            aria-label="Sair do tutorial"
-            onClick={onClose}
-          >
-            <X size={16} />
-          </button>
-        </div>
-        <div className="tip-body">
-          <h4 id="tutorial-step-title">{step.title}</h4>
-          <div dangerouslySetInnerHTML={{ __html: step.body }} />
-        </div>
-        <div className="tip-foot">
-          <span className="ch">
-            Capítulo {chapter.id} de {definition.chapters.length}
-          </span>
-          <span className="spc" />
-          <button
-            type="button"
-            className="prev"
-            disabled={progress.chapter === 0 && progress.step === 0}
-            onClick={onPrevious}
-          >
-            <ChevronLeft size={13} />
-            Anterior
-          </button>
-          <button type="button" className="exit" onClick={onClose}>
-            Sair
-          </button>
-          <button type="button" className="next" onClick={onNext}>
-            {number === total ? "Concluir" : "Próximo"}
-            <ChevronRight size={13} />
+            {completed
+              ? "Começar novamente"
+              : `Começar${progress.chapter || progress.step ? " de onde parei" : " do início"}`}
           </button>
         </div>
       </div>

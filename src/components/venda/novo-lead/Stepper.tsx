@@ -31,7 +31,7 @@ export function Stepper({ step, setStep, podeCalcular }: Props) {
         </span>
       ))}
       {podeCalcular && (
-        <span className="ready ">
+        <span className="ready show">
           <svg width="12" height="12">
             <use href="#i-check" />
           </svg>{" "}

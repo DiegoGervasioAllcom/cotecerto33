@@ -5,6 +5,7 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj, maskTelefone as maskPhone } from "@/lib/masks";
 import { useGroupScope } from "@/lib/group-scope";
+import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 
 export const Route = createFileRoute("/_authenticated/operacao/vendas")({
   head: () => ({ meta: [{ title: "Controle de Vendas · CoteCerto" }] }),
@@ -73,6 +74,7 @@ function classify(p: Proposta): Tab {
 
 function Page() {
   const { isGroupView } = useGroupScope();
+  const tutorialPreview = useTutorialPreview();
   const [periodOffset, setPeriodOffset] = useState(0);
   const period = useMemo(() => monthRange(periodOffset), [periodOffset]);
   const [rows, setRows] = useState<Proposta[]>([]);
@@ -86,6 +88,14 @@ function Page() {
   const [fFranq, setFFranq] = useState("");
   const [fSeg, setFSeg] = useState("");
   const [fTipo, setFTipo] = useState("");
+  const visibleTab: Tab =
+    tutorialPreview === "vendas-transmissao"
+      ? "transmissao"
+      : tutorialPreview === "vendas-emitidas"
+        ? "emitidas"
+        : tutorialPreview === "vendas-nao-pagas"
+          ? "naopagas"
+          : tab;
 
   useEffect(() => {
     (async () => {
@@ -144,7 +154,8 @@ function Page() {
   const filtered = useMemo(() => {
     return rows.filter((p) => {
       const t = classify(p);
-      const tabOk = tab === "emitidas" ? t === "pagas" || t === "naopagas" : t === tab;
+      const tabOk =
+        visibleTab === "emitidas" ? t === "pagas" || t === "naopagas" : t === visibleTab;
       if (!tabOk) return false;
       if (fFranq && p.empresa_id !== fFranq) return false;
       if (fSeg && (p.seguradora || "") !== fSeg) return false;
@@ -155,7 +166,7 @@ function Page() {
       }
       return true;
     });
-  }, [rows, tab, fFranq, fSeg, fTipo]);
+  }, [rows, visibleTab, fFranq, fSeg, fTipo]);
 
   function exportCsv() {
     const headers = [
@@ -291,7 +302,12 @@ function Page() {
               ["canceladas", "Canceladas", counts.canceladas.n],
             ] as [Tab, string, number][]
           ).map(([k, l, n]) => (
-            <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+            <button
+              key={k}
+              className={visibleTab === k ? "on" : ""}
+              data-tour={`vendas-tab-${k}`}
+              onClick={() => setTab(k)}
+            >
               {l} <span style={{ opacity: 0.7 }}>({n})</span>
             </button>
           ))}

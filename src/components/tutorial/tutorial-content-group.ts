@@ -1,0 +1,181 @@
+import type { TutorialSourceChapter } from "./tutorial-targets";
+
+export const groupTutorialChapters = [
+  {
+    id: 1,
+    module: "M1 · SEU GRUPO",
+    title: "Bem-vindo à sua área",
+    hook: '"O que eu controlo por aqui?"',
+    duration: "~3 min",
+    steps: [
+      {
+        page: "xdash",
+        target: null,
+        pos: "center",
+        hook: '"Aqui você lidera o seu grupo — vê só os seus vendedores, não a operação inteira."',
+        title: "A sua área de gestão",
+        body: "<p>Esta é a sua central. Tudo o que aparece aqui é <strong>filtrado para o seu grupo</strong> de vendedores. Você acompanha, cobra e cuida da sua equipe — sem enxergar outras franquias.</p>",
+      },
+      {
+        page: "xdash",
+        target: ".sidebar",
+        pos: "right",
+        title: "Seu menu",
+        body: "<p>No menu você tem <strong>Visão geral</strong> e <strong>Aprovações</strong> (pedidos de desconto que sobem para você), o acompanhamento do time (Vendedores, Supervisão, Pipeline), o financeiro (Vendas, Comissões, Premiações, Estornos, Renovações, Relatórios) e <strong>Acessos e permissões</strong> para cadastrar e gerir seus vendedores.</p>",
+      },
+      {
+        page: "xdash",
+        target: "#page-xdash .mkpi-grid",
+        pos: "top",
+        title: "Os números do grupo",
+        body: "<p>Vendas, leads, conversão média, comissão, prêmio e estornos — somando apenas a sua equipe. O <strong>Resumo do dia</strong> e os <strong>Alertas do grupo</strong> acima mostram onde agir primeiro.</p>",
+      },
+      {
+        page: "xdash",
+        target: "#sideUser",
+        pos: "right",
+        title: "Sua conta e acessibilidade",
+        body: "<p>No seu usuário você ajusta <strong>tamanho da fonte</strong> e <strong>alto contraste</strong>, e sai do sistema. O seu perfil vem do cadastro de acesso e não muda.</p>",
+      },
+      {
+        page: "maprov",
+        target: "#page-maprov .table-pipe",
+        pos: "top",
+        title: "Aprovações de desconto da sua equipe",
+        body: "<p>Quando alguém abaixo de você pede um desconto <strong>acima da política</strong>, o pedido chega aqui. Você confere (pode <strong>Abrir a cotação</strong>) e decide: <strong>aprovar dentro da sua alçada</strong>, contrapropor, negar — ou, se precisar de mais, <strong>Escalar ao superior</strong> (até a Matriz, em última instância). Cada passo fica registrado na trilha do pedido.</p>",
+      },
+    ],
+    outro: {
+      hook: '"Beleza. Agora vamos olhar a sua equipe de perto."',
+    },
+  },
+  {
+    id: 2,
+    module: "M2 · ACOMPANHAR A EQUIPE",
+    title: "Sua equipe",
+    hook: '"Como sei quem vai bem e quem travou?"',
+    duration: "~3 min",
+    steps: [
+      {
+        page: "mvend",
+        target: "#page-mvend .table-pipe",
+        pos: "top",
+        title: "Cada vendedor, lado a lado",
+        body: "<p>Seus vendedores com leads, cotações, propostas, vendas, conversão e comissão. Clique em um para abrir o <strong>perfil individual</strong> dele.</p>",
+      },
+      {
+        page: "msuperv",
+        target: "#page-msuperv .gargalo-row",
+        pos: "bottom",
+        title: "Caça-gargalos do grupo",
+        body: "<p>Onde a jornada do lead trava na sua equipe. Como o lead já chega distribuído pela Matriz, o seu funil começa em <strong>Distribuído → 1º contato</strong> — foco no que é responsabilidade do time.</p>",
+      },
+      {
+        page: "mpipe",
+        target: "#page-mpipe .kanban",
+        pos: "top",
+        title: "Pipeline do grupo",
+        body: "<p>O funil consolidado dos seus vendedores, por etapa. Use os filtros para focar num vendedor ou numa seguradora.</p>",
+      },
+    ],
+    outro: {
+      hook: '"Agora a parte do dinheiro: vendas e comissões."',
+    },
+  },
+  {
+    id: 3,
+    module: "M3 · FINANCEIRO DO GRUPO",
+    title: "Vendas, comissões, premiações e estornos",
+    hook: '"E o financeiro do meu grupo?"',
+    duration: "~4 min",
+    steps: [
+      {
+        page: "mvendas",
+        target: "#page-mvendas .toggle",
+        pos: "bottom",
+        title: "Vendas do grupo",
+        body: "<p>O extrato do seu grupo — da <strong>transmissão</strong> à baixa financeira: emitidas, pagas, não pagas e canceladas. Use as abas para filtrar cada situação.</p>",
+        prepare: "vendas-emitidas",
+      },
+      {
+        page: "mcomm",
+        target: "#page-mcomm .mkpi-grid",
+        pos: "top",
+        title: "Comissões",
+        body: "<p>Comissão gerada, paga, pendente e estornada do grupo — por vendedor e por seguradora, com o <strong>histórico de alterações</strong> (quem mudou, quando e de quanto pra quanto).</p>",
+      },
+      {
+        page: "mprem",
+        target: "#page-mprem .mkpi-grid",
+        pos: "top",
+        title: "Premiações",
+        body: "<p>As campanhas de premiação e quanto cada vendedor do seu grupo já ganhou — total, pago e a pagar. Serve para acompanhar incentivos e cobrar metas da equipe.</p>",
+      },
+      {
+        page: "mestorno",
+        target: "#page-mestorno .mkpi-grid",
+        pos: "top",
+        title: "Estornos e cancelamentos",
+        body: "<p>Vendas canceladas no prazo de estorno e o <strong>impacto na comissão</strong> do grupo. Aqui você vê motivo, vendedor e valor revertido — para agir rápido quando a taxa sobe.</p>",
+      },
+    ],
+    outro: {
+      hook: '"Agora a carteira que se renova — e os relatórios."',
+    },
+  },
+  {
+    id: 4,
+    module: "M4 · RENOVAÇÃO E RELATÓRIOS",
+    title: "Renovações e relatórios",
+    hook: '"Como não perco renovação e como exporto os números?"',
+    duration: "~2 min",
+    steps: [
+      {
+        page: "mren",
+        target: "#page-mren .audit-note",
+        pos: "bottom",
+        title: "Renovações no automático",
+        body: "<p>60 dias antes do vencimento, o sistema cria um lead de <strong>renovação</strong> para o vendedor responsável. Carteira que se renova sozinha vira receita recorrente — acompanhe o que está a vencer, renovado e perdido no seu grupo.</p>",
+      },
+      {
+        page: "mrel",
+        target: "#page-mrel .rep-grid",
+        pos: "top",
+        title: "Relatórios",
+        body: "<p>Exporte os números do seu grupo em <strong>PDF ou Excel</strong> — vendas, comissões, performance — com recorte por período, vendedor e seguradora. É a sua central de exportação.</p>",
+      },
+    ],
+    outro: {
+      hook: '"Por último, o mais importante: montar e cuidar do seu time."',
+    },
+  },
+  {
+    id: 5,
+    module: "M5 · ACESSOS DA SUA EQUIPE",
+    title: "Cadastrar e gerir vendedores",
+    hook: '"Como coloco um vendedor novo e tiro quem saiu?"',
+    duration: "~3 min",
+    steps: [
+      {
+        page: "xacessos",
+        target: "#page-xacessos .card",
+        pos: "top",
+        hook: '"Você monta o time, mas quem dá a chave final é a Matriz."',
+        title: "Cadastrar vendedor",
+        body: "<p>Preencha os dados do vendedor e crie o <strong>login e a senha</strong> de acesso. Ao enviar, o cadastro vai para a <strong>Matriz aprovar</strong> — só depois o vendedor ganha acesso e entra na sua base.</p>",
+      },
+      {
+        page: "xacessos",
+        target: null,
+        pos: "center",
+        title: "Vendedores ativos e desligamento",
+        body: "<p>Em <strong>Vendedores ativos</strong> você consulta o cadastro de cada um e pode <strong>desligar</strong> em caso de saída. Todo desligamento é <strong>registrado e avisado à Matriz</strong>. E atenção: um vendedor desligado <strong>só volta com aprovação da Matriz</strong> — você não consegue reincluir sozinho.</p>",
+      },
+    ],
+    outro: {
+      hook: '"É isso — você comanda o seu grupo de ponta a ponta. Conte comigo quando precisar."',
+      big: true,
+      final: true,
+    },
+  },
+] satisfies TutorialSourceChapter[];

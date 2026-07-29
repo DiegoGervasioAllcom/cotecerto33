@@ -10,6 +10,8 @@ import { useFipe } from "@/components/venda/novo-lead/hooks/useFipe";
 import { useValidacaoEtapas } from "@/components/venda/novo-lead/hooks/useValidacaoEtapas";
 import { useSimulacaoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { useCotacaoRascunho } from "@/components/venda/novo-lead/hooks/useCotacaoRascunho";
+import { useTutorialWizardPreview } from "@/components/venda/novo-lead/hooks/useTutorialWizardPreview";
+import { NovoLeadHeader } from "@/components/venda/novo-lead/NovoLeadHeader";
 import { StepSegurado } from "@/components/venda/novo-lead/steps/StepSegurado";
 import { StepSeguro } from "@/components/venda/novo-lead/steps/StepSeguro";
 import { StepVeiculo } from "@/components/venda/novo-lead/steps/StepVeiculo";
@@ -33,6 +35,10 @@ export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
 
 function Page() {
   const [step, setStep] = useState(0);
+  const { visibleStep, setVisibleStep, showTutorialReady } = useTutorialWizardPreview(
+    step,
+    setStep,
+  );
   const [seguradorasDb, setSeguradorasDb] = useState<string[]>([]);
 
   useEffect(() => {
@@ -256,51 +262,22 @@ function Page() {
   return (
     <AppShell title="Novo lead">
       <ProtoIcons />
-      <div className="page-head">
-        <div>
-          <h1>
-            Nova cotação{" "}
-            <span className="chip chip-slate" style={{ marginLeft: 6, verticalAlign: "middle" }}>
-              Novo
-            </span>
-          </h1>
-          <div className="sub">
-            Multi cálculo · Padrão Automóvel · espelha o fluxo de cotação do Quiver com a cara da
-            Supper.
-          </div>
-        </div>
-        <div className="tools">
-          <button className="btn btn-ghost">
-            <svg width="14" height="14">
-              <use href="#i-message" />
-            </svg>{" "}
-            WhatsApp
-          </button>
-          <button className="btn btn-ghost">
-            <svg width="14" height="14">
-              <use href="#i-history" />
-            </svg>{" "}
-            Histórico
-          </button>
-          <button className="btn btn-ghost" onClick={() => void abrirPerda()}>
-            <svg width="14" height="14">
-              <use href="#i-flag" />
-            </svg>{" "}
-            Classificar perda
-          </button>
-        </div>
-      </div>
+      <NovoLeadHeader onClassificarPerda={() => void abrirPerda()} />
       {loading && (
         <div className="muted" style={{ marginBottom: 8 }}>
           Carregando rascunho…
         </div>
       )}
 
-      <Stepper step={step} setStep={setStep} podeCalcular={podeCalcular} />
+      <Stepper
+        step={visibleStep}
+        setStep={setVisibleStep}
+        podeCalcular={podeCalcular || showTutorialReady}
+      />
 
-      <div className="lead-shell" style={step === 5 ? { display: "block" } : undefined}>
+      <div className="lead-shell" style={visibleStep === 5 ? { display: "block" } : undefined}>
         <div className="wizard-card">
-          {step === 0 && (
+          {visibleStep === 0 && (
             <StepSegurado
               f={f}
               up={up}
@@ -310,9 +287,11 @@ function Page() {
             />
           )}
 
-          {step === 1 && <StepSeguro f={f} up={up} setF={setF} seguradorasDb={seguradorasDb} />}
+          {visibleStep === 1 && (
+            <StepSeguro f={f} up={up} setF={setF} seguradorasDb={seguradorasDb} />
+          )}
 
-          {step === 2 && (
+          {visibleStep === 2 && (
             <StepVeiculo
               f={f}
               up={up}
@@ -323,11 +302,11 @@ function Page() {
             />
           )}
 
-          {step === 3 && <StepPerfil f={f} up={up} erros={erros} />}
+          {visibleStep === 3 && <StepPerfil f={f} up={up} erros={erros} />}
 
-          {step === 4 && <StepCoberturas f={f} up={up} erros={erros} />}
+          {visibleStep === 4 && <StepCoberturas f={f} up={up} erros={erros} />}
 
-          {step === 5 && (
+          {visibleStep === 5 && (
             <StepCalculo
               f={f}
               resultados={resultados}
@@ -339,8 +318,8 @@ function Page() {
           )}
 
           <WizardFooter
-            step={step}
-            setStep={setStep}
+            step={visibleStep}
+            setStep={setVisibleStep}
             resultados={resultados}
             validarEtapa={validarEtapa}
             podeCalcular={podeCalcular}
@@ -348,14 +327,14 @@ function Page() {
           />
         </div>
 
-        {step !== 5 && (
+        {visibleStep !== 5 && (
           <ResumoCotacao
             f={f}
             marcas={marcas}
             modelos={modelos}
             fipeValor={fipeValor}
             podeCalcular={podeCalcular}
-            setStep={setStep}
+            setStep={setVisibleStep}
             doSimularCalculo={doSimularCalculo}
             persistir={persistir}
             saveState={saveState}

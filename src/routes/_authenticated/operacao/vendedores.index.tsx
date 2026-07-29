@@ -329,7 +329,7 @@ function Page() {
       {err && <div className="alert alert-err">{err}</div>}
 
       {!loading && rows.length === 0 && (
-        <div className="card">
+        <div className="card" data-tour="vendedores-lista">
           <div
             className="card-b"
             style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
@@ -340,7 +340,7 @@ function Page() {
       )}
 
       {rows.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
+        <div data-tour="vendedores-lista" style={{ overflowX: "auto" }}>
           <table className="table-pipe mtable" style={{ minWidth: 1180 }}>
             <thead>
               <tr>

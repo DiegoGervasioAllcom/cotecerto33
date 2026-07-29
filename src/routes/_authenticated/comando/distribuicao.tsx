@@ -376,7 +376,7 @@ function Page() {
       )}
 
       {/* TRIAGEM */}
-      <div className="card" style={{ marginBottom: 18 }}>
+      <div className="card" data-tour="distribuicao-triagem" style={{ marginBottom: 18 }}>
         <div className="card-h">
           <h3>
             <svg width="16" height="16">
@@ -755,7 +755,7 @@ function Page() {
       </div>
 
       {/* SIMULAÇÃO */}
-      <div className="card" style={{ marginTop: 18 }}>
+      <div className="card" data-tour="distribuicao-simulacao" style={{ marginTop: 18 }}>
         <div className="card-h">
           <h3>
             <svg width="16" height="16">

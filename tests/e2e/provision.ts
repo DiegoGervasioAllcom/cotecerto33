@@ -53,6 +53,12 @@ export type VendedorComLead = {
   leadId: string;
 };
 
+export type VendedorComTutorial = VendedorComLead & {
+  cotacaoId: string;
+  rascunhoId: string;
+  propostaId: string;
+};
+
 /**
  * Cria uma empresa aprovada + vendedor aprovado nela, e um lead já distribuído
  * (`responsavel_id` = vendedor, `status_pipeline='novo'`) pronto para aparecer em
@@ -122,6 +128,104 @@ export async function limparVendedorComLead(v: VendedorComLead): Promise<void> {
   await admin.from("user_roles").delete().eq("user_id", v.userId);
   await admin.auth.admin.deleteUser(v.userId);
   await admin.from("empresas").delete().eq("id", v.empresaId);
+}
+
+/**
+ * Acrescenta ao vendedor uma cotação calculada e uma proposta selecionada.
+ * A fixture permite validar os destinos read-only do tutorial sem clicar em
+ * ações de negócio para fabricar dados durante o próprio tour.
+ */
+export async function criarVendedorComTutorial(): Promise<VendedorComTutorial> {
+  const vendedor = await criarVendedorComLead();
+  const criadoEmCalculada = new Date(Date.now() - 60_000).toISOString();
+  const { data: cotacao, error: eCotacao } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      status: "calculada",
+      step_atual: 5,
+      criado_em: criadoEmCalculada,
+      atualizado_em: criadoEmCalculada,
+    })
+    .select("id")
+    .single();
+  if (eCotacao || !cotacao) throw new Error(`criar cotação tutorial: ${eCotacao?.message}`);
+
+  const cotacaoId = cotacao.id;
+  const children = await Promise.all([
+    admin.from("cotacao_segurado").insert({
+      cotacao_id: cotacaoId,
+      nome: "Cliente Tutorial",
+      cpf_cnpj: "52998224725",
+      email: "cliente.tutorial@teste.local",
+    }),
+    admin.from("cotacao_veiculo").insert({
+      cotacao_id: cotacaoId,
+      marca_nome: "FIAT",
+      modelo_nome: "UNO",
+      ano_modelo: "2024",
+      placa: "TST1A23",
+    }),
+    admin.from("cotacao_coberturas").insert({ cotacao_id: cotacaoId }),
+  ]);
+  const childError = children.find((result) => result.error)?.error;
+  if (childError) throw new Error(`criar detalhe da cotação tutorial: ${childError.message}`);
+
+  const { error: ePremios } = await admin.from("cotacao_premios").insert([
+    {
+      cotacao_id: cotacaoId,
+      seguradora: "Porto Seguro",
+      cobertura: "Completa",
+      premio: 2100,
+      selecionada: true,
+    },
+    {
+      cotacao_id: cotacaoId,
+      seguradora: "Azul",
+      cobertura: "Completa",
+      premio: 2250,
+      selecionada: false,
+    },
+    {
+      cotacao_id: cotacaoId,
+      seguradora: "HDI",
+      cobertura: "Completa",
+      premio: 2400,
+      selecionada: false,
+    },
+  ]);
+  if (ePremios) throw new Error(`criar prêmios tutorial: ${ePremios.message}`);
+
+  const { data: proposta, error: eProposta } = await admin
+    .from("propostas")
+    .select("id")
+    .eq("cotacao_id", cotacaoId)
+    .single();
+  if (eProposta || !proposta) throw new Error(`buscar proposta tutorial: ${eProposta?.message}`);
+
+  const { data: rascunho, error: eRascunho } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      status: "rascunho",
+      step_atual: 1,
+      criado_em: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (eRascunho || !rascunho) throw new Error(`criar rascunho mais recente: ${eRascunho?.message}`);
+
+  return { ...vendedor, cotacaoId, rascunhoId: rascunho.id, propostaId: proposta.id };
+}
+
+export async function limparVendedorComTutorial(v: VendedorComTutorial): Promise<void> {
+  await admin.from("proposta_versoes").delete().eq("proposta_id", v.propostaId);
+  await admin.from("propostas").delete().eq("id", v.propostaId);
+  await admin.from("cotacoes").delete().eq("id", v.rascunhoId);
+  await admin.from("cotacoes").delete().eq("id", v.cotacaoId);
+  await limparVendedorComLead(v);
 }
 
 export type PersonaRole = "master" | "supervisor" | "franqueado";
