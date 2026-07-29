@@ -132,6 +132,14 @@ async function monitorSupabaseMutations(page: Page) {
       await route.continue();
       return;
     }
+    // Resolve as áreas do menu (V11) — RPC global, `stable`, só leitura, na mesma
+    // categoria do presence_set: não é ação de negócio do tutorial. O hook
+    // `useAreas` cacheia por sessão, então na prática não dispara durante o
+    // roteiro; a isenção existe para o teste não depender do estado do cache.
+    if (pathname.endsWith("/rest/v1/rpc/fn_areas_do_usuario")) {
+      await route.continue();
+      return;
+    }
     if (pathname.includes("/rest/v1/rpc/") || ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
       mutations.push(`${method} ${pathname}`);
     }

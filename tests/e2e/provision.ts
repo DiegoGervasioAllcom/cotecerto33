@@ -296,8 +296,15 @@ async function obterModeloId(modalidade: PersonaModalidade): Promise<string> {
 export async function criarPersona(opts: {
   role: PersonaRole;
   modalidade?: PersonaModalidade;
+  /**
+   * Cargo do time interno (V11). Obrigatório na prática para matriz/coordenador/
+   * supervisor/interno: o menu deles é recortado pelas áreas do cargo, e sem
+   * cargo `fn_areas_do_usuario` devolve vazio — a nav fica sem nenhum item. Na
+   * V11 quem define o cargo é a aprovação do cadastro.
+   */
+  cargo?: string;
 }): Promise<Persona> {
-  const { role, modalidade } = opts;
+  const { role, modalidade, cargo } = opts;
   const senha = "Teste@123!";
   const email = `${uniq(`${role}-e2e`)}@teste.local`;
 
@@ -329,7 +336,7 @@ export async function criarPersona(opts: {
 
   const { error: eProfile } = await admin
     .from("profiles")
-    .update({ empresa_id: emp.id, status: "aprovada" })
+    .update({ empresa_id: emp.id, status: "aprovada", ...(cargo ? { cargo_id: cargo } : {}) })
     .eq("id", userId);
   if (eProfile) throw new Error(`atualizar profile (${role}): ${eProfile.message}`);
 

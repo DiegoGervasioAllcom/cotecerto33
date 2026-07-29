@@ -69,7 +69,8 @@ test.describe("navegação por perfil — grpLike (master/supervisor/franquia Fu
   test.beforeAll(async () => {
     [master, supervisor, franquiaFull] = await Promise.all([
       criarPersona({ role: "master" }),
-      criarPersona({ role: "supervisor" }),
+      // V11: o supervisor precisa de cargo — o menu dele vem das áreas do cargo.
+      criarPersona({ role: "supervisor", cargo: "sup_vendas" }),
       criarPersona({ role: "franqueado", modalidade: "full" }),
     ]);
   });
@@ -96,7 +97,16 @@ test.describe("navegação por perfil — grpLike (master/supervisor/franquia Fu
     await expect(page.getByText("MASTER", { exact: true }).first()).toBeVisible();
   });
 
-  test("supervisor vê a nav de GRUPO (Vendedores) e não vê Novo lead/Distribuição", async ({
+  /**
+   * V11: o supervisor saiu da nav de GRUPO e virou time interno da Matriz, com o
+   * menu recortado pelas ÁREAS do cargo. Para `sup_vendas` o protótipo r40 define
+   * 10 áreas — inclui Vendedores e Supervisão, e não inclui Distribuição (que é
+   * do Supervisor Operacional) nem Leads.
+   *
+   * O selo também mudou: mostra o CARGO, não o perfil, porque os três
+   * supervisores moram no mesmo `perfil` e ele não distingue.
+   */
+  test("Supervisor de Vendas vê o menu do cargo dele e não vê Novo lead/Distribuição", async ({
     page,
   }) => {
     await loginAs(page, supervisor.email, supervisor.senha);
@@ -104,9 +114,11 @@ test.describe("navegação por perfil — grpLike (master/supervisor/franquia Fu
 
     await expect(page.getByRole("link", { name: "Vendedores" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Supervisão" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Aprovações" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Novo lead" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Distribuição" })).toHaveCount(0);
-    await expect(page.getByText("SUPERVISOR", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
+    await expect(page.getByText("SUPERVISOR DE VENDAS", { exact: true }).first()).toBeVisible();
   });
 
   test("franquia Full vê a nav de GRUPO (Vendedores) e não vê Novo lead/Distribuição", async ({

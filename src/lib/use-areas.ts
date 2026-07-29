@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
@@ -66,46 +66,42 @@ export function ehPerfilInterno(role: string | null | undefined): boolean {
   return !!role && PERFIS_INTERNOS.has(role);
 }
 
+/**
+ * Escopo e cargo do usuário, buscados UMA vez por sessão.
+ *
+ * Usa react-query de propósito, não `useEffect`: o `AppShell` remonta a cada
+ * navegação, e com efeito local o mesmo RPC disparava a cada troca de tela — um
+ * E2E do tutorial pegou 6 chamadas idênticas num único fluxo. Cargo e áreas só
+ * mudam quando a Matriz reclassifica o acesso, então cache longo é correto aqui;
+ * o `queryKey` por uid invalida sozinho na troca de usuário.
+ */
 export function useAreas(): AreasEscopo {
   const { role, session } = useAuth();
-  const [areas, setAreas] = useState<Set<string>>(new Set());
-  const [cargoNome, setCargoNome] = useState<string | null>(null);
   const ehInterno = ehPerfilInterno(role);
-  const [loading, setLoading] = useState(ehInterno);
+  const uid = session?.user?.id ?? null;
 
-  useEffect(() => {
-    let active = true;
-
-    if (!ehInterno || !session?.user?.id) {
-      setAreas(new Set());
-      setCargoNome(null);
-      setLoading(false);
-      return;
-    }
-
-    const uid = session.user.id;
-    setLoading(true);
-    Promise.all([
-      supabase.rpc("fn_areas_do_usuario", { _user_id: uid }),
-      supabase.from("profiles").select("cargos(nome)").eq("id", uid).maybeSingle(),
-    ]).then(([res, perfilRes]) => {
-      if (!active) return;
-      if (res.error) {
-        // Falha de rede/policy: conjunto vazio é o lado seguro — some menu,
-        // não aparece menu que a pessoa não deveria ver.
-        setAreas(new Set());
-      } else {
-        setAreas(new Set((res.data ?? []).map((r) => r.area_chave)));
-      }
+  const { data, isPending } = useQuery({
+    queryKey: ["areas-cargo", uid],
+    enabled: ehInterno && !!uid,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    queryFn: async () => {
+      const [res, perfilRes] = await Promise.all([
+        supabase.rpc("fn_areas_do_usuario", { _user_id: uid! }),
+        supabase.from("profiles").select("cargos(nome)").eq("id", uid!).maybeSingle(),
+      ]);
+      // Falha de rede/policy: conjunto vazio é o lado seguro — some menu, não
+      // aparece menu que a pessoa não deveria ver.
+      const chaves = res.error ? [] : (res.data ?? []).map((r) => r.area_chave);
       const cargo = perfilRes.data?.cargos as { nome: string } | null | undefined;
-      setCargoNome(cargo?.nome ?? null);
-      setLoading(false);
-    });
+      return { chaves, cargoNome: cargo?.nome ?? null };
+    },
+  });
 
-    return () => {
-      active = false;
-    };
-  }, [ehInterno, session?.user?.id]);
+  const areas = new Set<string>(data?.chaves ?? []);
+  const cargoNome = data?.cargoNome ?? null;
+  // Rede externa não consulta nada, então nunca fica "carregando".
+  const loading = ehInterno && !!uid && isPending;
 
   return {
     loading,
