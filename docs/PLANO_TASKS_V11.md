@@ -23,13 +23,21 @@ Sem isso, toda tela da V11 nasce em cima de premissa errada.
 | Task    | Tag     | Descrição                                                                                             | Depende de |
 | ------- | ------- | ----------------------------------------------------------------------------------------------------- | ---------- |
 | V11.0.1 | front   | Diffar o CSS do protótipo r40 contra `src/styles/proto.css` e aplicar o delta (regra 6: byte a byte)  | —          |
-| V11.0.2 | banco   | Estender `public.perfil` com `coordenador`; decidir se supervisor Vendas × Operacional é valor de enum ou cargo | —  |
-| V11.0.3 | banco   | Tabela de **cargos** + áreas de escopo (7 presets + Vendedor Matriz), com RLS e checks                | V11.0.2    |
+| V11.0.2 | banco   | ✅ `public.perfil += 'coordenador'`; supervisor Vendas × Operacional resolvido como **cargo** (ver `PLANO_HIERARQUIA_V11.md`) | — |
+| V11.0.3 | banco   | ✅ Tabela de **cargos** + áreas de escopo (7 presets + Vendedor Matriz), com RLS e checks             | V11.0.2    |
 | V11.0.4 | banco   | Taxonomia única de **canais** (item 9 do Handoff): uma tabela alimentando captação, aprovação, funis e Central da Full | — |
-| V11.0.5 | banco   | Marcação de **diretor** no cadastro (mín. 2, não é cargo) + RPC que valida senha de diretor no servidor | V11.0.2   |
-| V11.0.6 | banco   | **Histórico append-only** com DE/PARA em JSON, sem `UPDATE`/`DELETE` para a aplicação (item 7)         | —          |
-| V11.0.7 | testes  | Testes de RLS/grants: histórico não editável, política sem diretor é rejeitada no backend             | V11.0.5, V11.0.6 |
-| V11.0.8 | banco   | Cadeia hierárquica: Master passa a responder ao Coordenador; revisar `superior_id` e `empresas_visiveis()` | V11.0.2 |
+| V11.0.5 | banco   | ✅ Marcação de **diretor** no cadastro (mín. 2, não é cargo) + verificação da senha no servidor e a única porta de escrita do histórico | V11.0.2 |
+| V11.0.6 | banco   | ✅ **Histórico append-only** com DE/PARA em JSON, sem `UPDATE`/`DELETE`/`TRUNCATE` para a aplicação (item 7) | —      |
+| V11.0.7 | testes  | ✅ Testes de RLS/grants: histórico não editável, política sem diretor é rejeitada no backend           | V11.0.5, V11.0.6 |
+| V11.0.8 | banco   | ✅ Cadeia hierárquica: Master passa a responder ao Coordenador; `empresas_visiveis()` já era agnóstica de rótulo | V11.0.2 |
+
+> **Armadilha registrada para quem fizer o histórico da franquia (V11.5.6).** Trigger
+> `for each row` **não dispara em TRUNCATE**. O Supabase concede `ALL` em `public` a
+> `service_role` por default privileges, e `ALL` inclui `TRUNCATE` — então o histórico
+> nasceu apagável por um `truncate` da própria aplicação, passando por cima dos triggers
+> de UPDATE/DELETE. Verificado na prática (1 linha → 0). A tabela da franquia precisa do
+> mesmo par: `revoke all from service_role` antes do grant seletivo **e** um trigger
+> `before truncate ... for each statement`.
 
 ## Frente 1 · Convite Supper e porta de entrada
 

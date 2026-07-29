@@ -1326,6 +1326,68 @@ export type Database = {
           },
         ];
       };
+      historico_alteracoes: {
+        Row: {
+          area: string;
+          autor_id: string | null;
+          autor_nome: string;
+          de_para: Json | null;
+          empresa_id: string | null;
+          id: string;
+          o_que: string;
+          quando: string;
+        };
+        Insert: {
+          area: string;
+          autor_id?: string | null;
+          autor_nome: string;
+          de_para?: Json | null;
+          empresa_id?: string | null;
+          id?: string;
+          o_que: string;
+          quando?: string;
+        };
+        Update: {
+          area?: string;
+          autor_id?: string | null;
+          autor_nome?: string;
+          de_para?: Json | null;
+          empresa_id?: string | null;
+          id?: string;
+          o_que?: string;
+          quando?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "historico_alteracoes_autor_id_fkey";
+            columns: ["autor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "historico_alteracoes_autor_id_fkey";
+            columns: ["autor_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "historico_alteracoes_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "historico_alteracoes_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       integracoes: {
         Row: {
           atualizado_em: string;
@@ -2074,6 +2136,7 @@ export type Database = {
           desligado_em: string | null;
           desligado_motivo: string | null;
           dia_pagamento: number | null;
+          diretor: boolean;
           email: string;
           empresa_id: string | null;
           equipe: string | null;
@@ -2098,6 +2161,7 @@ export type Database = {
           desligado_em?: string | null;
           desligado_motivo?: string | null;
           dia_pagamento?: number | null;
+          diretor?: boolean;
           email?: string;
           empresa_id?: string | null;
           equipe?: string | null;
@@ -2122,6 +2186,7 @@ export type Database = {
           desligado_em?: string | null;
           desligado_motivo?: string | null;
           dia_pagamento?: number | null;
+          diretor?: boolean;
           email?: string;
           empresa_id?: string | null;
           equipe?: string | null;
@@ -2814,10 +2879,12 @@ export type Database = {
         Args: { p_ano: number; p_trimestre: number };
         Returns: string[];
       };
+      fn_confirmar_senha_diretor: { Args: { _senha: string }; Returns: boolean };
       fn_dentro_alcada_desconto: {
         Args: { p_aprovador: string; p_pct: number; p_seguradora: string };
         Returns: boolean;
       };
+      fn_eh_diretor: { Args: { _user_id: string }; Returns: boolean };
       fn_modelo_alcada_desconto: {
         Args: { p_profile_id: string };
         Returns: string;
@@ -2838,6 +2905,16 @@ export type Database = {
         Returns: {
           id: string;
         }[];
+      };
+      fn_registrar_alteracao: {
+        Args: {
+          _area: string;
+          _de_para?: Json;
+          _empresa_id?: string;
+          _o_que: string;
+          _senha: string;
+        };
+        Returns: string;
       };
       fn_tem_area: {
         Args: { _area: string; _user_id: string };
