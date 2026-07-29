@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
+import { AceiteTutorialPreview } from "@/components/venda/aceite-tutorial-preview";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/aceite")({
@@ -76,6 +78,7 @@ function Timeline({ r }: { r: Row }) {
 
 function Page() {
   const { selected } = Route.useSearch();
+  const tutorialPreview = useTutorialPreview();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -101,8 +104,12 @@ function Page() {
     setLoading(false);
   }
   useEffect(() => {
-    load();
-  }, []);
+    if (tutorialPreview === "aceite-aceita" || tutorialPreview === "aceite-pendencia") {
+      setLoading(false);
+      return;
+    }
+    void load();
+  }, [tutorialPreview]);
 
   useEffect(() => {
     if (!selected || loading) return;
@@ -143,6 +150,15 @@ function Page() {
 
     setBusy(null);
     await load();
+  }
+
+  if (tutorialPreview === "aceite-aceita" || tutorialPreview === "aceite-pendencia") {
+    return (
+      <AppShell title="Aceite & transmissão">
+        <ProtoIcons />
+        <AceiteTutorialPreview mode={tutorialPreview} />
+      </AppShell>
+    );
   }
 
   return (
@@ -266,6 +282,7 @@ function Page() {
                 <div className="row" style={{ justifyContent: "flex-end", marginTop: 12 }}>
                   <button
                     className="btn btn-yellow"
+                    data-tour="aceite-transmitir"
                     disabled={busy === r.id || !ok}
                     style={!ok ? { opacity: 0.5 } : undefined}
                     onClick={() => transmitir(r.id)}

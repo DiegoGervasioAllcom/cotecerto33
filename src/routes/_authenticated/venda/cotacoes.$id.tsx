@@ -273,7 +273,12 @@ function Page() {
             </svg>{" "}
             Voltar para lista
           </button>
-          <Link to="/venda/novo-lead" search={{ id: data.id }} className="btn btn-ghost">
+          <Link
+            to="/venda/novo-lead"
+            search={{ id: data.id }}
+            className="btn btn-ghost"
+            data-tour="comparar-mais"
+          >
             <svg width={14} height={14}>
               <use href="#i-plus" />
             </svg>{" "}

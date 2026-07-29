@@ -2,6 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import {
+  ExtratoTutorialPreview,
+  ExtratoTutorialSalePreview,
+} from "@/components/venda/extrato-tutorial-preview";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/venda/extrato")({
@@ -243,7 +247,7 @@ function Page() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 12 }}>
+      <div className="card" data-tour="extrato-filtros" style={{ marginBottom: 12 }}>
         <div className="card-b row" style={{ gap: 12, alignItems: "end", flexWrap: "wrap" }}>
           <div>
             <div className="label">De</div>
@@ -380,6 +384,8 @@ function Page() {
 
       {loading && <div className="muted">Carregando…</div>}
 
+      <ExtratoTutorialSalePreview />
+
       {!loading && rows.length === 0 && (
         <div className="card">
           <div
@@ -424,7 +430,11 @@ function Page() {
         </div>
       )}
 
-      <div className="card" style={{ marginTop: 18, borderLeft: "4px solid var(--alert)" }}>
+      <div
+        className="card"
+        data-tour="extrato-estornos"
+        style={{ marginTop: 18, borderLeft: "4px solid var(--alert)" }}
+      >
         <div className="card-h">
           <h3 style={{ color: "var(--alert)" }}>
             <svg width="16" height="16">
@@ -532,7 +542,9 @@ function Page() {
         </div>
       </div>
 
-      {/* TODO Q3: campanha ativa / próximos pagamentos dependem de fonte de dados não disponível */}
+      <ExtratoTutorialPreview />
+
+      {/* TODO Q3: campanha ativa / próximos pagamentos reais dependem de fonte de dados não disponível */}
     </AppShell>
   );
 }

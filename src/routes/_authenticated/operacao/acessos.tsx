@@ -4,6 +4,8 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 import { SolicitacoesVendedorTab } from "@/components/acessos/solicitacoes-vendedor-tab";
 import { useAcessosData } from "@/components/operacao/acessos/hooks/useAcessosData";
+import { useAcessosTutorialPreview } from "@/components/operacao/acessos/hooks/useAcessosTutorialPreview";
+import { AcessosNavigation } from "@/components/operacao/acessos/AcessosNavigation";
 import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
 import { DesligamentosTab } from "@/components/operacao/acessos/desligamentos-tab";
 import { PersoGeral } from "@/components/operacao/acessos/perso-geral";
@@ -41,6 +43,13 @@ function Page() {
     recusar,
     liberar,
   } = useAcessosData(!denied);
+  const { visibleTab, setVisibleTab, visiblePersoSub, setVisiblePersoSub } =
+    useAcessosTutorialPreview({
+      tab,
+      setTab,
+      persoSub,
+      setPersoSub,
+    });
 
   if (denied) return denied;
 
@@ -56,20 +65,12 @@ function Page() {
         </div>
       </div>
 
-      <div className="toggle" style={{ marginBottom: 18 }}>
-        <button className={tab === "pend" ? "on" : ""} onClick={() => setTab("pend")}>
-          Pendentes de aprovação <span style={{ opacity: 0.7 }}>({pendentes.length})</span>
-        </button>
-        <button className={tab === "vendedores" ? "on" : ""} onClick={() => setTab("vendedores")}>
-          Solicitações de vendedor
-        </button>
-        <button className={tab === "deslig" ? "on" : ""} onClick={() => setTab("deslig")}>
-          Desligamentos <span style={{ opacity: 0.7 }}>({deslig.length})</span>
-        </button>
-        <button className={tab === "modelos" ? "on" : ""} onClick={() => setTab("modelos")}>
-          Personalização geral
-        </button>
-      </div>
+      <AcessosNavigation
+        tab={visibleTab}
+        pendentes={pendentes.length}
+        desligamentos={deslig.length}
+        onChange={setVisibleTab}
+      />
 
       {err && (
         <div className="banner alert" style={{ marginBottom: 14 }}>
@@ -77,16 +78,16 @@ function Page() {
         </div>
       )}
 
-      {tab === "pend" && <PendentesTab pendentes={pendentes} onAnalisar={openAnalisar} />}
+      {visibleTab === "pend" && <PendentesTab pendentes={pendentes} onAnalisar={openAnalisar} />}
 
-      {tab === "vendedores" && <SolicitacoesVendedorTab />}
+      {visibleTab === "vendedores" && <SolicitacoesVendedorTab />}
 
-      {tab === "deslig" && <DesligamentosTab deslig={deslig} />}
+      {visibleTab === "deslig" && <DesligamentosTab deslig={deslig} />}
 
-      {tab === "modelos" && (
+      {visibleTab === "modelos" && (
         <PersoGeral
-          sub={persoSub}
-          setSub={setPersoSub}
+          sub={visiblePersoSub}
+          setSub={setVisiblePersoSub}
           modelos={modelos.filter((m) => m.tipo === "franqueada")}
           setModelos={(updater) =>
             setModelos((prev) => {

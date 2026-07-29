@@ -353,7 +353,7 @@ function Page() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-            <div className="card">
+            <div className="card" data-tour="vendedor-funil">
               <div className="card-h">
                 <strong>
                   <svg width="14" height="14" style={{ verticalAlign: -2 }}>
