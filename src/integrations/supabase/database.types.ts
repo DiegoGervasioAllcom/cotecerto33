@@ -1343,6 +1343,7 @@ export type Database = {
           celular: string | null;
           cidade: string | null;
           contato_emergencia: string | null;
+          convite_id: string | null;
           created_at: string;
           dados_bancarios: string | null;
           dados_cadastro: Json;
@@ -1381,6 +1382,7 @@ export type Database = {
           celular?: string | null;
           cidade?: string | null;
           contato_emergencia?: string | null;
+          convite_id?: string | null;
           created_at?: string;
           dados_bancarios?: string | null;
           dados_cadastro?: Json;
@@ -1419,6 +1421,7 @@ export type Database = {
           celular?: string | null;
           cidade?: string | null;
           contato_emergencia?: string | null;
+          convite_id?: string | null;
           created_at?: string;
           dados_bancarios?: string | null;
           dados_cadastro?: Json;
@@ -1452,6 +1455,13 @@ export type Database = {
           uf?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "empresas_convite_id_fkey";
+            columns: ["convite_id"];
+            isOneToOne: false;
+            referencedRelation: "convites";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "empresas_modelo_id_fkey";
             columns: ["modelo_id"];
@@ -3001,6 +3011,10 @@ export type Database = {
           p_submotivo: string;
         };
         Returns: undefined;
+      };
+      consumir_convite: {
+        Args: { p_token: string; p_user_id: string };
+        Returns: boolean;
       };
       contrapropor_desconto: {
         Args: { p_id: string; p_obs?: string; p_pct_novo: number };

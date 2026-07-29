@@ -342,5 +342,9 @@ comment on function public.abrir_convite(text) is
    Pública (anon) porque o convidado ainda não tem login — por isso devolve só o
    necessário e nunca a tabela. Motivos de recusa: inexistente, usado, expirado.';
 
+-- `anon` porque o convidado ainda não tem login; `service_role` porque a server
+-- function `cadastrarPorConvite` revalida o token antes de criar o usuário — sem
+-- este grant o revoke acima a deixaria de fora e o cadastro morria com
+-- "permission denied".
 revoke all on function public.abrir_convite(text) from public;
-grant execute on function public.abrir_convite(text) to anon, authenticated;
+grant execute on function public.abrir_convite(text) to anon, authenticated, service_role;
