@@ -43,3 +43,10 @@ coverage/
 test-results/
 playwright-report/
 /playwright/.cache/
+
+# Worktrees e skills espelhadas por outras ferramentas de agente
+.codex/
+.agents/
+
+# Saída de relatórios gerados localmente
+output/
