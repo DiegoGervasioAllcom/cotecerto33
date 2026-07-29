@@ -408,6 +408,110 @@ export type Database = {
         };
         Relationships: [];
       };
+      convites: {
+        Row: {
+          cargo_id: string | null;
+          codigo: string;
+          criado_em: string;
+          criado_por: string;
+          escopo: string;
+          expira_em: string;
+          id: string;
+          nome: string;
+          perfil: string | null;
+          token: string;
+          trilha: string;
+          usado_em: string | null;
+          usado_por: string | null;
+          vinc_empresa_id: string | null;
+          vinc_tipo: string;
+        };
+        Insert: {
+          cargo_id?: string | null;
+          codigo: string;
+          criado_em?: string;
+          criado_por: string;
+          escopo: string;
+          expira_em: string;
+          id?: string;
+          nome: string;
+          perfil?: string | null;
+          token: string;
+          trilha: string;
+          usado_em?: string | null;
+          usado_por?: string | null;
+          vinc_empresa_id?: string | null;
+          vinc_tipo: string;
+        };
+        Update: {
+          cargo_id?: string | null;
+          codigo?: string;
+          criado_em?: string;
+          criado_por?: string;
+          escopo?: string;
+          expira_em?: string;
+          id?: string;
+          nome?: string;
+          perfil?: string | null;
+          token?: string;
+          trilha?: string;
+          usado_em?: string | null;
+          usado_por?: string | null;
+          vinc_empresa_id?: string | null;
+          vinc_tipo?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "convites_cargo_id_fkey";
+            columns: ["cargo_id"];
+            isOneToOne: false;
+            referencedRelation: "cargos";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "convites_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "convites_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "convites_usado_por_fkey";
+            columns: ["usado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "convites_usado_por_fkey";
+            columns: ["usado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "convites_vinc_empresa_id_fkey";
+            columns: ["vinc_empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "convites_vinc_empresa_id_fkey";
+            columns: ["vinc_empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       cotacao_coberturas: {
         Row: {
           app_invalidez: string | null;
@@ -2854,6 +2958,7 @@ export type Database = {
         Args: { p_cotacao_id: string; p_pct: number; p_seguradora_id: string };
         Returns: undefined;
       };
+      abrir_convite: { Args: { p_token: string }; Returns: Json };
       aceitar_desconto: { Args: { p_id: string }; Returns: undefined };
       admin_atualizar_usuario: {
         Args: { p_empresa_id: string; p_nome: string; p_user_id: string };
@@ -2900,6 +3005,24 @@ export type Database = {
       contrapropor_desconto: {
         Args: { p_id: string; p_obs?: string; p_pct_novo: number };
         Returns: undefined;
+      };
+      criar_convite: {
+        Args: {
+          p_cargo_id?: string;
+          p_escopo: string;
+          p_nome: string;
+          p_perfil?: string;
+          p_trilha: string;
+          p_validade_dias?: number;
+          p_vinc_empresa_id?: string;
+          p_vinc_tipo?: string;
+        };
+        Returns: {
+          codigo: string;
+          expira_em: string;
+          id: string;
+          token: string;
+        }[];
       };
       criar_leads_renovacao: { Args: never; Returns: Json };
       definir_negociacao_status: {
@@ -2972,6 +3095,7 @@ export type Database = {
         Returns: string[];
       };
       fn_confirmar_senha_diretor: { Args: { _senha: string }; Returns: boolean };
+      fn_convite_codigo: { Args: never; Returns: string };
       fn_dentro_alcada_desconto: {
         Args: { p_aprovador: string; p_pct: number; p_seguradora: string };
         Returns: boolean;
