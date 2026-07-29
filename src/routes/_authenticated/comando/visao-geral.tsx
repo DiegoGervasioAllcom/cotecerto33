@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { ChannelFunnels } from "@/components/comando/channel-funnels";
 import { DashboardPeriodPicker } from "@/components/comando/dashboard-period-picker";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,6 +77,20 @@ function Page() {
   });
 
   const normalizedPeriod = normalizedPeriodQuery.data;
+
+  const channelFunnelsQuery = useQuery({
+    queryKey: ["funis-por-canal-visao-geral", normalizedPeriod?.inicio, normalizedPeriod?.fim],
+    enabled: Boolean(normalizedPeriod),
+    queryFn: async () => {
+      if (!normalizedPeriod) throw new Error("Período ainda não normalizado.");
+      const { data, error } = await supabase.rpc("funis_por_canal_visao_geral", {
+        p_inicio: normalizedPeriod.inicio,
+        p_fim: normalizedPeriod.fim,
+      });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Dinheiro é agregado exclusivamente no servidor. A RPC aplica a janela
   // canônica, auth.uid() e RLS; o React apenas exibe saldo e quantidade.
@@ -720,6 +735,13 @@ function Page() {
           </div>
         )}
       </div>
+
+      <ChannelFunnels
+        funnels={channelFunnelsQuery.data ?? []}
+        periodLabel={periodLabel}
+        isLoading={normalizedPeriodQuery.isLoading || channelFunnelsQuery.isLoading}
+        error={channelFunnelsQuery.error}
+      />
 
       <div className="dash-grid">
         <div className="col">

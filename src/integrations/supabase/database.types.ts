@@ -62,6 +62,7 @@ export type Database = {
           ativo: boolean;
           criado_em: string;
           empresa_id: string | null;
+          exibir_funil: boolean;
           id: string;
           nome: string;
           ordem: number;
@@ -71,6 +72,7 @@ export type Database = {
           ativo?: boolean;
           criado_em?: string;
           empresa_id?: string | null;
+          exibir_funil?: boolean;
           id?: string;
           nome: string;
           ordem?: number;
@@ -80,6 +82,7 @@ export type Database = {
           ativo?: boolean;
           criado_em?: string;
           empresa_id?: string | null;
+          exibir_funil?: boolean;
           id?: string;
           nome?: string;
           ordem?: number;
@@ -3013,6 +3016,21 @@ export type Database = {
         Returns: boolean;
       };
       fn_trimestre: { Args: { p_competencia: string }; Returns: number };
+      funis_por_canal_visao_geral: {
+        Args: { p_fim: string; p_inicio: string };
+        Returns: {
+          canal_id: string;
+          canal_nome: string;
+          contatos: number;
+          cotacoes: number;
+          indicacoes: number;
+          negociacoes: number;
+          ordem: number;
+          pendentes: number;
+          transmissoes: number;
+          vendas_emitidas: number;
+        }[];
+      };
       has_role: {
         Args: { _role: Database["public"]["Enums"]["perfil"]; _user_id: string };
         Returns: boolean;
