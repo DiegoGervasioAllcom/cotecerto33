@@ -420,3 +420,108 @@ export async function limparCotacaoQuiverFixture(f: CotacaoQuiverFixture): Promi
   await admin.auth.admin.deleteUser(f.userId);
   await admin.from("empresas").delete().eq("id", f.empresaId);
 }
+
+// ===========================================================================
+// Convite Supper (V11 · Frente 1)
+// ===========================================================================
+
+export type ConviteFixture = { id: string; codigo: string; token: string; nome: string };
+
+/** Documento de 11 dígitos único — o schema valida só o tamanho. */
+export function documentoUnico(): string {
+  return uniqDoc();
+}
+
+/**
+ * Emite um convite direto pelo banco, para os casos em que o teste não precisa
+ * passar pela tela (expirado, já usado).
+ */
+export async function criarConviteInterno(opts?: {
+  nome?: string;
+  cargoId?: string;
+  expiraEm?: Date;
+  usado?: boolean;
+}): Promise<ConviteFixture> {
+  const nome = opts?.nome ?? uniq("Convidado E2E");
+  const { data: matriz, error: eMatriz } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", "desenvolvimento@suppercerto.com.br")
+    .single();
+  if (eMatriz || !matriz) throw new Error(`matriz do seed não encontrada: ${eMatriz?.message}`);
+
+  const { data: codigo, error: eCod } = await admin.rpc("fn_convite_codigo");
+  if (eCod) throw new Error(`fn_convite_codigo: ${eCod.message}`);
+
+  const token = `e2e-${crypto.randomUUID()}-${crypto.randomUUID()}`.replace(/-/g, "").slice(0, 48);
+
+  const { data, error } = await admin
+    .from("convites")
+    .insert({
+      codigo: codigo as unknown as string,
+      token,
+      nome,
+      escopo: "interno",
+      trilha: "interno",
+      cargo_id: opts?.cargoId ?? "sup_operacional",
+      vinc_tipo: "matriz",
+      expira_em: (opts?.expiraEm ?? new Date(Date.now() + 7 * 86_400_000)).toISOString(),
+      usado_em: opts?.usado ? new Date().toISOString() : null,
+      criado_por: matriz.id,
+    })
+    .select("id,codigo,token,nome")
+    .single();
+  if (error || !data) throw new Error(`criar convite: ${error?.message}`);
+  return data as ConviteFixture;
+}
+
+/** Empresa (pedido pendente) ligada a um convite, com a classificação por join. */
+export async function pedidoDoConvite(conviteId: string) {
+  const { data } = await admin
+    .from("empresas")
+    .select("id,nome,tipo,status,convite_id")
+    .eq("convite_id", conviteId)
+    .maybeSingle();
+  return data;
+}
+
+/** Limpa convite, pedido e usuário criados por um cenário de convite. */
+export async function limparConvite(conviteId: string): Promise<void> {
+  const { data: conv } = await admin
+    .from("convites")
+    .select("usado_por")
+    .eq("id", conviteId)
+    .maybeSingle();
+  const { data: emp } = await admin
+    .from("empresas")
+    .select("id")
+    .eq("convite_id", conviteId)
+    .maybeSingle();
+
+  if (conv?.usado_por) {
+    await admin.from("user_roles").delete().eq("user_id", conv.usado_por);
+    await admin.auth.admin.deleteUser(conv.usado_por);
+  }
+  await admin.from("convites").delete().eq("id", conviteId);
+  if (emp?.id) await admin.from("empresas").delete().eq("id", emp.id);
+}
+
+/**
+ * Pedido pendente ligado ao convite, buscado pelo código humano (SC-XXXXXX) que
+ * a tela mostra. É a asserção central do C9: o pedido não é uma linha solta, ele
+ * aponta para o convite que o originou.
+ */
+export async function pedidoDoConvitePorCodigo(codigo: string) {
+  const { data: conv } = await admin
+    .from("convites")
+    .select("id,usado_em,cargo_id,trilha")
+    .eq("codigo", codigo)
+    .maybeSingle();
+  if (!conv) return null;
+  const { data: emp } = await admin
+    .from("empresas")
+    .select("id,nome,tipo,status,convite_id")
+    .eq("convite_id", conv.id)
+    .maybeSingle();
+  return { convite: conv, pedido: emp };
+}
