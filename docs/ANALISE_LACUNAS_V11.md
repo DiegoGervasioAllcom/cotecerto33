@@ -110,6 +110,30 @@ duas exceções que são **infra, não tela**:
 - **Item 10 · Persistência geral** — na demo só o histórico persiste no navegador. Filas,
   cadastros, solicitações e motivos precisam de banco.
 
+## Lacuna encontrada no teste das 12 personas (29/07/2026)
+
+**Dois dos 7 cargos não têm `perfil` correto onde morar.** A V11 acrescentou só
+`coordenador` ao enum `public.perfil`, que agora é `matriz`, `coordenador`, `supervisor`,
+`master`, `franqueado`, `vendedor`. Direção → `matriz`, Coordenador → `coordenador` e os
+três supervisores → `supervisor` encaixam. Mas **Assistente Comercial** e **Marketing**
+não são supervisores nem Matriz: hoje só rodam marcados como `supervisor`, o que acerta o
+menu (o recorte vem do cargo) e erra duas coisas:
+
+- **O selo.** A tela mostra "SUPPER · SUPERVISOR" para quem é Assistente ou Marketing.
+- **O escopo de dados.** `perfil` é o que a RLS lê. Um `supervisor` sem subordinados vê,
+  por `empresas_visiveis()`, só a própria empresa — mas Marketing tem Leads, Distribuição
+  e Relatórios no menu justamente para olhar a captação inteira. Ou seja, o menu abre
+  telas que o dado não preenche.
+
+No protótipo o problema não aparece porque lá o menu vem *só* do cargo — não existe eixo
+de perfil. Aqui os dois eixos coexistem (perfil = segurança, cargo = escopo de tela) e
+falta um valor para "time interno de apoio".
+
+Duas saídas, ambas de banco: somar um valor `interno` ao enum, ou passar o escopo de dados
+a depender de área em vez de perfil (o que casaria com o resto da V11, já que
+`fn_tem_area` existe). **Precisa de decisão antes de convidar Assistente ou Marketing pela
+Frente 1** — o convite grava perfil.
+
 ## Divergências entre as fontes
 
 Três pontos precisam de decisão antes de virar task. Nenhum bloqueia começar a Etapa 1.
