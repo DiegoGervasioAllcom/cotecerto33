@@ -22,7 +22,14 @@ Sem isso, toda tela da V11 nasce em cima de premissa errada.
 
 | Task    | Tag     | Descrição                                                                                             | Depende de |
 | ------- | ------- | ----------------------------------------------------------------------------------------------------- | ---------- |
-| V11.0.1 | front   | Diffar o CSS do protótipo r40 contra `src/styles/proto.css` e aplicar o delta (regra 6: byte a byte)  | —          |
+| V11.0.1 | front   | ✅ Diffar o CSS do protótipo r40 contra `src/styles/proto.css` e aplicar o delta (regra 6: byte a byte) | —         |
+
+> **Frente 0 concluída.** O delta de CSS entre o V10 e o r40 era de duas coisas: `.kpi .lbl`
+> ganhou `padding-right:44px` e `min-height:36px` (reserva o canto do card para o ícone) e
+> entrou `.pw-toggle` (o "olhinho" da tela Criar senha, que é da frente de e-mail adiada).
+> `proto.css` está em 473 classes, igual ao r40, sem nada sobrando. Os únicos "diffs"
+> restantes são de formatação — o prettier normaliza `.01em` para `0.01em`, convenção que já
+> valia no arquivo inteiro; os valores são idênticos.
 | V11.0.2 | banco   | ✅ `public.perfil += 'coordenador'`; supervisor Vendas × Operacional resolvido como **cargo** (ver `PLANO_HIERARQUIA_V11.md`) | — |
 | V11.0.3 | banco   | ✅ Tabela de **cargos** + áreas de escopo (7 presets + Vendedor Matriz), com RLS e checks             | V11.0.2    |
 | V11.0.4 | banco   | ✅ Taxonomia única de **canais** (item 9): tabela + `leads.canal_id` + `profile_canais`. **Telas pendentes** — ver nota abaixo | — |
