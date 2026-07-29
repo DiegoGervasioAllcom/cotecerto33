@@ -25,6 +25,14 @@ function collectBrowserErrors(page: Page) {
         message.text().includes("the server responded with a status of 404")
       )
         return;
+      // O serviço Realtime pode responder 503 durante a inicialização no runner da CI.
+      // O tutorial não depende desse canal; mantenha qualquer outro erro como bloqueante.
+      if (
+        source.includes("@supabase_supabase-js") &&
+        message.text().includes("/realtime/v1/websocket") &&
+        message.text().includes("Unexpected response code: 503")
+      )
+        return;
       errors.push(`console${source ? ` (${source})` : ""}: ${message.text()}`);
     }
   });
