@@ -82,6 +82,7 @@ export function UsuariosSistemaModal({ onClose }: { onClose: () => void }) {
 
       function tipoLabel(p: ProfileLite, role: SistemaRole): string {
         if (role === "matriz") return "Matriz";
+        if (role === "coordenador") return "Coordenador Comercial";
         if (role === "supervisor") return "Supervisor (Matriz)";
         if (role === "master") return "Master franqueado";
         if (role === "franqueado") {

@@ -1,6 +1,7 @@
 # Plano — Hierarquia V11 (primeira etapa)
 
-**Aberto em:** 28/07/2026 · **Status:** aguardando aprovação para implementar
+**Aberto em:** 28/07/2026 · **Status:** H1–H10 implementados e testados em 28/07/2026
+(migrations `20260729014448`–`20260729014452`, `tests/db/rls-hierarquia-v11-areas.test.ts`)
 
 **Escopo:** as tasks de hierarquia da Frente 0 (V11.0.2, V11.0.3, V11.0.8) e a Frente 8
 inteira do `PLANO_TASKS_V11.md`. Não inclui canais, diretor, histórico, convite nem e-mail.
@@ -111,6 +112,29 @@ Só `Canais` (do menu da Full) é nova, e ela é da Frente 5, não desta etapa.
 4. **"Regras Decididas" ainda ausente.** A regra 5 (escopos dos presets) está nesse
    documento, que não veio no pacote. Os escopos de H3 saem de `const MENUS` dos Fluxos,
    que é fonte da verdade — mas se as Regras Decididas contradisserem, H3 volta.
+
+## Dívidas conscientes desta etapa
+
+1. **`isGroupView` ainda trata supervisor como visão de grupo.** A navegação dele já é
+   por área (H7/H8), mas 6 telas usam esse mesmo sinal para decidir **conteúdo** —
+   `visao-geral.tsx` mostra "Visão geral do grupo" e "Equipe de … · N franquias", e
+   `pipeline-geral`, `vendas`, `xacessos` e `aprovacoes` fazem o mesmo tipo de escolha.
+   Verificado no navegador: o Supervisor Operacional recebe o menu certo (4 áreas) e cai
+   num painel rotulado como de grupo. Separar isso exige decidir **o que o dashboard de
+   cada supervisor mostra** — é task de produto, não de refactor, e ficou fora do H7/H8
+   de propósito para o diff não virar mudança de 6 telas.
+
+2. **Override de áreas pode tirar Aprovações de quem tem alçada.** `profile_areas`
+   substitui o preset por completo, então dá para deixar um Supervisor de Vendas com
+   alçada de desconto e sem a área `maprov` — ele mantém autoridade e perde a tela para
+   exercê-la. A separação está correta em princípio (alçada é regra de dinheiro atada ao
+   cargo, conforme a regra 2 do `AGENTS.md`; menu é apresentação), mas a tela de
+   aprovação deveria avisar. Coberto por teste, não tratado na UI.
+
+3. **`/inicio` desvia os perfis internos, não os de grupo.** Matriz, Coordenador e
+   supervisores passam a cair em `/comando/visao-geral` (antes só a Matriz), porque
+   `/inicio` é a home de venda e não está no menu deles. Master e Franquia Full seguem
+   em `/inicio` como na V10 — mudar isso é decisão de produto.
 
 ## Fora de escopo desta etapa
 

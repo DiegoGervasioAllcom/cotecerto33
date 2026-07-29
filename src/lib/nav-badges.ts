@@ -75,17 +75,26 @@ type NavBadges = {
  */
 export function useNavBadges({
   isMatriz,
-  grpLike,
+  verLeads,
+  verAprovacoes,
 }: {
+  /**
+   * Só para a contagem de aprovações: a Matriz decide o que está com
+   * `nivel_atual` nulo (topo da cadeia); todos os outros aprovadores decidem o
+   * que está com `nivel_atual` = eles.
+   */
   isMatriz: boolean;
-  grpLike: boolean;
+  /** Tem a área de Leads (V11: matriz, coordenador, operacional, backoffice, marketing). */
+  verLeads: boolean;
+  /** É aprovador na cadeia de desconto (tem a área de Aprovações). */
+  verAprovacoes: boolean;
 }): NavBadges {
   const [leadsPendentes, setLeadsPendentes] = useState<number | null>(null);
   const [leadMaisAntigoElapsed, setLeadMaisAntigoElapsed] = useState<string | null>(null);
   const [aprovacoesPendentes, setAprovacoesPendentes] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isMatriz) {
+    if (!verLeads) {
       setLeadsPendentes(null);
       setLeadMaisAntigoElapsed(null);
       return;
@@ -106,10 +115,10 @@ export function useNavBadges({
     return () => {
       cancelled = true;
     };
-  }, [isMatriz]);
+  }, [verLeads]);
 
   useEffect(() => {
-    if (!isMatriz && !grpLike) {
+    if (!verAprovacoes) {
       setAprovacoesPendentes(null);
       return;
     }
@@ -120,7 +129,7 @@ export function useNavBadges({
     return () => {
       cancelled = true;
     };
-  }, [isMatriz, grpLike]);
+  }, [isMatriz, verAprovacoes]);
 
   return { leadsPendentes, aprovacoesPendentes, leadMaisAntigoElapsed };
 }

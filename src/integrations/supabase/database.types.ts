@@ -3,6 +3,30 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      areas: {
+        Row: {
+          chave: string;
+          disponivel: boolean;
+          label: string;
+          ordem: number;
+          rota: string | null;
+        };
+        Insert: {
+          chave: string;
+          disponivel?: boolean;
+          label: string;
+          ordem: number;
+          rota?: string | null;
+        };
+        Update: {
+          chave?: string;
+          disponivel?: boolean;
+          label?: string;
+          ordem?: number;
+          rota?: string | null;
+        };
+        Relationships: [];
+      };
       campanhas_elite: {
         Row: {
           ativa: boolean;
@@ -30,6 +54,63 @@ export type Database = {
           nome?: string;
           periodo?: string | null;
           tipo?: string;
+        };
+        Relationships: [];
+      };
+      cargo_areas: {
+        Row: {
+          area_chave: string;
+          cargo_id: string;
+        };
+        Insert: {
+          area_chave: string;
+          cargo_id: string;
+        };
+        Update: {
+          area_chave?: string;
+          cargo_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cargo_areas_area_chave_fkey";
+            columns: ["area_chave"];
+            isOneToOne: false;
+            referencedRelation: "areas";
+            referencedColumns: ["chave"];
+          },
+          {
+            foreignKeyName: "cargo_areas_cargo_id_fkey";
+            columns: ["cargo_id"];
+            isOneToOne: false;
+            referencedRelation: "cargos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      cargos: {
+        Row: {
+          atualizado_em: string;
+          criado_em: string;
+          descricao: string | null;
+          id: string;
+          nome: string;
+          preset: boolean;
+        };
+        Insert: {
+          atualizado_em?: string;
+          criado_em?: string;
+          descricao?: string | null;
+          id: string;
+          nome: string;
+          preset?: boolean;
+        };
+        Update: {
+          atualizado_em?: string;
+          criado_em?: string;
+          descricao?: string | null;
+          id?: string;
+          nome?: string;
+          preset?: boolean;
         };
         Relationships: [];
       };
@@ -1945,11 +2026,49 @@ export type Database = {
         };
         Relationships: [];
       };
+      profile_areas: {
+        Row: {
+          area_chave: string;
+          profile_id: string;
+        };
+        Insert: {
+          area_chave: string;
+          profile_id: string;
+        };
+        Update: {
+          area_chave?: string;
+          profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_areas_area_chave_fkey";
+            columns: ["area_chave"];
+            isOneToOne: false;
+            referencedRelation: "areas";
+            referencedColumns: ["chave"];
+          },
+          {
+            foreignKeyName: "profile_areas_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_areas_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           aprovada_em: string | null;
           avatar_url: string | null;
           bonus_campanha: number | null;
+          cargo_id: string | null;
           comissao_modelo: number | null;
           created_at: string;
           desligado_em: string | null;
@@ -1973,6 +2092,7 @@ export type Database = {
           aprovada_em?: string | null;
           avatar_url?: string | null;
           bonus_campanha?: number | null;
+          cargo_id?: string | null;
           comissao_modelo?: number | null;
           created_at?: string;
           desligado_em?: string | null;
@@ -1996,6 +2116,7 @@ export type Database = {
           aprovada_em?: string | null;
           avatar_url?: string | null;
           bonus_campanha?: number | null;
+          cargo_id?: string | null;
           comissao_modelo?: number | null;
           created_at?: string;
           desligado_em?: string | null;
@@ -2016,6 +2137,13 @@ export type Database = {
           telefone?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "profiles_cargo_id_fkey";
+            columns: ["cargo_id"];
+            isOneToOne: false;
+            referencedRelation: "cargos";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "profiles_empresa_id_fkey";
             columns: ["empresa_id"];
@@ -2657,6 +2785,12 @@ export type Database = {
         Args: { p_competencia: string };
         Returns: Json;
       };
+      fn_areas_do_usuario: {
+        Args: { _user_id: string };
+        Returns: {
+          area_chave: string;
+        }[];
+      };
       fn_comissao_clt: {
         Args: { p_competencia: string; p_vendedor: string };
         Returns: {
@@ -2704,6 +2838,10 @@ export type Database = {
         Returns: {
           id: string;
         }[];
+      };
+      fn_tem_area: {
+        Args: { _area: string; _user_id: string };
+        Returns: boolean;
       };
       fn_trimestre: { Args: { p_competencia: string }; Returns: number };
       has_role: {
@@ -2848,7 +2986,7 @@ export type Database = {
       meta_escopo: "empresa" | "usuario";
       modelo_tipo: "franqueada" | "clt";
       msg_escopo: "global" | "pessoal";
-      perfil: "matriz" | "master" | "vendedor" | "franqueado" | "supervisor";
+      perfil: "matriz" | "master" | "vendedor" | "franqueado" | "supervisor" | "coordenador";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -3004,7 +3142,7 @@ export const Constants = {
       meta_escopo: ["empresa", "usuario"],
       modelo_tipo: ["franqueada", "clt"],
       msg_escopo: ["global", "pessoal"],
-      perfil: ["matriz", "master", "vendedor", "franqueado", "supervisor"],
+      perfil: ["matriz", "master", "vendedor", "franqueado", "supervisor", "coordenador"],
     },
   },
 } as const;

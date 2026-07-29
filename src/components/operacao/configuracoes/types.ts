@@ -34,7 +34,13 @@ export type Empresa = { id: string; nome: string; tipo: string };
 
 export type ModalKind = null | "seguradoras" | "matriz" | "franqueado" | "vendedor" | "todos";
 
-export type SistemaRole = "matriz" | "master" | "vendedor" | "franqueado" | "supervisor";
+export type SistemaRole =
+  | "matriz"
+  | "coordenador"
+  | "master"
+  | "vendedor"
+  | "franqueado"
+  | "supervisor";
 
 export type UsuarioSistema = {
   id: string;

@@ -21,9 +21,11 @@ function Index() {
 
   if (!session) return <Navigate to="/auth" />;
   if (profile?.status === "pendente") return <Navigate to="/auth/pendente" />;
-  // Matriz, Master, Supervisor e Franquia Full caem na visão de grupo;
-  // Vendedor e Franquia Individual caem em /inicio (mesma lógica de
+  // Matriz, Coordenador, Master, Supervisor e Franquia Full caem na visão de
+  // comando; Vendedor e Franquia Individual caem em /inicio (mesma lógica de
   // useGroupScope/isGroupView usada na navegação lateral).
-  if (role === "matriz" || isGroupView) return <Navigate to="/comando/visao-geral" />;
+  if (role === "matriz" || role === "coordenador" || isGroupView) {
+    return <Navigate to="/comando/visao-geral" />;
+  }
   return <Navigate to="/inicio" />;
 }
