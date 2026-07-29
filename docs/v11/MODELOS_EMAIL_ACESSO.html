@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoteCerto · Modelos de e-mail de acesso</title>
+<style>
+  :root{
+    --slate:#425563; --slate-dark:#2F3D48; --yellow:#FFB600; --yellow-soft:#FFF6E0;
+    --orange:#E8802A; --ink:#26313A; --muted:#7C8A95; --line:#E2E6E9; --bg:#F5F4F1;
+    --alert:#B5462B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.5}
+  .top{background:var(--slate);color:#fff;padding:26px 40px}
+  .top h1{margin:0;font-size:21px;font-weight:800;letter-spacing:-.2px}
+  .top p{margin:5px 0 0;font-size:13.5px;color:#c7d0d6}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 40px 60px}
+
+  .regras{background:#fff;border-radius:16px;padding:22px 26px;box-shadow:0 4px 18px rgba(50,60,70,.07);
+          border-left:5px solid var(--yellow);margin-bottom:32px}
+  .regras h2{margin:0 0 12px;font-size:15px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted)}
+  .regras ul{margin:0;padding-left:20px}
+  .regras li{font-size:13.5px;margin-bottom:7px}
+  .regras b{color:var(--slate)}
+
+  h2.sec{font-size:15px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);
+         margin:36px 0 16px;font-weight:800}
+
+  .card{background:#fff;border-radius:16px;box-shadow:0 4px 18px rgba(50,60,70,.07);
+        margin-bottom:26px;overflow:hidden;display:grid;grid-template-columns:1.1fr .9fr}
+  @media(max-width:1000px){.card{grid-template-columns:1fr}}
+  .card > div{padding:24px 26px}
+  .card .specs{background:#FAFBFB;border-left:1px solid var(--line)}
+
+  .chip{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;
+        color:var(--yellow);background:var(--slate);padding:5px 12px;border-radius:999px;margin-bottom:12px}
+  .chip.ext{background:var(--orange);color:#fff}
+  .chip.neg{background:var(--alert);color:#fff}
+
+  .assunto{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .assunto b{color:var(--ink);font-size:13.5px;font-weight:700}
+
+  /* e-mail renderizado */
+  .mail{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:14px;background:#fff}
+  .mail-top{background:var(--slate);color:#fff;padding:14px 20px;font-weight:800;font-size:14px;letter-spacing:.5px}
+  .mail-top span{color:var(--yellow)}
+  .mail-body{padding:20px 22px;font-size:13.5px}
+  .mail-body p{margin:0 0 12px}
+  .var{background:var(--yellow-soft);border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,monospace;
+       font-size:12px;color:#8a6400;white-space:nowrap}
+  .btn-mail{display:inline-block;background:var(--yellow);color:var(--slate-dark);font-weight:800;font-size:13.5px;
+            padding:11px 22px;border-radius:8px;margin:6px 0 12px}
+  .aviso{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
+  .areas{background:#F2F3F4;border-radius:8px;padding:12px 14px;margin:4px 0 12px;font-size:12.5px}
+  .areas b{display:block;color:var(--slate);margin-bottom:5px;font-size:12px;text-transform:uppercase;letter-spacing:.8px}
+
+  .specs h4{margin:0 0 8px;font-size:11.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
+  .specs h4:not(:first-child){margin-top:18px}
+  .specs ul{margin:0;padding-left:18px}
+  .specs li{font-size:12.5px;margin-bottom:5px}
+  .tag{display:inline-block;background:#EDEFF0;border-radius:5px;padding:2px 7px;font-size:11.5px;
+       font-family:ui-monospace,Menlo,monospace;color:#55606A;margin:0 4px 5px 0}
+  .foot{text-align:center;color:var(--muted);font-size:11.5px;margin-top:36px}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>CoteCerto · Convite Supper e e-mails de liberação de acesso</h1>
+    <p>Dois momentos: o Convite Supper (WhatsApp, antes do cadastro) e o Boas-vindas Supper (e-mail de confirmação do acesso). Supper Certo.</p>
+  </div>
+
+  <div class="wrap">
+
+    <div class="regras">
+      <h2>Regras que valem para todos os modelos</h2>
+      <ul>
+        <li><b>São dois momentos.</b> 1º: o <b>Convite Supper</b> — gerado no sistema e encaminhado por <b>WhatsApp</b> por quem está acima (Coordenadora Comercial → Master; Master → franquias e vendedores; Full → time dela); o link abre o autocadastro já identificado, com perfil e vínculo pré-preenchidos. 2º: o e-mail <b>Boas-vindas Supper!</b> — confirma a aprovação com o link para criar a senha (pendência e recusa têm modelos próprios).</li>
+        <li><b>Nenhuma senha é enviada por e-mail.</b> O e-mail leva um link único para a pessoa criar a própria senha.</li>
+        <li><b>Validade do link: 48 horas.</b> Expirado, a pessoa pede um novo na tela de login — o link antigo deixa de funcionar.</li>
+        <li><b>O tipo de acesso concedido é sempre declarado no corpo do e-mail</b>, para a pessoa saber o que recebeu (e reclamar se estiver errado).</li>
+        <li><b>Time interno recebe o cargo e a lista de áreas liberadas.</b> É o escopo definido pela Matriz na aprovação.</li>
+        <li>Todo envio fica registrado no log de acessos: quem aprovou, quando e qual escopo foi aplicado.</li>
+        <li>Remetente sugerido: <span class="var">acesso@suppercerto.com.br</span> · responder para o time da Matriz.</li>
+      </ul>
+    </div>
+
+    <h2 class="sec">1º momento · Convite Supper — mensagem de WhatsApp</h2>
+
+    <!-- 0. CONVITE SUPPER -->
+    <div class="card">
+      <div>
+        <span class="chip">Convite Supper | todos os perfis</span>
+        <div class="assunto">Mensagem pronta para encaminhar por WhatsApp<br><b>Gerada pelo botão "Convidar" — quem convida só copia e envia</b></div>
+        <div class="mail">
+          <div class="mail-top">CONVITE <span>SUPPER</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome_candidato}}</span>! Aqui é
+               <b><span class="var">{{quem_convida}}</span></b>, <span class="var">{{cargo_quem_convida}}</span> da Supper Certo.</p>
+            <p>Quero te convidar para se cadastrar na nossa plataforma como <b><span class="var">{{perfil}}</span></b>. É rápido:</p>
+            <div class="areas"><b>Como funciona</b>
+              1. Toque no link — o cadastro abre já identificado com o seu convite.<br>
+              2. Confira seus dados e confirme o vínculo (ele já vem preenchido).<br>
+              3. Envie — seu pedido entra na fila de aprovação e a confirmação chega no seu e-mail.</div>
+            <p><span class="var">{{link_convite}}</span></p>
+            <p class="aviso">Este convite é nominal e de uso único — vale só para você, por <span class="var">{{validade_convite}}</span>.
+               Se expirar, é só me pedir um novo.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome_candidato}}</span><span class="tag">{{quem_convida}}</span><span class="tag">{{cargo_quem_convida}}</span>
+        <span class="tag">{{perfil}}</span><span class="tag">{{link_convite}}</span><span class="tag">{{validade_convite}}</span>
+        <h4>Quando dispara</h4>
+        <ul>
+          <li>Gerado pelo botão <b>Convidar</b> em Acessos e permissões. Quem convida copia e encaminha pelo <b>WhatsApp</b> ao candidato — Master, vendedores, franquias e colaboradores.</li>
+        </ul>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li>Não é e-mail: é <b>mensagem de WhatsApp</b>, em primeira pessoa de quem convida.</li>
+          <li>O vínculo (a quem se reporta) vai <b>embutido no link</b>: o candidato não digita quem o convidou — some o erro de cadastro e a fila errada.</li>
+          <li>Status rastreável para quem convidou: <b>enviado · aberto · cadastro concluído · expirado</b>.</li>
+          <li>É o único modelo que existe <b>antes</b> do cadastro. Todos os seguintes são e-mails, enviados <b>depois</b> da análise.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 class="sec">2º momento · Boas-vindas Supper — acessos internos (Matriz)</h2>
+
+    <!-- 1. MATRIZ -->
+    <div class="card">
+      <div>
+        <span class="chip">Matriz | Supper Certo</span>
+        <div class="assunto">Assunto<br><b>Boas-vindas Supper! Seu acesso à Matriz está liberado</b></div>
+        <div class="mail">
+          <div class="mail-top">SUPPER <span>CERTO</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome}}</span>.</p>
+            <p>Seu acesso à <b>Matriz</b> do Supper Certo foi liberado por <span class="var">{{aprovador}}</span>.
+               Esse é o acesso mais amplo do sistema: você enxerga toda a operação e responde pelas configurações.</p>
+            <div class="areas"><b>O que você acessa</b>
+              As 17 áreas do sistema, incluindo Aprovações, Comissões, Acessos e permissões e Configurações.</div>
+            <p>Para começar, crie sua senha:</p>
+            <a class="btn-mail">Criar minha senha</a>
+            <p class="aviso">O link vale por 48 horas e só pode ser usado uma vez. Se expirar, peça um novo na tela de login.
+               Se você não solicitou este acesso, avise a Matriz e não use o link.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome}}</span><span class="tag">{{aprovador}}</span><span class="tag">{{link}}</span><span class="tag">{{validade}}</span>
+        <h4>Quando dispara</h4>
+        <ul><li>Na aprovação de um cadastro classificado como <b>Matriz (total)</b>.</li></ul>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li>Único que cita <b>responsabilidade sobre configurações</b>.</li>
+          <li>Não lista as áreas uma a uma — são todas.</li>
+          <li>Recomendo exigir <b>e-mail corporativo</b> para este tipo.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 2. CARGO INTERNO -->
+    <div class="card">
+      <div>
+        <span class="chip">Cargo | interno (por escopo)</span>
+        <div class="assunto">Assunto<br><b>Boas-vindas Supper! Seu acesso como {{cargo}}</b></div>
+        <div class="mail">
+          <div class="mail-top">SUPPER <span>CERTO</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome}}</span>.</p>
+            <p>Seu acesso ao Supper Certo foi liberado como <b><span class="var">{{cargo}}</span></b>.
+               Você verá apenas as áreas do seu cargo — nada além disso.</p>
+            <div class="areas"><b>Áreas liberadas para você</b>
+              <span class="var">{{areas}}</span><br>
+              <span style="color:#7C8A95">Exemplo — Coordenador Comercial: Visão geral · Aprovações · Franquias · Vendedores ·
+              Supervisão · Pipeline geral · Vendas · Comissões · Premiações · Relatórios</span></div>
+            <p>Janela de acesso: <span class="var">{{janela}}</span> (dias e horário em que o login é permitido).</p>
+            <a class="btn-mail">Criar minha senha</a>
+            <p class="aviso">O link vale por 48 horas. Precisa de uma área que não está na lista? Fale com a Matriz —
+               o escopo pode ser ajustado sem criar um novo acesso.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome}}</span><span class="tag">{{cargo}}</span><span class="tag">{{areas}}</span>
+        <span class="tag">{{janela}}</span><span class="tag">{{link}}</span>
+        <h4>Cargos que usam este modelo</h4>
+        <ul>
+          <li>Coordenador Comercial <b>(as 17 áreas)</b></li>
+          <li>Supervisor comercial / Master <b>(7)</b></li>
+          <li>Supervisor Backoffice <b>(5)</b></li>
+          <li>Marketing <b>(5)</b></li>
+          <li>Assistente Comercial <b>(3)</b></li>
+        </ul>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li><b>A lista de áreas é montada na hora</b>, a partir do escopo que a Matriz marcou na aprovação.</li>
+          <li>É o único que fala em <b>janela de acesso</b> (dias/horário).</li>
+          <li>Deixa explícito como pedir ampliação de escopo.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 3. SUPERVISOR -->
+    <div class="card">
+      <div>
+        <span class="chip">Supervisor | Vendas / Operacional</span>
+        <div class="assunto">Assunto<br><b>Boas-vindas Supper! Seu acesso de Supervisor ({{tipo}})</b></div>
+        <div class="mail">
+          <div class="mail-top">SUPPER <span>CERTO</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome}}</span>.</p>
+            <p>Você recebeu o acesso de <b>Supervisor <span class="var">{{tipo}}</span></b>.
+               É um papel da Matriz, com acesso por escopo e <b>sem comissionamento</b>.</p>
+            <div class="areas"><b>Áreas liberadas</b>
+              <span class="var">{{areas}}</span><br>
+              <span style="color:#7C8A95">Vendas inclui Aprovações — você tem alçada de desconto sobre o time de vendas.<br>
+              Operacional cuida de Leads, Distribuição e Acessos e permissões — sem alçada.</span></div>
+            <a class="btn-mail">Criar minha senha</a>
+            <p class="aviso">O link vale por 48 horas. Sua equipe e sua alçada podem ser ajustadas pela Matriz a qualquer momento.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome}}</span><span class="tag">{{tipo}}</span><span class="tag">{{areas}}</span>
+        <span class="tag">{{alcada}}</span><span class="tag">{{link}}</span>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li>Diz na cara que é <b>papel da Matriz e não comissionado</b> — evita a confusão com o Master.</li>
+          <li>Só a versão <b>Vendas</b> menciona alçada de desconto.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 class="sec">2º momento · Boas-vindas Supper — acessos externos (rede comissionada)</h2>
+
+    <!-- 4. MASTER -->
+    <div class="card">
+      <div>
+        <span class="chip ext">Master | franqueado</span>
+        <div class="assunto">Assunto<br><b>Boas-vindas Supper! Seu acesso de Master está liberado</b></div>
+        <div class="mail">
+          <div class="mail-top">SUPPER <span>CERTO</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome}}</span>.</p>
+            <p>Seu acesso de <b>Master franqueado</b> está liberado para o grupo
+               <span class="var">{{grupo}}</span> — região <span class="var">{{regiao}}</span>.
+               Você responde ao <b>Coordenador Comercial</b>.</p>
+            <div class="areas"><b>O que você comanda</b>
+              As franquias que você supervisiona e os vendedores delas, além da sua operação própria.
+              Menu de comando com 12 áreas: aprovações, vendas, comissões, premiações, estornos, renovações e relatórios.</div>
+            <p>Sua remuneração inclui <b>20% sobre a comissão da equipe</b>, além do programa Elite.</p>
+            <a class="btn-mail">Criar minha senha</a>
+            <p class="aviso">O link vale por 48 horas. Dúvidas sobre comissionamento? Fale com a Matriz.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome}}</span><span class="tag">{{grupo}}</span><span class="tag">{{regiao}}</span><span class="tag">{{link}}</span>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li>Único que fala em <b>20% sobre a equipe + Elite</b>.</li>
+          <li>Cita o grupo e a região que ele comanda.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 5. FRANQUIA FULL -->
+    <div class="card">
+      <div>
+        <span class="chip ext">Franquia | Full</span>
+        <div class="assunto">Assunto<br><b>Boas-vindas Supper! Sua franquia Full está ativa</b></div>
+        <div class="mail">
+          <div class="mail-top">SUPPER <span>CERTO</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome}}</span>.</p>
+            <p>A franquia <b><span class="var">{{franquia}}</span></b> (<span class="var">{{cidade_uf}}</span>)
+               está ativa no modelo <b>Full</b> — o único com equipe abaixo.</p>
+            <div class="areas"><b>Suas condições comerciais</b>
+              As regras de comissionamento e o modelo operacional da sua franquia são
+              <b>customizados para a sua operação</b> e estão no seu contrato.
+              Dúvidas? Fale com a Matriz.</div>
+            <p>Você convida, aprova e desliga os vendedores da sua equipe, acompanha o ranking e o resultado da unidade.</p>
+            <a class="btn-mail">Criar minha senha</a>
+            <p class="aviso">O link vale por 48 horas. Cada vendedor entra pelo convite que você enviar e recebe o próprio e-mail de acesso.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome}}</span><span class="tag">{{franquia}}</span><span class="tag">{{cidade_uf}}</span><span class="tag">{{link}}</span>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li>Não traz números: as condições são <b>customizadas por operação</b>.</li>
+          <li>Avisa que os vendedores entram por convite e recebem e-mail próprio — evita que ele repasse a senha.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 6. FRANQUIA INDIVIDUAL -->
+    <div class="card">
+      <div>
+        <span class="chip ext">Franquia | Individual</span>
+        <div class="assunto">Assunto<br><b>Boas-vindas Supper! Sua franquia {{modelo}} está ativa</b></div>
+        <div class="mail">
+          <div class="mail-top">SUPPER <span>CERTO</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome}}</span>.</p>
+            <p>Sua franquia está ativa no modelo <b><span class="var">{{modelo}}</span></b>.
+               Nas classificações Individuais você <b>opera como vendedor</b>: atende, cota e acompanha os próprios resultados.</p>
+            <div class="areas"><b>Suas condições comerciais</b>
+              Cada classificação Individual (Smart, Conecta, Light, Link ou Flex) tem um modelo
+              operacional próprio, <b>customizado para a sua operação</b> e definido em contrato.</div>
+            <a class="btn-mail">Criar minha senha</a>
+            <p class="aviso">O link vale por 48 horas. Você se reporta a <span class="var">{{responsavel}}</span> — vínculo definido pelo seu convite.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome}}</span><span class="tag">{{modelo}}</span>
+        <span class="tag">{{responsavel}}</span>
+        <h4>Classificações que usam este e-mail</h4>
+        <ul>
+          <li>Smart</li><li>Conecta</li><li>Light</li><li>Link</li><li>Flex</li>
+        </ul>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li>As condições comerciais <b>não vão no e-mail</b>: são customizadas por operação e vivem no contrato.</li>
+          <li>Diz que ele opera como vendedor e informa o responsável — que vem do convite (o Master, na rede externa).</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 7. VENDEDOR -->
+    <div class="card">
+      <div>
+        <span class="chip ext">Vendedor | Matriz / Master / Full</span>
+        <div class="assunto">Assunto<br><b>Boas-vindas Supper! Seu acesso de vendedor</b></div>
+        <div class="mail">
+          <div class="mail-top">SUPPER <span>CERTO</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome}}</span>.</p>
+            <p>Seu acesso de <b>vendedor</b> está liberado em <span class="var">{{origem}}</span>.
+               Você enxerga a sua carteira e as suas cotações — nunca dados de outros vendedores.</p>
+            <div class="areas"><b>Seu dia a dia no sistema</b>
+              Início · Atender agora · Pipeline · Novo lead · Cotações · Propostas ·
+              Aceite &amp; transmissão · Extrato de vendas · Mensagens prontas</div>
+            <p>Atenção ao SLA: o primeiro contato com um lead novo deve sair em <b>até 3 minutos</b>.
+               Passou disso, o lead volta para a fila.</p>
+            <a class="btn-mail">Criar minha senha</a>
+            <p class="aviso">O link vale por 48 horas. Você se reporta a <span class="var">{{responsavel}}</span> — vínculo definido pelo seu convite.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome}}</span><span class="tag">{{origem}}</span><span class="tag">{{responsavel}}</span><span class="tag">{{link}}</span>
+        <h4>Origem (preenche {{origem}})</h4>
+        <ul>
+          <li><b>Matriz</b> — vendedor contratado (Modelo CLT) · responsável: Supervisor de Vendas</li>
+          <li><b>Master</b> — vendedor da operação própria do Master · responsável: o Master</li>
+          <li><b>Full</b> — vendedor de uma franquia Full · responsável: a franquia</li>
+        </ul>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li>Um só modelo para as três origens — muda apenas <b>{{origem}}</b> e o responsável, herdados do convite.</li>
+          <li>Único que reforça o <b>SLA de 3 minutos</b> (leads distribuídos pela Central; leads manuais não têm SLA).</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 class="sec">2º momento · E-mails de confirmação — quando o pedido não é aprovado</h2>
+
+    <!-- 8. PENDENCIA -->
+    <div class="card">
+      <div>
+        <span class="chip">Pendência</span>
+        <div class="assunto">Assunto<br><b>Falta um dado para liberar seu acesso ao Supper Certo</b></div>
+        <div class="mail">
+          <div class="mail-top">SUPPER <span>CERTO</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome}}</span>.</p>
+            <p>Recebemos seu pedido de acesso como <b><span class="var">{{tipo_declarado}}</span></b>,
+               mas precisamos de mais uma informação antes de liberar:</p>
+            <div class="areas"><b>O que falta</b><span class="var">{{pendencia}}</span></div>
+            <p>É só responder este e-mail com o que foi pedido — seu cadastro continua na fila, não precisa refazer.</p>
+            <p class="aviso">Pedido registrado em <span class="var">{{data_pedido}}</span>.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome}}</span><span class="tag">{{tipo_declarado}}</span>
+        <span class="tag">{{pendencia}}</span><span class="tag">{{data_pedido}}</span>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li><b>Não tem link de senha</b> — o acesso ainda não existe.</li>
+          <li>Deixa claro que o cadastro <b>não foi perdido</b>, evitando cadastro duplicado.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 9. RECUSA -->
+    <div class="card">
+      <div>
+        <span class="chip neg">Recusa</span>
+        <div class="assunto">Assunto<br><b>Sobre o seu pedido de acesso ao Supper Certo</b></div>
+        <div class="mail">
+          <div class="mail-top">SUPPER <span>CERTO</span></div>
+          <div class="mail-body">
+            <p>Olá, <span class="var">{{nome}}</span>.</p>
+            <p>Analisamos seu pedido de acesso como <b><span class="var">{{tipo_declarado}}</span></b>
+               e ele <b>não foi aprovado</b> neste momento.</p>
+            <div class="areas"><b>Motivo</b><span class="var">{{motivo}}</span></div>
+            <p>Se você acredita que houve engano, responda este e-mail — a Matriz revisa o pedido.</p>
+            <p class="aviso">Nenhum acesso foi criado e nenhum dado seu fica ativo no sistema.</p>
+          </div>
+        </div>
+      </div>
+      <div class="specs">
+        <h4>Variáveis</h4>
+        <span class="tag">{{nome}}</span><span class="tag">{{tipo_declarado}}</span><span class="tag">{{motivo}}</span>
+        <h4>O que muda neste modelo</h4>
+        <ul>
+          <li>Tom respeitoso e <b>motivo sempre preenchido</b> — recusa sem motivo gera retrabalho.</li>
+          <li>Abre caminho para revisão, em vez de encerrar o assunto.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot">
+      CoteCerto · Supper Certo — modelos para aprovação. Os textos entre <span class="var">{{chaves}}</span> são preenchidos pelo sistema.
+    </div>
+  </div>
+</body>
+</html>

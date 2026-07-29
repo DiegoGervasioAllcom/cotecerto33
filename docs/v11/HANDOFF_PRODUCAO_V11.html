@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handoff de Produção · V11 r40 · Supper Certo | Cote Certo</title>
+<style>:root{--slate:#425563;--yellow:#FFB600;--ys:#FFF6E0;--ink:#26313A;--muted:#7C8A95;--bg:#F5F4F1;--ok:#1F7A5C}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55}
+.top{background:var(--slate);color:#fff;padding:26px 44px}.top h1{margin:0;font-size:21px;font-weight:800}.top p{margin:5px 0 0;font-size:13px;color:#c7d0d6}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 44px 60px}
+.intro{background:#fff;border-left:5px solid var(--yellow);border-radius:14px;padding:18px 22px;font-size:13.5px;box-shadow:0 4px 16px rgba(50,60,70,.07);margin-bottom:24px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(50,60,70,.07)}
+th{background:var(--slate);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:10px 14px;text-align:left}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid #F0F2F3;vertical-align:top}tr:last-child td{border-bottom:none}
+td.n{font-weight:800;color:var(--slate);width:36px}.ac{background:var(--ys);border-radius:8px;padding:8px 12px;font-size:12.5px;margin-top:6px}
+.foot{text-align:center;color:var(--muted);font-size:11px;margin-top:30px}</style></head><body>
+<div class="top"><h1>Handoff de Produção · V11 (build r40)</h1><p>O que é simulação no protótipo e precisa virar implementação real — com critério de aceite. 28/07/2026.</p></div>
+<div class="wrap">
+<div class="intro"><b>Como usar:</b> o protótipo V11 é a referência funcional; o Relatório DE/PARA diz o que mudou e onde ver;
+as Regras Decididas dão o porquê. Esta lista é o que <b>não dá</b> para o protótipo entregar (exige servidor, banco e serviços)
+— cada item tem o critério de aceite que fecha a entrega.</div>
+<table><tr><th></th><th>Item de produção</th></tr>
+<tr><td class="n">1</td><td><b>Rota /convite/{código}</b> — token nominal, uso único, validade configurável (demo: 7 dias). Abre o cadastro pré-preenchido (perfil e vínculo travados).<div class="ac">Aceite: link expirado/reusado mostra erro amigável e oferece pedir novo convite; token válido abre o formulário com os dados fixos, sem seletores.</div></td></tr>
+<tr><td class="n">2</td><td><b>E-mails reais</b> — Boas-vindas (com escopo do interno no corpo), pendência e recusa, conforme o doc "Convite Supper e e-mails". Link de senha com expiração real de 48h.<div class="ac">Aceite: nenhum e-mail contém senha; link expirado leva a "pedir novo"; remetente acesso@suppercerto.com.br (confirmar com a Lis).</div></td></tr>
+<tr><td class="n">3</td><td><b>Tela de criar senha</b> — hash seguro (bcrypt/argon2), política mínima (8+, letras e números), invalidação do token no uso.<div class="ac">Aceite: reuso do link falha; senha nunca trafega/persiste em texto puro.</div></td></tr>
+<tr><td class="n">4</td><td><b>WhatsApp</b> — envio do convite: texto via link é paliativo; produção usa <b>API WhatsApp Business</b> com o PDF anexado automaticamente.<div class="ac">Aceite: convite chega com a arte oficial e o link clicável, sem passo manual.</div></td></tr>
+<tr><td class="n">5</td><td><b>Régua de performance como rotina</b> — job periódico por bloco (interno/rede/franquia), com pausa de distribuição automática e notificação ao supervisor; revisão do supervisor registrada.<div class="ac">Aceite: sem botão manual; travado não recebe lead do distribuidor; reativação exige registro de quem revisou.</div></td></tr>
+<tr><td class="n">6</td><td><b>Trava de diretor real</b> — autenticação da senha do diretor no servidor (a demo aceita demo1234); mensagem "Seu acesso não permite esse tipo de alteração" para quem não é diretor.<div class="ac">Aceite: alteração de política sem credencial de diretor é rejeitada no backend, não só na tela.</div></td></tr>
+<tr><td class="n">7</td><td><b>Histórico imutável por permissão de banco</b> — tabela append-only (sem UPDATE/DELETE para a aplicação), com DE/PARA em JSON por alteração; idem para o histórico da franquia.<div class="ac">Aceite: tentativa de editar/apagar falha por permissão; toda gravação de política gera linha com antes/depois.</div></td></tr>
+<tr><td class="n">8</td><td><b>Período único</b> — todos os widgets da Visão geral lêem a mesma janela (dia/semana/quinzena/mês/personalizado), server-side.<div class="ac">Aceite: trocar o período atualiza KPIs, funis por canal e tabelas com dados reais da janela.</div></td></tr>
+<tr><td class="n">9</td><td><b>Taxonomia única de canais</b> — uma tabela de canais alimenta captação de lead, canais habilitados na aprovação, funis e a Central da Full (que soma os canais próprios dela).<div class="ac">Aceite: criar/renomear canal reflete em todos os pontos sem duplicidade.</div></td></tr>
+<tr><td class="n">10</td><td><b>Persistência geral</b> — filas, cadastros, solicitações e motivos em banco (na demo, só o histórico persiste no navegador).<div class="ac">Aceite: reload/novo login não perde nenhum dado operacional.</div></td></tr>
+<tr><td class="n">11</td><td><b>Decisão de produto pendente (Lis):</b> endereço único das configurações da Franquia Full (hoje: Central da Franquia × Acessos › Personalização).<div class="ac">Aceite: definido com a Lis antes da tela final.</div></td></tr>
+</table>
+<div class="foot">Handoff de Produção · V11 r40 · Supper Certo | Plataforma Cote Certo</div>
+</div></body></html>

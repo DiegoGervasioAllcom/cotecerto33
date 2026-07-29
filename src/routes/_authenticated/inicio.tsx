@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { ehPerfilInterno } from "@/lib/use-areas";
 
 export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({ meta: [{ title: "Início · CoteCerto" }] }),
@@ -65,15 +66,22 @@ function Page() {
   const [d, setD] = useState<DashData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // `/inicio` é a home de venda. O time interno da Matriz (V11: matriz,
+  // coordenador e os supervisores) não tem esse item no menu — o cargo dele
+  // começa em Visão geral. Sem este desvio, o login joga o interno numa tela
+  // que não existe na navegação dele. Master e Franquia Full seguem em /inicio,
+  // como na V10 (mudar isso é decisão de produto, não desta task).
+  const ehInterno = ehPerfilInterno(role);
+
   useEffect(() => {
-    if (!session?.user?.id || role === "matriz") return;
+    if (!session?.user?.id || ehInterno) return;
     void carregar(session.user.id).then((r) => {
       setD(r);
       setLoading(false);
     });
-  }, [session?.user?.id, role]);
+  }, [session?.user?.id, ehInterno]);
 
-  if (role === "matriz") return <Navigate to="/comando/visao-geral" />;
+  if (ehInterno) return <Navigate to="/comando/visao-geral" />;
 
   const today = new Date();
   const headerSub = `${today.getDate()} de ${MESES[today.getMonth()]} · ${DIAS_SEMANA[today.getDay()]} · faltam ${diasUteisRestantes(today)} dias úteis no mês.`;

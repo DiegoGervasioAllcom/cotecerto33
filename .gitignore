@@ -43,3 +43,15 @@ coverage/
 test-results/
 playwright-report/
 /playwright/.cache/
+
+# Worktrees e skills espelhadas por outras ferramentas de agente
+.codex/
+.agents/
+
+# Saída de relatórios gerados localmente
+output/
+
+# Insumos binários mantidos fora do versionamento (o runbook em Markdown é a
+# fonte de deploy; a planilha da Movida circula por fora do repositório)
+docs/CoteCerto_Guia_Deploy.pdf
+docs/*.xlsx

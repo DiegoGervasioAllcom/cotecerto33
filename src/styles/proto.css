@@ -896,6 +896,8 @@ textarea.input:focus {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding-right: 44px;
+  min-height: 36px;
 }
 .kpi .val {
   color: var(--slate);
@@ -4363,6 +4365,25 @@ textarea.input:focus {
 }
 .auth-input select {
   cursor: pointer;
+}
+.pw-toggle {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #7c8a95;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px;
+  flex: none;
+}
+.pw-toggle svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
 }
 .auth-btn {
   width: 100%;

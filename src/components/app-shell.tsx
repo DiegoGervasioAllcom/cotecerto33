@@ -36,6 +36,7 @@ import { useAuth } from "@/lib/auth";
 import { usePresence } from "@/lib/use-presence";
 import { useGroupScope } from "@/lib/group-scope";
 import { useNavBadges } from "@/lib/nav-badges";
+import { useAreas, ehPerfilInterno, type AreaChave } from "@/lib/use-areas";
 import type { Perfil } from "@/integrations/supabase/client";
 import { SidebarUserMenu, useAccessibilityPrefs } from "@/components/user-menu";
 import {
@@ -49,6 +50,12 @@ type Item = {
   label: string;
   icon: typeof Home;
   soon?: boolean;
+  /**
+   * Área que libera este item para o time interno (V11 · H7). Itens sem `area`
+   * não passam pelo recorte — é o caso das navs de venda e de grupo, que são
+   * por perfil, não por cargo.
+   */
+  area?: AreaChave;
 };
 
 type Group = {
@@ -72,35 +79,50 @@ const VENDA_GROUP: Group = {
   ],
 };
 
-/** Matriz — 16 itens (COMANDO 3 + OPERAÇÃO 13). */
+/**
+ * Time interno da Matriz — as 17 áreas do V11 (`MATRIZ_AREAS` do protótipo r40),
+ * na mesma ordem do menu dele. Quem vê o quê sai do cargo, não do perfil: cada
+ * item declara sua `area` e o recorte acontece em `INTERNO_GROUPS`.
+ *
+ * Assim a Matriz continua com as 17, o Coordenador recebe as mesmas 17 (preset
+ * `coord_com`), o Supervisor de Vendas 10, o Operacional 4, e um cargo criado na
+ * tela de Configurações aparece sem tocar neste arquivo.
+ */
 const MATRIZ_COMANDO_GROUP: Group = {
   label: "COMANDO",
   items: [
-    { to: "/comando/visao-geral", label: "Visão geral", icon: LayoutDashboard },
-    { to: "/comando/leads", label: "Leads", icon: Users },
-    { to: "/comando/distribuicao", label: "Distribuição", icon: Share2 },
+    { to: "/comando/visao-geral", label: "Visão geral", icon: LayoutDashboard, area: "mdash" },
+    { to: "/comando/leads", label: "Leads", icon: Users, area: "mleads" },
+    { to: "/comando/distribuicao", label: "Distribuição", icon: Share2, area: "mdist" },
   ],
 };
 
 const MATRIZ_OPERACAO_GROUP: Group = {
   label: "OPERAÇÃO",
   items: [
-    { to: "/operacao/aprovacoes", label: "Aprovações", icon: ClipboardCheck },
-    { to: "/operacao/franquias", label: "Franquias", icon: Building2 },
-    { to: "/operacao/vendedores", label: "Vendedores", icon: Briefcase },
-    { to: "/operacao/supervisao", label: "Supervisão", icon: ShieldCheck },
-    { to: "/operacao/pipeline-geral", label: "Pipeline geral", icon: GitBranch },
-    { to: "/operacao/vendas", label: "Vendas", icon: TrendingUp },
-    { to: "/operacao/comissoes", label: "Comissões", icon: DollarSign },
-    { to: "/operacao/premiacoes", label: "Premiações", icon: Trophy },
-    { to: "/operacao/estornos", label: "Estornos", icon: RotateCcw },
-    { to: "/operacao/renovacoes", label: "Renovações", icon: RefreshCw },
-    { to: "/operacao/relatorios", label: "Relatórios", icon: BarChart3 },
-    { to: "/operacao/mensagens", label: "Mensagens", icon: Mail },
-    { to: "/operacao/acessos", label: "Acessos e permissões", icon: KeyRound },
-    { to: "/operacao/configuracoes", label: "Configurações", icon: Settings },
+    { to: "/operacao/aprovacoes", label: "Aprovações", icon: ClipboardCheck, area: "maprov" },
+    { to: "/operacao/franquias", label: "Franquias", icon: Building2, area: "mfranq" },
+    { to: "/operacao/vendedores", label: "Vendedores", icon: Briefcase, area: "mvend" },
+    { to: "/operacao/supervisao", label: "Supervisão", icon: ShieldCheck, area: "msuperv" },
+    { to: "/operacao/pipeline-geral", label: "Pipeline geral", icon: GitBranch, area: "mpipe" },
+    { to: "/operacao/vendas", label: "Vendas", icon: TrendingUp, area: "mvendas" },
+    { to: "/operacao/comissoes", label: "Comissões", icon: DollarSign, area: "mcomm" },
+    { to: "/operacao/premiacoes", label: "Premiações", icon: Trophy, area: "mprem" },
+    { to: "/operacao/estornos", label: "Estornos", icon: RotateCcw, area: "mestorno" },
+    { to: "/operacao/renovacoes", label: "Renovações", icon: RefreshCw, area: "mren" },
+    { to: "/operacao/relatorios", label: "Relatórios", icon: BarChart3, area: "mrel" },
+    { to: "/operacao/mensagens", label: "Mensagens", icon: Mail, area: "mmsgs" },
+    { to: "/operacao/acessos", label: "Acessos e permissões", icon: KeyRound, area: "macessos" },
+    { to: "/operacao/configuracoes", label: "Configurações", icon: Settings, area: "mconf" },
   ],
 };
+
+/** Recorta os grupos internos pelas áreas do usuário, descartando grupo vazio. */
+function recortarPorArea(groups: Group[], temArea: (a: AreaChave) => boolean): Group[] {
+  return groups
+    .map((g) => ({ ...g, items: g.items.filter((i) => !i.area || temArea(i.area)) }))
+    .filter((g) => g.items.length > 0);
+}
 
 /**
  * Master / Supervisor / Franquia Full — 12 itens (área de grupo).
@@ -125,9 +147,16 @@ const GRUPO_GROUP: Group = {
   ],
 };
 
-/** Selo da marca por perfil (SUPPER · <selo>). */
+/**
+ * Selo da marca (SUPPER · <selo>). Para o time interno o rótulo vem do CARGO,
+ * não daqui: vários cargos moram no mesmo perfil (Assistente Comercial e
+ * Marketing são `interno`; os três supervisores são `supervisor`), então o perfil
+ * não distingue. Estes valores são o fallback de quem não tem cargo.
+ */
 const BRAND_LABEL: Record<Perfil, string> = {
   matriz: "MATRIZ",
+  coordenador: "COORDENAÇÃO",
+  interno: "MATRIZ",
   master: "MASTER",
   supervisor: "SUPERVISOR",
   franqueado: "FRANQUEADO",
@@ -157,26 +186,44 @@ export function AppShell({
   };
 
   // 3 experiências de navegação (ver docs/MAPA_PROTOTIPO_PERFIS.md §2-3):
-  // venLike = vendedor + franquia Individual · grpLike = master/supervisor/franquia Full · matriz.
+  // venLike = vendedor + franquia Individual · grpLike = master/franquia Full ·
+  // interno = matriz/coordenador/supervisor, recortado por ÁREA (V11 · H7).
   // Só o franqueado depende da query de modelo (Individual/Full); enquanto ela
   // carrega, não computamos a experiência para não "piscar" a nav errada.
   const franqPend = role === "franqueado" && scopeLoading;
   const venLike =
     !franqPend && (role === "vendedor" || (role === "franqueado" && isFranqIndividual));
-  const grpLike = !franqPend && isGroupView;
   const isMatriz = role === "matriz";
+  const ehInterno = ehPerfilInterno(role);
+
+  // V11: o supervisor deixa de ter nav de grupo — ele é time interno da Matriz e
+  // recebe o menu do cargo dele. `isGroupView` continua devolvendo true para
+  // supervisor porque 6 telas usam esse mesmo sinal para decidir CONTEÚDO
+  // ("Visão geral do grupo" etc.); mudar isso é task própria, fora do H7/H8.
+  // Aqui excluímos supervisor só da navegação, para não somar duas navs.
+  const grpLike = !franqPend && isGroupView && role !== "supervisor";
+
+  const { temArea, cargoNome, loading: areasLoading } = useAreas();
 
   const { leadsPendentes, aprovacoesPendentes, leadMaisAntigoElapsed } = useNavBadges({
     isMatriz,
-    grpLike,
+    verLeads: temArea("mleads"),
+    verAprovacoes: temArea("maprov") || grpLike,
   });
+  // Interno só entra depois das áreas carregarem — senão a nav pisca vazia (ou
+  // completa) antes do recorte do cargo chegar.
   const visibleGroups: Group[] = [
-    ...(isMatriz ? [MATRIZ_COMANDO_GROUP, MATRIZ_OPERACAO_GROUP] : []),
+    ...(ehInterno && !areasLoading
+      ? recortarPorArea([MATRIZ_COMANDO_GROUP, MATRIZ_OPERACAO_GROUP], temArea)
+      : []),
     ...(venLike ? [VENDA_GROUP] : []),
     ...(grpLike ? [GRUPO_GROUP] : []),
   ];
 
-  const brandLabel = role ? BRAND_LABEL[role] : "";
+  // Time interno se identifica pelo cargo (como no protótipo); os demais, pelo
+  // perfil. Sem cargo definido, cai no rótulo do perfil.
+  const brandLabel =
+    ehInterno && cargoNome ? cargoNome.toUpperCase() : role ? BRAND_LABEL[role] : "";
   const tutorialPersona = resolveTutorialPersona({
     role,
     profile,

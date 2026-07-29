@@ -3,6 +3,30 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      areas: {
+        Row: {
+          chave: string;
+          disponivel: boolean;
+          label: string;
+          ordem: number;
+          rota: string | null;
+        };
+        Insert: {
+          chave: string;
+          disponivel?: boolean;
+          label: string;
+          ordem: number;
+          rota?: string | null;
+        };
+        Update: {
+          chave?: string;
+          disponivel?: boolean;
+          label?: string;
+          ordem?: number;
+          rota?: string | null;
+        };
+        Relationships: [];
+      };
       campanhas_elite: {
         Row: {
           ativa: boolean;
@@ -30,6 +54,108 @@ export type Database = {
           nome?: string;
           periodo?: string | null;
           tipo?: string;
+        };
+        Relationships: [];
+      };
+      canais: {
+        Row: {
+          ativo: boolean;
+          criado_em: string;
+          empresa_id: string | null;
+          id: string;
+          nome: string;
+          ordem: number;
+          tipo: string;
+        };
+        Insert: {
+          ativo?: boolean;
+          criado_em?: string;
+          empresa_id?: string | null;
+          id?: string;
+          nome: string;
+          ordem?: number;
+          tipo: string;
+        };
+        Update: {
+          ativo?: boolean;
+          criado_em?: string;
+          empresa_id?: string | null;
+          id?: string;
+          nome?: string;
+          ordem?: number;
+          tipo?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "canais_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "canais_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
+      cargo_areas: {
+        Row: {
+          area_chave: string;
+          cargo_id: string;
+        };
+        Insert: {
+          area_chave: string;
+          cargo_id: string;
+        };
+        Update: {
+          area_chave?: string;
+          cargo_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cargo_areas_area_chave_fkey";
+            columns: ["area_chave"];
+            isOneToOne: false;
+            referencedRelation: "areas";
+            referencedColumns: ["chave"];
+          },
+          {
+            foreignKeyName: "cargo_areas_cargo_id_fkey";
+            columns: ["cargo_id"];
+            isOneToOne: false;
+            referencedRelation: "cargos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      cargos: {
+        Row: {
+          atualizado_em: string;
+          criado_em: string;
+          descricao: string | null;
+          id: string;
+          nome: string;
+          preset: boolean;
+        };
+        Insert: {
+          atualizado_em?: string;
+          criado_em?: string;
+          descricao?: string | null;
+          id: string;
+          nome: string;
+          preset?: boolean;
+        };
+        Update: {
+          atualizado_em?: string;
+          criado_em?: string;
+          descricao?: string | null;
+          id?: string;
+          nome?: string;
+          preset?: boolean;
         };
         Relationships: [];
       };
@@ -1245,6 +1371,68 @@ export type Database = {
           },
         ];
       };
+      historico_alteracoes: {
+        Row: {
+          area: string;
+          autor_id: string | null;
+          autor_nome: string;
+          de_para: Json | null;
+          empresa_id: string | null;
+          id: string;
+          o_que: string;
+          quando: string;
+        };
+        Insert: {
+          area: string;
+          autor_id?: string | null;
+          autor_nome: string;
+          de_para?: Json | null;
+          empresa_id?: string | null;
+          id?: string;
+          o_que: string;
+          quando?: string;
+        };
+        Update: {
+          area?: string;
+          autor_id?: string | null;
+          autor_nome?: string;
+          de_para?: Json | null;
+          empresa_id?: string | null;
+          id?: string;
+          o_que?: string;
+          quando?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "historico_alteracoes_autor_id_fkey";
+            columns: ["autor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "historico_alteracoes_autor_id_fkey";
+            columns: ["autor_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "historico_alteracoes_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "historico_alteracoes_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       integracoes: {
         Row: {
           atualizado_em: string;
@@ -1321,6 +1509,7 @@ export type Database = {
           bloqueado: boolean;
           bloqueado_em: string | null;
           bloqueado_por: string | null;
+          canal_id: string | null;
           cliente_id: string | null;
           contato: string | null;
           criado_em: string;
@@ -1351,6 +1540,7 @@ export type Database = {
           bloqueado?: boolean;
           bloqueado_em?: string | null;
           bloqueado_por?: string | null;
+          canal_id?: string | null;
           cliente_id?: string | null;
           contato?: string | null;
           criado_em?: string;
@@ -1381,6 +1571,7 @@ export type Database = {
           bloqueado?: boolean;
           bloqueado_em?: string | null;
           bloqueado_por?: string | null;
+          canal_id?: string | null;
           cliente_id?: string | null;
           contato?: string | null;
           criado_em?: string;
@@ -1405,6 +1596,13 @@ export type Database = {
           valor?: number | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "leads_canal_id_fkey";
+            columns: ["canal_id"];
+            isOneToOne: false;
+            referencedRelation: "canais";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "leads_cliente_id_fkey";
             columns: ["cliente_id"];
@@ -1945,16 +2143,92 @@ export type Database = {
         };
         Relationships: [];
       };
+      profile_areas: {
+        Row: {
+          area_chave: string;
+          profile_id: string;
+        };
+        Insert: {
+          area_chave: string;
+          profile_id: string;
+        };
+        Update: {
+          area_chave?: string;
+          profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_areas_area_chave_fkey";
+            columns: ["area_chave"];
+            isOneToOne: false;
+            referencedRelation: "areas";
+            referencedColumns: ["chave"];
+          },
+          {
+            foreignKeyName: "profile_areas_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_areas_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      profile_canais: {
+        Row: {
+          canal_id: string;
+          profile_id: string;
+        };
+        Insert: {
+          canal_id: string;
+          profile_id: string;
+        };
+        Update: {
+          canal_id?: string;
+          profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_canais_canal_id_fkey";
+            columns: ["canal_id"];
+            isOneToOne: false;
+            referencedRelation: "canais";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_canais_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_canais_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           aprovada_em: string | null;
           avatar_url: string | null;
           bonus_campanha: number | null;
+          cargo_id: string | null;
           comissao_modelo: number | null;
           created_at: string;
           desligado_em: string | null;
           desligado_motivo: string | null;
           dia_pagamento: number | null;
+          diretor: boolean;
           email: string;
           empresa_id: string | null;
           equipe: string | null;
@@ -1973,11 +2247,13 @@ export type Database = {
           aprovada_em?: string | null;
           avatar_url?: string | null;
           bonus_campanha?: number | null;
+          cargo_id?: string | null;
           comissao_modelo?: number | null;
           created_at?: string;
           desligado_em?: string | null;
           desligado_motivo?: string | null;
           dia_pagamento?: number | null;
+          diretor?: boolean;
           email?: string;
           empresa_id?: string | null;
           equipe?: string | null;
@@ -1996,11 +2272,13 @@ export type Database = {
           aprovada_em?: string | null;
           avatar_url?: string | null;
           bonus_campanha?: number | null;
+          cargo_id?: string | null;
           comissao_modelo?: number | null;
           created_at?: string;
           desligado_em?: string | null;
           desligado_motivo?: string | null;
           dia_pagamento?: number | null;
+          diretor?: boolean;
           email?: string;
           empresa_id?: string | null;
           equipe?: string | null;
@@ -2016,6 +2294,13 @@ export type Database = {
           telefone?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "profiles_cargo_id_fkey";
+            columns: ["cargo_id"];
+            isOneToOne: false;
+            referencedRelation: "cargos";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "profiles_empresa_id_fkey";
             columns: ["empresa_id"];
@@ -2657,6 +2942,12 @@ export type Database = {
         Args: { p_competencia: string };
         Returns: Json;
       };
+      fn_areas_do_usuario: {
+        Args: { _user_id: string };
+        Returns: {
+          area_chave: string;
+        }[];
+      };
       fn_comissao_clt: {
         Args: { p_competencia: string; p_vendedor: string };
         Returns: {
@@ -2680,10 +2971,12 @@ export type Database = {
         Args: { p_ano: number; p_trimestre: number };
         Returns: string[];
       };
+      fn_confirmar_senha_diretor: { Args: { _senha: string }; Returns: boolean };
       fn_dentro_alcada_desconto: {
         Args: { p_aprovador: string; p_pct: number; p_seguradora: string };
         Returns: boolean;
       };
+      fn_eh_diretor: { Args: { _user_id: string }; Returns: boolean };
       fn_modelo_alcada_desconto: {
         Args: { p_profile_id: string };
         Returns: string;
@@ -2704,6 +2997,20 @@ export type Database = {
         Returns: {
           id: string;
         }[];
+      };
+      fn_registrar_alteracao: {
+        Args: {
+          _area: string;
+          _de_para?: Json;
+          _empresa_id?: string;
+          _o_que: string;
+          _senha: string;
+        };
+        Returns: string;
+      };
+      fn_tem_area: {
+        Args: { _area: string; _user_id: string };
+        Returns: boolean;
       };
       fn_trimestre: { Args: { p_competencia: string }; Returns: number };
       has_role: {
@@ -2848,7 +3155,14 @@ export type Database = {
       meta_escopo: "empresa" | "usuario";
       modelo_tipo: "franqueada" | "clt";
       msg_escopo: "global" | "pessoal";
-      perfil: "matriz" | "master" | "vendedor" | "franqueado" | "supervisor";
+      perfil:
+        | "matriz"
+        | "master"
+        | "vendedor"
+        | "franqueado"
+        | "supervisor"
+        | "coordenador"
+        | "interno";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -3004,7 +3318,15 @@ export const Constants = {
       meta_escopo: ["empresa", "usuario"],
       modelo_tipo: ["franqueada", "clt"],
       msg_escopo: ["global", "pessoal"],
-      perfil: ["matriz", "master", "vendedor", "franqueado", "supervisor"],
+      perfil: [
+        "matriz",
+        "master",
+        "vendedor",
+        "franqueado",
+        "supervisor",
+        "coordenador",
+        "interno",
+      ],
     },
   },
 } as const;

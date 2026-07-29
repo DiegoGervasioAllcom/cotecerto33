@@ -62,6 +62,24 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
     return { cotacaoId: cot.data!.id as string, propostaId: proposta.data!.id as string };
   }
 
+  /**
+   * Supervisor COM alçada de desconto.
+   *
+   * V11 (H6): ter o perfil `supervisor` não basta mais — a alçada é derivada de
+   * `profiles.cargo_id`, e só o cargo `sup_vendas` tem modelo em
+   * desconto_politicas. O Supervisor Operacional e o Backoffice existem
+   * justamente para NÃO aprovar desconto (coberto em rls-hierarquia-v11-areas).
+   */
+  async function criarSupervisorVendas(opts: { emailPrefix: string }) {
+    const sup = await criarPersonaComEmpresa("supervisor", opts);
+    const { error } = await admin
+      .from("profiles")
+      .update({ cargo_id: "sup_vendas" })
+      .eq("id", sup.userId);
+    if (error) throw error;
+    return sup;
+  }
+
   async function upsertPolitica(modelo: string, seguradoraId: string, pctMaximo: number) {
     await admin
       .from("desconto_politicas")
@@ -76,7 +94,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
   describe("cadeia: nivel_atual e escalar", () => {
     it("solicitar resolve nivel_atual = superior do solicitante", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: "g32-cadeia-sup",
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -110,7 +128,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
     it("escalar sobe corretamente e barra acima da Matriz", async () => {
       // supervisor sem superior_id -> reporta direto à Matriz (nivel_atual vira NULL ao escalar).
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: "g32-escalar-sup",
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -155,7 +173,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
   describe("alçada", () => {
     it("aprovador com política pct_maximo=10 aprova 8 (ok); 15 -> raise; sem política -> raise; matriz aprova qualquer valor", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: "g32-alcada-sup",
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -164,7 +182,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
         superiorId: supervisor.userId,
       });
 
-      await upsertPolitica("supervisor", seguradoras[2].id, 10);
+      await upsertPolitica("supervisor_vendas", seguradoras[2].id, 10);
 
       // 8% -> dentro da alçada, aprova.
       const cot1 = await criarCotacaoComPremio({
@@ -234,7 +252,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
   describe("aprovar aplica no prêmio (e reflete no G4 quando pago)", () => {
     it("reduz cotacao_premios.premio e propostas.premio/comissao_valor; ledger reflete no pagamento", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: "g32-premio-sup",
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -242,7 +260,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
         empresaId: supervisor.empresaId,
         superiorId: supervisor.userId,
       });
-      await upsertPolitica("supervisor", seguradoras[4].id, 10);
+      await upsertPolitica("supervisor_vendas", seguradoras[4].id, 10);
 
       const cot = await criarCotacaoComPremio({
         empresaId: vendedor.empresaId,
@@ -301,7 +319,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
   describe("contraproposta -> aceitar", () => {
     it("status transita e o prêmio só muda no aceitar", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: "g32-contra-sup",
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -309,7 +327,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
         empresaId: supervisor.empresaId,
         superiorId: supervisor.userId,
       });
-      await upsertPolitica("supervisor", seguradoras[5].id, 10);
+      await upsertPolitica("supervisor_vendas", seguradoras[5].id, 10);
 
       const cot = await criarCotacaoComPremio({
         empresaId: vendedor.empresaId,
@@ -372,7 +390,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
   describe("negar encerra; solicitante abre novo", () => {
     it("negar muda status para negado e não impede novo pedido", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: "g32-negar-sup",
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -420,7 +438,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
   describe("segurança de ator (quem pode chamar cada RPC)", () => {
     it("quem não é nivel_atual/matriz não aprova; quem não é solicitante não aceita/cancela", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: "g32-ator-sup",
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -431,7 +449,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
       const foraDaCadeia = await criarPersonaComEmpresa("vendedor", {
         emailPrefix: "g32-ator-fora",
       });
-      await upsertPolitica("supervisor", seguradoras[1].id, 10);
+      await upsertPolitica("supervisor_vendas", seguradoras[1].id, 10);
       const cot = await criarCotacaoComPremio({
         empresaId: vendedor.empresaId,
         responsavelId: vendedor.userId,
@@ -487,7 +505,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
   describe("RLS reforçada (fn_pode_ver_solicitacao_desconto)", () => {
     it("solicitante, cadeia-acima e matriz veem; colega lateral (mesma empresa, sem hierarquia) e outra rede NÃO veem", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: "g32-rls-sup",
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -614,7 +632,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
   describe("G3.2b: barra desconto em proposta já paga", () => {
     it("aprovar continua funcionando normalmente ANTES do pagamento (regressão)", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: uniq("g32b-ok-sup"),
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -622,7 +640,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
         empresaId: supervisor.empresaId,
         superiorId: supervisor.userId,
       });
-      await upsertPolitica("supervisor", seguradoras[6].id, 10);
+      await upsertPolitica("supervisor_vendas", seguradoras[6].id, 10);
 
       const cot = await criarCotacaoComPremio({
         empresaId: vendedor.empresaId,
@@ -660,7 +678,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
     });
 
     it("aprovar falha quando a proposta já está paga; não altera premio/comissao_valor nem status", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: uniq("g32b-paga-sup"),
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -668,7 +686,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
         empresaId: supervisor.empresaId,
         superiorId: supervisor.userId,
       });
-      await upsertPolitica("supervisor", seguradoras[7].id, 10);
+      await upsertPolitica("supervisor_vendas", seguradoras[7].id, 10);
 
       const cot = await criarCotacaoComPremio({
         empresaId: vendedor.empresaId,
@@ -723,7 +741,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
         seguradoraNome: seguradoras[8].nome,
         premio: 500,
       });
-      await upsertPolitica("supervisor", seguradoras[8].id, 10);
+      await upsertPolitica("supervisor_vendas", seguradoras[8].id, 10);
 
       const s2 = await vendedor.client.rpc("solicitar_desconto", {
         p_cotacao_id: cot2.cotacaoId,
@@ -764,7 +782,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
     });
 
     it("aprovar aplica o desconto normalmente quando a proposta paga foi cancelada (guard não barra)", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: uniq("g32b-cancel-sup"),
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
@@ -772,7 +790,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
         empresaId: supervisor.empresaId,
         superiorId: supervisor.userId,
       });
-      await upsertPolitica("supervisor", seguradoras[9].id, 10);
+      await upsertPolitica("supervisor_vendas", seguradoras[9].id, 10);
 
       const cot = await criarCotacaoComPremio({
         empresaId: vendedor.empresaId,
@@ -822,7 +840,7 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
 
   describe("guarda: seguradora sem prêmio selecionado", () => {
     it("aprovar falha ALTO (não silencioso) quando nenhum prêmio selecionado casa com a seguradora do pedido", async () => {
-      const supervisor = await criarPersonaComEmpresa("supervisor", {
+      const supervisor = await criarSupervisorVendas({
         emailPrefix: uniq("sup-guard"),
       });
       const vendedor = await criarPersonaComEmpresa("vendedor", {
