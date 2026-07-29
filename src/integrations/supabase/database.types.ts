@@ -57,6 +57,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      canais: {
+        Row: {
+          ativo: boolean;
+          criado_em: string;
+          empresa_id: string | null;
+          id: string;
+          nome: string;
+          ordem: number;
+          tipo: string;
+        };
+        Insert: {
+          ativo?: boolean;
+          criado_em?: string;
+          empresa_id?: string | null;
+          id?: string;
+          nome: string;
+          ordem?: number;
+          tipo: string;
+        };
+        Update: {
+          ativo?: boolean;
+          criado_em?: string;
+          empresa_id?: string | null;
+          id?: string;
+          nome?: string;
+          ordem?: number;
+          tipo?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "canais_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "canais_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       cargo_areas: {
         Row: {
           area_chave: string;
@@ -1464,6 +1509,7 @@ export type Database = {
           bloqueado: boolean;
           bloqueado_em: string | null;
           bloqueado_por: string | null;
+          canal_id: string | null;
           cliente_id: string | null;
           contato: string | null;
           criado_em: string;
@@ -1494,6 +1540,7 @@ export type Database = {
           bloqueado?: boolean;
           bloqueado_em?: string | null;
           bloqueado_por?: string | null;
+          canal_id?: string | null;
           cliente_id?: string | null;
           contato?: string | null;
           criado_em?: string;
@@ -1524,6 +1571,7 @@ export type Database = {
           bloqueado?: boolean;
           bloqueado_em?: string | null;
           bloqueado_por?: string | null;
+          canal_id?: string | null;
           cliente_id?: string | null;
           contato?: string | null;
           criado_em?: string;
@@ -1548,6 +1596,13 @@ export type Database = {
           valor?: number | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "leads_canal_id_fkey";
+            columns: ["canal_id"];
+            isOneToOne: false;
+            referencedRelation: "canais";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "leads_cliente_id_fkey";
             columns: ["cliente_id"];
@@ -2118,6 +2173,43 @@ export type Database = {
           },
           {
             foreignKeyName: "profile_areas_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      profile_canais: {
+        Row: {
+          canal_id: string;
+          profile_id: string;
+        };
+        Insert: {
+          canal_id: string;
+          profile_id: string;
+        };
+        Update: {
+          canal_id?: string;
+          profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_canais_canal_id_fkey";
+            columns: ["canal_id"];
+            isOneToOne: false;
+            referencedRelation: "canais";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_canais_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_canais_profile_id_fkey";
             columns: ["profile_id"];
             isOneToOne: false;
             referencedRelation: "v_vendedor_kpis";

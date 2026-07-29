@@ -25,12 +25,23 @@ Sem isso, toda tela da V11 nasce em cima de premissa errada.
 | V11.0.1 | front   | Diffar o CSS do protótipo r40 contra `src/styles/proto.css` e aplicar o delta (regra 6: byte a byte)  | —          |
 | V11.0.2 | banco   | ✅ `public.perfil += 'coordenador'`; supervisor Vendas × Operacional resolvido como **cargo** (ver `PLANO_HIERARQUIA_V11.md`) | — |
 | V11.0.3 | banco   | ✅ Tabela de **cargos** + áreas de escopo (7 presets + Vendedor Matriz), com RLS e checks             | V11.0.2    |
-| V11.0.4 | banco   | Taxonomia única de **canais** (item 9 do Handoff): uma tabela alimentando captação, aprovação, funis e Central da Full | — |
+| V11.0.4 | banco   | ✅ Taxonomia única de **canais** (item 9): tabela + `leads.canal_id` + `profile_canais`. **Telas pendentes** — ver nota abaixo | — |
 | V11.0.5 | banco   | ✅ Marcação de **diretor** no cadastro (mín. 2, não é cargo) + verificação da senha no servidor e a única porta de escrita do histórico | V11.0.2 |
 | V11.0.6 | banco   | ✅ **Histórico append-only** com DE/PARA em JSON, sem `UPDATE`/`DELETE`/`TRUNCATE` para a aplicação (item 7) | —      |
 | V11.0.7 | testes  | ✅ Testes de RLS/grants: histórico não editável, política sem diretor é rejeitada no backend           | V11.0.5, V11.0.6 |
 | V11.0.8 | banco   | ✅ Cadeia hierárquica: Master passa a responder ao Coordenador; `empresas_visiveis()` já era agnóstica de rótulo | V11.0.2 |
 
+> **`leads.origem` virou legado, mas as telas ainda leem.** A V11.0.4 entregou a
+> taxonomia no banco: `canais` (com `tipo` separando captação paga, entrada manual e
+> lead que nasce de dentro), `leads.canal_id` e `profile_canais`. O texto livre
+> `leads.origem` continua na tabela porque **8 telas leem para exibir e filtrar** —
+> inclusive `comando/leads.tsx`, que monta o filtro coletando os textos distintos das
+> linhas e decide o selo de mídia paga com regex (`/ads|meta|google/i`). Um trigger
+> resolve `canal_id` a partir do texto para os escritores antigos, então o dado novo
+> nasce certo. **Falta migrar as leituras**, tela por tela, nas frentes que já tocam
+> cada uma: funis na Frente 7, Central da Full na Frente 5, e a tela de Leads junto
+> da Frente 2. Só quando isso fechar o item 9 está inteiro.
+>
 > **Armadilha registrada para quem fizer o histórico da franquia (V11.5.6).** Trigger
 > `for each row` **não dispara em TRUNCATE**. O Supabase concede `ALL` em `public` a
 > `service_role` por default privileges, e `ALL` inclui `TRUNCATE` — então o histórico
