@@ -39,6 +39,12 @@ export interface AreasEscopo {
   areas: Set<string>;
   /** Atalho de leitura. Sempre false enquanto `loading`. */
   temArea: (chave: AreaChave) => boolean;
+  /**
+   * Nome do cargo (ex.: "Supervisor de Vendas"). O protótipo identifica o time
+   * interno pelo cargo, não pelo perfil — dois cargos diferentes moram no mesmo
+   * perfil, então o perfil não serve de rótulo. NULL para a rede externa.
+   */
+  cargoNome: string | null;
 }
 
 /**
@@ -46,12 +52,25 @@ export interface AreasEscopo {
  * vendedor) tem nav própria e não passa por cargo — para eles o hook resolve
  * imediatamente com conjunto vazio, sem ida ao banco.
  */
-const PERFIS_INTERNOS = new Set(["matriz", "coordenador", "supervisor"]);
+const PERFIS_INTERNOS = new Set(["matriz", "coordenador", "supervisor", "interno"]);
+
+/**
+ * Time interno da Matriz: menu recortado por área e home em /comando/visao-geral
+ * (não em /inicio, que é a home de venda).
+ *
+ * Vive aqui e é usado pelo `app-shell`, por `/inicio` e pela raiz. Estava
+ * repetido nos quatro e a lista divergiu quando `interno` entrou — o perfil novo
+ * ganhava o menu certo e continuava caindo na home de venda.
+ */
+export function ehPerfilInterno(role: string | null | undefined): boolean {
+  return !!role && PERFIS_INTERNOS.has(role);
+}
 
 export function useAreas(): AreasEscopo {
   const { role, session } = useAuth();
   const [areas, setAreas] = useState<Set<string>>(new Set());
-  const ehInterno = !!role && PERFIS_INTERNOS.has(role);
+  const [cargoNome, setCargoNome] = useState<string | null>(null);
+  const ehInterno = ehPerfilInterno(role);
   const [loading, setLoading] = useState(ehInterno);
 
   useEffect(() => {
@@ -59,20 +78,27 @@ export function useAreas(): AreasEscopo {
 
     if (!ehInterno || !session?.user?.id) {
       setAreas(new Set());
+      setCargoNome(null);
       setLoading(false);
       return;
     }
 
+    const uid = session.user.id;
     setLoading(true);
-    supabase.rpc("fn_areas_do_usuario", { _user_id: session.user.id }).then(({ data, error }) => {
+    Promise.all([
+      supabase.rpc("fn_areas_do_usuario", { _user_id: uid }),
+      supabase.from("profiles").select("cargos(nome)").eq("id", uid).maybeSingle(),
+    ]).then(([res, perfilRes]) => {
       if (!active) return;
-      if (error) {
+      if (res.error) {
         // Falha de rede/policy: conjunto vazio é o lado seguro — some menu,
         // não aparece menu que a pessoa não deveria ver.
         setAreas(new Set());
       } else {
-        setAreas(new Set((data ?? []).map((r) => r.area_chave)));
+        setAreas(new Set((res.data ?? []).map((r) => r.area_chave)));
       }
+      const cargo = perfilRes.data?.cargos as { nome: string } | null | undefined;
+      setCargoNome(cargo?.nome ?? null);
       setLoading(false);
     });
 
@@ -84,6 +110,7 @@ export function useAreas(): AreasEscopo {
   return {
     loading,
     areas,
+    cargoNome,
     temArea: (chave: AreaChave) => !loading && areas.has(chave),
   };
 }

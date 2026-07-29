@@ -3155,7 +3155,14 @@ export type Database = {
       meta_escopo: "empresa" | "usuario";
       modelo_tipo: "franqueada" | "clt";
       msg_escopo: "global" | "pessoal";
-      perfil: "matriz" | "master" | "vendedor" | "franqueado" | "supervisor" | "coordenador";
+      perfil:
+        | "matriz"
+        | "master"
+        | "vendedor"
+        | "franqueado"
+        | "supervisor"
+        | "coordenador"
+        | "interno";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -3311,7 +3318,15 @@ export const Constants = {
       meta_escopo: ["empresa", "usuario"],
       modelo_tipo: ["franqueada", "clt"],
       msg_escopo: ["global", "pessoal"],
-      perfil: ["matriz", "master", "vendedor", "franqueado", "supervisor", "coordenador"],
+      perfil: [
+        "matriz",
+        "master",
+        "vendedor",
+        "franqueado",
+        "supervisor",
+        "coordenador",
+        "interno",
+      ],
     },
   },
 } as const;

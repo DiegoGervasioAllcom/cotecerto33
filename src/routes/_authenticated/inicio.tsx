@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { ehPerfilInterno } from "@/lib/use-areas";
 
 export const Route = createFileRoute("/_authenticated/inicio")({
   head: () => ({ meta: [{ title: "Início · CoteCerto" }] }),
@@ -70,7 +71,7 @@ function Page() {
   // começa em Visão geral. Sem este desvio, o login joga o interno numa tela
   // que não existe na navegação dele. Master e Franquia Full seguem em /inicio,
   // como na V10 (mudar isso é decisão de produto, não desta task).
-  const ehInterno = role === "matriz" || role === "coordenador" || role === "supervisor";
+  const ehInterno = ehPerfilInterno(role);
 
   useEffect(() => {
     if (!session?.user?.id || ehInterno) return;

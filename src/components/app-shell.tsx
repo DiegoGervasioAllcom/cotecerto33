@@ -36,7 +36,7 @@ import { useAuth } from "@/lib/auth";
 import { usePresence } from "@/lib/use-presence";
 import { useGroupScope } from "@/lib/group-scope";
 import { useNavBadges } from "@/lib/nav-badges";
-import { useAreas, type AreaChave } from "@/lib/use-areas";
+import { useAreas, ehPerfilInterno, type AreaChave } from "@/lib/use-areas";
 import type { Perfil } from "@/integrations/supabase/client";
 import { SidebarUserMenu, useAccessibilityPrefs } from "@/components/user-menu";
 import { TutorialProvider } from "@/components/tutorial/tutorial-provider";
@@ -145,9 +145,16 @@ const GRUPO_GROUP: Group = {
 };
 
 /** Selo da marca por perfil (SUPPER · <selo>). */
+/**
+ * Selo da marca (SUPPER · <selo>). Para o time interno o rótulo vem do CARGO,
+ * não daqui: vários cargos moram no mesmo perfil (Assistente Comercial e
+ * Marketing são `interno`; os três supervisores são `supervisor`), então o perfil
+ * não distingue. Estes valores são o fallback de quem não tem cargo.
+ */
 const BRAND_LABEL: Record<Perfil, string> = {
   matriz: "MATRIZ",
   coordenador: "COORDENAÇÃO",
+  interno: "MATRIZ",
   master: "MASTER",
   supervisor: "SUPERVISOR",
   franqueado: "FRANQUEADO",
@@ -184,7 +191,7 @@ export function AppShell({
   const venLike =
     !franqPend && (role === "vendedor" || (role === "franqueado" && isFranqIndividual));
   const isMatriz = role === "matriz";
-  const ehInterno = isMatriz || role === "coordenador" || role === "supervisor";
+  const ehInterno = ehPerfilInterno(role);
 
   // V11: o supervisor deixa de ter nav de grupo — ele é time interno da Matriz e
   // recebe o menu do cargo dele. `isGroupView` continua devolvendo true para
@@ -193,7 +200,7 @@ export function AppShell({
   // Aqui excluímos supervisor só da navegação, para não somar duas navs.
   const grpLike = !franqPend && isGroupView && role !== "supervisor";
 
-  const { temArea, loading: areasLoading } = useAreas();
+  const { temArea, cargoNome, loading: areasLoading } = useAreas();
 
   const { leadsPendentes, aprovacoesPendentes, leadMaisAntigoElapsed } = useNavBadges({
     isMatriz,
@@ -218,7 +225,10 @@ export function AppShell({
     ...(grpLike ? [GRUPO_GROUP] : []),
   ];
 
-  const brandLabel = role ? BRAND_LABEL[role] : "";
+  // Time interno se identifica pelo cargo (como no protótipo); os demais, pelo
+  // perfil. Sem cargo definido, cai no rótulo do perfil.
+  const brandLabel =
+    ehInterno && cargoNome ? cargoNome.toUpperCase() : role ? BRAND_LABEL[role] : "";
   const tutorialKind = resolveTutorialKind({
     role,
     isGroupView,

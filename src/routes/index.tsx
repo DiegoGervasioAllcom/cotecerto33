@@ -1,6 +1,7 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { useGroupScope } from "@/lib/group-scope";
+import { ehPerfilInterno } from "@/lib/use-areas";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -24,7 +25,7 @@ function Index() {
   // Matriz, Coordenador, Master, Supervisor e Franquia Full caem na visão de
   // comando; Vendedor e Franquia Individual caem em /inicio (mesma lógica de
   // useGroupScope/isGroupView usada na navegação lateral).
-  if (role === "matriz" || role === "coordenador" || isGroupView) {
+  if (ehPerfilInterno(role) || isGroupView) {
     return <Navigate to="/comando/visao-geral" />;
   }
   return <Navigate to="/inicio" />;

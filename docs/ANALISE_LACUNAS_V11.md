@@ -110,29 +110,43 @@ duas exceções que são **infra, não tela**:
 - **Item 10 · Persistência geral** — na demo só o histórico persiste no navegador. Filas,
   cadastros, solicitações e motivos precisam de banco.
 
-## Lacuna encontrada no teste das 12 personas (29/07/2026)
+## Perfil do time de apoio — resolvido em 29/07/2026
 
-**Dois dos 7 cargos não têm `perfil` correto onde morar.** A V11 acrescentou só
-`coordenador` ao enum `public.perfil`, que agora é `matriz`, `coordenador`, `supervisor`,
-`master`, `franqueado`, `vendedor`. Direção → `matriz`, Coordenador → `coordenador` e os
-três supervisores → `supervisor` encaixam. Mas **Assistente Comercial** e **Marketing**
-não são supervisores nem Matriz: hoje só rodam marcados como `supervisor`, o que acerta o
-menu (o recorte vem do cargo) e erra duas coisas:
+**Dois dos 7 cargos não tinham `perfil` onde morar.** Direção → `matriz`, Coordenador →
+`coordenador` e os três supervisores → `supervisor` encaixam. **Assistente Comercial** e
+**Marketing** não são supervisores nem Matriz, e só podiam rodar marcados como
+`supervisor`.
 
-- **O selo.** A tela mostra "SUPPER · SUPERVISOR" para quem é Assistente ou Marketing.
-- **O escopo de dados.** `perfil` é o que a RLS lê. Um `supervisor` sem subordinados vê,
-  por `empresas_visiveis()`, só a própria empresa — mas Marketing tem Leads, Distribuição
-  e Relatórios no menu justamente para olhar a captação inteira. Ou seja, o menu abre
-  telas que o dado não preenche.
+O motivo pelo qual isso importava **não** é o óbvio. Levantamento no banco:
 
-No protótipo o problema não aparece porque lá o menu vem *só* do cargo — não existe eixo
-de perfil. Aqui os dois eixos coexistem (perfil = segurança, cargo = escopo de tela) e
-falta um valor para "time interno de apoio".
+- **Nenhuma policy RLS usa `'supervisor'`** — zero, em todo o schema. O perfil não decide
+  escopo de dado: quem decide é `empresas_visiveis()`, que só abre para matriz/coordenador
+  e, fora disso, desce `superior_id`.
+- Mas duas coisas leem o papel: `fechar_comissao_competencia` paga **royalties** a todo
+  profile com role `supervisor` e `profiles.royalties > 0`, e `solicitar_vendedor` aceita
+  supervisor como solicitante. Ou seja, a única coisa que separava um Marketing de receber
+  royalties de supervisor no fechamento era aquela coluna estar nula.
 
-Duas saídas, ambas de banco: somar um valor `interno` ao enum, ou passar o escopo de dados
-a depender de área em vez de perfil (o que casaria com o resto da V11, já que
-`fn_tem_area` existe). **Precisa de decisão antes de convidar Assistente ou Marketing pela
-Frente 1** — o convite grava perfil.
+Então o problema era de **dinheiro e capacidade**, não de visibilidade. Resolvido com um
+valor próprio `interno` no enum (migration `20260729035930`), que fica fora do laço de
+royalties por construção. Coberto por teste que preenche `royalties` igual nos dois papéis
+e verifica que só o supervisor recebe lançamento.
+
+O selo também estava errado — mostrava "SUPPER · SUPERVISOR" para Assistente e Marketing.
+Passou a exibir o **cargo** (como no protótipo, onde a identidade do time interno é o
+cargo): "SUPPER · SUPERVISOR DE VENDAS", "SUPPER · MARKETING".
+
+### O que segue aberto: escopo de dados do time de apoio
+
+`interno` **não** entra no braço amplo de `empresas_visiveis()`, de propósito: **18 policies
+de escrita** (leads, clientes, oportunidades, cotacao_*, metas, canais) usam essa mesma
+função, então abrir visibilidade abriria escrita na rede toda. Só que Marketing tem Leads,
+Distribuição e Relatórios no menu justamente para olhar a captação inteira — hoje o menu
+abre telas que o dado não preenche.
+
+Dar leitura ampla sem escrita exige separar os dois eixos nas **22 policies de SELECT**.
+É mudança larga e depende de decidir **o que exatamente Marketing e Assistente devem ver**
+— decisão de produto, não de refactor. Registrado aqui para não se perder.
 
 ## Divergências entre as fontes
 
