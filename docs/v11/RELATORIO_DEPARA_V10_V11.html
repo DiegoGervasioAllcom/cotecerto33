@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório DE/PARA · V10 → V11 · Supper Certo | Plataforma Cote Certo</title>
+<style>
+  :root{--slate:#425563;--slate-dark:#2F3D48;--yellow:#FFB600;--yellow-soft:#FFF6E0;
+        --orange:#E8802A;--ink:#26313A;--muted:#7C8A95;--line:#E2E6E9;--bg:#F5F4F1;--ok:#1F7A5C}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.55}
+  .top{background:var(--slate);color:#fff;padding:28px 44px}
+  .top h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.2px}
+  .top p{margin:6px 0 0;font-size:13.5px;color:#c7d0d6}
+  .wrap{max-width:1160px;margin:0 auto;padding:30px 44px 64px}
+  .intro{background:#fff;border-radius:16px;padding:20px 24px;box-shadow:0 4px 18px rgba(50,60,70,.07);
+         border-left:5px solid var(--yellow);margin-bottom:28px;font-size:13.5px}
+  h2.sec{font-size:14px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:34px 0 6px;font-weight:800}
+  .apr{display:inline-block;background:#E4EFE9;color:var(--ok);font-size:11px;font-weight:800;
+       letter-spacing:.8px;text-transform:uppercase;padding:3px 10px;border-radius:999px;margin-left:8px}
+  p.fonte{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;
+        box-shadow:0 4px 16px rgba(50,60,70,.07);margin-bottom:18px}
+  th{background:var(--slate);color:#fff;font-size:11.5px;text-transform:uppercase;letter-spacing:1px;
+     padding:11px 14px;text-align:left}
+  td{padding:10px 14px;font-size:13px;border-bottom:1px solid #F0F2F3;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.de{color:#8a5a4a;width:34%}
+  td.para{width:44%}
+  td.onde{color:var(--muted);font-size:12px;width:22%}
+  .dev{background:#F2F5F7;border-left:4px solid var(--slate);border-radius:0 10px 10px 0;
+       padding:14px 18px;margin:6px 0 24px;font-size:13px}
+  .dev b{color:var(--slate)}
+  .foot{text-align:center;color:var(--muted);font-size:11.5px;margin-top:34px}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>Relatório DE/PARA · V10 → V11</h1>
+    <p>O que mudou, etapa por etapa — só entram aqui etapas aprovadas pela Lis. Supper Certo | Plataforma Cote Certo.</p>
+  </div>
+  <div class="wrap">
+
+    <div class="intro">
+      Este é o relatório que acompanha a V11 para o programador: cada linha diz <b>como era (DE)</b>,
+      <b>como ficou (PARA)</b> e <b>onde</b> ver funcionando no protótipo. A fonte da verdade das regras é o
+      documento <b>Fluxos Operacionais</b>; os porquês estão em <b>Regras decididas</b>; os nomes seguem o
+      <b>De-para dos nomes de perfil</b>. Uma etapa só entra aqui depois do ciclo Fazer → Revisar → <b>Aprovar</b>.
+    </div>
+
+    <h2 class="sec">Etapa 1 · Autocadastro + Convite Supper <span class="apr">Aprovada em 27/07/2026</span></h2>
+    <p class="fonte">Fonte: fluxo "Autocadastro" · Regras decididas 3 e 4 · Convite Supper e e-mails.</p>
+    <table>
+      <tr><th>DE (V10)</th><th>PARA (V11)</th><th>Onde ver no protótipo</th></tr>
+      <tr><td class="de">Acesso criado somente pela Matriz, direto na tela de Acessos</td>
+          <td class="para">Todo cadastro nasce de um <b>Convite Supper</b> (link nominal, uso único, perfil e vínculo embutidos). Criação direta pela Matriz vira <b>exceção com log</b></td>
+          <td class="onde">Acessos e permissões → botões Convidar</td></tr>
+      <tr><td class="de">Cadastro espontâneo (era a proposta inicial da porta única)</td>
+          <td class="para"><b>Removido.</b> Sem convite, o caminho é o botão <b>"Quero falar com a Cote Certo"</b>: nome, e-mail, tema (Comercial/Financeiro/Outro) e mensagem — enviados por e-mail à Matriz, sem registro no sistema</td>
+          <td class="onde">Tela de login</td></tr>
+      <tr><td class="de">Tela "Realize o seu cadastro" com trilha livre</td>
+          <td class="para">Cadastro abre <b>pelo link do convite</b>, com cargo/perfil e vínculo em <b>texto fixo</b> (quem recebe não altera — pede novo convite se estiver errado)</td>
+          <td class="onde">Convite → Simular: abrir pelo link</td></tr>
+      <tr><td class="de">Sem convite no sistema</td>
+          <td class="para">Botão Convidar em <b>3 áreas</b>, cada um no seu escopo: <b>Matriz interno</b> (7 cargos + Vendedor Matriz), <b>Matriz externo</b> (Master e Franquia Individual direta — vínculo Matriz), <b>Master</b> (franquias e vendedores dele, vínculo travado nele), <b>Full</b> (só Vendedor | Full da própria franquia)</td>
+          <td class="onde">Acessos de cada perfil</td></tr>
+      <tr><td class="de">—</td>
+          <td class="para">Saídas do convite: <b>Enviar por WhatsApp</b> (wa.me, contato salvo), <b>Copiar</b>, <b>Baixar em PDF</b> (arte oficial com logo, link clicável) e pré-visualização da arte no modal</td>
+          <td class="onde">Modal do convite</td></tr>
+      <tr><td class="de">Pedido sem contexto na fila</td>
+          <td class="para">Pedido cai em <b>Pendentes</b> com o tipo declarado (chip "TÍTULO | qualificador"), vínculo e origem (Convite Supper / exceção)</td>
+          <td class="onde">Matriz → Pendentes de aprovação</td></tr>
+      <tr><td class="de">Cargos presets: 9, com legado ("Supervisor comercial / Master", "Vendedor / Franqueado", "Matriz (total)")</td>
+          <td class="para"><b>7 cargos:</b> Direção (ex-Matriz total), Coordenador Comercial, Supervisor de Vendas, Supervisor Operacional, Supervisor Backoffice, Assistente Comercial, Marketing. Legados removidos; <b>Vendedor Matriz (Modelo CLT)</b> entra nas listas de convite/cadastro (fora dos presets)</td>
+          <td class="onde">Configurações → Cargos</td></tr>
+    </table>
+    <div class="dev"><b>Orientação ao programador (Etapa 1):</b> a tela do convite cria um <b>pedido de acesso</b>,
+      nunca um usuário ativo — o tipo declarado é insumo da aprovação. Implementar a rota <b>/convite/{código}</b>:
+      valida o token (nominal, uso único, validade) e abre o cadastro pré-preenchido — o link do PDF e da mensagem
+      não é decorativo. "Quero falar" dispara e-mail à Matriz (sem persistência). Envio por WhatsApp: texto via
+      wa.me; anexo do PDF é manual — automatizar depois via <b>API WhatsApp Business</b>. CNPJ para franquias/Master,
+      CPF para pessoas. Nenhuma senha nesta fase (senha é a Etapa 3).</div>
+
+    <h2 class="sec">Etapa 2 · Duas filas de aprovação <span class="apr">Aprovada em 27/07/2026</span></h2>
+    <p class="fonte">Fonte: fluxo "Acesso e visualização" · Regras decididas 5, 6, 7 e 12.</p>
+    <table>
+      <tr><th>DE (V10)</th><th>PARA (V11)</th><th>Onde ver no protótipo</th></tr>
+      <tr><td class="de">Fila única de pendentes, só externos</td>
+          <td class="para"><b>Uma visão por bloco:</b> pendentes do time interno no bloco Matriz, da rede no bloco Externos — e o vendedor de Franquia Full cai na <b>fila da própria franqueada</b>, que aprova sozinha (equipe é dela)</td>
+          <td class="onde">Acessos (Matriz) + Acessos da Full</td></tr>
+      <tr><td class="de">Análise abria em branco, escolha manual do tipo</td>
+          <td class="para">Modal abre <b>travado no que o convite definiu</b> (tipo + vínculo herdados; "Reclassificar" só como exceção). Master ganha o <b>seletor de Supervisor de Vendas</b>; interno ganha cargo (preset) + áreas ajustáveis + janela — aprovado vira Cadastro Matriz</td>
+          <td class="onde">Pendentes → Analisar</td></tr>
+      <tr><td class="de">Sem canais no acesso</td>
+          <td class="para"><b>Canais de leads</b> escolhidos na aprovação (ex.: vendedor só da Movida) para franquias e vendedores; produtos e canais logo abaixo do modelo/supervisão, com botão <b>Todos</b> (alterna tudo/nada). Master franqueado <b>não</b> tem produtos/canais — não vende nem recebe leads</td>
+          <td class="onde">Modal de análise</td></tr>
+      <tr><td class="de">Listas fragmentadas (aba própria p/ vendedores; rede espalhada)</td>
+          <td class="para"><b>Cadastros Matriz</b> unificada (colaboradores + Vendedores Matriz, filtros de cargo/ano + busca, Configurar/Excluir) e <b>Cadastros Rede</b> nova (Masters, franquias com modelo visível/filtrável, vendedores; travas de exclusão; excluído vai a Desligamentos). <b>Aprovado entra na lista do seu bloco</b></td>
+          <td class="onde">Abas Cadastros Matriz / Cadastros Rede</td></tr>
+      <tr><td class="de">Criação direta escondida em telas avulsas</td>
+          <td class="para"><b>Cadastro manual · exceção</b> ao lado de cada Convidar; pedido entra na fila com selo amarelo "manual · exceção" e vai direto à classificação; registrado em log</td>
+          <td class="onde">Botões no topo dos blocos</td></tr>
+      <tr><td class="de">Status fixos, sem significado operacional</td>
+          <td class="para"><b>Regra 12:</b> sinal de performance (OK/Atenção/Travado) com <b>duas réguas independentes</b> (interno e rede) em Personalização geral › Performance; Travado sai da distribuição; <b>clicar no selo</b> abre o resumo com motivo em números e ações do supervisor (notificar / revisar-reativar)</td>
+          <td class="onde">Personalização › Performance + selos nas listas</td></tr>
+    </table>
+    <div class="dev"><b>Orientação ao programador (Etapa 2):</b> separar <b>situação do cadastro</b> (manual: ativo/suspenso/desligado)
+      de <b>sinal de performance</b> (calculado pela régua do bloco). Roteamento da fila pelo vínculo estruturado do pedido
+      (trilha/perfil/vincTipo/vincId) — vendedor de Full nunca chega à Matriz. Aprovação grava: escopo (interno), canais e produtos
+      (vendedores/franquias), Supervisor de Vendas (Master). Recalcular a régua é job periódico; Travado + pausa ativa = fora da
+      distribuição automática até revisão do supervisor (registrar a revisão). Alterações das réguas entram no histórico imutável (Etapa 6).</div>
+
+    <h2 class="sec">Etapas 3 a 7 + refinamentos <span class="apr">Fechadas em 28/07/2026 · build r40</span></h2>
+    <table>
+      <tr><th>DE (V10)</th><th>PARA (V11)</th><th>Onde ver</th></tr>
+      <tr><td class="de">Sem e-mails de acesso; senha criada por terceiros</td><td class="para"><b>3 e-mails</b> (Boas-vindas com escopo, pendência com motivo, recusa) simulados na decisão + tela <b>Criar senha</b> (link 48h, uso único, olhinho). Pendência mantém o pedido na fila com selo</td><td class="onde">Decisões da fila</td></tr>
+      <tr><td class="de">Master cadastrava e desligava direto</td><td class="para">Master <b>convida e acompanha</b> ("Meus cadastrados" com status, lembrete à Matriz) e <b>solicita</b> desligamento (vendedor e franquia) com motivo; Matriz aprova/nega com trava se houver time</td><td class="onde">Master → Acessos</td></tr>
+      <tr><td class="de">Full com tela simples de vendedores</td><td class="para"><b>Matrizinha completa</b>: Central da Franquia (leads próprios × Matriz opcional, SLA e canais próprios), Acessos com 5 abas espelhando a Matriz, Modelo CLT + complementos, régua e histórico próprios, cadastro direto passando pela <b>configuração</b> (produtos/canais/comissão por pessoa, selo "personalizado")</td><td class="onde">Full → Central + Acessos</td></tr>
+      <tr><td class="de">Regras alteráveis por qualquer um, sem rastro</td><td class="para"><b>Governança</b>: diretores (mín. 2, dupla aprovação por tela), senha de diretor em todo "Salvar política" (9 botões padronizados, um por aba), <b>Histórico imutável com DE/PARA</b> (filtro por área, persistente), motivo obrigatório em todo desligamento com "Detalhes"</td><td class="onde">Personalização · Histórico</td></tr>
+      <tr><td class="de">Escopos genéricos; canais soltos</td><td class="para">Regra 5 nos presets; <b>produtos padrão por bloco</b> (interno: todos · externo: só Auto) herdados na aprovação; <b>taxonomia única de canais</b>; Vendedor | Master distinto (operação própria); Supervisor = papel de acompanhamento</td><td class="onde">Personalização · Cadastros</td></tr>
+      <tr><td class="de">Dashboard fixo mensal</td><td class="para"><b>Período único</b> (dia/semana/quinzena/mês/personalizado) escalando KPIs e os <b>4 funis por canal</b> (Movida/Google/Facebook/Manual) + <b>alertas</b> clicáveis do estado real</td><td class="onde">Matriz → Visão geral</td></tr>
+    </table>
+    <div class="dev"><b>Orientações principais ao TI:</b> o protótipo r40 é a referência funcional (carimbo de build no login); os fluxos são a fonte da verdade das regras e as Regras Decididas dão o porquê. Implementar pelo <b>CoteCerto_Handoff_Producao_V11</b> — 11 itens com critério de aceite (rota /convite, e-mails/senha reais, API WhatsApp, régua como job, trava de diretor no backend, histórico append-only por permissão de banco, período único, taxonomia de canais, persistência). Nunca conceder permissão pelo tipo declarado; toda política só grava com diretor autenticado + linha DE/PARA no histórico.</div>
+    <p class="fonte" style="margin-top:22px"><b>V11 fechada para o TI em 28/07/2026.</b> Pacote: protótipo r40 · este relatório · Handoff de Produção · Regras Decididas · Fluxos Operacionais · Roteiro de Revisão.</p>
+
+    <div class="foot">Relatório DE/PARA V10→V11 · gerado em 27/07/2026 · Supper Certo | Plataforma Cote Certo</div>
+  </div>
+</body>
+</html>

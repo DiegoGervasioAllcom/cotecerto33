@@ -13,9 +13,21 @@
 
 # CoteCerto — instruções para agentes
 
-Sistema da Supper para o ciclo do corretor de seguros (lead → cotação → proposta → apólice → comissão). Estamos evoluindo para a **versão V10** (hierarquia da rede, franquia Individual/Full, desconto multinível, motor de comissão).
+Sistema da Supper para o ciclo do corretor de seguros (lead → cotação → proposta → apólice → comissão). A **V10** está fechada para go-live (hierarquia da rede, franquia Individual/Full, desconto multinível, motor de comissão). A frente atual é a **V11**: convite nominal como porta única de entrada, Coordenador Comercial e dois supervisores, régua de performance, governança por diretor com histórico imutável.
 
-## Fontes da verdade (ler antes de qualquer task)
+## Fontes da verdade da V11 (ler antes de qualquer task da V11)
+
+| Documento                                | O que contém                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------- |
+| `docs/v11/FLUXOS_OPERACIONAIS.html`      | **Fonte da verdade das regras** — 5 fluxos navegáveis (dados em `const FLOWS`)   |
+| `docs/ANALISE_LACUNAS_V11.md`            | O que muda da V10 para a V11, tamanho de cada lacuna e divergências entre fontes |
+| `docs/PLANO_TASKS_V11.md`                | Tasks por frente, dependências e decisões que bloqueiam                          |
+| `docs/v11/RELATORIO_DEPARA_V10_V11.html` | DE/PARA por etapa + orientação ao programador. **Atenção:** a coluna "DE (V10)" descreve design intermediário, não o que está em produção |
+| `docs/v11/HANDOFF_PRODUCAO_V11.html`     | 11 itens que o protótipo simula e precisam virar implementação real              |
+| `docs/v11/MODELOS_EMAIL_ACESSO.html`     | Corpo dos e-mails de acesso                                                     |
+| Protótipo `cotecerto_prototipo_v11.html` | Referência de UX da V11 — build 28/07 · r40 (862 KB: só via grep recortado)      |
+
+## Fontes da verdade da V10 (referência histórica e base de comparação)
 
 | Documento                                                | O que contém                                                                                      |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -60,9 +72,9 @@ Agentes em `.claude/agents/` e skills em `.claude/skills/`. **Fluxo obrigatório
 4. **`revisor`** audita o diff e precisa aprová-lo. Se reprovar, o trabalho volta ao especialista para correção, passa novamente pelos testes e retorna ao `revisor`.
 5. **Nenhum commit, push ou Pull Request pode ser criado antes da aprovação do `revisor`.**
 
-Economia de token (vale para todos): Grep/Glob antes de Read; protótipo (655 KB) só via grep recortado; arquivos grandes lidos por trecho; não reimprimir arquivos inteiros nas respostas.
+Economia de token (vale para todos): Grep/Glob antes de Read; protótipos (V10 655 KB, V11 862 KB) só via grep recortado; arquivos grandes lidos por trecho; não reimprimir arquivos inteiros nas respostas.
 
 ## Definition of Done
 
 - Task de banco: migration versionada + RLS + teste + aplicada em staging.
-- Task de front: tela igual ao protótipo V10 + zod + sem `any` + teste do comportamento por perfil quando aplicável.
+- Task de front: tela igual ao protótipo da versão em curso (**V11 r40** na frente atual; V10 para manutenção) + zod + sem `any` + teste do comportamento por perfil quando aplicável.
