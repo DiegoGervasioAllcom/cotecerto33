@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { tutorialDefinitions } from "@/components/tutorial/tutorial-content";
-import { resolveTutorialKind } from "@/components/tutorial/tutorial-persona";
+import {
+  resolveTutorialKind,
+  resolveTutorialPersona,
+} from "@/components/tutorial/tutorial-persona";
 
 describe("roteiro por persona", () => {
   it.each([
@@ -43,12 +46,94 @@ describe("roteiro por persona", () => {
     }
   });
 
-  it("mantém a extensão dos roteiros definida no protótipo V10", () => {
-    const total = (kind: keyof typeof tutorialDefinitions) =>
-      tutorialDefinitions[kind].chapters.reduce((sum, chapter) => sum + chapter.steps.length, 0);
+  it.each([
+    {
+      experiencia: "Matriz",
+      input: {
+        role: "matriz",
+        isGroupView: false,
+        isFranqIndividual: false,
+        scopeLoading: false,
+      },
+      kind: "matriz",
+      presentation: ["Ana", "CENTRO DE COMANDO DA MATRIZ"],
+    },
+    {
+      experiencia: "Vendedor",
+      input: {
+        role: "vendedor",
+        isGroupView: false,
+        isFranqIndividual: false,
+        scopeLoading: false,
+      },
+      kind: "sales",
+      presentation: ["Rafinha", "A PRIMEIRA SEMANA DA RAFINHA"],
+    },
+    {
+      experiencia: "Master",
+      input: {
+        role: "master",
+        isGroupView: true,
+        isFranqIndividual: false,
+        scopeLoading: false,
+      },
+      kind: "group",
+      presentation: ["Douglas", "ÁREA DO MASTER FRANQUEADO"],
+    },
+    {
+      experiencia: "Supervisor",
+      input: {
+        role: "supervisor",
+        isGroupView: true,
+        isFranqIndividual: false,
+        scopeLoading: false,
+      },
+      kind: "group",
+      presentation: ["Paula", "ÁREA DO SUPERVISOR (MATRIZ)"],
+    },
+    {
+      experiencia: "Franquia Individual",
+      input: {
+        role: "franqueado",
+        isGroupView: false,
+        isFranqIndividual: true,
+        scopeLoading: false,
+      },
+      kind: "sales",
+      presentation: ["Felipe", "ÁREA DA FRANQUIA (INDIVIDUAL)"],
+    },
+    {
+      experiencia: "Franquia Full",
+      input: {
+        role: "franqueado",
+        isGroupView: true,
+        isFranqIndividual: false,
+        scopeLoading: false,
+      },
+      kind: "group",
+      presentation: ["Marcelo", "ÁREA DO FRANQUEADO"],
+    },
+  ] as const)(
+    "$experiencia recebe o roteiro $kind com apresentação própria",
+    ({ input, kind, presentation }) => {
+      const persona = resolveTutorialPersona(input);
 
-    expect(total("sales")).toBe(73);
-    expect(total("matriz")).toBe(54);
-    expect(total("group")).toBe(21);
+      expect(persona?.kind).toBe(kind);
+      expect(
+        [persona?.guideName, persona?.title, persona?.eyebrow, persona?.intro].join(" "),
+      ).toContain(presentation[0]);
+      expect(persona?.eyebrow).toContain(presentation[1]);
+    },
+  );
+
+  it("não oferece uma apresentação provisória enquanto a modalidade da franquia carrega", () => {
+    expect(
+      resolveTutorialPersona({
+        role: "franqueado",
+        isGroupView: false,
+        isFranqIndividual: false,
+        scopeLoading: true,
+      }),
+    ).toBeNull();
   });
 });

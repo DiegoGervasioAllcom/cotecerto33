@@ -1,4 +1,4 @@
-import { type MouseEvent, type ReactNode, useRef, useState } from "react";
+import { type ReactNode } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home,
@@ -39,8 +39,11 @@ import { useNavBadges } from "@/lib/nav-badges";
 import { useAreas, ehPerfilInterno, type AreaChave } from "@/lib/use-areas";
 import type { Perfil } from "@/integrations/supabase/client";
 import { SidebarUserMenu, useAccessibilityPrefs } from "@/components/user-menu";
-import { TutorialProvider } from "@/components/tutorial/tutorial-provider";
-import { resolveTutorialKind } from "@/components/tutorial/tutorial-persona";
+import {
+  TUTORIAL_TRIGGER_ID,
+  useTutorialController,
+} from "@/components/tutorial/tutorial-controller-context";
+import { resolveTutorialPersona } from "@/components/tutorial/tutorial-persona";
 
 type Item = {
   to: string;
@@ -144,7 +147,6 @@ const GRUPO_GROUP: Group = {
   ],
 };
 
-/** Selo da marca por perfil (SUPPER · <selo>). */
 /**
  * Selo da marca (SUPPER · <selo>). Para o time interno o rótulo vem do CARGO,
  * não daqui: vários cargos moram no mesmo perfil (Assistente Comercial e
@@ -174,6 +176,7 @@ export function AppShell({
   const { isGroupView, isFranqIndividual, loading: scopeLoading } = useGroupScope();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isOpen: tutorialOpen, openTutorial } = useTutorialController();
   usePresence();
   useAccessibilityPrefs();
 
@@ -207,14 +210,6 @@ export function AppShell({
     verLeads: temArea("mleads"),
     verAprovacoes: temArea("maprov") || grpLike,
   });
-  const [tutorialOpen, setTutorialOpen] = useState(false);
-  const tutorialTriggerRef = useRef<HTMLElement | null>(null);
-
-  const openTutorial = (event: MouseEvent<HTMLButtonElement>) => {
-    tutorialTriggerRef.current = event.currentTarget;
-    setTutorialOpen(true);
-  };
-
   // Interno só entra depois das áreas carregarem — senão a nav pisca vazia (ou
   // completa) antes do recorte do cargo chegar.
   const visibleGroups: Group[] = [
@@ -229,8 +224,10 @@ export function AppShell({
   // perfil. Sem cargo definido, cai no rótulo do perfil.
   const brandLabel =
     ehInterno && cargoNome ? cargoNome.toUpperCase() : role ? BRAND_LABEL[role] : "";
-  const tutorialKind = resolveTutorialKind({
+  const tutorialPersona = resolveTutorialPersona({
     role,
+    profile,
+    empresa,
     isGroupView,
     isFranqIndividual,
     scopeLoading,
@@ -238,7 +235,7 @@ export function AppShell({
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <aside className="sidebar" data-tour="shell-sidebar">
         <div className="brand">
           <img src={logoUrl} alt="CoteCerto" className="logo-img" />
           <div className="sublabel">SUPPER · {brandLabel}</div>
@@ -257,7 +254,18 @@ export function AppShell({
                       ? aprovacoesPendentes
                       : null;
                 return (
-                  <Link key={item.to} to={item.to} className={`nav-item${active ? " active" : ""}`}>
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`nav-item${active ? " active" : ""}`}
+                    data-tour={
+                      item.to === "/venda/atender"
+                        ? "nav-atender"
+                        : item.to === "/venda/novo-lead"
+                          ? "nav-novo-lead"
+                          : undefined
+                    }
+                  >
                     <Icon className="ic" />
                     <span>{item.label}</span>
                     {item.soon && <span className="soon-tag">EM FORMULAÇÃO</span>}
@@ -268,7 +276,7 @@ export function AppShell({
             </div>
           ))}
         </div>
-        <div className="sidebar-foot">
+        <div className="sidebar-foot" data-tour="shell-user">
           <SidebarUserMenu
             profile={profile}
             empresa={empresa}
@@ -287,7 +295,7 @@ export function AppShell({
             {crumbs && <div className="crumbs">{crumbs}</div>}
             <h1>{title}</h1>
           </div>
-          <div className="search">
+          <div className="search" data-tour="shell-search">
             <Search className="si" />
             <input
               type="text"
@@ -302,6 +310,7 @@ export function AppShell({
             <button
               type="button"
               className="react-pill"
+              data-tour="shell-react-pill"
               onClick={() => navigate({ to: "/comando/leads" })}
             >
               <Share2 style={{ width: 15, height: 15 }} />
@@ -310,24 +319,28 @@ export function AppShell({
               {leadMaisAntigoElapsed && <span className="rp-time">{leadMaisAntigoElapsed}</span>}
             </button>
           )}
-          {tutorialKind && (
-            <button type="button" className="btn btn-yellow" onClick={openTutorial}>
+          {tutorialPersona && (
+            <button
+              id={TUTORIAL_TRIGGER_ID}
+              type="button"
+              className="btn btn-yellow"
+              aria-haspopup="dialog"
+              aria-expanded={tutorialOpen}
+              onClick={() => {
+                if (session?.user.id) {
+                  openTutorial({ persona: tutorialPersona, userId: session.user.id });
+                }
+              }}
+            >
               <HelpCircle style={{ width: 15, height: 15 }} />
               <span>Tutorial</span>
             </button>
           )}
         </div>
-        <div className="page active">{children}</div>
+        <div className="page active" data-tour="page-content">
+          {children}
+        </div>
       </main>
-
-      {tutorialOpen && tutorialKind && session?.user.id && (
-        <TutorialProvider
-          kind={tutorialKind}
-          userId={session.user.id}
-          returnFocusElement={tutorialTriggerRef.current}
-          onClose={() => setTutorialOpen(false)}
-        />
-      )}
     </div>
   );
 }

@@ -159,7 +159,7 @@ function Page() {
       {loading && <div className="muted">Carregando…</div>}
 
       {!loading && filtered.length === 0 && (
-        <div className="card">
+        <div className="card" data-tour="cotacoes-lista">
           <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
             Nenhuma cotação ativa. Cotações aparecem aqui depois que o cálculo é solicitado.
           </div>
@@ -167,7 +167,7 @@ function Page() {
       )}
 
       {filtered.length > 0 && (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <div className="card" data-tour="cotacoes-lista" style={{ padding: 0, overflow: "hidden" }}>
           <table className="table-pipe">
             <thead>
               <tr>

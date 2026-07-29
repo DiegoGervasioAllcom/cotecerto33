@@ -91,7 +91,7 @@ function Page() {
       {loading && <div className="muted">Carregando…</div>}
 
       {!loading && rows.length === 0 && (
-        <div className="card">
+        <div className="card" data-tour="propostas-lista">
           <div
             className="card-b"
             style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
@@ -102,7 +102,7 @@ function Page() {
       )}
 
       {rows.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
+        <div data-tour="propostas-lista" style={{ overflowX: "auto" }}>
           <table className="table-pipe mtable" style={{ minWidth: 900 }}>
             <thead>
               <tr>

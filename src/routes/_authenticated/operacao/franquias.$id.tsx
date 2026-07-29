@@ -323,7 +323,7 @@ function Page() {
 
       {/* funil + vendedores */}
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginTop: 16 }}>
-        <div className="card">
+        <div className="card" data-tour="franquia-funil">
           <div className="card-h">
             <h3>
               <svg width="14" height="14" style={{ verticalAlign: "-2px", marginRight: 6 }}>

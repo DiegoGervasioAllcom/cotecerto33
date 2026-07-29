@@ -361,7 +361,7 @@ function Page() {
           </div>
 
           {/* FUNIL */}
-          <div className="card">
+          <div className="card" data-tour="home-funil">
             <div className="card-h">
               <h3>
                 <svg width="16" height="16">
@@ -565,7 +565,7 @@ function Page() {
           </div>
 
           {/* TENDÊNCIA */}
-          <div className="card chart-card">
+          <div className="card chart-card" data-tour="home-tendencia">
             <div className="card-h">
               <h3>
                 <svg width="16" height="16">

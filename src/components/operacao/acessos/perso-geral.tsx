@@ -34,10 +34,18 @@ export function PersoGeral({
   return (
     <>
       <div className="toggle toggle-sub" style={{ marginBottom: 16 }}>
-        <button className={sub === "franquia" ? "on" : ""} onClick={() => setSub("franquia")}>
+        <button
+          className={sub === "franquia" ? "on" : ""}
+          data-tour="acessos-modelos-franquia"
+          onClick={() => setSub("franquia")}
+        >
           Modelo Franquia
         </button>
-        <button className={sub === "clt" ? "on" : ""} onClick={() => setSub("clt")}>
+        <button
+          className={sub === "clt" ? "on" : ""}
+          data-tour="acessos-modelos-clt"
+          onClick={() => setSub("clt")}
+        >
           Modelo CLT
         </button>
       </div>

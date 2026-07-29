@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { TutorialControllerProvider } from "@/components/tutorial/tutorial-controller";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -40,5 +41,9 @@ function AuthenticatedLayout() {
     return null;
   }
 
-  return <Outlet />;
+  return (
+    <TutorialControllerProvider>
+      <Outlet />
+    </TutorialControllerProvider>
+  );
 }

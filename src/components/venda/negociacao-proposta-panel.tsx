@@ -2,6 +2,11 @@
 // nova versão (via RPC registrar_versao_proposta) + ações de status
 // (aceita/recusada) e prazo de resposta. Usado em src/routes/_authenticated/venda/propostas.tsx.
 import { useEffect, useState } from "react";
+import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
+import {
+  PropostaAjusteTutorialPreview,
+  PropostaEnvioTutorialPreview,
+} from "@/components/venda/proposta-tutorial-preview";
 import { supabase } from "@/integrations/supabase/client";
 import { propostaVersaoSchema } from "@/lib/schemas/propostaVersao.schema";
 
@@ -65,6 +70,7 @@ export function NegociacaoPropostaPanel({
   const [formErr, setFormErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [ok, setOk] = useState<string | null>(null);
+  const tutorialPreview = useTutorialPreview();
 
   async function loadHistorico() {
     setLoadingHist(true);
@@ -153,7 +159,7 @@ export function NegociacaoPropostaPanel({
   }
 
   return (
-    <div className="prop-shell" style={{ marginTop: 18 }}>
+    <div className="prop-shell" data-tour="proposta-painel" style={{ marginTop: 18 }}>
       <div>
         <div className="card">
           <div className="card-h">
@@ -187,64 +193,78 @@ export function NegociacaoPropostaPanel({
               </div>
             )}
 
-            <div className="prop-section">
-              <h4>Registrar nova versão</h4>
-              <div className="wizard-grid">
-                <div className="field-group">
-                  <label>Prêmio</label>
-                  <input
+            {tutorialPreview === "proposta-ajuste" ? (
+              <PropostaAjusteTutorialPreview />
+            ) : (
+              <div className="prop-section" data-tour="proposta-versao">
+                <h4>Registrar nova versão</h4>
+                <div className="wizard-grid" data-tour="proposta-pagamento">
+                  <div className="field-group">
+                    <label>Prêmio</label>
+                    <input
+                      className="input"
+                      inputMode="decimal"
+                      value={premio}
+                      onChange={(e) => setPremio(e.target.value)}
+                      placeholder="ex.: 3420,00"
+                      maxLength={20}
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label>Forma de pagamento</label>
+                    <input
+                      className="input"
+                      value={formaPagamento}
+                      onChange={(e) => setFormaPagamento(e.target.value)}
+                      placeholder="ex.: Cartão de crédito"
+                      maxLength={60}
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label>Parcelas</label>
+                    <input
+                      className="input"
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={parcelas}
+                      onChange={(e) => setParcelas(e.target.value)}
+                      placeholder="ex.: 12"
+                    />
+                  </div>
+                </div>
+                <div className="field-group" data-tour="proposta-nota">
+                  <label>Nota para esta versão</label>
+                  <textarea
                     className="input"
-                    inputMode="decimal"
-                    value={premio}
-                    onChange={(e) => setPremio(e.target.value)}
-                    placeholder="ex.: 3420,00"
-                    maxLength={20}
+                    rows={2}
+                    value={nota}
+                    onChange={(e) => setNota(e.target.value)}
+                    maxLength={1000}
+                    placeholder="Ex: cliente pediu redução de franquia."
                   />
                 </div>
-                <div className="field-group">
-                  <label>Forma de pagamento</label>
-                  <input
-                    className="input"
-                    value={formaPagamento}
-                    onChange={(e) => setFormaPagamento(e.target.value)}
-                    placeholder="ex.: Cartão de crédito"
-                    maxLength={60}
-                  />
-                </div>
-                <div className="field-group">
-                  <label>Parcelas</label>
-                  <input
-                    className="input"
-                    type="number"
-                    min={1}
-                    max={99}
-                    value={parcelas}
-                    onChange={(e) => setParcelas(e.target.value)}
-                    placeholder="ex.: 12"
-                  />
+                <div className="row" style={{ paddingTop: 10 }}>
+                  <span className="spacer" />
+                  {tutorialPreview === "proposta-envio" ? (
+                    <PropostaEnvioTutorialPreview />
+                  ) : (
+                    <button
+                      className="btn btn-yellow"
+                      data-tour="proposta-enviar"
+                      disabled={busy}
+                      onClick={handleRegistrarVersao}
+                    >
+                      {busy ? "Registrando…" : "Registrar nova versão"}
+                    </button>
+                  )}
                 </div>
               </div>
-              <div className="field-group">
-                <label>Nota para esta versão</label>
-                <textarea
-                  className="input"
-                  rows={2}
-                  value={nota}
-                  onChange={(e) => setNota(e.target.value)}
-                  maxLength={1000}
-                  placeholder="Ex: cliente pediu redução de franquia."
-                />
-              </div>
-              <div className="row" style={{ paddingTop: 10 }}>
-                <span className="spacer" />
-                <button className="btn btn-yellow" disabled={busy} onClick={handleRegistrarVersao}>
-                  {busy ? "Registrando…" : "Registrar nova versão"}
-                </button>
-              </div>
-            </div>
+            )}
 
             <div
               className="prop-section"
+              data-tour="proposta-acoes"
               style={{ borderTop: "1px solid var(--border-soft)", paddingTop: 14 }}
             >
               <h4>Ações</h4>
