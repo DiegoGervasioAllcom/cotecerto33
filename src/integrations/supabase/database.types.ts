@@ -1366,6 +1366,8 @@ export type Database = {
           perc_comissao: number | null;
           perc_equipe: number | null;
           pix_chave: string | null;
+          reclassificacao_motivo: string | null;
+          reclassificado_em: string | null;
           recusa_motivo: string | null;
           recusada_em: string | null;
           rg: string | null;
@@ -1405,6 +1407,8 @@ export type Database = {
           perc_comissao?: number | null;
           perc_equipe?: number | null;
           pix_chave?: string | null;
+          reclassificacao_motivo?: string | null;
+          reclassificado_em?: string | null;
           recusa_motivo?: string | null;
           recusada_em?: string | null;
           rg?: string | null;
@@ -1444,6 +1448,8 @@ export type Database = {
           perc_comissao?: number | null;
           perc_equipe?: number | null;
           pix_chave?: string | null;
+          reclassificacao_motivo?: string | null;
+          reclassificado_em?: string | null;
           recusa_motivo?: string | null;
           recusada_em?: string | null;
           rg?: string | null;
@@ -2260,6 +2266,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      produtos: {
+        Row: {
+          ativo: boolean;
+          fixo: boolean;
+          id: string;
+          nome: string;
+          ordem: number;
+          tem_jornada: boolean;
+        };
+        Insert: {
+          ativo?: boolean;
+          fixo?: boolean;
+          id: string;
+          nome: string;
+          ordem?: number;
+          tem_jornada?: boolean;
+        };
+        Update: {
+          ativo?: boolean;
+          fixo?: boolean;
+          id?: string;
+          nome?: string;
+          ordem?: number;
+          tem_jornada?: boolean;
+        };
+        Relationships: [];
+      };
+      produtos_padrao: {
+        Row: {
+          bloco: string;
+          produto_id: string;
+        };
+        Insert: {
+          bloco: string;
+          produto_id: string;
+        };
+        Update: {
+          bloco?: string;
+          produto_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "produtos_padrao_produto_id_fkey";
+            columns: ["produto_id"];
+            isOneToOne: false;
+            referencedRelation: "produtos";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profile_areas: {
         Row: {
           area_chave: string;
@@ -2327,6 +2383,43 @@ export type Database = {
           },
           {
             foreignKeyName: "profile_canais_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      profile_produtos: {
+        Row: {
+          produto_id: string;
+          profile_id: string;
+        };
+        Insert: {
+          produto_id: string;
+          profile_id: string;
+        };
+        Update: {
+          produto_id?: string;
+          profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profile_produtos_produto_id_fkey";
+            columns: ["produto_id"];
+            isOneToOne: false;
+            referencedRelation: "produtos";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_produtos_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profile_produtos_profile_id_fkey";
             columns: ["profile_id"];
             isOneToOne: false;
             referencedRelation: "v_vendedor_kpis";
@@ -2981,6 +3074,20 @@ export type Database = {
         Args: { p_ativo: boolean; p_motivo?: string; p_user_id: string };
         Returns: undefined;
       };
+      aprovar_acesso: {
+        Args: {
+          p_areas?: string[];
+          p_canais?: string[];
+          p_cargo_id?: string;
+          p_empresa_id: string;
+          p_motivo?: string;
+          p_perfil: Database["public"]["Enums"]["perfil"];
+          p_produtos?: string[];
+          p_reclassificado?: boolean;
+          p_superior_id?: string;
+        };
+        Returns: undefined;
+      };
       aprovar_desconto: {
         Args: { p_id: string; p_pct_concedido: number };
         Returns: undefined;
@@ -3139,6 +3246,7 @@ export type Database = {
         Args: { p_solicitante: string };
         Returns: boolean;
       };
+      fn_produtos_padrao: { Args: { _bloco: string }; Returns: string[] };
       fn_rede_subordinados: {
         Args: { p_user_id: string };
         Returns: {

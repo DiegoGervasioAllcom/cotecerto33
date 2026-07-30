@@ -18,6 +18,7 @@ import {
   loginMatriz,
   criarPersonaComEmpresa,
   criarEmpresa,
+  criarUsuario,
   uniq,
   uniqDoc,
   type Db,
@@ -27,6 +28,8 @@ type Cenario = {
   /** Empresa pendente (o pedido). */
   pedidoId: string;
   conviteId: string;
+  /** Pessoa que fez o pedido — o convite cria as duas coisas juntas. */
+  profileId: string;
 };
 
 /** Cria um convite + o pedido pendente ligado a ele, como a Frente 1 faz. */
@@ -51,8 +54,18 @@ async function criarPedido(opts: {
     .single();
   if (ePedido || !pedido) throw new Error(`criar pedido: ${ePedido?.message}`);
 
+  // O pedido não é só a empresa: o cadastro pelo convite cria a PESSOA e a
+  // aponta para ela. Sem isso a aprovação não tem o que aprovar — foi o que a
+  // primeira versão deste helper esqueceu.
+  const { userId } = await criarUsuario(`${uniq("pedido")}@teste.local`);
+  const { error: eProfile } = await admin
+    .from("profiles")
+    .update({ empresa_id: pedido.id, status: "pendente" })
+    .eq("id", userId);
+  if (eProfile) throw new Error(`ligar pessoa ao pedido: ${eProfile.message}`);
+
   if (opts.semConvite) {
-    return { pedidoId: pedido.id, conviteId: "" };
+    return { pedidoId: pedido.id, conviteId: "", profileId: userId };
   }
 
   const { data: codigo } = await admin.rpc("fn_convite_codigo");
@@ -76,7 +89,7 @@ async function criarPedido(opts: {
   if (eConvite || !convite) throw new Error(`criar convite: ${eConvite?.message}`);
 
   await admin.from("empresas").update({ convite_id: convite.id }).eq("id", pedido.id);
-  return { pedidoId: pedido.id, conviteId: convite.id };
+  return { pedidoId: pedido.id, conviteId: convite.id, profileId: userId };
 }
 
 /** Franquia Full de verdade (precisa de modelo com modalidade full). */
@@ -328,5 +341,170 @@ describe("F2 — RLS: o pendente da Full sai das filas da Matriz", () => {
     const p = await criarPedido({ trilha: "externo", perfil: "master", criadoPor: matrizId });
     const { data } = await anonClient().from("empresas").select("id").eq("id", p.pedidoId);
     expect(data ?? []).toHaveLength(0);
+  });
+});
+
+describe("F5 — a aprovação grava o escopo numa transação", () => {
+  it("interno herda os produtos do bloco e as áreas do cargo", async () => {
+    const p = await criarPedido({
+      trilha: "interno",
+      cargoId: "sup_operacional",
+      criadoPor: matrizId,
+    });
+    const matriz = await loginMatriz();
+    const { error } = await matriz.rpc("aprovar_acesso", {
+      p_empresa_id: p.pedidoId,
+      p_perfil: "supervisor",
+      p_cargo_id: "sup_operacional",
+    });
+    expect(error).toBeNull();
+
+    const { data: perfil } = await admin
+      .from("profiles")
+      .select("id,cargo_id,status")
+      .eq("empresa_id", p.pedidoId)
+      .single();
+    expect(perfil?.cargo_id).toBe("sup_operacional");
+    expect(perfil?.status).toBe("aprovada");
+
+    // Bloco interno herda todos os produtos ativos.
+    const { data: prods } = await admin
+      .from("profile_produtos")
+      .select("produto_id")
+      .eq("profile_id", perfil!.id);
+    expect((prods ?? []).map((r) => r.produto_id).sort()).toEqual([
+      "auto",
+      "celular",
+      "moto",
+      "resid",
+      "vida",
+    ]);
+
+    // Sem override de áreas, o escopo vem do preset do cargo (4 do Operacional).
+    const { data: areas } = await admin.rpc("fn_areas_do_usuario", {
+      _user_id: perfil!.id,
+    });
+    expect((areas ?? []).length).toBe(4);
+  });
+
+  it("externo herda só Auto, e o produto fixo entra mesmo se a tela esquecer", async () => {
+    const p = await criarPedido({
+      trilha: "externo",
+      perfil: "franquia_indiv",
+      criadoPor: matrizId,
+    });
+    const matriz = await loginMatriz();
+    // A tela manda só 'moto', omitindo o Auto de propósito.
+    const { error } = await matriz.rpc("aprovar_acesso", {
+      p_empresa_id: p.pedidoId,
+      p_perfil: "franqueado",
+      p_produtos: ["moto"],
+    });
+    expect(error).toBeNull();
+
+    const { data: perfil } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("empresa_id", p.pedidoId)
+      .single();
+    const { data: prods } = await admin
+      .from("profile_produtos")
+      .select("produto_id")
+      .eq("profile_id", perfil!.id);
+    // Auto entra por ser fixo, mesmo não tendo sido enviado.
+    expect((prods ?? []).map((r) => r.produto_id).sort()).toEqual(["auto", "moto"]);
+  });
+
+  it("Master franqueado não recebe produtos nem canais", async () => {
+    const p = await criarPedido({ trilha: "externo", perfil: "master", criadoPor: matrizId });
+    const matriz = await loginMatriz();
+
+    // Mandar produtos para um Master é recusado, não ignorado em silêncio.
+    const recusa = await matriz.rpc("aprovar_acesso", {
+      p_empresa_id: p.pedidoId,
+      p_perfil: "master",
+      p_produtos: ["auto"],
+    });
+    expect(recusa.error, "aceitou produtos para Master").not.toBeNull();
+
+    const { error } = await matriz.rpc("aprovar_acesso", {
+      p_empresa_id: p.pedidoId,
+      p_perfil: "master",
+    });
+    expect(error).toBeNull();
+
+    const { data: perfil } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("empresa_id", p.pedidoId)
+      .single();
+    const { count: nProd } = await admin
+      .from("profile_produtos")
+      .select("produto_id", { count: "exact", head: true })
+      .eq("profile_id", perfil!.id);
+    const { count: nCanais } = await admin
+      .from("profile_canais")
+      .select("canal_id", { count: "exact", head: true })
+      .eq("profile_id", perfil!.id);
+    expect(nProd).toBe(0);
+    expect(nCanais).toBe(0);
+  });
+
+  it("reclassificar exige motivo, e o tipo declarado continua no convite", async () => {
+    const p = await criarPedido({
+      trilha: "externo",
+      perfil: "franquia_indiv",
+      criadoPor: matrizId,
+    });
+    const matriz = await loginMatriz();
+
+    const semMotivo = await matriz.rpc("aprovar_acesso", {
+      p_empresa_id: p.pedidoId,
+      p_perfil: "master",
+      p_reclassificado: true,
+    });
+    expect(semMotivo.error, "reclassificou sem motivo").not.toBeNull();
+
+    const { error } = await matriz.rpc("aprovar_acesso", {
+      p_empresa_id: p.pedidoId,
+      p_perfil: "master",
+      p_reclassificado: true,
+      p_motivo: "CNPJ mostra estrutura de Master, não de franquia individual",
+    });
+    expect(error).toBeNull();
+
+    const { data: emp } = await admin
+      .from("empresas")
+      .select("reclassificado_em, reclassificacao_motivo, convite_id")
+      .eq("id", p.pedidoId)
+      .single();
+    expect(emp?.reclassificado_em).toBeTruthy();
+    expect(emp?.reclassificacao_motivo).toContain("estrutura de Master");
+
+    // O DECLARADO não foi sobrescrito: continua no convite.
+    const { data: conv } = await admin
+      .from("convites")
+      .select("perfil")
+      .eq("id", emp!.convite_id!)
+      .single();
+    expect(conv?.perfil, "o tipo declarado no convite foi alterado").toBe("franquia_indiv");
+  });
+
+  it("a Matriz não aprova pelo aprovar_acesso o vendedor de uma Full", async () => {
+    const full = await criarFull("f5-full");
+    const p = await criarPedido({
+      trilha: "externo",
+      perfil: "vendedor",
+      vincTipo: "full",
+      vincEmpresaId: full.empresaId,
+      criadoPor: matrizId,
+    });
+    const matriz = await loginMatriz();
+    const { error } = await matriz.rpc("aprovar_acesso", {
+      p_empresa_id: p.pedidoId,
+      p_perfil: "vendedor",
+    });
+    expect(error).not.toBeNull();
+    expect(error?.message).toContain("fila da franquia");
   });
 });
