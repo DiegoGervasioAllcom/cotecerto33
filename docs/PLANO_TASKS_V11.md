@@ -40,14 +40,15 @@ Sem isso, toda tela da V11 nasce em cima de premissa errada.
 >
 > **`leads.origem` virou legado, mas as telas ainda leem.** A V11.0.4 entregou a
 > taxonomia no banco: `canais` (com `tipo` separando captação paga, entrada manual e
-> lead que nasce de dentro), `leads.canal_id` e `profile_canais`. O texto livre
-> `leads.origem` continua na tabela porque **8 telas leem para exibir e filtrar** —
-> inclusive `comando/leads.tsx`, que monta o filtro coletando os textos distintos das
-> linhas e decide o selo de mídia paga com regex (`/ads|meta|google/i`). Um trigger
-> resolve `canal_id` a partir do texto para os escritores antigos, então o dado novo
-> nasce certo. **Falta migrar as leituras**, tela por tela, nas frentes que já tocam
-> cada uma: funis na Frente 7, Central da Full na Frente 5, e a tela de Leads junto
-> da Frente 2. Só quando isso fechar o item 9 está inteiro.
+> lead que nasce de dentro), `leads.canal_id` e `profile_canais`. Um trigger resolve
+> `canal_id` a partir do texto para os escritores antigos, então o dado novo nasce certo.
+> **`comando/leads.tsx` já migrou (F11 da Frente 2, PR #102):** filtro e selo de mídia paga
+> agora leem `canal_id`/`canais.tipo='supper'`, não mais os textos distintos das linhas
+> nem o regex `/ads|meta|google/i`; `origem` só entra como fallback de exibição para leads
+> legados sem canal resolvido. **Falta migrar as outras 5 telas** (`venda/aceite.tsx`,
+> `venda/pipeline.tsx`, `venda/atender.tsx`, `operacao/comissoes.tsx`,
+> `operacao/pipeline-geral.tsx`), tela por tela, nas frentes que já as tocam: funis na
+> Frente 7, Central da Full na Frente 5. Só quando isso fechar o item 9 está inteiro.
 >
 > **Armadilha registrada para quem fizer o histórico da franquia (V11.5.6).** Trigger
 > `for each row` **não dispara em TRUNCATE**. O Supabase concede `ALL` em `public` a
@@ -129,13 +130,24 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 | V11.2.1 | infra  | ⏸ **adiada** · **E-mails reais** (item 2): boas-vindas com escopo, pendência com motivo, recusa — pelos modelos de `MODELOS_EMAIL_ACESSO.html`, via API do provider. Nenhum e-mail carrega senha | —                |
 | V11.2.2 | front  | ⏸ **adiada** · **Tela Criar senha** (item 3): `generateLink` + link 48h de uso único, política mínima 8+ com letras e números                                                                    | V11.2.1          |
 | V11.2.0 | infra  | **Pedir agora:** SPF/DKIM/DMARC em `suppercerto.com.br` e confirmar o remetente `acesso@suppercerto.com.br` com a Lis. Prazo de terceiro, não de código                                          | —                |
-| V11.2.3 | banco  | Roteamento da fila pelo vínculo estruturado do pedido (trilha/perfil/vincTipo/vincId) — vendedor de Full **nunca** chega à Matriz                                                                | V11.1.1          |
-| V11.2.4 | front  | Pendentes em dois blocos: time interno no bloco Matriz, rede no bloco Externos                                                                                                                   | V11.2.3          |
-| V11.2.5 | front  | Fila própria da Franquia Full, que aprova o vendedor dela sem a Matriz                                                                                                                           | V11.2.3          |
-| V11.2.6 | front  | Modal de análise travado no que o convite definiu; "Reclassificar" só como exceção registrada                                                                                                    | V11.2.3          |
-| V11.2.7 | front  | Na aprovação: seletor de Supervisor de Vendas (Master), cargo + áreas + janela (interno), produtos e canais com botão "Todos". Master franqueado **não** recebe produtos/canais                  | V11.0.3, V11.0.4 |
-| V11.2.8 | banco  | Produtos padrão por bloco (interno: todos · externo: só Auto), herdados na aprovação                                                                                                             | V11.0.4          |
-| V11.2.9 | testes | RLS por perfil nas duas filas: cada bloco vê só o seu; Full não vê pendente da Matriz e vice-versa                                                                                               | V11.2.3          |
+| V11.2.3 | banco  | ✅ Roteamento da fila pelo vínculo estruturado do pedido (trilha/perfil/vincTipo/vincId) — vendedor de Full **nunca** chega à Matriz                                                              | V11.1.1          |
+| V11.2.4 | front  | ✅ Pendentes em dois blocos: time interno no bloco Matriz, rede no bloco Externos                                                                                                                 | V11.2.3          |
+| V11.2.5 | front  | ✅ Fila própria da Franquia Full, que aprova o vendedor dela sem a Matriz                                                                                                                         | V11.2.3          |
+| V11.2.6 | front  | ✅ Modal de análise travado no que o convite definiu; "Reclassificar" só como exceção registrada                                                                                                  | V11.2.3          |
+| V11.2.7 | front  | ✅ Na aprovação: seletor de Supervisor de Vendas (Master), cargo + áreas + janela (interno), produtos e canais com botão "Todos". Master franqueado **não** recebe produtos/canais                | V11.0.3, V11.0.4 |
+| V11.2.8 | banco  | ✅ Produtos padrão por bloco (interno: todos · externo: só Auto), herdados na aprovação                                                                                                           | V11.0.4          |
+| V11.2.9 | testes | ✅ RLS por perfil nas duas filas: cada bloco vê só o seu; Full não vê pendente da Matriz e vice-versa                                                                                              | V11.2.3          |
+
+> **Frente 2 concluída para o roteamento/aprovação** (V11.2.3-V11.2.9, PR #102, mergeado
+> 30/07/2026 — detalhes em `PLANO_FILAS_V11.md`). `fn_destino_pedido`/`fn_pode_aprovar_pedido`
+> decidem fila e autoridade no banco, não na tela; `aprovar_acesso` grava
+> papel/cargo/áreas/produtos/canais/superior numa única transação. Testado com 20 testes de
+> banco (`tests/db/filas-aprovacao-v11.test.ts`) e 30 E2E (`tests/e2e/`, incluindo o novo
+> `filas-aprovacao.spec.ts`). **V11.2.0/2.1/2.2 seguem adiadas** (e-mail e senha, decisão de
+> 28/07) — não bloqueiam a Frente 3. Decisão em aberto com a Lis sobre a Matriz também
+> aprovar o vendedor de uma Full: `docs/PERGUNTAS_PARA_LIS.md` item 5; a separação
+> `fn_destino_pedido`/`fn_pode_aprovar_pedido` foi feita de propósito para isso custar
+> pouco quando decidido.
 
 ## Frente 3 · Cadastros e ciclo de vida
 
