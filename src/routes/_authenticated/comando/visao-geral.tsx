@@ -3,10 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ChannelFunnels } from "@/components/comando/channel-funnels";
+import { DashboardAlerts } from "@/components/comando/dashboard-alerts";
+import { useDashboardAlertCounts } from "@/components/comando/use-dashboard-alert-counts";
 import { DashboardPeriodPicker } from "@/components/comando/dashboard-period-picker";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { selectCurrentDashboardPeriod } from "@/lib/dashboard-period";
+import { buildDashboardAlertsFromCounts } from "@/lib/dashboard-alerts";
 import { printHtml } from "@/lib/print";
 import { useGroupScope } from "@/lib/group-scope";
 import { useAuth } from "@/lib/auth";
@@ -48,6 +51,10 @@ type Proposta = {
   responsavel_id: string | null;
   criado_em: string;
   atualizado_em: string | null;
+  emitida_em: string | null;
+  pago_em: string | null;
+  cancelada_em: string | null;
+  vencimento: string | null;
 };
 
 function Page() {
@@ -77,6 +84,7 @@ function Page() {
   });
 
   const normalizedPeriod = normalizedPeriodQuery.data;
+  const dashboardAlertsQuery = useDashboardAlertCounts(normalizedPeriod, now, SLA_SECONDS);
 
   const channelFunnelsQuery = useQuery({
     queryKey: ["funis-por-canal-visao-geral", normalizedPeriod?.inicio, normalizedPeriod?.fim],
@@ -142,7 +150,9 @@ function Page() {
         supabase.from("profiles").select("id,nome,empresa_id").limit(2000),
         supabase
           .from("propostas")
-          .select("id,status,valor,responsavel_id,criado_em,atualizado_em")
+          .select(
+            "id,status,valor,responsavel_id,criado_em,atualizado_em,emitida_em,pago_em,cancelada_em,vencimento",
+          )
           .gte("criado_em", normalizedPeriod.inicio)
           .lt("criado_em", normalizedPeriod.fim)
           .limit(5000),
@@ -188,7 +198,12 @@ function Page() {
 
   const periodLabel = periodWindow.label;
   const leadsMes = useMemo(() => leads.filter((x) => !x.arquivado), [leads]);
-  const propostasMes = propostas;
+  const propostasMes = propostas.filter(
+    (proposta) =>
+      normalizedPeriod &&
+      proposta.criado_em >= normalizedPeriod.inicio &&
+      proposta.criado_em < normalizedPeriod.fim,
+  );
   const emitidasMes = propostasMes.filter(
     (x) => x.status === "gerada" || x.status === "transmitida",
   );
@@ -258,7 +273,6 @@ function Page() {
   );
   const fechadosHoje = leadsMes.filter((l) => l.status_pipeline === "ganho");
   const emTransmissao = propostasMes.filter((x) => x.status === "gerada");
-  const pendTransmHoje = propostasMes.filter((x) => x.status === "gerada");
 
   const recebidosMes = leadsMes.length;
   const distribuidosMes = distribuidos.length;
@@ -344,11 +358,14 @@ function Page() {
       .slice(0, 8);
   }, [vendedores, franquias, leadsMes]);
 
-  const alertasCount =
-    (pendTransmHoje.length > 0 ? 1 : 0) +
-    (semAtendimento.length > 0 ? 1 : 0) +
-    (slaEstourado.length > 0 ? 1 : 0) +
-    (naoPagasMes > 0 ? 1 : 0);
+  const dashboardAlerts = useMemo(() => {
+    if (!normalizedPeriod || !dashboardAlertsQuery.data) return [];
+    return buildDashboardAlertsFromCounts({
+      counts: dashboardAlertsQuery.data,
+      inicio: normalizedPeriod.inicio,
+      fim: normalizedPeriod.fim,
+    });
+  }, [dashboardAlertsQuery.data, normalizedPeriod]);
 
   function chartBarsSVG(): string {
     const W = 720,
@@ -515,17 +532,28 @@ function Page() {
 
       <DashboardPeriodPicker value={periodWindow} onChange={setPeriodWindow} />
 
-      {(normalizedPeriodQuery.error || dashboardQuery.error || saldoGrupoQuery.error) && (
+      {(normalizedPeriodQuery.error ||
+        dashboardQuery.error ||
+        saldoGrupoQuery.error ||
+        dashboardAlertsQuery.error) && (
         <div
           className="audit-note"
           style={{ background: "var(--alert-soft)", color: "var(--alert)", marginBottom: 12 }}
         >
-          {(normalizedPeriodQuery.error ?? dashboardQuery.error ?? saldoGrupoQuery.error)?.message}
+          {
+            (
+              normalizedPeriodQuery.error ??
+              dashboardQuery.error ??
+              saldoGrupoQuery.error ??
+              dashboardAlertsQuery.error
+            )?.message
+          }
         </div>
       )}
       {(normalizedPeriodQuery.isLoading ||
         dashboardQuery.isLoading ||
-        saldoGrupoQuery.isLoading) && (
+        saldoGrupoQuery.isLoading ||
+        dashboardAlertsQuery.isLoading) && (
         <div className="muted small" style={{ marginBottom: 12 }}>
           Carregando…
         </div>
@@ -548,10 +576,6 @@ function Page() {
             <div className="sum-chip" style={{ cursor: "pointer" }}>
               <span className="sc-val">{emTransmissao.length}</span>
               <span className="sc-lbl">Em transmissão</span>
-            </div>
-            <div className="sum-chip alert" style={{ cursor: "pointer" }}>
-              <span className="sc-val">{pendTransmHoje.length}</span>
-              <span className="sc-lbl">Com pendência no período</span>
             </div>
             <div
               className="sum-chip alert"
@@ -828,81 +852,21 @@ function Page() {
                 {isGroupView ? "Alertas do grupo" : "Alertas críticos do dia"}
               </h3>
               <span className="chip chip-alert">
-                {alertasCount} pendência{alertasCount === 1 ? "" : "s"}
+                {dashboardAlerts.length} pendência{dashboardAlerts.length === 1 ? "" : "s"}
               </span>
             </div>
             <div className="card-b">
-              <div className="actions-list">
-                {pendTransmHoje.length > 0 && (
-                  <div className="action-row">
-                    <div className="ic-square alert">
-                      <svg width="18" height="18">
-                        <use href="#i-upload"></use>
-                      </svg>
-                    </div>
-                    <div className="body">
-                      <h4>{pendTransmHoje.length} proposta(s) em transmissão no período</h4>
-                      <p>Seguradora aguardando — resolver antes da emissão</p>
-                    </div>
-                    <div className="meta">Resolver</div>
-                  </div>
-                )}
-                {semAtendimento.length > 0 && (
-                  <div
-                    className="action-row"
-                    onClick={() => navigate({ to: "/comando/leads" })}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <div className="ic-square alert">
-                      <svg width="18" height="18">
-                        <use href="#i-alert-triangle"></use>
-                      </svg>
-                    </div>
-                    <div className="body">
-                      <h4>{semAtendimento.length} leads sem atendimento</h4>
-                      <p>Aguardando distribuição ou 1º contato</p>
-                    </div>
-                    <div className="meta">Agir</div>
-                  </div>
-                )}
-                {slaEstourado.length > 0 && (
-                  <div
-                    className="action-row"
-                    onClick={() => navigate({ to: "/comando/leads" })}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <div className="ic-square alert">
-                      <svg width="18" height="18">
-                        <use href="#i-clock"></use>
-                      </svg>
-                    </div>
-                    <div className="body">
-                      <h4>{slaEstourado.length} leads com SLA estourado</h4>
-                      <p>Voltaram para a fila — redistribuir agora</p>
-                    </div>
-                    <div className="meta">Urgente</div>
-                  </div>
-                )}
-                {naoPagasMes > 0 && (
-                  <div className="action-row">
-                    <div className="ic-square warn">
-                      <svg width="18" height="18">
-                        <use href="#i-dollar"></use>
-                      </svg>
-                    </div>
-                    <div className="body">
-                      <h4>{naoPagasMes} vendas emitidas e não pagas</h4>
-                      <p>Acompanhar baixa financeira no período</p>
-                    </div>
-                    <div className="meta muted">Cobrar</div>
-                  </div>
-                )}
-                {alertasCount === 0 && (
-                  <div className="muted small" style={{ padding: 12 }}>
-                    Sem pendências críticas — bom trabalho. 🎉
-                  </div>
-                )}
-              </div>
+              {dashboardAlertsQuery.error ? (
+                <div className="audit-note" style={{ color: "var(--alert)" }} role="alert">
+                  Não foi possível carregar os alertas: {dashboardAlertsQuery.error.message}
+                </div>
+              ) : (
+                <DashboardAlerts
+                  alerts={dashboardAlerts}
+                  navigate={navigate}
+                  isLoading={dashboardAlertsQuery.isLoading}
+                />
+              )}
             </div>
           </div>
         </div>

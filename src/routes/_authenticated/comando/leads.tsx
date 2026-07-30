@@ -5,8 +5,10 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useRequireRole } from "@/lib/require-role";
+import { leadsAlertSearchSchema } from "@/lib/dashboard-alerts";
 
 export const Route = createFileRoute("/_authenticated/comando/leads")({
+  validateSearch: leadsAlertSearchSchema,
   head: () => ({ meta: [{ title: "Leads · CoteCerto" }] }),
   component: Page,
 });
@@ -128,6 +130,7 @@ const STAGE_META: Record<string, { titulo: string; descricao: string; icon: stri
 };
 
 function Page() {
+  const search = Route.useSearch();
   const denied = useRequireRole("matriz");
   const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -154,14 +157,27 @@ function Page() {
   async function load() {
     setLoading(true);
     try {
+      let leadsQuery = supabase
+        .from("leads")
+        .select(
+          "id,nome,contato,origem,status_pipeline,empresa_id,responsavel_id,criado_em,atualizado_em,distribuido_em,ultimo_atendimento_em,bloqueado,motivo_bloqueio,motivo_perda,submotivo_perda,em_avaliacao_matriz,arquivado,dados",
+        )
+        .order("criado_em", { ascending: false });
+      if (search.alerta) {
+        leadsQuery = leadsQuery
+          .eq("status_pipeline", "novo")
+          .is("ultimo_atendimento_em", null)
+          .or("bloqueado.is.false,bloqueado.is.null")
+          .or("arquivado.is.false,arquivado.is.null");
+        if (search.alerta === "sla-estourado") {
+          leadsQuery = leadsQuery.lt(
+            "criado_em",
+            new Date(Date.now() - SLA_SECONDS * 1000).toISOString(),
+          );
+        }
+      }
       const [{ data: lds, error }, { data: emps }, { data: profs }] = await Promise.all([
-        supabase
-          .from("leads")
-          .select(
-            "id,nome,contato,origem,status_pipeline,empresa_id,responsavel_id,criado_em,atualizado_em,distribuido_em,ultimo_atendimento_em,bloqueado,motivo_bloqueio,motivo_perda,submotivo_perda,em_avaliacao_matriz,arquivado,dados",
-          )
-          .order("criado_em", { ascending: false })
-          .limit(500),
+        leadsQuery.limit(search.alerta ? 2000 : 500),
         supabase.from("empresas").select("id,nome").order("nome"),
         supabase.from("profiles").select("id,nome,empresa_id"),
       ]);
@@ -182,7 +198,7 @@ function Page() {
   useEffect(() => {
     if (denied) return;
     load();
-  }, [denied]);
+  }, [denied, search.alerta]);
   useEffect(() => {
     if (denied) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -218,6 +234,26 @@ function Page() {
   const filtered = useMemo(
     () =>
       enriched.filter((l) => {
+        if (
+          search.inicio &&
+          search.fim &&
+          (l.criado_em < search.inicio || l.criado_em >= search.fim)
+        )
+          return false;
+        if (search.alerta === "sem-atendimento") {
+          if (l.arquivado || l.bloqueado || l.status_pipeline !== "novo" || l.ultimo_atendimento_em)
+            return false;
+        }
+        if (search.alerta === "sla-estourado") {
+          if (
+            l.arquivado ||
+            l.bloqueado ||
+            l.status_pipeline !== "novo" ||
+            l.ultimo_atendimento_em ||
+            l.ageSec <= SLA_SECONDS
+          )
+            return false;
+        }
         if (fArquivados === "ativos" && l.arquivado) return false;
         if (fArquivados === "arquivados" && !l.arquivado) return false;
         if (fStatus) {
@@ -236,7 +272,7 @@ function Page() {
         if (fOrigem && (l.origem || "") !== fOrigem) return false;
         return true;
       }),
-    [enriched, fStatus, fUf, fOrigem, fArquivados],
+    [enriched, fStatus, fUf, fOrigem, fArquivados, search.alerta, search.fim, search.inicio],
   );
 
   const kpis = useMemo(() => {
