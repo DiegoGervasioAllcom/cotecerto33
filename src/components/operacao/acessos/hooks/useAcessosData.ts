@@ -129,7 +129,7 @@ export function useAcessosData(enabled = true) {
         .from("empresas")
         .select(
           "id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro," +
-            "convites(codigo,trilha,perfil,cargo_id,vinc_tipo,vinc_empresa_id,cargos(nome))",
+            "convites!empresas_convite_id_fkey(codigo,trilha,perfil,cargo_id,vinc_tipo,vinc_empresa_id,cargos(nome))",
         )
         .eq("status", "pendente")
         .order("created_at", { ascending: false }),
