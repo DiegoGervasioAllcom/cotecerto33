@@ -7,6 +7,7 @@ import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-
 import { SolicitacoesVendedorTab } from "@/components/acessos/solicitacoes-vendedor-tab";
 import { useAcessosData } from "@/components/operacao/acessos/hooks/useAcessosData";
 import { useAcessosTutorialPreview } from "@/components/operacao/acessos/hooks/useAcessosTutorialPreview";
+import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { AcessosNavigation } from "@/components/operacao/acessos/AcessosNavigation";
 import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
 import { DesligamentosTab } from "@/components/operacao/acessos/desligamentos-tab";
@@ -55,6 +56,31 @@ function Page() {
 
   const [convidando, setConvidando] = useState<EscopoConvite | null>(null);
 
+  // V11 · F6 — dois blocos, espelhando o protótipo: MATRIZ · TIME INTERNO (POR
+  // ESCOPO) e EXTERNOS · REDE. `bloco` só decide o realce visual (qual acc-group
+  // está "ativo"); o conteúdo de cada aba já é filtrado por `p.bloco` (F1: vem
+  // de `convites.trilha`, e a RLS de F2 garante que o pendente do vendedor de
+  // uma Franquia Full nunca chega a esta lista).
+  const [blocoAtivo, setBlocoAtivo] = useState<"interno" | "externo">("interno");
+  // O tour do módulo M5 (Acessos) força `visibleTab` via `prepare:
+  // "acessos-pendentes"` etc., sem saber que agora existem dois blocos — todos
+  // os `prepare` de acessos apontam para conteúdo do bloco EXTERNOS (pendentes,
+  // desligamentos, personalização; o bloco interno é novo na V11 e ainda não
+  // tem passo de tour). Sem este ajuste, o tour ficaria "preparando" uma aba que
+  // o bloco errado esconde.
+  const tutorialPreview = useTutorialPreview();
+  const blocoParaConteudo = tutorialPreview?.startsWith("acessos-") ? "externo" : blocoAtivo;
+  const pendentesInterno = pendentes.filter((p) => p.bloco === "interno");
+  const pendentesExterno = pendentes.filter((p) => p.bloco === "externo");
+
+  function abrirInterno() {
+    setBlocoAtivo("interno");
+  }
+  function abrirExterno(t: typeof visibleTab) {
+    setBlocoAtivo("externo");
+    setVisibleTab(t);
+  }
+
   if (denied) return denied;
 
   return (
@@ -64,27 +90,10 @@ function Page() {
         <div>
           <h1>Acessos e permissões</h1>
           <div className="sub">
-            Aprove novos cadastros e classifique cada usuário por modelo de franquia
+            Time interno da Matriz (por escopo) e a rede externa (com regras por modelo)
           </div>
         </div>
-        {/* V11: todo cadastro nasce de um Convite Supper. Dois escopos aqui —
-            o time interno da Matriz e a rede externa (Master e Individual direta). */}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <button className="btn btn-slate" type="button" onClick={() => setConvidando("interno")}>
-            Convidar · time interno
-          </button>
-          <button className="btn btn-yellow" type="button" onClick={() => setConvidando("externo")}>
-            Convidar · rede externa
-          </button>
-        </div>
       </div>
-
-      <AcessosNavigation
-        tab={visibleTab}
-        pendentes={pendentes.length}
-        desligamentos={deslig.length}
-        onChange={setVisibleTab}
-      />
 
       {err && (
         <div className="banner alert" style={{ marginBottom: 14 }}>
@@ -92,13 +101,100 @@ function Page() {
         </div>
       )}
 
-      {visibleTab === "pend" && <PendentesTab pendentes={pendentes} onAnalisar={openAnalisar} />}
+      <div
+        className="acc-group"
+        style={{
+          marginBottom: 12,
+          padding: "12px 14px",
+          borderRadius: 14,
+          border: `1px solid ${blocoParaConteudo === "interno" ? "var(--slate)" : "var(--border-soft)"}`,
+          background: blocoParaConteudo === "interno" ? "#f4f6f8" : "var(--white)",
+        }}
+      >
+        <div
+          className="small muted"
+          style={{
+            fontWeight: 800,
+            letterSpacing: ".08em",
+            marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          MATRIZ · TIME INTERNO (POR ESCOPO)
+          <button
+            className="btn btn-slate btn-sm"
+            style={{ marginLeft: "auto" }}
+            type="button"
+            onClick={() => setConvidando("interno")}
+          >
+            Convidar · Convite Supper
+          </button>
+        </div>
+        <div className="toggle">
+          <button className={blocoParaConteudo === "interno" ? "on" : ""} onClick={abrirInterno}>
+            Pendentes de aprovação <span style={{ opacity: 0.7 }}>({pendentesInterno.length})</span>
+          </button>
+        </div>
+      </div>
 
-      {visibleTab === "vendedores" && <SolicitacoesVendedorTab />}
+      <div
+        className="acc-group"
+        style={{
+          marginBottom: 18,
+          padding: "12px 14px",
+          borderRadius: 14,
+          border: `1px solid ${blocoParaConteudo === "externo" ? "var(--slate)" : "var(--border-soft)"}`,
+          background: blocoParaConteudo === "externo" ? "#f4f6f8" : "var(--white)",
+        }}
+      >
+        <div
+          className="small muted"
+          style={{
+            fontWeight: 800,
+            letterSpacing: ".08em",
+            marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          EXTERNOS · REDE
+          <button
+            className="btn btn-slate btn-sm"
+            style={{ marginLeft: "auto" }}
+            type="button"
+            onClick={() => setConvidando("externo")}
+          >
+            Convidar · Convite Supper
+          </button>
+        </div>
+        <AcessosNavigation
+          tab={visibleTab}
+          pendentes={pendentesExterno.length}
+          desligamentos={deslig.length}
+          onChange={abrirExterno}
+        />
+      </div>
 
-      {visibleTab === "deslig" && <DesligamentosTab deslig={deslig} />}
+      {blocoParaConteudo === "interno" && (
+        <PendentesTab pendentes={pendentesInterno} onAnalisar={openAnalisar} />
+      )}
 
-      {visibleTab === "modelos" && (
+      {blocoParaConteudo === "externo" && visibleTab === "pend" && (
+        <PendentesTab pendentes={pendentesExterno} onAnalisar={openAnalisar} />
+      )}
+
+      {blocoParaConteudo === "externo" && visibleTab === "vendedores" && (
+        <SolicitacoesVendedorTab />
+      )}
+
+      {blocoParaConteudo === "externo" && visibleTab === "deslig" && (
+        <DesligamentosTab deslig={deslig} />
+      )}
+
+      {blocoParaConteudo === "externo" && visibleTab === "modelos" && (
         <PersoGeral
           sub={visiblePersoSub}
           setSub={setVisiblePersoSub}

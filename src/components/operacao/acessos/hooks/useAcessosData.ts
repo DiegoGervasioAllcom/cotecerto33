@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type {
   CltConfig,
   CltRegras,
+  ConviteDoPendente,
   Deslig,
   FranquiaAprovada,
   Modelo,
@@ -18,6 +19,80 @@ import type {
   Trio,
 } from "../types";
 import { CLT_DEFAULT } from "../constants";
+import type { AprovarAcessoParams } from "@/components/acessos/classificar-acesso-modal";
+
+type PendenteBruto = {
+  id: string;
+  nome: string;
+  tipo: "pj" | "pf";
+  documento: string;
+  cidade: string | null;
+  uf: string | null;
+  email: string | null;
+  telefone: string | null;
+  celular: string | null;
+  created_at: string;
+  dados_cadastro: Record<string, unknown> | null;
+  // PostgREST devolve objeto único para *-a-1, mas o client-gen tipa como
+  // array quando não sabe a cardinalidade da FK — tratamos os dois formatos.
+  convites:
+    | {
+        codigo: string;
+        trilha: string;
+        perfil: string | null;
+        cargo_id: string | null;
+        vinc_tipo: string;
+        vinc_empresa_id: string | null;
+        cargos: { nome: string } | { nome: string }[] | null;
+      }
+    | {
+        codigo: string;
+        trilha: string;
+        perfil: string | null;
+        cargo_id: string | null;
+        vinc_tipo: string;
+        vinc_empresa_id: string | null;
+        cargos: { nome: string } | { nome: string }[] | null;
+      }[]
+    | null;
+};
+
+/** Normaliza o join de convites (+ cargo) e deriva o bloco (F6). */
+function mapPendentes(data: unknown): Pendente[] {
+  return ((data ?? []) as PendenteBruto[]).map((row) => {
+    const convRaw = Array.isArray(row.convites) ? row.convites[0] : row.convites;
+    let convite: ConviteDoPendente | null = null;
+    if (convRaw) {
+      const cargoRaw = Array.isArray(convRaw.cargos) ? convRaw.cargos[0] : convRaw.cargos;
+      convite = {
+        codigo: convRaw.codigo,
+        trilha: convRaw.trilha as ConviteDoPendente["trilha"],
+        perfil: convRaw.perfil as ConviteDoPendente["perfil"],
+        cargo_id: convRaw.cargo_id,
+        cargo_nome: cargoRaw?.nome ?? null,
+        vinc_tipo: convRaw.vinc_tipo as ConviteDoPendente["vinc_tipo"],
+        vinc_empresa_id: convRaw.vinc_empresa_id,
+      };
+    }
+    return {
+      id: row.id,
+      nome: row.nome,
+      tipo: row.tipo,
+      documento: row.documento,
+      cidade: row.cidade,
+      uf: row.uf,
+      email: row.email,
+      telefone: row.telefone,
+      celular: row.celular,
+      created_at: row.created_at,
+      dados_cadastro: row.dados_cadastro,
+      convite,
+      // Sem convite: cai no bloco externo, onde a Matriz define o tipo na
+      // análise (a "Prime Riscos" do protótipo). Com convite, segue a trilha.
+      bloco: convite?.trilha === "interno" ? "interno" : "externo",
+    };
+  });
+}
 
 function toTrio(x: unknown): Trio {
   if (Array.isArray(x)) {
@@ -45,9 +120,17 @@ export function useAcessosData(enabled = true) {
   const reload = useCallback(async () => {
     setErr(null);
     const [p, d, m, c, roles] = await Promise.all([
+      // V11 · F6: o join com convites é o que diz se o pedido veio via Convite
+      // Supper (com tipo/vínculo travados) ou é criação manual por exceção
+      // (convite_id nulo — "sem tipo declarado, a Matriz define na análise").
+      // A RLS de F2 já garante que o pendente do vendedor de uma Franquia Full
+      // não aparece aqui: não é preciso filtrar isso no cliente.
       supabase
         .from("empresas")
-        .select("id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro")
+        .select(
+          "id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro," +
+            "convites(codigo,trilha,perfil,cargo_id,vinc_tipo,vinc_empresa_id,cargos(nome))",
+        )
         .eq("status", "pendente")
         .order("created_at", { ascending: false }),
       supabase
@@ -60,7 +143,7 @@ export function useAcessosData(enabled = true) {
       supabase.from("user_roles").select("user_id,role").in("role", ["master", "supervisor"]),
     ]);
     if (p.error) setErr(p.error.message);
-    setPendentes((p.data ?? []) as Pendente[]);
+    setPendentes(mapPendentes(p.data));
     setDeslig((d.data ?? []) as Deslig[]);
     const modelosData = ((m.data ?? []) as Modelo[]).map((x) => ({
       ...x,
@@ -184,15 +267,29 @@ export function useAcessosData(enabled = true) {
     await reload();
   }
 
-  async function liberar(persist: () => Promise<void>, tag: string) {
+  // V11 · F5/F7: papel, cargo, áreas, produtos, canais e supervisão vão numa
+  // transação só via `aprovar_acesso` — antes dela vinham em chamadas soltas
+  // do front, e uma falha no meio deixava o acesso meio classificado.
+  // `persist()` continua existindo à parte para o que é domínio de G3/G4
+  // (modelo de franquia, comissão do Master/Supervisor, salário CLT), que a
+  // RPC não toca — são dois eixos diferentes.
+  async function liberar(params: AprovarAcessoParams, persist: () => Promise<void>, tag: string) {
     if (!analisando) return;
     setBusy(true);
-    const { error } = await supabase.rpc("aprovar_empresa", {
+    const { error } = await supabase.rpc("aprovar_acesso", {
       p_empresa_id: analisando.id,
+      p_perfil: params.perfil,
+      p_cargo_id: params.cargoId ?? undefined,
+      p_areas: params.areas && params.areas.length > 0 ? params.areas : undefined,
+      p_produtos: params.produtos && params.produtos.length > 0 ? params.produtos : undefined,
+      p_canais: params.canais && params.canais.length > 0 ? params.canais : undefined,
+      p_superior_id: params.superiorId ?? undefined,
+      p_reclassificado: params.reclassificado ?? false,
+      p_motivo: params.motivo || undefined,
     });
     if (error) {
       setBusy(false);
-      console.error("aprovar_empresa error", error);
+      console.error("aprovar_acesso error", error);
       setErr(
         `${error.message}${error.details ? ` · ${error.details}` : ""}${error.hint ? ` · ${error.hint}` : ""}`,
       );
