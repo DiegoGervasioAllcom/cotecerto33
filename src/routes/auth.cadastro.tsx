@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { cadastrarFranquia } from "@/lib/cadastro.functions";
 import logoUrl from "@/assets/cotecerto-logo.png";
-import { onlyDigits, maskCpfCnpj, maskTelefone } from "@/lib/masks";
+import { camposDoModelo, type ModeloCadastro } from "@/lib/cadastro-campos";
+import { CamposCadastro } from "@/components/auth/campos-cadastro";
 import { cnpjCadastroSchema, cpfCadastroSchema } from "@/lib/schemas/cadastro.schema";
 
 export const Route = createFileRoute("/auth/cadastro")({
@@ -11,222 +12,20 @@ export const Route = createFileRoute("/auth/cadastro")({
   component: CadastroPage,
 });
 
-type Model = "cnpj" | "cpf";
 type View = "model" | "form" | "success";
-
-type FieldDef = {
-  key: string;
-  label: string;
-  type: "text" | "email" | "tel" | "date" | "password";
-  ph?: string;
-  full?: boolean;
-  required?: boolean;
-  maxLen?: number;
-};
-
-const CNPJ_FIELDS: FieldDef[] = [
-  {
-    key: "nome",
-    label: "Razão Social",
-    type: "text",
-    full: true,
-    ph: "Empresa LTDA",
-    required: true,
-    maxLen: 150,
-  },
-  {
-    key: "documento",
-    label: "CNPJ",
-    type: "text",
-    ph: "00.000.000/0000-00",
-    required: true,
-    maxLen: 18,
-  },
-  { key: "data_nascimento", label: "Data de nascimento (sócio)", type: "date" },
-  {
-    key: "endereco",
-    label: "Endereço completo",
-    type: "text",
-    full: true,
-    ph: "Rua, nº, bairro, cidade - UF, CEP",
-    maxLen: 2000,
-  },
-  {
-    key: "socio_nome",
-    label: "Nome do sócio operador",
-    type: "text",
-    full: true,
-    ph: "Quem vai operar a franquia",
-    required: true,
-    maxLen: 150,
-  },
-  {
-    key: "socio_cpf",
-    label: "CPF do sócio operador",
-    type: "text",
-    ph: "000.000.000-00",
-    maxLen: 14,
-  },
-  { key: "socio_rg", label: "RG do sócio operador", type: "text", ph: "00.000.000-0", maxLen: 20 },
-  { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000", maxLen: 15 },
-  {
-    key: "telefone_recado",
-    label: "Outro telefone / recado",
-    type: "tel",
-    ph: "(11) 90000-0000",
-    maxLen: 15,
-  },
-  {
-    key: "email",
-    label: "E-mail",
-    type: "email",
-    full: true,
-    ph: "voce@email.com",
-    required: true,
-    maxLen: 254,
-  },
-  {
-    key: "pix_chave",
-    label: "Chave Pix (conta PJ)",
-    type: "text",
-    full: true,
-    ph: "CNPJ, e-mail, telefone ou chave aleatória",
-    maxLen: 150,
-  },
-  {
-    key: "dados_bancarios",
-    label: "Banco / Agência / Conta (PJ)",
-    type: "text",
-    full: true,
-    ph: "Banco 000 · Ag 0001 · CC 00000-0",
-    maxLen: 2000,
-  },
-  {
-    key: "password",
-    label: "Senha de acesso",
-    type: "password",
-    ph: "Mínimo 6 caracteres",
-    required: true,
-  },
-];
-
-const CPF_FIELDS: FieldDef[] = [
-  {
-    key: "nome",
-    label: "Nome completo",
-    type: "text",
-    full: true,
-    ph: "Seu nome",
-    required: true,
-    maxLen: 150,
-  },
-  {
-    key: "documento",
-    label: "CPF",
-    type: "text",
-    ph: "000.000.000-00",
-    required: true,
-    maxLen: 14,
-  },
-  { key: "rg", label: "RG", type: "text", ph: "00.000.000-0", maxLen: 20 },
-  { key: "data_nascimento", label: "Data de nascimento", type: "date" },
-  { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000", maxLen: 15 },
-  {
-    key: "endereco",
-    label: "Endereço completo",
-    type: "text",
-    full: true,
-    ph: "Rua, nº, bairro, cidade - UF, CEP",
-    maxLen: 2000,
-  },
-  {
-    key: "telefone_recado",
-    label: "Outro telefone / recado",
-    type: "tel",
-    ph: "(11) 90000-0000",
-    maxLen: 15,
-  },
-  {
-    key: "contato_emergencia",
-    label: "Contato de emergência",
-    type: "text",
-    full: true,
-    ph: "Nome e telefone do contato",
-    maxLen: 2000,
-  },
-  {
-    key: "email",
-    label: "E-mail",
-    type: "email",
-    full: true,
-    ph: "voce@email.com",
-    required: true,
-    maxLen: 254,
-  },
-  {
-    key: "pix_chave",
-    label: "Chave Pix",
-    type: "text",
-    full: true,
-    ph: "CPF, e-mail, telefone ou chave aleatória",
-    maxLen: 150,
-  },
-  {
-    key: "dados_bancarios",
-    label: "Banco / Agência / Conta",
-    type: "text",
-    full: true,
-    ph: "Banco 000 · Ag 0001 · CC 00000-0",
-    maxLen: 2000,
-  },
-  {
-    key: "password",
-    label: "Senha de acesso",
-    type: "password",
-    ph: "Mínimo 6 caracteres",
-    required: true,
-  },
-];
-
-function maskFor(key: string, raw: string): string {
-  const d = onlyDigits(raw);
-  switch (key) {
-    case "documento":
-      // CPF (11) ou CNPJ (14)
-      return maskCpfCnpj(raw);
-    case "socio_cpf":
-      return d
-        .slice(0, 11)
-        .replace(/^(\d{3})(\d)/, "$1.$2")
-        .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-        .replace(/\.(\d{3})(\d)/, ".$1-$2");
-    case "socio_rg":
-    case "rg":
-      return d
-        .slice(0, 9)
-        .replace(/^(\d{2})(\d)/, "$1.$2")
-        .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-        .replace(/\.(\d{3})(\d)/, ".$1-$2");
-    case "celular":
-    case "telefone_recado":
-      return maskTelefone(raw);
-    default:
-      return raw;
-  }
-}
 
 function CadastroPage() {
   const navigate = useNavigate();
   const cadastrar = useServerFn(cadastrarFranquia);
   const [view, setView] = useState<View>("model");
-  const [model, setModel] = useState<Model>("cnpj");
+  const [model, setModel] = useState<ModeloCadastro>("cnpj");
   const [values, setValues] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fields = useMemo(() => (model === "cnpj" ? CNPJ_FIELDS : CPF_FIELDS), [model]);
+  const fields = useMemo(() => camposDoModelo(model), [model]);
 
-  function pick(m: Model) {
+  function pick(m: ModeloCadastro) {
     setModel(m);
     setValues({});
     setError(null);
@@ -345,51 +144,7 @@ function CadastroPage() {
               Trocar modelo
             </button>
             <form onSubmit={submit}>
-              <div className="auth-form">
-                <div className="auth-grid">
-                  {fields.map((f) => (
-                    <div key={f.key} className={`auth-field${f.full ? " full" : ""}`}>
-                      <label>
-                        {f.label}
-                        {f.required && <span className="req"> *</span>}
-                      </label>
-                      <div className="auth-input">
-                        {f.type === "email" && (
-                          <svg style={{ width: 16, height: 16, color: "#7A8794", flex: "none" }}>
-                            <use href="#i-mail" />
-                          </svg>
-                        )}
-                        {f.type === "password" && (
-                          <svg style={{ width: 16, height: 16, color: "#7A8794", flex: "none" }}>
-                            <use href="#i-lock" />
-                          </svg>
-                        )}
-                        <input
-                          type={f.type}
-                          placeholder={f.ph || ""}
-                          required={f.required}
-                          minLength={f.type === "password" ? 6 : undefined}
-                          maxLength={f.maxLen}
-                          inputMode={
-                            [
-                              "documento",
-                              "socio_cpf",
-                              "socio_rg",
-                              "rg",
-                              "celular",
-                              "telefone_recado",
-                            ].includes(f.key)
-                              ? "numeric"
-                              : undefined
-                          }
-                          value={values[f.key] || ""}
-                          onChange={(e) => update(f.key, maskFor(f.key, e.target.value))}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <CamposCadastro fields={fields} values={values} onChange={update} />
 
               {error && (
                 <div className="banner alert" style={{ marginTop: 14, fontSize: 12.5 }}>

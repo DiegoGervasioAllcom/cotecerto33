@@ -4,6 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
+import { useAuth } from "@/lib/auth";
+import { ConvidarModal, type EscopoConvite } from "@/components/acessos/convidar-modal";
 import { Icon } from "@/components/operacao/acessos/icon";
 import { CadastrarVendedorForm } from "@/components/acessos/cadastrar-vendedor-form";
 
@@ -47,6 +49,12 @@ export const Route = createFileRoute("/_authenticated/operacao/xacessos")({
 
 function Page() {
   const { group, groupPct } = useGroupScope();
+  const { role } = useAuth();
+  const [convidando, setConvidando] = useState<EscopoConvite | null>(null);
+
+  // V11: o Master convida a rede dele; a Franquia Full, o time dela.
+  const escopoConvite: EscopoConvite | null =
+    role === "master" ? "master" : role === "franqueado" ? "full" : null;
   const [rows, setRows] = useState<Membro[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -160,10 +168,23 @@ function Page() {
         <div>
           <h1>Acessos da equipe</h1>
           <div className="sub">
-            Sua rede{group ? ` · ${groupPct}% sobre a equipe` : ""} — cadastro de novos vendedores é
-            feito pela Matriz em Acessos e permissões.
+            Sua rede{group ? ` · ${groupPct}% sobre a equipe` : ""} —{" "}
+            {escopoConvite === "full"
+              ? "convide o vendedor da sua franquia; a aprovação é sua."
+              : "convide a sua rede; a Matriz aprova e classifica."}
           </div>
         </div>
+        {escopoConvite && (
+          <div style={{ marginLeft: "auto" }}>
+            <button
+              className="btn btn-yellow"
+              type="button"
+              onClick={() => setConvidando(escopoConvite)}
+            >
+              {escopoConvite === "full" ? "Convidar vendedor" : "Convidar"}
+            </button>
+          </div>
+        )}
       </div>
 
       {err && (
@@ -265,6 +286,7 @@ function Page() {
           )}
         </div>
       </div>
+      {convidando && <ConvidarModal escopo={convidando} onClose={() => setConvidando(null)} />}
     </AppShell>
   );
 }
