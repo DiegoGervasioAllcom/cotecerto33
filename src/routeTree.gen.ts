@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth.index'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as AuthPendenteRouteImport } from './routes/auth.pendente'
 import { Route as AuthCadastroRouteImport } from './routes/auth.cadastro'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
@@ -58,6 +59,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthIndexRoute = AuthIndexRouteImport.update({
   id: '/auth/',
   path: '/auth/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthPendenteRoute = AuthPendenteRouteImport.update({
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/inicio': typeof AuthenticatedInicioRoute
   '/auth/cadastro': typeof AuthCadastroRoute
   '/auth/pendente': typeof AuthPendenteRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/auth/': typeof AuthIndexRoute
   '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
   '/comando/leads': typeof AuthenticatedComandoLeadsRoute
@@ -298,6 +305,7 @@ export interface FileRoutesByTo {
   '/inicio': typeof AuthenticatedInicioRoute
   '/auth/cadastro': typeof AuthCadastroRoute
   '/auth/pendente': typeof AuthPendenteRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/auth': typeof AuthIndexRoute
   '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
   '/comando/leads': typeof AuthenticatedComandoLeadsRoute
@@ -337,6 +345,7 @@ export interface FileRoutesById {
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/auth/cadastro': typeof AuthCadastroRoute
   '/auth/pendente': typeof AuthPendenteRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
   '/_authenticated/comando/leads': typeof AuthenticatedComandoLeadsRoute
@@ -376,6 +385,7 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/auth/cadastro'
     | '/auth/pendente'
+    | '/convite/$token'
     | '/auth/'
     | '/comando/distribuicao'
     | '/comando/leads'
@@ -413,6 +423,7 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/auth/cadastro'
     | '/auth/pendente'
+    | '/convite/$token'
     | '/auth'
     | '/comando/distribuicao'
     | '/comando/leads'
@@ -451,6 +462,7 @@ export interface FileRouteTypes {
     | '/_authenticated/inicio'
     | '/auth/cadastro'
     | '/auth/pendente'
+    | '/convite/$token'
     | '/auth/'
     | '/_authenticated/comando/distribuicao'
     | '/_authenticated/comando/leads'
@@ -489,6 +501,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthCadastroRoute: typeof AuthCadastroRoute
   AuthPendenteRoute: typeof AuthPendenteRoute
+  ConviteTokenRoute: typeof ConviteTokenRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
@@ -513,6 +526,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth/'
       preLoaderRoute: typeof AuthIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/pendente': {
@@ -831,6 +851,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthCadastroRoute: AuthCadastroRoute,
   AuthPendenteRoute: AuthPendenteRoute,
+  ConviteTokenRoute: ConviteTokenRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 export const routeTree = rootRouteImport
