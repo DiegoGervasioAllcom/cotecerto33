@@ -129,7 +129,7 @@ function Page() {
             type="button"
             onClick={() => setConvidando("interno")}
           >
-            Convidar · Convite Supper
+            Convidar · time interno
           </button>
         </div>
         <div className="toggle">
@@ -167,7 +167,7 @@ function Page() {
             type="button"
             onClick={() => setConvidando("externo")}
           >
-            Convidar · Convite Supper
+            Convidar · rede externa
           </button>
         </div>
         <AcessosNavigation
