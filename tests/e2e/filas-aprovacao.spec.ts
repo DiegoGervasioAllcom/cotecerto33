@@ -125,7 +125,7 @@ test.describe("Frente 2 · F10 — roteamento das filas por trilha do convite", 
     await loginAs(fullPage, full.email, full.senha);
     await expect(fullPage).not.toHaveURL(/\/auth/, { timeout: 15_000 });
     await fullPage.goto("/operacao/xacessos");
-    await expect(fullPage.getByRole("heading", { name: "Acessos da equipe" })).toBeVisible({
+    await expect(fullPage.getByRole("heading", { name: "Acessos da equipe" }).first()).toBeVisible({
       timeout: 15_000,
     });
 
