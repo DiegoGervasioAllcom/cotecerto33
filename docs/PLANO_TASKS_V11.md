@@ -23,13 +23,6 @@ Sem isso, toda tela da V11 nasce em cima de premissa errada.
 | Task    | Tag     | Descrição                                                                                             | Depende de |
 | ------- | ------- | ----------------------------------------------------------------------------------------------------- | ---------- |
 | V11.0.1 | front   | ✅ Diffar o CSS do protótipo r40 contra `src/styles/proto.css` e aplicar o delta (regra 6: byte a byte) | —         |
-
-> **Frente 0 concluída.** O delta de CSS entre o V10 e o r40 era de duas coisas: `.kpi .lbl`
-> ganhou `padding-right:44px` e `min-height:36px` (reserva o canto do card para o ícone) e
-> entrou `.pw-toggle` (o "olhinho" da tela Criar senha, que é da frente de e-mail adiada).
-> `proto.css` está em 473 classes, igual ao r40, sem nada sobrando. Os únicos "diffs"
-> restantes são de formatação — o prettier normaliza `.01em` para `0.01em`, convenção que já
-> valia no arquivo inteiro; os valores são idênticos.
 | V11.0.2 | banco   | ✅ `public.perfil += 'coordenador'`; supervisor Vendas × Operacional resolvido como **cargo** (ver `PLANO_HIERARQUIA_V11.md`) | — |
 | V11.0.3 | banco   | ✅ Tabela de **cargos** + áreas de escopo (7 presets + Vendedor Matriz), com RLS e checks             | V11.0.2    |
 | V11.0.4 | banco   | ✅ Taxonomia única de **canais** (item 9): tabela + `leads.canal_id` + `profile_canais`. **Telas pendentes** — ver nota abaixo | — |
@@ -38,6 +31,13 @@ Sem isso, toda tela da V11 nasce em cima de premissa errada.
 | V11.0.7 | testes  | ✅ Testes de RLS/grants: histórico não editável, política sem diretor é rejeitada no backend           | V11.0.5, V11.0.6 |
 | V11.0.8 | banco   | ✅ Cadeia hierárquica: Master passa a responder ao Coordenador; `empresas_visiveis()` já era agnóstica de rótulo | V11.0.2 |
 
+> **Frente 0 concluída.** O delta de CSS entre o V10 e o r40 era de duas coisas: `.kpi .lbl`
+> ganhou `padding-right:44px` e `min-height:36px` (reserva o canto do card para o ícone) e
+> entrou `.pw-toggle` (o "olhinho" da tela Criar senha, que é da frente de e-mail adiada).
+> `proto.css` está em 473 classes, igual ao r40, sem nada sobrando. Os únicos "diffs"
+> restantes são de formatação — o prettier normaliza `.01em` para `0.01em`, convenção que já
+> valia no arquivo inteiro; os valores são idênticos.
+>
 > **`leads.origem` virou legado, mas as telas ainda leem.** A V11.0.4 entregou a
 > taxonomia no banco: `canais` (com `tipo` separando captação paga, entrada manual e
 > lead que nasce de dentro), `leads.canal_id` e `profile_canais`. O texto livre
@@ -65,14 +65,24 @@ funcionando como exceção durante toda a transição.
 
 | Task    | Tag    | Descrição                                                                                        | Depende de |
 | ------- | ------ | ------------------------------------------------------------------------------------------------ | ---------- |
-| V11.1.1 | banco  | Tabela de **convites**: token nominal, uso único, validade configurável (demo 7d), perfil e vínculo embutidos | V11.0.2, V11.0.3 |
-| V11.1.2 | front  | Modal Convidar em 4 escopos: Matriz interno (7 cargos + Vendedor Matriz), Matriz externo (Master, Individual direta), Master (franquias e vendedores dele), Full (só Vendedor da própria franquia) | V11.1.1 |
-| V11.1.3 | front  | Saídas do convite: WhatsApp via wa.me, Copiar, **PDF com arte oficial e link clicável**, pré-visualização no modal | V11.1.2 |
-| V11.1.4 | front  | Rota **`/convite/{código}`** (item 1): valida token, abre cadastro pré-preenchido com perfil e vínculo em texto fixo | V11.1.1 |
-| V11.1.5 | front  | Erro amigável para link expirado/reusado, com opção de pedir novo convite                        | V11.1.4    |
+| V11.1.1 | banco  | ✅ Tabela de **convites**: token nominal, uso único, validade configurável (demo 7d), perfil e vínculo embutidos | V11.0.2, V11.0.3 |
+| V11.1.2 | front  | ✅ Modal Convidar em 4 escopos: Matriz interno (7 cargos + Vendedor Matriz), Matriz externo (Master, Individual direta), Master (franquias e vendedores dele), Full (só Vendedor da própria franquia) | V11.1.1 |
+| V11.1.3 | front  | ✅ Saídas do convite: WhatsApp via wa.me, Copiar, **PDF com arte oficial e link clicável**, pré-visualização no modal | V11.1.2 |
+| V11.1.4 | front  | ✅ Rota **`/convite/{token}`** (item 1): valida token, abre cadastro pré-preenchido com perfil e vínculo em texto fixo | V11.1.1 |
+| V11.1.5 | front  | ✅ Erro amigável para link expirado/reusado, com opção de pedir novo convite                        | V11.1.4    |
 | V11.1.6 | front  | ⏸ **adiada** (depende de e-mail) · Botão **"Quero falar com a Cote Certo"** no login: nome, e-mail, tema, mensagem → e-mail à Matriz, sem persistir | V11.2.1 |
 | V11.1.7 | front  | ⏸ **adiada** (sem criar senha, não há como aprovar alguém) · Remover o cadastro espontâneo de `auth.cadastro.tsx`; criação direta pela Matriz vira exceção com log | V11.1.4, V11.2.2, V11.2.3 |
-| V11.1.8 | testes | E2E do convite: emitir → abrir link → cadastrar → cair na fila certa; e os casos de expirado e reuso | V11.1.4 |
+| V11.1.8 | testes | ✅ E2E do convite: emitir → abrir link → cadastrar → cair na fila certa; e os casos de expirado e reuso | V11.1.4 |
+
+> **Frente 1 concluída** (detalhes em `PLANO_CONVITE_V11.md`), menos as duas tasks que
+> dependem da frente de e-mail. O convite carrega o payload que classifica o pedido, e
+> `empresas.convite_id` liga o pedido ao convite — é dali que a Frente 2 lê para abrir o
+> modal travado e rotear a fila. A validação de escopo é da RPC `criar_convite`, no
+> servidor: Master e Full têm o vínculo forçado neles, ignorando o que a tela enviar.
+>
+> **A porta de entrada antiga continua no ar.** Enquanto V11.1.7 estiver adiada,
+> `auth.cadastro.tsx` segue aceitando cadastro espontâneo com senha digitada por quem
+> cadastra. Convite e autocadastro coexistem — é dívida consciente, não esquecimento.
 
 ## Frente 2 · Filas de aprovação, e-mails e senha
 
@@ -180,6 +190,21 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 | V11.7.2 | front  | Todos os widgets da Visão geral lendo a mesma janela — hoje são 4 opções mensais no cliente (`visao-geral.tsx`) | V11.7.1 |
 | V11.7.3 | front  | **4 funis por canal** (Movida/Google/Facebook/Manual) escalando com o período                    | V11.7.1, V11.0.4 |
 | V11.7.4 | front  | **Alertas clicáveis** derivados do estado real                                                   | V11.7.2    |
+| V11.7.5 | banco  | Modelar o estado real de **pendência da seguradora** após a transmissão; não inferir pendência a partir de proposta apenas `gerada` | regra operacional da pendência definida |
+| V11.7.6 | front  | **Fechar os alertas adiados da Visão geral**: pendência da seguradora, franquia abaixo da meta e vendedor em atenção, usando os estados entregues pelas tasks dependentes | V11.7.5, V11.4.1, V11.8 |
+
+### Pendências rastreadas da V11.7.4
+
+| Pendência | Por que não entra agora | Task que desbloqueia | Critério para fechar |
+| --------- | ----------------------- | -------------------- | -------------------- |
+| Pendência da seguradora | `propostas` registra transmissão, emissão, pagamento e cancelamento, mas não distingue retorno pendente da seguradora. Tratar `status = 'gerada'` como pendência inventaria estado. | V11.7.5 | Estado persistido, regra de transição, RLS e testes positivo/negativo disponíveis; alerta abre `Vendas → Transmissão` já filtrado. |
+| Franquia abaixo da meta no período | A comparação exige a regra oficial de proporcionalização/competência da meta; não deve ser recalculada com heurística própria do dashboard. | V11.4.1 | Régua server-side fornece o resultado por franquia e período; alerta e destino usam exatamente o mesmo cálculo. |
+| Vendedor em atenção/travado | O estado pertence à régua de performance e ainda não existe como classificação persistida/calculada. | V11.4.1 | Régua fornece a classificação e a Visão geral apenas consome o resultado, respeitando o escopo da rede. |
+| Destinos por perfil novo | Um alerta não pode oferecer rota fora das áreas liberadas ao Coordenador/Supervisores. | V11.8 | Catálogo de alertas consulta a capacidade/área final de cada perfil e há teste de navegação positivo e negativo. |
+
+Enquanto essas dependências não fecharem, a V11.7.4 exibe somente alertas sustentados
+por estados reais já persistidos. A V11.7.6 é a task de retorno obrigatória: ela não pode
+ser marcada como concluída antes de revisitar as quatro linhas acima.
 
 ## Frente 8 · Menus e escopo por perfil
 
