@@ -3117,7 +3117,9 @@ export type Database = {
         Args: { p_aprovador: string; p_pct: number; p_seguradora: string };
         Returns: boolean;
       };
+      fn_destino_pedido: { Args: { _empresa_id: string }; Returns: string };
       fn_eh_diretor: { Args: { _user_id: string }; Returns: boolean };
+      fn_fila_franquia_id: { Args: { _empresa_id: string }; Returns: string };
       fn_modelo_alcada_desconto: {
         Args: { p_profile_id: string };
         Returns: string;
@@ -3128,6 +3130,10 @@ export type Database = {
           fonte: string;
           pct: number;
         }[];
+      };
+      fn_pode_aprovar_pedido: {
+        Args: { _empresa_id: string; _uid: string };
+        Returns: boolean;
       };
       fn_pode_ver_solicitacao_desconto: {
         Args: { p_solicitante: string };
