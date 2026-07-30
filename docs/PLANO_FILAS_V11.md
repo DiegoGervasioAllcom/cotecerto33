@@ -1,11 +1,15 @@
 # Plano — Frente 2 · Duas filas de aprovação
 
-**Aberto em:** 30/07/2026 · **Status:** aguardando aprovação para implementar
+**Aberto em:** 30/07/2026 · **Status:** ✅ concluído e mergeado — [PR #102](https://github.com/DiegoGervasioAllcom/cotecerto33/pull/102)
+(30/07/2026, 9 commits, F1-F11). Typecheck/lint limpos, 20 testes de banco
+(`tests/db/filas-aprovacao-v11.test.ts`) e 30 E2E (`tests/e2e/`, incluindo o novo
+`filas-aprovacao.spec.ts`) verdes. Worktree e branch já removidos (mergeados).
 
-**Worktree:** `~/Documents/cotecerto33-frente2` · **Branch:** `feat/v11-filas-aprovacao`
+**Branch:** `feat/v11-filas-aprovacao` (mergeada e apagada; era da `main`, com as Frentes 0 e
+1 já mergeadas nos PRs #97 e #100)
 
 **Escopo:** V11.2.3 a V11.2.9. **Fora:** V11.2.1 e V11.2.2 (e-mails e criar senha), adiadas
-por decisão de 28/07.
+por decisão de 28/07 — seguem adiadas.
 
 **Fontes:** fluxo "Acesso e visualização" em `docs/v11/FLUXOS_OPERACIONAIS.html` · Etapa 2 do
 Relatório DE/PARA · `openClassify`/`buildClassifyModal`/`openFullApprove` e `PROD_PADRAO` no

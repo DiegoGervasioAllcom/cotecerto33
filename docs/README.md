@@ -17,6 +17,15 @@ deve ser confirmado pelo código, migrations e testes da `main`.
 | `v11/MODELOS_EMAIL_ACESSO.html`    | corpo dos e-mails de acesso                               |
 | `../cotecerto_prototipo_v11.html`  | protótipo build 28/07 · r40 — referência de UX da V11     |
 
+### Planos por frente (escritos durante a implementação)
+
+| Documento                | Finalidade                                                                      | Status                             |
+| ------------------------- | -------------------------------------------------------------------------------- | ----------------------------------- |
+| `PLANO_HIERARQUIA_V11.md` | desenho de cargos/áreas da Frente 0 (supervisor Vendas × Operacional como cargo) | ✅ Frente 0 mergeada — PR #97       |
+| `PLANO_CONVITE_V11.md`    | Convite Supper da Frente 1 (token, escopos, saídas sem e-mail)                   | ✅ Frente 1 mergeada — PR #100      |
+| `PLANO_FILAS_V11.md`      | roteamento das filas de aprovação da Frente 2 (F1-F11)                          | ✅ mergeado — PR #102               |
+| `PERGUNTAS_PARA_LIS.md`   | decisões de produto em aberto para levar à Lis (7 itens, nenhuma bloqueia)       | aberto                              |
+
 ## Fontes canônicas da V10 (referência histórica)
 
 A V10 está fechada para go-live. Estes documentos continuam válidos como registro do
