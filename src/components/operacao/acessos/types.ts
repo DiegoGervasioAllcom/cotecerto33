@@ -1,4 +1,21 @@
 // Tipos compartilhados da tela "Acessos e permissões".
+
+/**
+ * O que o convite declarou para este pedido (V11 · Frente 1). `null` quando o
+ * pedido não tem convite — a criação manual por exceção da Etapa 1, que no
+ * protótipo aparece com o chip "manual · exceção" e "sem tipo declarado — a
+ * Matriz define na análise".
+ */
+export type ConviteDoPendente = {
+  codigo: string;
+  trilha: "interno" | "externo";
+  perfil: "master" | "franquia_full" | "franquia_indiv" | "vendedor" | null;
+  cargo_id: string | null;
+  cargo_nome: string | null;
+  vinc_tipo: "matriz" | "master" | "full";
+  vinc_empresa_id: string | null;
+};
+
 export type Pendente = {
   id: string;
   nome: string;
@@ -11,6 +28,15 @@ export type Pendente = {
   celular: string | null;
   created_at: string;
   dados_cadastro: Record<string, unknown> | null;
+  convite: ConviteDoPendente | null;
+  /**
+   * De qual bloco é este pendente — deriva de `convite.trilha` (F1). Sem
+   * convite, cai em `externo` (é onde a Matriz classifica o tipo na análise).
+   * `franquia` nunca aparece aqui: a RLS já filtra esses pendentes fora da
+   * visão da Matriz (F2) — só a `fn_destino_pedido` no banco sabe distinguir
+   * pelo vínculo completo (perfil + vinc_tipo), e a Matriz não precisa saber.
+   */
+  bloco: "interno" | "externo";
 };
 
 export type Deslig = {

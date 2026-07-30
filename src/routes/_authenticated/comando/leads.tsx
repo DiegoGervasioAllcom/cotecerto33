@@ -18,6 +18,7 @@ type Lead = {
   nome: string;
   contato: string | null;
   origem: string | null;
+  canal_id: string | null;
   status_pipeline: string;
   empresa_id: string | null;
   responsavel_id: string | null;
@@ -35,6 +36,7 @@ type Lead = {
 };
 type Empresa = { id: string; nome: string | null };
 type Profile = { id: string; nome: string | null; empresa_id?: string | null };
+type Canal = { id: string; nome: string; tipo: string };
 type Evento = {
   id: string;
   tipo: string;
@@ -138,13 +140,15 @@ function Page() {
   const [empresasList, setEmpresasList] = useState<Empresa[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [profilesList, setProfilesList] = useState<Profile[]>([]);
+  const [canais, setCanais] = useState<Record<string, Canal>>({});
+  const [canaisList, setCanaisList] = useState<Canal[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   const [fStatus, setFStatus] = useState("");
   const [fUf, setFUf] = useState("");
-  const [fOrigem, setFOrigem] = useState("");
+  const [fCanalId, setFCanalId] = useState("");
   const [fArquivados, setFArquivados] = useState<"ativos" | "arquivados" | "todos">("ativos");
   const [distAutoMsg, setDistAutoMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [distAutoLoading, setDistAutoLoading] = useState(false);
@@ -160,7 +164,7 @@ function Page() {
       let leadsQuery = supabase
         .from("leads")
         .select(
-          "id,nome,contato,origem,status_pipeline,empresa_id,responsavel_id,criado_em,atualizado_em,distribuido_em,ultimo_atendimento_em,bloqueado,motivo_bloqueio,motivo_perda,submotivo_perda,em_avaliacao_matriz,arquivado,dados",
+          "id,nome,contato,origem,canal_id,status_pipeline,empresa_id,responsavel_id,criado_em,atualizado_em,distribuido_em,ultimo_atendimento_em,bloqueado,motivo_bloqueio,motivo_perda,submotivo_perda,em_avaliacao_matriz,arquivado,dados",
         )
         .order("criado_em", { ascending: false });
       if (search.alerta) {
@@ -176,11 +180,15 @@ function Page() {
           );
         }
       }
-      const [{ data: lds, error }, { data: emps }, { data: profs }] = await Promise.all([
-        leadsQuery.limit(search.alerta ? 2000 : 500),
-        supabase.from("empresas").select("id,nome").order("nome"),
-        supabase.from("profiles").select("id,nome,empresa_id"),
-      ]);
+      const [{ data: lds, error }, { data: emps }, { data: profs }, { data: cnss }] =
+        await Promise.all([
+          leadsQuery.limit(search.alerta ? 2000 : 500),
+          supabase.from("empresas").select("id,nome").order("nome"),
+          supabase.from("profiles").select("id,nome,empresa_id"),
+          // V11 · F11: filtro e selo de mídia paga passam a ler daqui — a tabela
+          // canais é a lista canônica, não mais os valores livres de `origem`.
+          supabase.from("canais").select("id,nome,tipo").eq("ativo", true).order("ordem"),
+        ]);
       if (error) setErr(error.message);
       setLeads((lds ?? []) as Lead[]);
       const em: Record<string, Empresa> = {};
@@ -191,6 +199,10 @@ function Page() {
       for (const p of (profs ?? []) as Profile[]) pm[p.id] = p;
       setProfiles(pm);
       setProfilesList((profs ?? []) as Profile[]);
+      const cm: Record<string, Canal> = {};
+      for (const c of (cnss ?? []) as Canal[]) cm[c.id] = c;
+      setCanais(cm);
+      setCanaisList((cnss ?? []) as Canal[]);
     } finally {
       setLoading(false);
     }
@@ -223,12 +235,10 @@ function Page() {
 
   const filterOptions = useMemo(() => {
     const ufs = new Set<string>();
-    const origens = new Set<string>();
     for (const l of enriched) {
       if (l.uf) ufs.add(l.uf);
-      if (l.origem) origens.add(l.origem);
     }
-    return { ufs: Array.from(ufs).sort(), origens: Array.from(origens).sort() };
+    return { ufs: Array.from(ufs).sort() };
   }, [enriched]);
 
   const filtered = useMemo(
@@ -269,10 +279,10 @@ function Page() {
           }
         }
         if (fUf && l.uf !== fUf) return false;
-        if (fOrigem && (l.origem || "") !== fOrigem) return false;
+        if (fCanalId && l.canal_id !== fCanalId) return false;
         return true;
       }),
-    [enriched, fStatus, fUf, fOrigem, fArquivados, search.alerta, search.fim, search.inicio],
+    [enriched, fStatus, fUf, fCanalId, fArquivados, search.alerta, search.fim, search.inicio],
   );
 
   const kpis = useMemo(() => {
@@ -578,12 +588,14 @@ function Page() {
         </select>
         <select
           className="select-mini"
-          value={fOrigem}
-          onChange={(e) => setFOrigem(e.target.value)}
+          value={fCanalId}
+          onChange={(e) => setFCanalId(e.target.value)}
         >
-          <option value="">Todas as origens</option>
-          {filterOptions.origens.map((o) => (
-            <option key={o}>{o}</option>
+          <option value="">Todos os canais</option>
+          {canaisList.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
+            </option>
           ))}
         </select>
         <select
@@ -653,6 +665,7 @@ function Page() {
                       };
                 const empresa = l.empresa_id ? empresas[l.empresa_id]?.nome : null;
                 const vendedor = l.responsavel_id ? profiles[l.responsavel_id]?.nome : null;
+                const canal = l.canal_id ? canais[l.canal_id] : null;
                 const rowStyle =
                   !l.distribuido && l.status_pipeline === "novo" && l.ageSec > SLA_SECONDS
                     ? { background: "var(--alert-soft)", boxShadow: "inset 4px 0 0 var(--alert)" }
@@ -668,8 +681,8 @@ function Page() {
                       </div>
                     </td>
                     <td>
-                      {l.origem || "—"}
-                      {l.origem && /ads|meta|google/i.test(l.origem) && (
+                      {canal?.nome || l.origem || "—"}
+                      {canal?.tipo === "supper" && (
                         <>
                           <br />
                           <small className="muted" style={{ color: "#8a6400", fontWeight: 700 }}>
@@ -864,6 +877,7 @@ function Page() {
           lead={modal.lead}
           empresas={empresas}
           profiles={profiles}
+          canais={canais}
           onClose={() => setModal(null)}
         />
       )}
@@ -961,11 +975,13 @@ function HistoricoModal({
   lead,
   empresas,
   profiles,
+  canais,
   onClose,
 }: {
   lead: Lead;
   empresas: Record<string, Empresa>;
   profiles: Record<string, Profile>;
+  canais: Record<string, Canal>;
   onClose: () => void;
 }) {
   const [eventos, setEventos] = useState<Evento[]>([]);
@@ -988,9 +1004,10 @@ function HistoricoModal({
   // sintetiza a linha do tempo a partir dos campos do lead + eventos
   const timeline = useMemo(() => {
     const items: { titulo: string; descricao: string; ts: number; icon: string }[] = [];
+    const nomeCanal = lead.canal_id ? canais[lead.canal_id]?.nome : null;
     items.push({
       titulo: "Lead recebido",
-      descricao: `${lead.origem || "—"}${lead.dados?.cidade ? ` · ${lead.dados.cidade}` : ""}${lead.dados?.uf ? `/${lead.dados.uf}` : ""}`,
+      descricao: `${nomeCanal || lead.origem || "—"}${lead.dados?.cidade ? ` · ${lead.dados.cidade}` : ""}${lead.dados?.uf ? `/${lead.dados.uf}` : ""}`,
       ts: new Date(lead.criado_em).getTime(),
       icon: "i-layers",
     });
@@ -1088,7 +1105,7 @@ function HistoricoModal({
       durSec: Math.max(0, Math.floor(dur[i] / 1000)),
       gargalo: i === maxIdx && items.length > 1,
     }));
-  }, [lead, empresas, profiles, eventos]);
+  }, [lead, empresas, profiles, canais, eventos]);
 
   return (
     <Modal title={`Linha do tempo — ${lead.nome || "lead"}`} onClose={onClose} icon="i-clock">

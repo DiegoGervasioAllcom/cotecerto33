@@ -1,5 +1,6 @@
 // Aba "Pendentes de aprovação" — tabela de cadastros aguardando análise.
 import { maskCpfCnpj, maskTelefone } from "@/lib/masks";
+import { rotuloConvite } from "@/lib/convite-rotulo";
 import { Icon } from "./icon";
 import type { Pendente } from "./types";
 
@@ -44,7 +45,16 @@ export function PendentesTab({
             {pendentes.map((p) => (
               <tr key={p.id}>
                 <td>
-                  <strong>{p.nome}</strong>
+                  <strong>{p.nome}</strong>{" "}
+                  {/* V11 · F6: origem do pedido — mesma marcação do protótipo
+                      (accPendTable): via Convite (nominal, uso único) ou
+                      manual · exceção (criação direta, registrada em log). */}
+                  <span
+                    className={`chip ${p.convite ? "chip-outline" : "chip-yellow"}`}
+                    style={{ fontSize: "10px", verticalAlign: "middle" }}
+                  >
+                    {p.convite ? "via Convite" : "manual · exceção"}
+                  </span>
                   <div className="small muted">
                     {p.cidade ? `${p.cidade}${p.uf ? " · " + p.uf : ""}` : "—"}
                   </div>
@@ -54,6 +64,19 @@ export function PendentesTab({
                     <span className="chip chip-slate">Pessoa Jurídica</span>
                   ) : (
                     <span className="chip chip-outline">Pessoa Física</span>
+                  )}
+                  {/* O tipo declarado no convite — o modal de análise abre
+                      travado nele (F7); aqui é só o chip informativo da fila. */}
+                  {p.convite ? (
+                    <div style={{ marginTop: 4 }}>
+                      <span className="chip chip-yellow" style={{ fontSize: "10.5px" }}>
+                        {rotuloConvite(p.convite)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="small muted" style={{ marginTop: 4 }}>
+                      {rotuloConvite(p.convite)}
+                    </div>
                   )}
                 </td>
                 <td>{maskCpfCnpj(p.documento)}</td>

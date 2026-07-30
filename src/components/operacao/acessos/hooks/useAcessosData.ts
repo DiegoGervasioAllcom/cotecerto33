@@ -18,6 +18,8 @@ import type {
   Trio,
 } from "../types";
 import { CLT_DEFAULT } from "../constants";
+import type { AprovarAcessoParams } from "@/components/acessos/classificar-acesso-modal";
+import { fetchPendentes, mapPendentes } from "./pendentes-query";
 
 function toTrio(x: unknown): Trio {
   if (Array.isArray(x)) {
@@ -45,11 +47,12 @@ export function useAcessosData(enabled = true) {
   const reload = useCallback(async () => {
     setErr(null);
     const [p, d, m, c, roles] = await Promise.all([
-      supabase
-        .from("empresas")
-        .select("id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro")
-        .eq("status", "pendente")
-        .order("created_at", { ascending: false }),
+      // V11 · F6: o join com convites é o que diz se o pedido veio via Convite
+      // Supper (com tipo/vínculo travados) ou é criação manual por exceção
+      // (convite_id nulo — "sem tipo declarado, a Matriz define na análise").
+      // A RLS de F2 já garante que o pendente do vendedor de uma Franquia Full
+      // não aparece aqui: não é preciso filtrar isso no cliente.
+      fetchPendentes(),
       supabase
         .from("profiles")
         .select("id,nome,email,desligado_em,desligado_motivo,empresa_id")
@@ -60,7 +63,7 @@ export function useAcessosData(enabled = true) {
       supabase.from("user_roles").select("user_id,role").in("role", ["master", "supervisor"]),
     ]);
     if (p.error) setErr(p.error.message);
-    setPendentes((p.data ?? []) as Pendente[]);
+    setPendentes(mapPendentes(p.data));
     setDeslig((d.data ?? []) as Deslig[]);
     const modelosData = ((m.data ?? []) as Modelo[]).map((x) => ({
       ...x,
@@ -184,15 +187,29 @@ export function useAcessosData(enabled = true) {
     await reload();
   }
 
-  async function liberar(persist: () => Promise<void>, tag: string) {
+  // V11 · F5/F7: papel, cargo, áreas, produtos, canais e supervisão vão numa
+  // transação só via `aprovar_acesso` — antes dela vinham em chamadas soltas
+  // do front, e uma falha no meio deixava o acesso meio classificado.
+  // `persist()` continua existindo à parte para o que é domínio de G3/G4
+  // (modelo de franquia, comissão do Master/Supervisor, salário CLT), que a
+  // RPC não toca — são dois eixos diferentes.
+  async function liberar(params: AprovarAcessoParams, persist: () => Promise<void>, tag: string) {
     if (!analisando) return;
     setBusy(true);
-    const { error } = await supabase.rpc("aprovar_empresa", {
+    const { error } = await supabase.rpc("aprovar_acesso", {
       p_empresa_id: analisando.id,
+      p_perfil: params.perfil,
+      p_cargo_id: params.cargoId ?? undefined,
+      p_areas: params.areas && params.areas.length > 0 ? params.areas : undefined,
+      p_produtos: params.produtos && params.produtos.length > 0 ? params.produtos : undefined,
+      p_canais: params.canais && params.canais.length > 0 ? params.canais : undefined,
+      p_superior_id: params.superiorId ?? undefined,
+      p_reclassificado: params.reclassificado ?? false,
+      p_motivo: params.motivo || undefined,
     });
     if (error) {
       setBusy(false);
-      console.error("aprovar_empresa error", error);
+      console.error("aprovar_acesso error", error);
       setErr(
         `${error.message}${error.details ? ` · ${error.details}` : ""}${error.hint ? ` · ${error.hint}` : ""}`,
       );
