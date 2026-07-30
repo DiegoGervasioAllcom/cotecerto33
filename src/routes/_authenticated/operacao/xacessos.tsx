@@ -6,8 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
 import { useAuth } from "@/lib/auth";
 import { ConvidarModal, type EscopoConvite } from "@/components/acessos/convidar-modal";
+import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 import { Icon } from "@/components/operacao/acessos/icon";
 import { CadastrarVendedorForm } from "@/components/acessos/cadastrar-vendedor-form";
+import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
+import { useFilaFranquiaData } from "@/components/operacao/acessos/hooks/useFilaFranquiaData";
+import type { FranquiaAprovada } from "@/components/operacao/acessos/types";
 
 /**
  * Acessos da equipe (xacessos) — visão de grupo (master/supervisor/franquia Full).
@@ -49,7 +53,7 @@ export const Route = createFileRoute("/_authenticated/operacao/xacessos")({
 
 function Page() {
   const { group, groupPct } = useGroupScope();
-  const { role } = useAuth();
+  const { role, profile, empresa } = useAuth();
   const [convidando, setConvidando] = useState<EscopoConvite | null>(null);
 
   // V11: o Master convida a rede dele; a Franquia Full, o time dela.
@@ -60,6 +64,24 @@ function Page() {
   const [err, setErr] = useState<string | null>(null);
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
+
+  // V11 · F9 — a Franquia Full aprova o próprio vendedor (F1/F2: a RLS já
+  // entrega só o pedido dela). Individual não tem equipe para aprovar — "o
+  // franqueado opera como um vendedor", sem cadastro de vendedores.
+  const isFull = role === "franqueado" && empresa?.tipo === "pj";
+  const fila = useFilaFranquiaData(isFull);
+  const minhaFranquia: FranquiaAprovada[] =
+    isFull && empresa && profile
+      ? [
+          {
+            id: empresa.id,
+            nome: empresa.nome,
+            modeloNome: "",
+            modalidade: "full",
+            donoProfileId: profile.id,
+          },
+        ]
+      : [];
 
   useEffect(() => {
     void (async () => {
@@ -193,6 +215,23 @@ function Page() {
         </div>
       )}
 
+      {isFull && (
+        <div style={{ marginBottom: 18 }}>
+          <div
+            className="small muted"
+            style={{ fontWeight: 800, letterSpacing: ".08em", marginBottom: 8 }}
+          >
+            PENDENTES DE APROVAÇÃO ({fila.pendentes.length})
+          </div>
+          {fila.err && (
+            <div className="banner alert" style={{ marginBottom: 14 }}>
+              {fila.err}
+            </div>
+          )}
+          <PendentesTab pendentes={fila.pendentes} onAnalisar={fila.openAnalisar} />
+        </div>
+      )}
+
       <div style={{ marginBottom: 18 }}>
         <CadastrarVendedorForm />
       </div>
@@ -287,6 +326,38 @@ function Page() {
         </div>
       </div>
       {convidando && <ConvidarModal escopo={convidando} onClose={() => setConvidando(null)} />}
+      {fila.analisando && (
+        <ClassificarAcessoModal
+          pendente={fila.analisando}
+          modelosFranquia={[]}
+          superiores={[]}
+          franquiasAprovadas={minhaFranquia}
+          onClose={fila.closeModal}
+          onRecusar={fila.recusar}
+          onLiberar={fila.liberar}
+          busy={fila.busy}
+        />
+      )}
+      {fila.toast && (
+        <div
+          className={`toast ${fila.toast.kind === "ok" ? "toast-ok" : "toast-alert"}`}
+          style={{
+            position: "fixed",
+            right: 22,
+            bottom: 22,
+            background: fila.toast.kind === "ok" ? "var(--ok)" : "var(--alert)",
+            color: "#fff",
+            padding: "12px 18px",
+            borderRadius: 10,
+            boxShadow: "var(--shadow-lg)",
+            zIndex: 80,
+            fontWeight: 600,
+            fontSize: 13,
+          }}
+        >
+          {fila.toast.msg}
+        </div>
+      )}
     </AppShell>
   );
 }

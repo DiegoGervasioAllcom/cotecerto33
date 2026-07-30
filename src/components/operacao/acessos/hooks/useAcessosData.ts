@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import type {
   CltConfig,
   CltRegras,
-  ConviteDoPendente,
   Deslig,
   FranquiaAprovada,
   Modelo,
@@ -20,79 +19,7 @@ import type {
 } from "../types";
 import { CLT_DEFAULT } from "../constants";
 import type { AprovarAcessoParams } from "@/components/acessos/classificar-acesso-modal";
-
-type PendenteBruto = {
-  id: string;
-  nome: string;
-  tipo: "pj" | "pf";
-  documento: string;
-  cidade: string | null;
-  uf: string | null;
-  email: string | null;
-  telefone: string | null;
-  celular: string | null;
-  created_at: string;
-  dados_cadastro: Record<string, unknown> | null;
-  // PostgREST devolve objeto único para *-a-1, mas o client-gen tipa como
-  // array quando não sabe a cardinalidade da FK — tratamos os dois formatos.
-  convites:
-    | {
-        codigo: string;
-        trilha: string;
-        perfil: string | null;
-        cargo_id: string | null;
-        vinc_tipo: string;
-        vinc_empresa_id: string | null;
-        cargos: { nome: string } | { nome: string }[] | null;
-      }
-    | {
-        codigo: string;
-        trilha: string;
-        perfil: string | null;
-        cargo_id: string | null;
-        vinc_tipo: string;
-        vinc_empresa_id: string | null;
-        cargos: { nome: string } | { nome: string }[] | null;
-      }[]
-    | null;
-};
-
-/** Normaliza o join de convites (+ cargo) e deriva o bloco (F6). */
-function mapPendentes(data: unknown): Pendente[] {
-  return ((data ?? []) as PendenteBruto[]).map((row) => {
-    const convRaw = Array.isArray(row.convites) ? row.convites[0] : row.convites;
-    let convite: ConviteDoPendente | null = null;
-    if (convRaw) {
-      const cargoRaw = Array.isArray(convRaw.cargos) ? convRaw.cargos[0] : convRaw.cargos;
-      convite = {
-        codigo: convRaw.codigo,
-        trilha: convRaw.trilha as ConviteDoPendente["trilha"],
-        perfil: convRaw.perfil as ConviteDoPendente["perfil"],
-        cargo_id: convRaw.cargo_id,
-        cargo_nome: cargoRaw?.nome ?? null,
-        vinc_tipo: convRaw.vinc_tipo as ConviteDoPendente["vinc_tipo"],
-        vinc_empresa_id: convRaw.vinc_empresa_id,
-      };
-    }
-    return {
-      id: row.id,
-      nome: row.nome,
-      tipo: row.tipo,
-      documento: row.documento,
-      cidade: row.cidade,
-      uf: row.uf,
-      email: row.email,
-      telefone: row.telefone,
-      celular: row.celular,
-      created_at: row.created_at,
-      dados_cadastro: row.dados_cadastro,
-      convite,
-      // Sem convite: cai no bloco externo, onde a Matriz define o tipo na
-      // análise (a "Prime Riscos" do protótipo). Com convite, segue a trilha.
-      bloco: convite?.trilha === "interno" ? "interno" : "externo",
-    };
-  });
-}
+import { fetchPendentes, mapPendentes } from "./pendentes-query";
 
 function toTrio(x: unknown): Trio {
   if (Array.isArray(x)) {
@@ -125,14 +52,7 @@ export function useAcessosData(enabled = true) {
       // (convite_id nulo — "sem tipo declarado, a Matriz define na análise").
       // A RLS de F2 já garante que o pendente do vendedor de uma Franquia Full
       // não aparece aqui: não é preciso filtrar isso no cliente.
-      supabase
-        .from("empresas")
-        .select(
-          "id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro," +
-            "convites!empresas_convite_id_fkey(codigo,trilha,perfil,cargo_id,vinc_tipo,vinc_empresa_id,cargos(nome))",
-        )
-        .eq("status", "pendente")
-        .order("created_at", { ascending: false }),
+      fetchPendentes(),
       supabase
         .from("profiles")
         .select("id,nome,email,desligado_em,desligado_motivo,empresa_id")
