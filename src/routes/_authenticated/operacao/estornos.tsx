@@ -4,8 +4,10 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj } from "@/lib/masks";
+import { dashboardDestinationPeriodSchema } from "@/lib/dashboard-alerts";
 
 export const Route = createFileRoute("/_authenticated/operacao/estornos")({
+  validateSearch: dashboardDestinationPeriodSchema,
   head: () => ({ meta: [{ title: "Estornos · CoteCerto" }] }),
   component: Page,
 });
@@ -57,8 +59,20 @@ function monthRange(offset: number) {
 }
 
 function Page() {
+  const search = Route.useSearch();
   const [periodOffset, setPeriodOffset] = useState(0);
-  const period = useMemo(() => monthRange(periodOffset), [periodOffset]);
+  const period = useMemo(() => {
+    if (search.inicio && search.fim) {
+      return {
+        ini: search.inicio,
+        fim: search.fim,
+        label: "Período da Visão geral",
+        iniDate: new Date(search.inicio),
+        fimDate: new Date(search.fim),
+      };
+    }
+    return monthRange(periodOffset);
+  }, [periodOffset, search.fim, search.inicio]);
   const [rows, setRows] = useState<Estorno[]>([]);
   const [vendasMes, setVendasMes] = useState<number>(0);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
@@ -170,17 +184,21 @@ function Page() {
           <div className="sub">Onde a comissão volta e por quê — para a Matriz agir rápido</div>
         </div>
         <div className="tools">
-          <select
-            className="select-mini"
-            value={periodOffset}
-            onChange={(e) => setPeriodOffset(Number(e.target.value))}
-          >
-            {periodOpts.map((p) => (
-              <option key={p.off} value={p.off}>
-                {p.label}
-              </option>
-            ))}
-          </select>
+          {search.inicio && search.fim ? (
+            <span className="chip chip-info">Período da Visão geral</span>
+          ) : (
+            <select
+              className="select-mini"
+              value={periodOffset}
+              onChange={(e) => setPeriodOffset(Number(e.target.value))}
+            >
+              {periodOpts.map((p) => (
+                <option key={p.off} value={p.off}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          )}
           <button className="btn btn-ghost" onClick={exportCsv}>
             <svg width="14" height="14">
               <use href="#i-download" />

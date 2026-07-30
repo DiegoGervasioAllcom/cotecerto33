@@ -3,8 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { renewalsAlertSearchSchema } from "@/lib/dashboard-alerts";
 
 export const Route = createFileRoute("/_authenticated/operacao/renovacoes")({
+  validateSearch: renewalsAlertSearchSchema,
   head: () => ({ meta: [{ title: "Renovações · CoteCerto" }] }),
   component: Page,
 });
@@ -50,6 +52,8 @@ function daysUntil(s: string | null): number | null {
 }
 
 function Page() {
+  const search = Route.useSearch();
+  const inheritedPeriod = Boolean(search.inicio && search.fim);
   const [windowDays, setWindowDays] = useState<number>(90);
   const [rows, setRows] = useState<Proposta[]>([]);
   const [renovadas, setRenovadas] = useState<number>(0);
@@ -66,10 +70,10 @@ function Page() {
     (async () => {
       setLoading(true);
       setErr(null);
-      const today = new Date();
+      const today = search.inicio ? new Date(search.inicio) : new Date();
       today.setHours(0, 0, 0, 0);
-      const limit = new Date(today);
-      limit.setDate(limit.getDate() + windowDays);
+      const limit = search.fim ? new Date(search.fim) : new Date(today);
+      if (!search.fim) limit.setDate(limit.getDate() + windowDays);
       const iniIso = today.toISOString().slice(0, 10);
       const fimIso = limit.toISOString().slice(0, 10);
 
@@ -87,7 +91,7 @@ function Page() {
           .not("vencimento", "is", null)
           .is("cancelada_em", null)
           .gte("vencimento", iniIso)
-          .lte("vencimento", fimIso)
+          .lt("vencimento", fimIso)
           .order("vencimento", { ascending: true })
           .limit(1000),
         supabase
@@ -136,7 +140,7 @@ function Page() {
 
       setLoading(false);
     })();
-  }, [windowDays]);
+  }, [search.fim, search.inicio, windowDays]);
 
   async function iniciarRenovacao(p: Proposta) {
     setMsg(null);
@@ -216,15 +220,19 @@ function Page() {
           <div className="sub">CRM de renovação — algo que hoje a Supper não tem estruturado</div>
         </div>
         <div className="tools">
-          <select
-            className="select-mini"
-            value={windowDays}
-            onChange={(e) => setWindowDays(Number(e.target.value))}
-          >
-            <option value={90}>Próximos 90 dias</option>
-            <option value={60}>Próximos 60 dias</option>
-            <option value={30}>Próximos 30 dias</option>
-          </select>
+          {inheritedPeriod ? (
+            <span className="chip chip-info">Período da Visão geral</span>
+          ) : (
+            <select
+              className="select-mini"
+              value={windowDays}
+              onChange={(e) => setWindowDays(Number(e.target.value))}
+            >
+              <option value={90}>Próximos 90 dias</option>
+              <option value={60}>Próximos 60 dias</option>
+              <option value={30}>Próximos 30 dias</option>
+            </select>
+          )}
           <button className="btn btn-ghost" onClick={exportCsv}>
             <svg width="14" height="14">
               <use href="#i-download" />
@@ -263,7 +271,9 @@ function Page() {
               <use href="#i-clock" />
             </svg>
           </div>
-          <div className="lbl">A VENCER ({windowDays} DIAS)</div>
+          <div className="lbl">
+            {inheritedPeriod ? "A VENCER NO PERÍODO" : `A VENCER (${windowDays} DIAS)`}
+          </div>
           <div className="val" style={{ fontSize: 22 }}>
             {kpis.aVencer}
           </div>
@@ -341,7 +351,9 @@ function Page() {
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={10} className="muted" style={{ padding: 16 }}>
-                  Nenhuma apólice vencendo nos próximos {windowDays} dias.
+                  {inheritedPeriod
+                    ? "Nenhuma apólice vencendo no período da Visão geral."
+                    : `Nenhuma apólice vencendo nos próximos ${windowDays} dias.`}
                 </td>
               </tr>
             )}

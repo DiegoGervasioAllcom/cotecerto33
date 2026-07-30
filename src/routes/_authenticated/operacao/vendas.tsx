@@ -6,8 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj, maskTelefone as maskPhone } from "@/lib/masks";
 import { useGroupScope } from "@/lib/group-scope";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
+import { salesAlertSearchSchema } from "@/lib/dashboard-alerts";
 
 export const Route = createFileRoute("/_authenticated/operacao/vendas")({
+  validateSearch: salesAlertSearchSchema,
   head: () => ({ meta: [{ title: "Controle de Vendas · CoteCerto" }] }),
   component: Page,
 });
@@ -73,10 +75,16 @@ function classify(p: Proposta): Tab {
 }
 
 function Page() {
+  const search = Route.useSearch();
   const { isGroupView } = useGroupScope();
   const tutorialPreview = useTutorialPreview();
   const [periodOffset, setPeriodOffset] = useState(0);
-  const period = useMemo(() => monthRange(periodOffset), [periodOffset]);
+  const period = useMemo(() => {
+    if (search.inicio && search.fim) {
+      return { ini: search.inicio, fim: search.fim, label: "Período da Visão geral" };
+    }
+    return monthRange(periodOffset);
+  }, [periodOffset, search.fim, search.inicio]);
   const [rows, setRows] = useState<Proposta[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
@@ -84,7 +92,7 @@ function Page() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<Tab>("emitidas");
+  const [tab, setTab] = useState<Tab>(search.tab ?? "emitidas");
   const [fFranq, setFFranq] = useState("");
   const [fSeg, setFSeg] = useState("");
   const [fTipo, setFTipo] = useState("");
@@ -101,17 +109,19 @@ function Page() {
     (async () => {
       setLoading(true);
       setErr(null);
+      const periodField = search.tab === "naopagas" ? "emitida_em" : "criado_em";
+      const proposalsQuery = supabase
+        .from("propostas")
+        .select(
+          "id,numero,apolice_numero,status,seguradora,premio,valor,tipo_venda,forma_pagamento,comissao_pct,comissao_valor,emitida_em,pago_em,baixa_em,cancelada_em,transmitida_em,criado_em,empresa_id,responsavel_id,cotacao_id," +
+            "cotacoes(segurado:cotacao_segurado(nome,cpf_cnpj,celular),seguro:cotacao_seguro(tipo_seguro))",
+        )
+        .gte(periodField, period.ini)
+        .lt(periodField, period.fim)
+        .order(periodField, { ascending: false })
+        .limit(2000);
       const [props, emps, profs, segs] = await Promise.all([
-        supabase
-          .from("propostas")
-          .select(
-            "id,numero,apolice_numero,status,seguradora,premio,valor,tipo_venda,forma_pagamento,comissao_pct,comissao_valor,emitida_em,pago_em,baixa_em,cancelada_em,transmitida_em,criado_em,empresa_id,responsavel_id,cotacao_id," +
-              "cotacoes(segurado:cotacao_segurado(nome,cpf_cnpj,celular),seguro:cotacao_seguro(tipo_seguro))",
-          )
-          .gte("criado_em", period.ini)
-          .lt("criado_em", period.fim)
-          .order("criado_em", { ascending: false })
-          .limit(2000),
+        proposalsQuery,
         supabase.from("empresas").select("id,nome").order("nome"),
         supabase.from("profiles").select("id,nome").order("nome"),
         supabase.from("seguradoras").select("nome").eq("ativo", true).order("ordem"),
@@ -127,7 +137,7 @@ function Page() {
       setSeguradoras(((segs.data ?? []) as { nome: string }[]).map((s) => s.nome).filter(Boolean));
       setLoading(false);
     })();
-  }, [period.ini, period.fim]);
+  }, [period.ini, period.fim, search.tab]);
 
   const counts = useMemo(() => {
     const acc: Record<Tab, { n: number; total: number }> = {
@@ -249,16 +259,20 @@ function Page() {
           </div>
         </div>
         <div className="tools">
-          <select
-            className="select-mini"
-            value={periodOffset}
-            onChange={(e) => setPeriodOffset(Number(e.target.value))}
-          >
-            <option value={0}>{monthRange(0).label}</option>
-            <option value={-1}>{monthRange(-1).label}</option>
-            <option value={-2}>{monthRange(-2).label}</option>
-            <option value={-3}>{monthRange(-3).label}</option>
-          </select>
+          {search.inicio && search.fim ? (
+            <span className="chip chip-info">Período da Visão geral</span>
+          ) : (
+            <select
+              className="select-mini"
+              value={periodOffset}
+              onChange={(e) => setPeriodOffset(Number(e.target.value))}
+            >
+              <option value={0}>{monthRange(0).label}</option>
+              <option value={-1}>{monthRange(-1).label}</option>
+              <option value={-2}>{monthRange(-2).label}</option>
+              <option value={-3}>{monthRange(-3).label}</option>
+            </select>
+          )}
           <button className="btn btn-ghost" onClick={exportCsv}>
             <svg width={14} height={14}>
               <use href="#i-download" />
