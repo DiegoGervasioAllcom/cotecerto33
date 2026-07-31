@@ -2,53 +2,72 @@
 # ============================================================================
 # Deploy / atualização do app CoteCerto no servidor de produção.
 #
-# O que faz: baixa a imagem :latest do GHCR, recria o container do app com as
-# variáveis de runtime, faz health check e, se falhar, mantém instruções de
-# rollback (a imagem anterior fica no docker até o próximo prune).
+# O que faz: baixa uma imagem imutável sha-* do GHCR, recria o container com as
+# variáveis de runtime via arquivo .env, faz health check e, se falhar, mantém instruções de
+# rollback (a imagem anterior fica no Docker; este script não executa prune).
 #
 # Pré-requisitos (uma vez): `sudo docker login ghcr.io -u <user>` com um PAT
 # `read:packages`. Ver docs/RUNBOOK_DEPLOY.md.
 #
-# Uso:  ./deploy.sh            (usa :latest)
-#       IMAGE_TAG=sha-abc123 ./deploy.sh   (fixa uma tag específica)
+# Uso: IMAGE_TAG=sha-abc1234 ./deploy.sh
 # ============================================================================
 set -euo pipefail
 
 IMAGE_REPO="ghcr.io/diegogervasioallcom/cotecerto33"
-IMAGE_TAG="${IMAGE_TAG:-latest}"
+IMAGE_TAG="${IMAGE_TAG:-}"
+if [[ ! "$IMAGE_TAG" =~ ^sha-[0-9a-f]+$ ]]; then
+  echo "ERRO: IMAGE_TAG obrigatória no padrão sha-<commit>; latest não é permitido" >&2
+  exit 1
+fi
 IMAGE="${IMAGE_REPO}:${IMAGE_TAG}"
 NAME="cotecerto-app"
 HOST_BIND="127.0.0.1:3001:3000"           # porta 3000 do host é do Kong -> app na 3001
-SUPA_ENV="/home/alldev/supabase/docker/.env"
-SUPA_URL="https://supabase-cotecerto.sandboxallcom.com"
-QUIVER_ENV="/home/alldev/.quiver-webhook.env"
-QUIVER_URL="https://quiver-bot.sandboxallcom.com"
+APP_ENV="${APP_ENV:-/home/alldev/.cotecerto-app.env}"
 HEALTH_URL="http://127.0.0.1:3001/"
 
 echo "==> imagem alvo: ${IMAGE}"
 
-# service_role lida do .env do Supabase (nunca impressa)
-# (|| true: sem isso, set -e/pipefail abortaria antes da mensagem amigável)
-SR=$(sudo grep -E '^SERVICE_ROLE_KEY=' "$SUPA_ENV" | cut -d= -f2- || true)
-if [ -z "${SR}" ]; then
-  echo "ERRO: SERVICE_ROLE_KEY não encontrado em ${SUPA_ENV}" >&2
+# Um único arquivo protegido contém todo o runtime. Além de evitar segredos no
+# repositório, isto evita passá-los como valores de `-e` na linha de comando.
+if [ ! -f "$APP_ENV" ]; then
+  echo "ERRO: arquivo de runtime não encontrado: ${APP_ENV}" >&2
   exit 1
 fi
 
-# Segredo do webhook da Quiver (opcional: se o arquivo ainda não existir, sobe
-# sem ele — a integração de cotação real fica indisponível até ser criado,
-# mas não bloqueia o deploy do resto do app). Ver docs/RUNBOOK_DEPLOY.md §4.
-QUIVER_ENV_ARGS=()
-if [ -f "$QUIVER_ENV" ]; then
-  # shellcheck disable=SC1090
-  source "$QUIVER_ENV"
-  QUIVER_ENV_ARGS=(
-    -e "SELF_QUIVER_API_URL=${QUIVER_URL}"
-    -e "SELF_QUIVER_WEBHOOK_CLIENT_KEY=${QUIVER_KEY:-}"
-    -e "SELF_QUIVER_WEBHOOK_CLIENT_SECRET=${QUIVER_SECRET:-}"
-  )
-else
-  echo "AVISO: ${QUIVER_ENV} não encontrado — subindo sem integração Quiver (ver RUNBOOK §4)." >&2
+mode=$(sudo stat -c '%a' "$APP_ENV")
+if [ "$mode" != "600" ]; then
+  echo "ERRO: ${APP_ENV} deve ter permissão 600 (atual: ${mode})" >&2
+  exit 1
+fi
+
+required=(
+  SELF_SUPABASE_URL
+  SELF_SUPABASE_ANON_KEY
+  SELF_SUPABASE_SERVICE_ROLE_KEY
+  SELF_RESEND_API_KEY
+  SELF_APP_URL
+  SELF_QUIVER_API_URL
+  SELF_QUIVER_WEBHOOK_CLIENT_KEY
+  SELF_QUIVER_WEBHOOK_CLIENT_SECRET
+)
+for key in "${required[@]}"; do
+  if ! sudo grep -qE "^${key}=.+" "$APP_ENV"; then
+    echo "ERRO: variável obrigatória ausente ou vazia em ${APP_ENV}: ${key}" >&2
+    exit 1
+  fi
+done
+
+if ! sudo grep -qFx 'SELF_APP_URL=https://cote-certo.sandboxallcom.com' "$APP_ENV"; then
+  echo "ERRO: SELF_APP_URL deve apontar para o domínio público de produção" >&2
+  exit 1
+fi
+if ! sudo grep -qFx 'SELF_SUPABASE_URL=https://supabase-cotecerto.sandboxallcom.com' "$APP_ENV"; then
+  echo "ERRO: SELF_SUPABASE_URL deve apontar para o Supabase público de produção" >&2
+  exit 1
+fi
+if ! sudo grep -qFx 'SELF_QUIVER_API_URL=https://quiver-bot.sandboxallcom.com' "$APP_ENV"; then
+  echo "ERRO: SELF_QUIVER_API_URL deve usar o endpoint HTTPS de produção da Quiver" >&2
+  exit 1
 fi
 
 # guarda a imagem atual (para rollback manual, se preciso)
@@ -63,9 +82,7 @@ sudo docker stop "$NAME" >/dev/null 2>&1 || true
 sudo docker rm "$NAME"   >/dev/null 2>&1 || true
 sudo docker run -d --name "$NAME" --restart unless-stopped \
   -p "$HOST_BIND" \
-  -e SELF_SUPABASE_URL="$SUPA_URL" \
-  -e SELF_SUPABASE_SERVICE_ROLE_KEY="$SR" \
-  "${QUIVER_ENV_ARGS[@]}" \
+  --env-file "$APP_ENV" \
   "$IMAGE" >/dev/null
 
 echo "==> health check (${HEALTH_URL})"
@@ -81,7 +98,6 @@ done
 case "$code" in
   2??|3??)
     echo "==> OK: app respondeu HTTP ${code}"
-    sudo docker image prune -f >/dev/null 2>&1 || true
     echo "==> deploy concluído."
     ;;
   *)
