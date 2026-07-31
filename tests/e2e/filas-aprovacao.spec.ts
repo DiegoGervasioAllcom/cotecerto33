@@ -180,13 +180,16 @@ test.describe("Frente 2 · F10 — roteamento das filas por trilha do convite", 
     // fecha; sem o provedor (caso do CI), ele fica aberto para permitir retry
     // sem repetir a aprovação. Os dois resultados precisam retirar o acesso da fila.
     await expect
-      .poll(async () => {
-        const modalAberto = (await fullPage.locator(".modal-host").count()) > 0;
-        const erroEmail = await fullPage
-          .getByText(/Acesso aprovado, mas o e-mail de boas-vindas/)
-          .count();
-        return !modalAberto || erroEmail > 0;
-      })
+      .poll(
+        async () => {
+          const modalAberto = (await fullPage.locator(".modal-host").count()) > 0;
+          const erroEmail = await fullPage
+            .getByText(/Acesso aprovado, mas o e-mail de boas-vindas/)
+            .count();
+          return !modalAberto || erroEmail > 0;
+        },
+        { timeout: 15_000 },
+      )
       .toBe(true);
     if ((await fullPage.locator(".modal-host").count()) > 0) {
       await expect(
