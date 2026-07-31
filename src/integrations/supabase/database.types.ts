@@ -1339,6 +1339,72 @@ export type Database = {
         };
         Relationships: [];
       };
+      email_outbox: {
+        Row: {
+          criado_em: string;
+          criado_por: string;
+          destinatario: string;
+          empresa_id: string;
+          enviado_em: string | null;
+          id: string;
+          lease_token: string | null;
+          payload: Json;
+          processando_em: string | null;
+          provider_id: string | null;
+          status: string;
+          tentativas: number;
+          tipo: string;
+          ultimo_erro: string | null;
+        };
+        Insert: {
+          criado_em?: string;
+          criado_por: string;
+          destinatario: string;
+          empresa_id: string;
+          enviado_em?: string | null;
+          id?: string;
+          lease_token?: string | null;
+          payload?: Json;
+          processando_em?: string | null;
+          provider_id?: string | null;
+          status?: string;
+          tentativas?: number;
+          tipo: string;
+          ultimo_erro?: string | null;
+        };
+        Update: {
+          criado_em?: string;
+          criado_por?: string;
+          destinatario?: string;
+          empresa_id?: string;
+          enviado_em?: string | null;
+          id?: string;
+          lease_token?: string | null;
+          payload?: Json;
+          processando_em?: string | null;
+          provider_id?: string | null;
+          status?: string;
+          tentativas?: number;
+          tipo?: string;
+          ultimo_erro?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "email_outbox_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "email_outbox_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       empresas: {
         Row: {
           aprovada_em: string | null;
@@ -1363,6 +1429,8 @@ export type Database = {
           modelo_id: string | null;
           nome: string;
           parent_id: string | null;
+          pendencia_em: string | null;
+          pendencia_motivo: string | null;
           perc_comissao: number | null;
           perc_equipe: number | null;
           pix_chave: string | null;
@@ -1404,6 +1472,8 @@ export type Database = {
           modelo_id?: string | null;
           nome: string;
           parent_id?: string | null;
+          pendencia_em?: string | null;
+          pendencia_motivo?: string | null;
           perc_comissao?: number | null;
           perc_equipe?: number | null;
           pix_chave?: string | null;
@@ -1445,6 +1515,8 @@ export type Database = {
           modelo_id?: string | null;
           nome?: string;
           parent_id?: string | null;
+          pendencia_em?: string | null;
+          pendencia_motivo?: string | null;
           perc_comissao?: number | null;
           perc_equipe?: number | null;
           pix_chave?: string | null;
@@ -3088,6 +3160,20 @@ export type Database = {
         };
         Returns: undefined;
       };
+      aprovar_acesso_com_boas_vindas: {
+        Args: {
+          p_areas?: string[];
+          p_canais?: string[];
+          p_cargo_id?: string;
+          p_empresa_id: string;
+          p_motivo?: string;
+          p_perfil: Database["public"]["Enums"]["perfil"];
+          p_produtos?: string[];
+          p_reclassificado?: boolean;
+          p_superior_id?: string;
+        };
+        Returns: string;
+      };
       aprovar_desconto: {
         Args: { p_id: string; p_pct_concedido: number };
         Returns: undefined;
@@ -3176,6 +3262,10 @@ export type Database = {
           empresa_id: string;
         }[];
       };
+      enfileirar_boas_vindas: {
+        Args: { p_empresa_id: string };
+        Returns: string;
+      };
       escalar_desconto: { Args: { p_id: string }; Returns: undefined };
       expirar_leads_nao_atendidos: {
         Args: { p_janela_seg?: number };
@@ -3188,6 +3278,16 @@ export type Database = {
       fechar_comissao_competencia: {
         Args: { p_competencia: string };
         Returns: Json;
+      };
+      finalizar_email_outbox: {
+        Args: {
+          p_erro?: string;
+          p_lease_token: string;
+          p_outbox_id: string;
+          p_provider_id?: string;
+          p_resultado: string;
+        };
+        Returns: undefined;
       };
       fn_areas_do_usuario: {
         Args: { _user_id: string };
@@ -3267,6 +3367,10 @@ export type Database = {
         Args: { _area: string; _user_id: string };
         Returns: boolean;
       };
+      fn_tipo_declarado_email: {
+        Args: { p_empresa_id: string };
+        Returns: string;
+      };
       fn_trimestre: { Args: { p_competencia: string }; Returns: number };
       funis_por_canal_visao_geral: {
         Args: { p_fim: string; p_inicio: string };
@@ -3315,6 +3419,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      marcar_email_outbox_enviando: {
+        Args: { p_outbox_id: string };
+        Returns: Json;
+      };
       marcar_pagamento: {
         Args: { p_pago?: boolean; p_proposta_id: string };
         Returns: undefined;
@@ -3342,7 +3450,7 @@ export type Database = {
       puxar_lead_de_volta: { Args: { p_lead: string }; Returns: undefined };
       recusar_empresa: {
         Args: { motivo?: string; p_empresa_id: string };
-        Returns: undefined;
+        Returns: string;
       };
       redistribuir_lead: {
         Args: { p_empresa: string; p_lead: string; p_responsavel?: string };
@@ -3399,6 +3507,10 @@ export type Database = {
           p_pct_pedido: number;
           p_seguradora_id: string;
         };
+        Returns: string;
+      };
+      solicitar_pendencia_acesso: {
+        Args: { p_empresa_id: string; p_pendencia: string };
         Returns: string;
       };
       solicitar_vendedor: {

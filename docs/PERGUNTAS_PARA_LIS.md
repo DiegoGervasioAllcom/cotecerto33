@@ -99,11 +99,8 @@ que passa pela empresa deles?
 
 ## 7. Remetente dos e-mails de acesso
 
-**Trava:** a frente de e-mail, quando ela for retomada. Tem prazo de terceiro (DNS).
+✅ **Resolvido em 30/07/2026.**
 
-O Handoff nomeia `acesso@suppercerto.com.br` com um "confirmar com a Lis". Além do endereço,
-o domínio precisa de SPF, DKIM e DMARC — o que depende de quem controla o DNS de
-`suppercerto.com.br`.
-
-**Pedido:** confirmar o endereço e acionar quem mexe no DNS. É o item com maior tempo de
-espera de todos desta lista.
+O remetente será `acesso@cote-certo.sandboxallcom.com`, com respostas direcionadas
+para `diego.gervasio@allcomtelecom.com`. O domínio está verificado no Resend e os
+registros DKIM, SPF e DMARC (`p=none`) foram publicados no Cloudflare.

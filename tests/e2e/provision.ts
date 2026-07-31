@@ -54,6 +54,27 @@ const admin: Db = createClient<Database>(URL, SERVICE, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+export async function criarLinkRecoveryE2E() {
+  const email = `${uniq("recovery-e2e")}@teste.local`;
+  const { data: user, error: userError } = await admin.auth.admin.createUser({
+    email,
+    password: "Inicial123",
+    email_confirm: true,
+  });
+  if (userError || !user.user) throw new Error(`criar usuário recovery: ${userError?.message}`);
+  const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo: "http://localhost:8080/auth/criar-senha" },
+  });
+  if (linkError) throw new Error(`gerar recovery: ${linkError.message}`);
+  return { email, userId: user.user.id, actionLink: link.properties.action_link };
+}
+
+export async function limparUsuarioAuth(userId: string) {
+  await admin.auth.admin.deleteUser(userId);
+}
+
 function uniq(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e5)}`;
 }

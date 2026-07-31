@@ -214,6 +214,14 @@ function Page() {
           {err}
         </div>
       )}
+      {fila.emailRetryPending && !fila.analisando && (
+        <div className="banner warn" style={{ marginBottom: 14 }}>
+          Há um e-mail de acesso aguardando envio.
+          <button className="btn btn-yellow" disabled={fila.busy} onClick={fila.retryEmail}>
+            {fila.busy ? "Reenviando…" : "Tentar enviar novamente"}
+          </button>
+        </div>
+      )}
 
       {isFull && (
         <div style={{ marginBottom: 18 }}>
@@ -333,7 +341,10 @@ function Page() {
           superiores={[]}
           franquiasAprovadas={minhaFranquia}
           onClose={fila.closeModal}
+          onPendencia={fila.solicitarPendencia}
           onRecusar={fila.recusar}
+          onRetryEmail={fila.retryEmail}
+          emailRetryPending={fila.emailRetryPending}
           onLiberar={fila.liberar}
           busy={fila.busy}
         />
