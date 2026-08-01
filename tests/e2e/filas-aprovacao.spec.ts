@@ -176,8 +176,19 @@ test.describe("Frente 2 · F10 — roteamento das filas por trilha do convite", 
     await modalAnalisar.locator("select").selectOption(full.empresaId);
     await modalAnalisar.getByRole("button", { name: "Liberar acesso" }).click();
 
-    await expect(fullPage.locator(".modal-host")).toHaveCount(0, { timeout: 15_000 });
-    await expect(fullPage.getByText(/Acesso liberado/)).toBeVisible({ timeout: 10_000 });
+    // O objetivo deste spec é provar aprovação e roteamento. O dispatch externo
+    // pode continuar pendente sem Resend no CI, então confirmamos diretamente a
+    // transição persistida antes de recarregar a fila.
+    await expect
+      .poll(async () => (await pedidoDoConvitePorCodigo(codigoFull!))?.pedido?.status, {
+        timeout: 15_000,
+      })
+      .toBe("aprovada");
+    if ((await fullPage.locator(".modal-host").count()) > 0) {
+      await modalAnalisar.locator(".modal-h .x").click();
+    }
+    await fullPage.reload();
+    await expect(fullPage.locator(".modal-host")).toHaveCount(0);
     await expect(fullPage.getByText("Nenhum cadastro pendente")).toBeVisible({ timeout: 15_000 });
 
     await fullPage.close();

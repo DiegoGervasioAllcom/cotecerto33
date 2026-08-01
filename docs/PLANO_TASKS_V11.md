@@ -87,8 +87,10 @@ funcionando como exceção durante toda a transição.
 
 ## Frente 2 · Filas de aprovação, e-mails e senha
 
-> **E-mail adiado (decisão de 28/07/2026).** V11.2.1, V11.2.2 e V11.1.6 saem do caminho
-> crítico. Consequências, para não virar surpresa:
+> **E-mail implementado localmente em 31/07/2026.** V11.2.1 entrega pendência e
+> recusa com outbox; V11.2.2 entrega boas-vindas, link recovery de 48h e a tela
+> Criar senha. Falta configurar/testar Resend e GoTrue no ambiente publicado. V11.1.6
+> continua fora do caminho crítico. Consequências, para não virar surpresa:
 >
 > - **O convite não trava.** As saídas do Convite Supper são WhatsApp, Copiar e PDF
 >   (V11.1.3) — nenhuma delas depende de e-mail. Frentes 1, 2 e 3 seguem.
@@ -96,8 +98,11 @@ funcionando como exceção durante toda a transição.
 >   definir a própria senha. Então o caminho atual de `auth.cadastro.tsx` (senha digitada
 >   por quem cadastra, `cadastro.functions.ts:41`) **continua no ar** como exceção até a
 >   frente de e-mail entrar. É o oposto do que a V11 quer, e é dívida consciente.
-> - **O pedido de DNS não adia.** SPF/DKIM/DMARC em `suppercerto.com.br` para o remetente
->   `acesso@suppercerto.com.br` depende de terceiros e tem prazo próprio. Pedir agora.
+> - ✅ **DNS concluído em 30/07/2026.** O domínio
+>   `cote-certo.sandboxallcom.com` está verificado no Resend, com DKIM, SPF e
+>   DMARC (`p=none`) publicados no Cloudflare. Remetente:
+>   `acesso@cote-certo.sandboxallcom.com`; respostas:
+>   `diego.gervasio@allcomtelecom.com`.
 
 **Desenho decidido para quando a frente entrar:**
 
@@ -125,26 +130,29 @@ captura tudo. Provider só em staging e produção. Volume é de onboarding (dez
 Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side, no padrão
 `SELF_*` do `.env.example` (nunca `VITE_*`).
 
-| Task    | Tag    | Descrição                                                                                                                                                                                        | Depende de       |
-| ------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- |
-| V11.2.1 | infra  | ⏸ **adiada** · **E-mails reais** (item 2): boas-vindas com escopo, pendência com motivo, recusa — pelos modelos de `MODELOS_EMAIL_ACESSO.html`, via API do provider. Nenhum e-mail carrega senha | —                |
-| V11.2.2 | front  | ⏸ **adiada** · **Tela Criar senha** (item 3): `generateLink` + link 48h de uso único, política mínima 8+ com letras e números                                                                    | V11.2.1          |
-| V11.2.0 | infra  | **Pedir agora:** SPF/DKIM/DMARC em `suppercerto.com.br` e confirmar o remetente `acesso@suppercerto.com.br` com a Lis. Prazo de terceiro, não de código                                          | —                |
-| V11.2.3 | banco  | ✅ Roteamento da fila pelo vínculo estruturado do pedido (trilha/perfil/vincTipo/vincId) — vendedor de Full **nunca** chega à Matriz                                                              | V11.1.1          |
-| V11.2.4 | front  | ✅ Pendentes em dois blocos: time interno no bloco Matriz, rede no bloco Externos                                                                                                                 | V11.2.3          |
-| V11.2.5 | front  | ✅ Fila própria da Franquia Full, que aprova o vendedor dela sem a Matriz                                                                                                                         | V11.2.3          |
-| V11.2.6 | front  | ✅ Modal de análise travado no que o convite definiu; "Reclassificar" só como exceção registrada                                                                                                  | V11.2.3          |
-| V11.2.7 | front  | ✅ Na aprovação: seletor de Supervisor de Vendas (Master), cargo + áreas + janela (interno), produtos e canais com botão "Todos". Master franqueado **não** recebe produtos/canais                | V11.0.3, V11.0.4 |
-| V11.2.8 | banco  | ✅ Produtos padrão por bloco (interno: todos · externo: só Auto), herdados na aprovação                                                                                                           | V11.0.4          |
-| V11.2.9 | testes | ✅ RLS por perfil nas duas filas: cada bloco vê só o seu; Full não vê pendente da Matriz e vice-versa                                                                                              | V11.2.3          |
+| Task    | Tag    | Descrição                                                                                                                                                                                                           | Depende de       |
+| ------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| V11.2.1 | infra  | 🟡 **implementada e validada localmente** · Pendência e recusa com outbox transacional, Resend e retry; falta envio real no ambiente publicado                                                                      | —                |
+| V11.2.2 | front  | 🟡 **implementada e validada localmente** · Boas-vindas atômica com a aprovação, `generateLink`, link recovery 48h de uso único e tela Criar senha (8+, letras e números); falta configurar GoTrue/Resend publicado | V11.2.1          |
+| V11.2.0 | infra  | ✅ Domínio `cote-certo.sandboxallcom.com` verificado no Resend; DKIM, SPF e DMARC publicados. Remetente `acesso@cote-certo.sandboxallcom.com`; Reply-To `diego.gervasio@allcomtelecom.com`                          | —                |
+| V11.2.3 | banco  | ✅ Roteamento da fila pelo vínculo estruturado do pedido (trilha/perfil/vincTipo/vincId) — vendedor de Full **nunca** chega à Matriz                                                                                | V11.1.1          |
+| V11.2.4 | front  | ✅ Pendentes em dois blocos: time interno no bloco Matriz, rede no bloco Externos                                                                                                                                   | V11.2.3          |
+| V11.2.5 | front  | ✅ Fila própria da Franquia Full, que aprova o vendedor dela sem a Matriz                                                                                                                                           | V11.2.3          |
+| V11.2.6 | front  | ✅ Modal de análise travado no que o convite definiu; "Reclassificar" só como exceção registrada                                                                                                                    | V11.2.3          |
+| V11.2.7 | front  | ✅ Na aprovação: seletor de Supervisor de Vendas (Master), cargo + áreas + janela (interno), produtos e canais com botão "Todos". Master franqueado **não** recebe produtos/canais                                  | V11.0.3, V11.0.4 |
+| V11.2.8 | banco  | ✅ Produtos padrão por bloco (interno: todos · externo: só Auto), herdados na aprovação                                                                                                                             | V11.0.4          |
+| V11.2.9 | testes | ✅ RLS por perfil nas duas filas: cada bloco vê só o seu; Full não vê pendente da Matriz e vice-versa                                                                                                               | V11.2.3          |
 
 > **Frente 2 concluída para o roteamento/aprovação** (V11.2.3-V11.2.9, PR #102, mergeado
 > 30/07/2026 — detalhes em `PLANO_FILAS_V11.md`). `fn_destino_pedido`/`fn_pode_aprovar_pedido`
 > decidem fila e autoridade no banco, não na tela; `aprovar_acesso` grava
 > papel/cargo/áreas/produtos/canais/superior numa única transação. Testado com 20 testes de
 > banco (`tests/db/filas-aprovacao-v11.test.ts`) e 30 E2E (`tests/e2e/`, incluindo o novo
-> `filas-aprovacao.spec.ts`). **V11.2.0/2.1/2.2 seguem adiadas** (e-mail e senha, decisão de
-> 28/07) — não bloqueiam a Frente 3. Decisão em aberto com a Lis sobre a Matriz também
+> `filas-aprovacao.spec.ts`). **V11.2.1 e V11.2.2 estão implementadas e validadas
+> localmente**; a conclusão de produção depende da configuração e do envio real por
+> Resend/GoTrue no ambiente publicado. A V11.2.0 foi concluída em 30/07 — não
+> bloqueiam a Frente 3. Decisão em aberto
+> com a Lis sobre a Matriz também
 > aprovar o vendedor de uma Full: `docs/PERGUNTAS_PARA_LIS.md` item 5; a separação
 > `fn_destino_pedido`/`fn_pode_aprovar_pedido` foi feita de propósito para isso custar
 > pouco quando decidido.
@@ -240,30 +248,45 @@ ser marcada como concluída antes de revisitar as quatro linhas acima.
 
 ## Sequência recomendada
 
-**Ordem escolhida em 28/07/2026: começar pela hierarquia.** O detalhamento dessa primeira
-etapa está em `docs/PLANO_HIERARQUIA_V11.md`.
+**Ordem escolhida em 28/07/2026: começar pela hierarquia.** A Frente 0, o núcleo da
+Frente 1 e o núcleo de roteamento/aprovação da Frente 2 já foram implementados. Os
+detalhes da hierarquia estão em `docs/PLANO_HIERARQUIA_V11.md`.
 
-1. **Hierarquia primeiro** — V11.0.2, V11.0.3, V11.0.8 e Frente 8. É a fundação de que
-   filas, alçada e menus dependem, e não depende de decisão de terceiro nenhuma.
+1. ✅ **Base implementada** — V11.0.2, V11.0.3 e V11.0.8 estabeleceram a
+   hierarquia; V11.1.1–V11.1.5 e V11.1.8 entregaram o núcleo do convite;
+   V11.2.3–V11.2.9 entregaram filas e aprovação. V11.2.1 e V11.2.2 estão
+   implementadas localmente; V11.1.6 e V11.1.7 continuam adiadas, e e-mail/senha
+   aguardam configuração e prova real no ambiente publicado.
 2. **Pedidos disparados em paralelo, porque têm prazo de terceiro:** V11.9.3 ("Regras
-   Decididas", que trava a Frente 4), V11.2.0 (DNS do e-mail) e V11.5.1 (endereço das
-   configurações da Full).
-3. **Resto da Frente 0** — canais (V11.0.4), diretor (V11.0.5) e histórico (V11.0.6).
-4. **Frente 1** (convite), que já funciona sem e-mail via WhatsApp/Copiar/PDF.
-5. **Frente 2 e Frente 3** — filas e cadastros, onde o convite vira acesso.
-6. **Frente 4** (régua) e **Frente 6** (governança), que dependem de histórico e diretor.
-7. **Frente 5** (Full) depois de V11.5.1 decidido pela Lis.
-8. **Frente 7** (visão geral) em paralelo a partir da taxonomia de canais.
-9. **E-mail (V11.2.1, V11.2.2, V11.1.6, V11.1.7)** quando a frente for retomada — e só
-   então o autocadastro sai do ar.
-10. **Frente 9** por último, exceto os pedidos do item 2.
+   Decididas", que trava a Frente 4) e V11.5.1 (endereço das configurações da Full).
+3. **Frente 3** — começar por V11.3.1 e V11.3.2 (Cadastros Matriz e Rede), que já
+   contam com a hierarquia concluída. V11.3.7 espera a régua da V11.4.1.
+4. **Frente 4** (régua) e **Frente 6** (governança), que dependem de histórico e diretor.
+5. **Frente 5** (Full) depois de V11.5.1 decidido pela Lis.
+6. **Frente 7** (visão geral) em paralelo a partir da taxonomia de canais.
+7. **Frente 8** — auditar o status das tasks contra as entregas H7–H10 da hierarquia
+   antes de abrir nova implementação, evitando refazer menus, alçada e testes já cobertos.
+8. **Boas-vindas e senha (V11.2.2, V11.1.6, V11.1.7)** — pendência e recusa da
+   V11.2.1 já foram retomadas; só depois da senha o autocadastro sai do ar.
+9. **Frente 9** por último, exceto os pedidos do item 2.
 
 ## Decisões pendentes que bloqueiam tasks
 
-| #   | Pendência                                                             | Bloqueia                | Com quem                                                                          |
-| --- | --------------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------- |
-| 1   | Documento "Regras Decididas" não veio no pacote                       | Frentes 4 e 2 (escopos) | Lis                                                                               |
-| 2   | Endereço único das configurações da Full (item 11 do Handoff)         | V11.5.2, V11.5.4        | Lis                                                                               |
-| 3   | Carteira de Recuperação: V11 sem referência visual, ou V12?           | V11.9.2                 | Lis                                                                               |
-| 4   | Supervisor Vendas × Operacional: valores de enum ou cargos da tabela? | V11.0.2 → cascata       | técnica — recomendação híbrida em `PLANO_HIERARQUIA_V11.md`, aguardando aprovação |
-| 5   | Remetente `acesso@suppercerto.com.br` + SPF/DKIM/DMARC no domínio     | V11.2.1                 | Lis / quem controla o DNS                                                         |
+| #   | Pendência                                                     | Bloqueia                | Com quem |
+| --- | ------------------------------------------------------------- | ----------------------- | -------- |
+| 1   | Documento "Regras Decididas" não veio no pacote               | Frentes 4 e 2 (escopos) | Lis      |
+| 2   | Endereço único das configurações da Full (item 11 do Handoff) | V11.5.2, V11.5.4        | Lis      |
+| 3   | Carteira de Recuperação: V11 sem referência visual, ou V12?   | V11.9.2                 | Lis      |
+
+### Decisões já resolvidas
+
+- ✅ **Supervisor de Vendas × Supervisor Operacional:** solução híbrida implementada
+  em 29/07/2026 pela V11.0.2/V11.0.3. `coordenador` é perfil estrutural; os
+  supervisores são cargos (`sup_vendas` e `sup_operacional`). A alçada de desconto
+  deriva do cargo e existe somente para Supervisor de Vendas. Implementação e testes:
+  commit `72ec5dc`; detalhes em `PLANO_HIERARQUIA_V11.md`.
+- ✅ **Remetente e DNS dos e-mails de acesso:** V11.2.0 concluída em 30/07/2026.
+  `cote-certo.sandboxallcom.com` está verificado no Resend (São Paulo), com DKIM,
+  SPF e DMARC (`p=none`) publicados no Cloudflare. O remetente é
+  `acesso@cote-certo.sandboxallcom.com` e o `Reply-To` é
+  `diego.gervasio@allcomtelecom.com`.

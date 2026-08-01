@@ -44,7 +44,7 @@ Domínios:
 
 - Acesso SSH ao servidor (usuário `alldev`, com `sudo`).
 - **PAT do GitHub** (classic) com escopo **`read:packages`** para puxar a imagem privada.
-- A imagem publicada no GHCR: `ghcr.io/diegogervasioallcom/cotecerto33:latest`
+- A imagem imutável publicada no GHCR: `ghcr.io/diegogervasioallcom/cotecerto33:sha-<commit>`
   (o workflow `.github/workflows/docker.yml` publica a cada push na `main`).
 
 ---
@@ -92,6 +92,11 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=
 Suba o `~/cotecerto_bootstrap_prod.sql` para o servidor via **SFTP** (Termius).
 
 ### 3.2 Backup do banco atual (segurança)
+
+No checkpoint V11 de 31/07/2026, o responsável dispensou este backup porque a
+produção controlada ainda não possui usuários nem dados a preservar. Essa é uma
+decisão pontual: em qualquer deploy posterior com dados reais, o backup volta a
+ser obrigatório.
 
 ```bash
 sudo docker exec supabase-db pg_dump -U postgres -d postgres > ~/backup_prod_$(date +%F_%H%M%S).sql
@@ -159,41 +164,43 @@ Credenciais do admin semeado: `desenvolvimento@suppercerto.com.br` / `Supper@123
 
 ## 4. Fase 2 — App (container)
 
-> **Segredo do webhook da Quiver (uma vez só):** o app integra com a API de
-> cotação real (`https://quiver-bot.sandboxallcom.com`) — ver
-> `src/lib/quiver-webhook.ts`. Gere um segredo forte e salve num arquivo só
-> seu no servidor (ex.: `/home/alldev/.quiver-webhook.env`), e configure os
-> **mesmos valores** do lado da Quiver (`WEBHOOK_URL` apontando pra
-> `https://cote-certo.sandboxallcom.com/api/webhooks/quiver`,
-> `WEBHOOK_CLIENT_KEY`, `WEBHOOK_CLIENT_SECRET`) — sem isso o webhook nunca
-> autentica (401) e nenhuma cotação recebe resultado.
+Crie uma vez o arquivo de runtime do app no servidor. Ele não é versionado e
+deve conter também os segredos de e-mail e da Quiver. Edite-o diretamente, sem
+colar valores no terminal, em logs ou em comandos do histórico:
 >
 > ```bash
-> cat > /home/alldev/.quiver-webhook.env <<EOF
-> QUIVER_KEY=$(openssl rand -hex 16)
-> QUIVER_SECRET=$(openssl rand -hex 32)
-> EOF
-> chmod 600 /home/alldev/.quiver-webhook.env
+> sudo install -m 600 /dev/null /home/alldev/.cotecerto-app.env
+> sudo nano /home/alldev/.cotecerto-app.env
 > ```
+
+Modelo (substitua os marcadores somente no servidor):
+
+```dotenv
+SELF_SUPABASE_URL=https://supabase-cotecerto.sandboxallcom.com
+SELF_SUPABASE_ANON_KEY=<ANON_KEY do Supabase>
+SELF_SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY do Supabase>
+SELF_RESEND_API_KEY=<chave Resend de produção>
+SELF_APP_URL=https://cote-certo.sandboxallcom.com
+SELF_QUIVER_API_URL=https://quiver-bot.sandboxallcom.com
+SELF_QUIVER_WEBHOOK_CLIENT_KEY=<segredo compartilhado com a Quiver>
+SELF_QUIVER_WEBHOOK_CLIENT_SECRET=<segredo compartilhado com a Quiver>
+```
+
+O arquivo deve permanecer `600`. `SELF_SUPABASE_SERVICE_ROLE_KEY` e
+`SELF_RESEND_API_KEY` nunca entram no build, no Git ou no browser.
 
 ```bash
 # 1) login no GHCR (cole o PAT no prompt Password: — fica escondido)
 sudo docker login ghcr.io -u DiegoGervasioAllcom
 
 # 2) baixar a imagem
-sudo docker pull ghcr.io/diegogervasioallcom/cotecerto33:latest
+sudo docker pull ghcr.io/diegogervasioallcom/cotecerto33:sha-abc1234
 
-# 3) subir o container (porta 3001 só no localhost; service_role e segredo da Quiver lidos de arquivo, sem imprimir)
-SR=$(sudo grep -E '^SERVICE_ROLE_KEY=' /home/alldev/supabase/docker/.env | cut -d= -f2-)
-source /home/alldev/.quiver-webhook.env
+# 3) subir o container (porta 3001 só no localhost; runtime lido do .env protegido)
 sudo docker run -d --name cotecerto-app --restart unless-stopped \
   -p 127.0.0.1:3001:3000 \
-  -e SELF_SUPABASE_URL="https://supabase-cotecerto.sandboxallcom.com" \
-  -e SELF_SUPABASE_SERVICE_ROLE_KEY="$SR" \
-  -e SELF_QUIVER_API_URL="https://quiver-bot.sandboxallcom.com" \
-  -e SELF_QUIVER_WEBHOOK_CLIENT_KEY="$QUIVER_KEY" \
-  -e SELF_QUIVER_WEBHOOK_CLIENT_SECRET="$QUIVER_SECRET" \
-  ghcr.io/diegogervasioallcom/cotecerto33:latest
+  --env-file /home/alldev/.cotecerto-app.env \
+  ghcr.io/diegogervasioallcom/cotecerto33:sha-abc1234
 
 # 4) testar localmente (antes de tocar no nginx) — esperar HTTP 200
 sleep 3; curl -sS -o /dev/null -w "HTTP %{http_code}\n" http://127.0.0.1:3001/
@@ -248,7 +255,60 @@ Abrir **https://cote-certo.sandboxallcom.com** e logar.
 
 ---
 
-## 6. Atualizar o app (deploy de nova versão)
+## 6. Atualizar banco e app
+
+### 6.1 Checkpoint antes do deploy
+
+Só prossiga quando o CI da revisão estiver verde e a imagem imutável
+`sha-<commit>` existir no GHCR. O script recusa tag ausente, `latest` ou qualquer
+tag fora desse padrão. Registre sem remover a imagem anterior:
+
+```bash
+sudo docker inspect -f '{{.Config.Image}} {{.Image}}' cotecerto-app
+```
+
+Use a tag SHA no deploy; `latest` não é referência de rollback.
+
+### 6.2 Configurar GoTrue para o fluxo de criação de senha
+
+No `/home/alldev/supabase/docker/.env`, configure:
+
+```dotenv
+SITE_URL=https://cote-certo.sandboxallcom.com
+ADDITIONAL_REDIRECT_URLS=https://cote-certo.sandboxallcom.com/auth/criar-senha
+MAILER_OTP_EXP=172800
+```
+
+Confirme que o serviço `auth` no `docker-compose.yml` contém o mapeamento abaixo;
+a distribuição padrão já mapeia os dois primeiros, mas pode não mapear o prazo:
+
+```yaml
+GOTRUE_SITE_URL: ${SITE_URL}
+GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS}
+GOTRUE_MAILER_OTP_EXP: ${MAILER_OTP_EXP}
+```
+
+Valide e recrie apenas o Auth, depois aguarde o health check:
+
+```bash
+cd /home/alldev/supabase/docker
+sudo docker compose config --quiet
+sudo docker compose up -d --force-recreate auth
+sudo docker inspect -f '{{.State.Health.Status}}' supabase-auth
+```
+
+### 6.3 Ordem obrigatória: migrations antes do app
+
+1. Valide todas as migrations em banco local limpo (`supabase db reset`).
+2. Aplique em produção somente as migrations novas, com parada imediata em erro,
+   e registre as versões no histórico conforme §3.5.
+3. Recarregue o schema do PostgREST e valide banco/Auth.
+4. Só então publique a imagem do app pela tag `sha-<commit>`.
+
+Neste checkpoint, não faça rebuild do schema nem seed após validar os e-mails:
+isso apagaria a evidência do smoke test.
+
+### 6.4 Publicar o app
 
 Após um novo push na `main` (o CI republica a imagem `:latest`), use o script
 versionado **`deploy/deploy.sh`** — ele faz pull, recria o container, health check
@@ -258,28 +318,19 @@ versionado **`deploy/deploy.sh`** — ele faz pull, recria o container, health c
 `/home/alldev/deploy.sh`) e `chmod +x`. Requer o `docker login ghcr.io` já feito (§4).
 
 ```bash
-# atualizar para a última versão
-./deploy.sh
-
-# ou fixar uma tag/commit específico
-IMAGE_TAG=sha-abc123 ./deploy.sh
+# fixar a tag do commit aprovada no CI
+IMAGE_TAG=sha-abc1234 ./deploy.sh
 ```
 
 Equivalente manual (o que o script faz por baixo):
 
 ```bash
-sudo docker pull ghcr.io/diegogervasioallcom/cotecerto33:latest
+sudo docker pull ghcr.io/diegogervasioallcom/cotecerto33:sha-abc1234
 sudo docker stop cotecerto-app && sudo docker rm cotecerto-app
-SR=$(sudo grep -E '^SERVICE_ROLE_KEY=' /home/alldev/supabase/docker/.env | cut -d= -f2-)
-source /home/alldev/.quiver-webhook.env  # QUIVER_KEY / QUIVER_SECRET (ver §4)
 sudo docker run -d --name cotecerto-app --restart unless-stopped \
   -p 127.0.0.1:3001:3000 \
-  -e SELF_SUPABASE_URL="https://supabase-cotecerto.sandboxallcom.com" \
-  -e SELF_SUPABASE_SERVICE_ROLE_KEY="$SR" \
-  -e SELF_QUIVER_API_URL="https://quiver-bot.sandboxallcom.com" \
-  -e SELF_QUIVER_WEBHOOK_CLIENT_KEY="$QUIVER_KEY" \
-  -e SELF_QUIVER_WEBHOOK_CLIENT_SECRET="$QUIVER_SECRET" \
-  ghcr.io/diegogervasioallcom/cotecerto33:latest
+  --env-file /home/alldev/.cotecerto-app.env \
+  ghcr.io/diegogervasioallcom/cotecerto33:sha-abc1234
 curl -sS -o /dev/null -w "HTTP %{http_code}\n" http://127.0.0.1:3001/
 ```
 
@@ -293,6 +344,23 @@ aplicar incrementalmente com `supabase db push` apontando pro Postgres local **d
 dentro do servidor**, ou reaplicar só o(s) arquivo(s) novo(s) via `psql` e inserir a
 linha em `supabase_migrations.schema_migrations`. Rebuild completo (§3) só se necessário.
 
+### 6.5 Health e smoke test V11
+
+Depois do health local, valide o domínio público e execute com uma conta temporária:
+
+```bash
+curl -fsS -o /dev/null https://cote-certo.sandboxallcom.com/
+curl -fsS -o /dev/null https://supabase-cotecerto.sandboxallcom.com/auth/v1/health
+sudo docker inspect -f '{{.State.Health.Status}}' cotecerto-app
+```
+
+- aprovar um acesso e confirmar uma única mensagem de boas-vindas;
+- conferir inbox e spam, remetente, link público e expiração de 48 horas;
+- abrir `/auth/criar-senha`, definir a senha e autenticar;
+- confirmar que reutilizar o link não permite nova definição;
+- validar pendência, recusa e retry da outbox sem envio duplicado;
+- verificar logs apenas por status/ID, nunca imprimir payload, token ou chave.
+
 ---
 
 ## 7. Rollback
@@ -300,9 +368,9 @@ linha em `supabase_migrations.schema_migrations`. Rebuild completo (§3) só se 
 **App:**
 
 ```bash
-# voltar pra imagem anterior (se souber a tag/digest) ou re-subir a última boa
+# use a tag SHA hexadecimal registrada no checkpoint; nunca use latest como rollback
 sudo docker stop cotecerto-app && sudo docker rm cotecerto-app
-# ... docker run com a imagem anterior
+IMAGE_TAG=sha-deadbee ./deploy.sh
 ```
 
 **nginx (voltar ao estático anterior):**

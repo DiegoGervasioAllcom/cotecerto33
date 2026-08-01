@@ -20,6 +20,8 @@ import type {
 import { CLT_DEFAULT } from "../constants";
 import type { AprovarAcessoParams } from "@/components/acessos/classificar-acesso-modal";
 import { fetchPendentes, mapPendentes } from "./pendentes-query";
+import { dispatchAccessEmail } from "@/lib/email.functions";
+import { findRetryableAccessEmail } from "@/lib/email-outbox-client";
 
 function toTrio(x: unknown): Trio {
   if (Array.isArray(x)) {
@@ -41,6 +43,7 @@ export function useAcessosData(enabled = true) {
   const [analisando, setAnalisando] = useState<Pendente | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ msg: string; kind: "ok" | "alert" } | null>(null);
+  const [emailRetryOutboxId, setEmailRetryOutboxId] = useState<string | null>(null);
   const [superiores, setSuperiores] = useState<Superior[]>([]);
   const [franquiasAprovadas, setFranquiasAprovadas] = useState<FranquiaAprovada[]>([]);
 
@@ -149,6 +152,11 @@ export function useAcessosData(enabled = true) {
         regras: { ...CLT_DEFAULT.regras, ...((c.data.regras ?? {}) as Partial<CltRegras>) },
       });
     }
+    try {
+      setEmailRetryOutboxId(await findRetryableAccessEmail());
+    } catch (retryError) {
+      setErr(retryError instanceof Error ? retryError.message : "Falha ao consultar e-mails.");
+    }
   }, []);
 
   useEffect(() => {
@@ -170,21 +178,83 @@ export function useAcessosData(enabled = true) {
     setAnalisando(null);
   }
 
-  async function recusar() {
+  async function enviarOutbox(outboxId: string) {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error("Sessão expirada. Entre novamente.");
+    await dispatchAccessEmail({ data: { outbox_id: outboxId, caller_token: token } });
+  }
+
+  async function retryEmail() {
+    if (!emailRetryOutboxId) return;
+    setBusy(true);
+    try {
+      await enviarOutbox(emailRetryOutboxId);
+      setEmailRetryOutboxId(null);
+      setToast({ msg: "E-mail enviado.", kind: "ok" });
+      closeModal();
+      await reload();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Falha ao reenviar o e-mail.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function solicitarPendencia(motivo: string) {
     if (!analisando) return;
     setBusy(true);
-    const { error } = await supabase.rpc("recusar_empresa", {
+    const { data, error } = await supabase.rpc("solicitar_pendencia_acesso", {
       p_empresa_id: analisando.id,
-      motivo: undefined,
+      p_pendencia: motivo,
     });
-    setBusy(false);
-    if (error) {
-      setErr(error.message);
+    if (error || !data) {
+      setBusy(false);
+      setErr(error?.message ?? "Falha ao registrar a pendência.");
       return;
     }
-    setToast({ msg: `Cadastro recusado · ${analisando.nome}`, kind: "alert" });
-    closeModal();
-    await reload();
+    try {
+      await enviarOutbox(String(data));
+      setEmailRetryOutboxId(null);
+      setToast({ msg: `Pendência enviada · ${analisando.nome}`, kind: "ok" });
+      closeModal();
+      await reload();
+    } catch (e) {
+      setEmailRetryOutboxId(String(data));
+      setErr(
+        `Pendência registrada, mas o e-mail não foi enviado: ${e instanceof Error ? e.message : "erro desconhecido"}`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function recusar(motivo: string) {
+    if (!analisando) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc("recusar_empresa", {
+      p_empresa_id: analisando.id,
+      motivo,
+    });
+    if (error || !data) {
+      setBusy(false);
+      setErr(error?.message ?? "A recusa não retornou a fila do e-mail.");
+      return;
+    }
+    try {
+      await enviarOutbox(String(data));
+      setEmailRetryOutboxId(null);
+      setToast({ msg: `Cadastro recusado e e-mail enviado · ${analisando.nome}`, kind: "alert" });
+      closeModal();
+      await reload();
+    } catch (e) {
+      setEmailRetryOutboxId(String(data));
+      setErr(
+        `Cadastro recusado, mas o e-mail não foi enviado: ${e instanceof Error ? e.message : "erro desconhecido"}`,
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   // V11 · F5/F7: papel, cargo, áreas, produtos, canais e supervisão vão numa
@@ -196,7 +266,7 @@ export function useAcessosData(enabled = true) {
   async function liberar(params: AprovarAcessoParams, persist: () => Promise<void>, tag: string) {
     if (!analisando) return;
     setBusy(true);
-    const { error } = await supabase.rpc("aprovar_acesso", {
+    const { data: outboxId, error } = await supabase.rpc("aprovar_acesso_com_boas_vindas", {
       p_empresa_id: analisando.id,
       p_perfil: params.perfil,
       p_cargo_id: params.cargoId ?? undefined,
@@ -207,11 +277,13 @@ export function useAcessosData(enabled = true) {
       p_reclassificado: params.reclassificado ?? false,
       p_motivo: params.motivo || undefined,
     });
-    if (error) {
+    if (error || !outboxId) {
       setBusy(false);
-      console.error("aprovar_acesso error", error);
+      console.error("aprovar_acesso_com_boas_vindas error", error);
       setErr(
-        `${error.message}${error.details ? ` · ${error.details}` : ""}${error.hint ? ` · ${error.hint}` : ""}`,
+        error
+          ? `${error.message}${error.details ? ` · ${error.details}` : ""}${error.hint ? ` · ${error.hint}` : ""}`
+          : "A aprovação não retornou a fila do e-mail de boas-vindas.",
       );
       return;
     }
@@ -220,6 +292,17 @@ export function useAcessosData(enabled = true) {
     } catch (e) {
       setBusy(false);
       setErr(e instanceof Error ? e.message : "Erro ao salvar a classificação.");
+      await reload();
+      return;
+    }
+    try {
+      await enviarOutbox(String(outboxId));
+    } catch (e) {
+      setEmailRetryOutboxId(String(outboxId));
+      setBusy(false);
+      setErr(
+        `Acesso aprovado, mas o e-mail de boas-vindas não foi enviado: ${e instanceof Error ? e.message : "erro desconhecido"}`,
+      );
       await reload();
       return;
     }
@@ -254,6 +337,9 @@ export function useAcessosData(enabled = true) {
     reload,
     openAnalisar,
     closeModal,
+    emailRetryPending: emailRetryOutboxId !== null,
+    retryEmail,
+    solicitarPendencia,
     recusar,
     liberar,
   };

@@ -40,6 +40,7 @@ import {
   checkOptionalNumber,
   checkOptionalEquipe,
 } from "@/lib/schemas/classificacao-acesso.schema";
+import { pendenciaAcessoSchema, recusaAcessoSchema } from "@/lib/schemas/email-acesso.schema";
 
 type TipoPJ = "franquia" | "master";
 // "vendedor_clt" é o Vendedor Matriz (perfil vendedor, sem cargo — vende, tem
@@ -100,7 +101,10 @@ export function ClassificarAcessoModal({
   superiores,
   franquiasAprovadas,
   onClose,
+  onPendencia,
   onRecusar,
+  onRetryEmail,
+  emailRetryPending,
   onLiberar,
   busy,
 }: {
@@ -109,7 +113,10 @@ export function ClassificarAcessoModal({
   superiores: Superior[];
   franquiasAprovadas: FranquiaAprovada[];
   onClose: () => void;
-  onRecusar: () => void;
+  onPendencia: (motivo: string) => Promise<void>;
+  onRecusar: (motivo: string) => Promise<void>;
+  onRetryEmail: () => Promise<void>;
+  emailRetryPending: boolean;
   onLiberar: (
     params: AprovarAcessoParams,
     persist: () => Promise<void>,
@@ -120,6 +127,8 @@ export function ClassificarAcessoModal({
   const isPF = pendente.tipo === "pf";
   const [fullForm, setFullForm] = useState(false);
   const [localErr, setLocalErr] = useState<string | null>(null);
+  const [decisao, setDecisao] = useState<"pendencia" | "recusa" | null>(null);
+  const [decisaoMotivo, setDecisaoMotivo] = useState("");
 
   // V11 · F7 — trava do convite. Sem convite não há o que travar.
   const [locked, setLocked] = useState(!!pendente.convite);
@@ -196,6 +205,19 @@ export function ClassificarAcessoModal({
 
   function reclassificar() {
     setLocked(false);
+  }
+
+  async function confirmarDecisao() {
+    if (!decisao) return;
+    const schema = decisao === "pendencia" ? pendenciaAcessoSchema : recusaAcessoSchema;
+    const parsed = schema.safeParse(decisaoMotivo);
+    if (!parsed.success) {
+      setLocalErr(parsed.error.issues[0]?.message ?? "Motivo inválido.");
+      return;
+    }
+    setLocalErr(null);
+    if (decisao === "pendencia") await onPendencia(parsed.data);
+    if (decisao === "recusa") await onRecusar(parsed.data);
   }
 
   async function handleLiberar() {
@@ -932,6 +954,25 @@ export function ClassificarAcessoModal({
             </>
           )}
         </div>
+        {decisao && !fullForm && (
+          <div className="modal-b">
+            <div className="field-group">
+              <label>{decisao === "pendencia" ? "O que falta" : "Motivo da recusa"}</label>
+              <textarea
+                className="input"
+                rows={3}
+                maxLength={decisao === "pendencia" ? 1000 : 2000}
+                value={decisaoMotivo}
+                onChange={(event) => setDecisaoMotivo(event.target.value)}
+                placeholder={
+                  decisao === "pendencia"
+                    ? "Descreva a informação necessária."
+                    : "Explique por que o pedido não foi aprovado."
+                }
+              />
+            </div>
+          </div>
+        )}
         <div className="modal-f">
           {fullForm ? (
             <button className="btn btn-yellow" onClick={() => setFullForm(false)}>
@@ -939,12 +980,51 @@ export function ClassificarAcessoModal({
             </button>
           ) : (
             <>
-              <button className="btn btn-ghost" disabled={busy} onClick={onRecusar}>
-                <Icon id="x" size={14} /> Recusar
-              </button>
-              <button className="btn btn-yellow" disabled={busy} onClick={handleLiberar}>
-                <Icon id="check" size={14} /> {busy ? "Processando…" : "Liberar acesso"}
-              </button>
+              {decisao ? (
+                <>
+                  <button
+                    className="btn btn-ghost"
+                    disabled={busy}
+                    onClick={() => {
+                      setDecisao(null);
+                      setDecisaoMotivo("");
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button className="btn btn-yellow" disabled={busy} onClick={confirmarDecisao}>
+                    <Icon id="check" size={14} /> {busy ? "Enviando…" : "Confirmar e enviar"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {emailRetryPending ? (
+                    <button className="btn btn-yellow" disabled={busy} onClick={onRetryEmail}>
+                      {busy ? "Reenviando…" : "Tentar enviar e-mail novamente"}
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        className="btn btn-ghost"
+                        disabled={busy}
+                        onClick={() => setDecisao("pendencia")}
+                      >
+                        Pedir informação
+                      </button>
+                      <button
+                        className="btn btn-ghost"
+                        disabled={busy}
+                        onClick={() => setDecisao("recusa")}
+                      >
+                        <Icon id="x" size={14} /> Recusar
+                      </button>
+                      <button className="btn btn-yellow" disabled={busy} onClick={handleLiberar}>
+                        <Icon id="check" size={14} /> {busy ? "Processando…" : "Liberar acesso"}
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
             </>
           )}
         </div>
