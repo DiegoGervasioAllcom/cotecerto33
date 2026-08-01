@@ -280,7 +280,9 @@ MAILER_OTP_EXP=172800
 ```
 
 Confirme que o serviço `auth` no `docker-compose.yml` contém o mapeamento abaixo;
-a distribuição padrão já mapeia os dois primeiros, mas pode não mapear o prazo:
+a distribuição padrão já mapeia os dois primeiros, mas **não mapeia o terceiro**
+(confirmado em produção em 01/08/2026 — sem essa linha, `MAILER_OTP_EXP` no `.env`
+não tem efeito nenhum):
 
 ```yaml
 GOTRUE_SITE_URL: ${SITE_URL}
@@ -397,3 +399,4 @@ sudo docker exec -i supabase-db psql -U postgres -d postgres < ~/backup_prod_XXX
 | `unauthorized` no `docker pull`                                            | login no GHCR não feito / PAT sem `read:packages`              | `docker login ghcr.io` com PAT correto (§4)                       |
 | porta 3000 ocupada                                                         | Kong (Supabase) já usa a 3000 do host                          | publicar o app em **3001**                                        |
 | login não conecta                                                          | anon key embutida ≠ anon key do Supabase                       | conferir fingerprint (§4)                                         |
+| `MAILER_OTP_EXP` no `.env` não muda a validade do link                     | a distribuição self-hosted não mapeia `GOTRUE_MAILER_OTP_EXP` no `docker-compose.yml` — só `GOTRUE_SITE_URL` e `GOTRUE_URI_ALLOW_LIST` vêm mapeados por padrão | adicionar `GOTRUE_MAILER_OTP_EXP: ${MAILER_OTP_EXP}` no serviço `auth` do `docker-compose.yml` (mesmo lugar do §6.2), antes de `--force-recreate auth` — confirmado em produção em 01/08/2026 |
