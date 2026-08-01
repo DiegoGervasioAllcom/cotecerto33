@@ -176,29 +176,18 @@ test.describe("Frente 2 · F10 — roteamento das filas por trilha do convite", 
     await modalAnalisar.locator("select").selectOption(full.empresaId);
     await modalAnalisar.getByRole("button", { name: "Liberar acesso" }).click();
 
-    // A aprovação e a criação da outbox são transacionais. Com Resend o modal
-    // fecha; sem o provedor (caso do CI), ele fica aberto para permitir retry
-    // sem repetir a aprovação. Os dois resultados precisam retirar o acesso da fila.
+    // O objetivo deste spec é provar aprovação e roteamento. O dispatch externo
+    // pode continuar pendente sem Resend no CI, então confirmamos diretamente a
+    // transição persistida antes de recarregar a fila.
     await expect
-      .poll(
-        async () => {
-          const modalAberto = (await fullPage.locator(".modal-host").count()) > 0;
-          const erroEmail = await fullPage
-            .getByText(/Acesso aprovado, mas o e-mail de boas-vindas/)
-            .count();
-          return !modalAberto || erroEmail > 0;
-        },
-        { timeout: 15_000 },
-      )
-      .toBe(true);
+      .poll(async () => (await pedidoDoConvitePorCodigo(codigoFull!))?.pedido?.status, {
+        timeout: 15_000,
+      })
+      .toBe("aprovada");
     if ((await fullPage.locator(".modal-host").count()) > 0) {
-      await expect(
-        modalAnalisar.getByRole("button", { name: "Tentar enviar e-mail novamente" }),
-      ).toBeVisible();
       await modalAnalisar.locator(".modal-h .x").click();
-    } else {
-      await expect(fullPage.getByText(/Acesso liberado/)).toBeVisible();
     }
+    await fullPage.reload();
     await expect(fullPage.locator(".modal-host")).toHaveCount(0);
     await expect(fullPage.getByText("Nenhum cadastro pendente")).toBeVisible({ timeout: 15_000 });
 
