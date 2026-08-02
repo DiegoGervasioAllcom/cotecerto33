@@ -21,6 +21,8 @@ import { AcessosNavigation } from "@/components/operacao/acessos/AcessosNavigati
 import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
 import { DesligamentosTab } from "@/components/operacao/acessos/desligamentos-tab";
 import { PersoGeral } from "@/components/operacao/acessos/perso-geral";
+import { CadastrosMatrizTab } from "@/components/operacao/acessos/cadastros-matriz-tab";
+import { CadMatrizModal } from "@/components/acessos/cad-matriz-modal";
 import { useRequireRole } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
@@ -90,6 +92,14 @@ function Page() {
   // de `convites.trilha`, e a RLS de F2 garante que o pendente do vendedor de
   // uma Franquia Full nunca chega a esta lista).
   const [blocoAtivo, setBlocoAtivo] = useState<"interno" | "externo">("interno");
+  // V11 · C4 — sub-aba do bloco Interno: Cadastros Matriz (novo) x Pendentes de
+  // aprovação (já existia). Independente de qual profile está sendo editado
+  // no momento (configurando), que é outro estado — o modal de edição.
+  const [tabInterno, setTabInterno] = useState<"cadastros" | "pend">("pend");
+  const [configurando, setConfigurando] = useState<{ id: string; isVendedorClt: boolean } | null>(
+    null,
+  );
+  const [cadastrosMatrizTick, setCadastrosMatrizTick] = useState(0);
   // O tour do módulo M5 (Acessos) força `visibleTab` via `prepare:
   // "acessos-pendentes"` etc., sem saber que agora existem dois blocos — todos
   // os `prepare` de acessos apontam para conteúdo do bloco EXTERNOS (pendentes,
@@ -177,7 +187,22 @@ function Page() {
           </button>
         </div>
         <div className="toggle">
-          <button className={blocoParaConteudo === "interno" ? "on" : ""} onClick={abrirInterno}>
+          <button
+            className={tabInterno === "cadastros" ? "on" : ""}
+            onClick={() => {
+              abrirInterno();
+              setTabInterno("cadastros");
+            }}
+          >
+            Cadastros Matriz
+          </button>
+          <button
+            className={tabInterno === "pend" ? "on" : ""}
+            onClick={() => {
+              abrirInterno();
+              setTabInterno("pend");
+            }}
+          >
             Pendentes de aprovação <span style={{ opacity: 0.7 }}>({pendentesInterno.length})</span>
           </button>
         </div>
@@ -230,7 +255,14 @@ function Page() {
         />
       </div>
 
-      {blocoParaConteudo === "interno" && (
+      {blocoParaConteudo === "interno" && tabInterno === "cadastros" && (
+        <CadastrosMatrizTab
+          key={cadastrosMatrizTick}
+          onConfigurar={(id, isVendedorClt) => setConfigurando({ id, isVendedorClt })}
+        />
+      )}
+
+      {blocoParaConteudo === "interno" && tabInterno === "pend" && (
         <PendentesTab pendentes={pendentesInterno} onAnalisar={openAnalisar} />
       )}
 
@@ -308,6 +340,17 @@ function Page() {
           escopo={cadastroManual}
           onClose={() => setCadastroManual(null)}
           onCriado={aoCriarManual}
+        />
+      )}
+      {configurando && (
+        <CadMatrizModal
+          profileId={configurando.id}
+          isVendedorClt={configurando.isVendedorClt}
+          onClose={() => setConfigurando(null)}
+          onSalvo={() => {
+            setConfigurando(null);
+            setCadastrosMatrizTick((t) => t + 1);
+          }}
         />
       )}
     </AppShell>

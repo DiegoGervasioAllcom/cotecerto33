@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -31,6 +31,7 @@ export function CargoAreasFields({
   areas,
   setAreas,
   locked,
+  initialAreas,
 }: {
   cargos: CargoOpcao[];
   cargoId: string;
@@ -38,8 +39,17 @@ export function CargoAreasFields({
   areas: string[];
   setAreas: (v: string[]) => void;
   locked: boolean;
+  /**
+   * Áreas já conhecidas pelo chamador (ex.: override existente de um cadastro
+   * já aprovado, na edição — C4). Usadas só na primeira montagem, no lugar de
+   * buscar o preset do cargo; trocas de cargo feitas pelo usuário depois disso
+   * continuam buscando o preset normalmente. Sem isto, abrir o editor de
+   * alguém com áreas customizadas as substituiria pelo preset do cargo.
+   */
+  initialAreas?: string[];
 }) {
   const [catalogoAreas, setCatalogoAreas] = useState<{ chave: string; label: string }[]>([]);
+  const jaInicializou = useRef(false);
 
   useEffect(() => {
     supabase
@@ -55,6 +65,12 @@ export function CargoAreasFields({
   // <select> nunca dispara onChange: sem isto, o pedido chegaria à aprovação
   // com o cargo certo mas nenhuma área marcada.
   useEffect(() => {
+    if (!jaInicializou.current && initialAreas !== undefined) {
+      jaInicializou.current = true;
+      setAreas(initialAreas);
+      return;
+    }
+    jaInicializou.current = true;
     if (!cargoId) {
       setAreas([]);
       return;
