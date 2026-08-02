@@ -10,6 +10,7 @@ import {
 } from "@/components/acessos/cadastro-manual-modal";
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 import { SolicitacoesVendedorTab } from "@/components/acessos/solicitacoes-vendedor-tab";
+import { DesligamentoSolicitacoesTab } from "@/components/acessos/desligamento-solicitacoes-tab";
 import { useAcessosData } from "@/components/operacao/acessos/hooks/useAcessosData";
 import {
   PENDENTES_SELECT,
@@ -281,7 +282,10 @@ function Page() {
       )}
 
       {blocoParaConteudo === "externo" && visibleTab === "deslig" && (
-        <DesligamentosTab deslig={deslig} />
+        <>
+          <DesligamentoSolicitacoesTab />
+          <DesligamentosTab deslig={deslig} />
+        </>
       )}
 
       {blocoParaConteudo === "externo" && visibleTab === "modelos" && (

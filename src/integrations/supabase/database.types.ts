@@ -1309,6 +1309,85 @@ export type Database = {
           },
         ];
       };
+      desligamento_solicitacoes: {
+        Row: {
+          alvo_profile_id: string;
+          created_at: string;
+          id: string;
+          motivo: string;
+          observacao: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          solicitante_id: string;
+          status: string;
+        };
+        Insert: {
+          alvo_profile_id: string;
+          created_at?: string;
+          id?: string;
+          motivo: string;
+          observacao?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          solicitante_id: string;
+          status?: string;
+        };
+        Update: {
+          alvo_profile_id?: string;
+          created_at?: string;
+          id?: string;
+          motivo?: string;
+          observacao?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          solicitante_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "desligamento_solicitacoes_alvo_profile_id_fkey";
+            columns: ["alvo_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_alvo_profile_id_fkey";
+            columns: ["alvo_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_solicitante_id_fkey";
+            columns: ["solicitante_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_solicitante_id_fkey";
+            columns: ["solicitante_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       distribuicao_config: {
         Row: {
           atualizado_em: string;
@@ -3567,6 +3646,10 @@ export type Database = {
           versao: number;
         }[];
       };
+      resolver_desligamento: {
+        Args: { p_aprovar: boolean; p_id: string; p_observacao?: string };
+        Returns: undefined;
+      };
       resolver_solicitacao_vendedor: {
         Args: { p_aprovar: boolean; p_id: string; p_observacao?: string };
         Returns: undefined;
@@ -3588,6 +3671,10 @@ export type Database = {
           p_pct_pedido: number;
           p_seguradora_id: string;
         };
+        Returns: string;
+      };
+      solicitar_desligamento: {
+        Args: { p_alvo_profile_id: string; p_motivo: string };
         Returns: string;
       };
       solicitar_pendencia_acesso: {
