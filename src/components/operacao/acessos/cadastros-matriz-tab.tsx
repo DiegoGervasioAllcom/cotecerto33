@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Icon } from "./icon";
+import { GerenciarCargosModal } from "@/components/acessos/gerenciar-cargos-modal";
 
 type CargoOpcao = { id: string; nome: string };
 
@@ -56,6 +57,7 @@ export function CadastrosMatrizTab({
   const [fAno, setFAno] = useState("");
   const [busca, setBusca] = useState("");
   const [reloadTick, setReloadTick] = useState(0);
+  const [gerenciandoCargos, setGerenciandoCargos] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -236,10 +238,20 @@ export function CadastrosMatrizTab({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div className="muted small" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <Icon id="info" size={13} /> Time interno da Matriz com acesso <strong>por escopo</strong>{" "}
-        às áreas marcadas. Criação direta é a <strong>exceção</strong> — use "Cadastro manual ·
-        exceção" no topo do bloco.
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="muted small" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <Icon id="info" size={13} /> Time interno da Matriz com acesso <strong>por escopo</strong>{" "}
+          às áreas marcadas. Criação direta é a <strong>exceção</strong> — use "Cadastro manual ·
+          exceção" no topo do bloco.
+        </div>
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ marginLeft: "auto", whiteSpace: "nowrap" }}
+          type="button"
+          onClick={() => setGerenciandoCargos(true)}
+        >
+          <Icon id="shield" size={13} /> Gerenciar cargos
+        </button>
       </div>
 
       {err && <div className="banner alert">{err}</div>}
@@ -384,6 +396,12 @@ export function CadastrosMatrizTab({
           )}
         </div>
       </div>
+      {gerenciandoCargos && (
+        <GerenciarCargosModal
+          onClose={() => setGerenciandoCargos(false)}
+          onAlterado={() => setReloadTick((t) => t + 1)}
+        />
+      )}
     </div>
   );
 }
