@@ -201,8 +201,9 @@ export function CadastrosRedeTab() {
     () =>
       linhas.filter((l) => {
         // V11 · C5 — fiel ao protótipo: com um Modelo selecionado, só franquias
-        // daquele modelo aparecem (não é um "E" com Perfil, é uma lupa à parte).
-        if (fModelo) return l.kind === "franquia" && l.modeloId === fModelo;
+        // daquele modelo aparecem (não é um "OU" com Perfil — combina com os
+        // outros filtros, inclusive busca/ano, como o resto desta função).
+        if (fModelo && !(l.kind === "franquia" && l.modeloId === fModelo)) return false;
         if (fPerfil && l.kind !== fPerfil) return false;
         if (fAno && l.ano !== fAno) return false;
         if (busca) {
