@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import { cadastroManualSchema } from "@/lib/schemas/cadastro.schema";
 
 type Payload = {
   email: string;
@@ -101,19 +102,11 @@ type CadastroManualPayload = {
 export const criarPendenteManual = createServerFn({ method: "POST" })
   .inputValidator((data: CadastroManualPayload) => {
     if (!data?.caller_token) throw new Error("Sessão inválida.");
-    if (!data.nome || data.nome.trim().length < 2) {
-      throw new Error("Nome é obrigatório.");
+    const parsed = cadastroManualSchema.safeParse(data);
+    if (!parsed.success) {
+      throw new Error(parsed.error.issues[0]?.message ?? "Dados inválidos.");
     }
-    if (!data.documento || data.documento.replace(/\D/g, "").length < 11) {
-      throw new Error("Documento é obrigatório.");
-    }
-    if (!data.email) {
-      throw new Error("E-mail é obrigatório — é ele que recebe a aprovação.");
-    }
-    if (data.tipo !== "pj" && data.tipo !== "pf") {
-      throw new Error("Tipo inválido.");
-    }
-    return data;
+    return { ...parsed.data, caller_token: data.caller_token };
   })
   .handler(async ({ data }) => {
     const url =
