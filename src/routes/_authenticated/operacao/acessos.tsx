@@ -31,7 +31,10 @@ export const Route = createFileRoute("/_authenticated/operacao/acessos")({
 });
 
 function Page() {
-  const denied = useRequireRole("matriz");
+  // V11 · C4 — coordenador também aciona "Cadastro manual · exceção"
+  // (fn_pode_criar_pendente_manual) e edita cargos (RLS de cargos/cargo_areas,
+  // H2/H3); sem isto a rota inteira ficava fechada para ele.
+  const denied = useRequireRole("matriz", "coordenador");
   const {
     tab,
     setTab,
