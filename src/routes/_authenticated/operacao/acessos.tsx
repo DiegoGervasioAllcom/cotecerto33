@@ -1,11 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { ConvidarModal, type EscopoConvite } from "@/components/acessos/convidar-modal";
+import {
+  CadastroManualModal,
+  type EscopoCadastroManual,
+} from "@/components/acessos/cadastro-manual-modal";
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 import { SolicitacoesVendedorTab } from "@/components/acessos/solicitacoes-vendedor-tab";
 import { useAcessosData } from "@/components/operacao/acessos/hooks/useAcessosData";
+import {
+  PENDENTES_SELECT,
+  mapPendentes,
+} from "@/components/operacao/acessos/hooks/pendentes-query";
 import { useAcessosTutorialPreview } from "@/components/operacao/acessos/hooks/useAcessosTutorialPreview";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { AcessosNavigation } from "@/components/operacao/acessos/AcessosNavigation";
@@ -58,6 +67,22 @@ function Page() {
     });
 
   const [convidando, setConvidando] = useState<EscopoConvite | null>(null);
+  const [cadastroManual, setCadastroManual] = useState<EscopoCadastroManual | null>(null);
+
+  // V11 · C3 — "Cadastro manual · exceção" vai direto para a classificação. Busca
+  // o pendente que acabou de nascer direto (o estado `pendentes` do closure ainda
+  // não reflete o `reload()` no mesmo tick) e recarrega a lista em paralelo.
+  async function aoCriarManual(empresaId: string) {
+    setCadastroManual(null);
+    void reload();
+    const { data } = await supabase
+      .from("empresas")
+      .select(PENDENTES_SELECT)
+      .eq("id", empresaId)
+      .single();
+    const [criado] = mapPendentes(data ? [data] : []);
+    if (criado) openAnalisar(criado);
+  }
 
   // V11 · F6 — dois blocos, espelhando o protótipo: MATRIZ · TIME INTERNO (POR
   // ESCOPO) e EXTERNOS · REDE. `bloco` só decide o realce visual (qual acc-group
@@ -135,8 +160,16 @@ function Page() {
         >
           MATRIZ · TIME INTERNO (POR ESCOPO)
           <button
-            className="btn btn-slate btn-sm"
+            className="btn btn-ghost btn-sm"
             style={{ marginLeft: "auto" }}
+            type="button"
+            onClick={() => setCadastroManual("interno")}
+          >
+            Cadastro manual · exceção
+          </button>
+          <button
+            className="btn btn-slate btn-sm"
+            style={{ marginLeft: 8 }}
             type="button"
             onClick={() => setConvidando("interno")}
           >
@@ -173,8 +206,16 @@ function Page() {
         >
           EXTERNOS · REDE
           <button
-            className="btn btn-slate btn-sm"
+            className="btn btn-ghost btn-sm"
             style={{ marginLeft: "auto" }}
+            type="button"
+            onClick={() => setCadastroManual("externo")}
+          >
+            Cadastro manual · exceção
+          </button>
+          <button
+            className="btn btn-slate btn-sm"
+            style={{ marginLeft: 8 }}
             type="button"
             onClick={() => setConvidando("externo")}
           >
@@ -262,6 +303,13 @@ function Page() {
         </div>
       )}
       {convidando && <ConvidarModal escopo={convidando} onClose={() => setConvidando(null)} />}
+      {cadastroManual && (
+        <CadastroManualModal
+          escopo={cadastroManual}
+          onClose={() => setCadastroManual(null)}
+          onCriado={aoCriarManual}
+        />
+      )}
     </AppShell>
   );
 }
