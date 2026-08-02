@@ -79,7 +79,7 @@ export type CltConfig = {
   regras: CltRegras;
 };
 
-export type Tab = "pend" | "vendedores" | "deslig" | "modelos";
+export type Tab = "cadastros" | "pend" | "vendedores" | "deslig" | "modelos";
 export type PersoSub = "franquia" | "clt";
 
 export type Superior = { id: string; nome: string; role: "master" | "supervisor" };

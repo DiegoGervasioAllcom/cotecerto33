@@ -22,6 +22,7 @@ import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
 import { DesligamentosTab } from "@/components/operacao/acessos/desligamentos-tab";
 import { PersoGeral } from "@/components/operacao/acessos/perso-geral";
 import { CadastrosMatrizTab } from "@/components/operacao/acessos/cadastros-matriz-tab";
+import { CadastrosRedeTab } from "@/components/operacao/acessos/cadastros-rede-tab";
 import { CadMatrizModal } from "@/components/acessos/cad-matriz-modal";
 import { useRequireRole } from "@/lib/require-role";
 
@@ -268,6 +269,8 @@ function Page() {
       {blocoParaConteudo === "interno" && tabInterno === "pend" && (
         <PendentesTab pendentes={pendentesInterno} onAnalisar={openAnalisar} />
       )}
+
+      {blocoParaConteudo === "externo" && visibleTab === "cadastros" && <CadastrosRedeTab />}
 
       {blocoParaConteudo === "externo" && visibleTab === "pend" && (
         <PendentesTab pendentes={pendentesExterno} onAnalisar={openAnalisar} />
