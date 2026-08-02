@@ -6,10 +6,9 @@
 // "Franquia | Full"/"Franquia | Individual", aqui a modalidade vem de
 // `modelos_franquia.modalidade` (dado real, ver H2 e G2.1).
 //
-// "Excluir" aqui é só `admin_set_usuario_status` na pessoa-dona do cadastro —
-// SEM a trava de "Master com franquia" / "franquia com vendedor" do protótipo:
-// essa trava é a C6 (RPC dedicada, ainda não implementada). Documentado no
-// plano (docs/PLANO_CADASTROS_V11.md) como sequência C5 → C6.
+// "Excluir" chama `excluir_cadastro_rede` (C6) — RPC dedicada que barra
+// exclusão de Master com franquia ativa vinculada, ou franquia com vendedor
+// ativo na base, antes de cair em `admin_set_usuario_status`.
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Icon } from "./icon";
@@ -229,9 +228,8 @@ export function CadastrosRedeTab() {
       window.alert("O motivo é obrigatório.");
       return;
     }
-    const { error } = await supabase.rpc("admin_set_usuario_status", {
+    const { error } = await supabase.rpc("excluir_cadastro_rede", {
       p_user_id: l.id,
-      p_ativo: false,
       p_motivo: motivo.trim(),
     });
     if (error) {

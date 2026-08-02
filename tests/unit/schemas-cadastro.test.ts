@@ -163,9 +163,7 @@ describe("cadastroManualSchema", () => {
   });
 
   it("rejeita celular com formato inválido quando informado", () => {
-    expect(
-      cadastroManualSchema.safeParse({ ...pfValido, celular: "123" }).success,
-    ).toBe(false);
+    expect(cadastroManualSchema.safeParse({ ...pfValido, celular: "123" }).success).toBe(false);
   });
 
   it("rejeita uf com mais de 2 caracteres", () => {

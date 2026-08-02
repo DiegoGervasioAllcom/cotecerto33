@@ -3340,6 +3340,10 @@ export type Database = {
         Returns: string;
       };
       escalar_desconto: { Args: { p_id: string }; Returns: undefined };
+      excluir_cadastro_rede: {
+        Args: { p_motivo: string; p_user_id: string };
+        Returns: undefined;
+      };
       expirar_leads_nao_atendidos: {
         Args: { p_janela_seg?: number };
         Returns: number;
