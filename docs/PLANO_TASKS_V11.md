@@ -206,12 +206,22 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 
 | Task    | Tag   | Descrição                                                                                                                                                                 | Depende de                              |
 | ------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| V11.7.1 | banco | **Período único** server-side (item 8): dia/semana/quinzena/mês/personalizado                                                                                             | —                                       |
+| V11.7.1 | banco | ✅ **Período único** server-side (item 8): dia/semana/quinzena/mês/personalizado                                                                                             | —                                       |
 | V11.7.2 | front | Todos os widgets da Visão geral lendo a mesma janela — hoje são 4 opções mensais no cliente (`visao-geral.tsx`)                                                           | V11.7.1                                 |
-| V11.7.3 | front | **4 funis por canal** (Movida/Google/Facebook/Manual) escalando com o período                                                                                             | V11.7.1, V11.0.4                        |
-| V11.7.4 | front | **Alertas clicáveis** derivados do estado real                                                                                                                            | V11.7.2                                 |
-| V11.7.5 | banco | Modelar o estado real de **pendência da seguradora** após a transmissão; não inferir pendência a partir de proposta apenas `gerada`                                       | regra operacional da pendência definida |
-| V11.7.6 | front | **Fechar os alertas adiados da Visão geral**: pendência da seguradora, franquia abaixo da meta e vendedor em atenção, usando os estados entregues pelas tasks dependentes | V11.7.5, V11.4.1, V11.8                 |
+| V11.7.3 | front | ✅ **4 funis por canal** (Movida/Google/Facebook/Manual) escalando com o período                                                                                             | V11.7.1, V11.0.4                        |
+| V11.7.4 | front | ✅ **Alertas clicáveis** derivados do estado real — 8 alertas (5 originais + os 3 fechados abaixo)                                                                                                                            | V11.7.2                                 |
+| V11.7.5 | banco | ✅ Modelar o estado real de **pendência da seguradora** após a transmissão; não inferir pendência a partir de proposta apenas `gerada`                                       | regra operacional da pendência definida |
+| V11.7.6 | front | ✅ **Fechar os alertas adiados da Visão geral**: pendência da seguradora, franquia abaixo da meta e vendedor em atenção. "Destinos por perfil novo" (V11.8) ficou fora de escopo — os 3 alertas apontam pra destinos já válidos hoje | V11.7.5, V11.4.1                 |
+
+> **V11.7.1 e V11.7.3 já tinham sido entregues em 29/07/2026** (commits `10e8bdd`,
+> `1d34317`), antes de a numeração de frentes virar prática — só não tinham sido marcadas
+> aqui. **Fechamento da Frente 7 concluído em 03/08/2026** (V11.7.5/V11.7.6, banco+front):
+> `docs/PLANO_VISAO_GERAL_V11.md` tem o levantamento completo do que estava pronto vs.
+> faltando em cada task, as decisões tomadas (V11.7.2 — mover KPI grid/rankings/gráfico
+> pra RPC — e a mudança em `operacao/vendas.tsx` ficaram de fora, por escolha) e os dois
+> bugs vivos de heurística corrigidos (`visao-geral.tsx` tratava `status='gerada'` como
+> pendência da seguradora; o mesmo schema zod sem `{offset:true}` quebrava a navegação de
+> todos os alertas com período). 489 testes de banco + 207 unitários, todos passando.
 
 ### Pendências rastreadas da V11.7.4
 

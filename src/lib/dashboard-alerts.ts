@@ -1,8 +1,16 @@
 import { z } from "zod";
 
 export const dashboardDestinationPeriodSchema = z.object({
-  inicio: z.string().datetime().optional(),
-  fim: z.string().datetime().optional(),
+  // `offset: true` — bug ao vivo encontrado ao testar o alerta novo
+  // "pendentes-seguradora" (V11.7.6c): `normalizar_periodo_visao_geral`
+  // devolve timestamps com offset numérico (`+00:00`), não só `Z`; sem
+  // `offset: true`, o zod rejeitava a busca inteira e as telas de destino
+  // (Vendas, Estornos, Renovações) quebravam com "Não foi possível carregar
+  // esta página". Bug pré-existente (afetava também vendas-nao-pagas,
+  // estornos, renovacoes, sem-atendimento, sla-estourado), não introduzido
+  // por esta rodada — corrigido aqui porque está no mesmo arquivo/schema.
+  inicio: z.string().datetime({ offset: true }).optional(),
+  fim: z.string().datetime({ offset: true }).optional(),
 });
 
 export const leadsAlertSearchSchema = dashboardDestinationPeriodSchema.extend({
@@ -20,7 +28,10 @@ export type DashboardAlertKind =
   | "sla-estourado"
   | "vendas-nao-pagas"
   | "estornos"
-  | "renovacoes";
+  | "renovacoes"
+  | "franquias-abaixo-meta"
+  | "vendedores-atencao"
+  | "pendentes-seguradora";
 
 export type DashboardAlert = {
   kind: DashboardAlertKind;
@@ -30,12 +41,18 @@ export type DashboardAlert = {
   title: string;
   description: string;
   action: string;
-  to: "/comando/leads" | "/operacao/vendas" | "/operacao/estornos" | "/operacao/renovacoes";
+  to:
+    | "/comando/leads"
+    | "/operacao/vendas"
+    | "/operacao/estornos"
+    | "/operacao/renovacoes"
+    | "/operacao/franquias"
+    | "/operacao/acessos";
   search: {
     inicio?: string;
     fim?: string;
     alerta?: "sem-atendimento" | "sla-estourado";
-    tab?: "naopagas";
+    tab?: "naopagas" | "transmissao";
   };
 };
 
@@ -60,6 +77,13 @@ export type DashboardAlertCounts = {
   vendasNaoPagas: number;
   estornos: number;
   renovacoes: number;
+  // V11.7.6b/7.6c — os 3 alertas abaixo só existem via RPC/consulta de servidor
+  // (franquia por meta pró-rata, performance_status de profiles, pendência da
+  // seguradora); `buildDashboardAlerts` (heurística client-side, leads+propostas
+  // já carregados) não tem como derivá-los, então sempre manda 0 para eles.
+  franquiasAbaixoMeta: number;
+  vendedoresAtencao: number;
+  pendentesSeguradora: number;
 };
 
 const inWindow = (value: string | null, inicio: string, fim: string) => {
@@ -108,6 +132,10 @@ export function buildDashboardAlerts({
       vendasNaoPagas: unpaid.length,
       estornos: reversals.length,
       renovacoes: renewals.length,
+      // Sem dado client-side equivalente — ver comentário em DashboardAlertCounts.
+      franquiasAbaixoMeta: 0,
+      vendedoresAtencao: 0,
+      pendentesSeguradora: 0,
     },
     inicio,
     fim,
@@ -130,6 +158,9 @@ export function buildDashboardAlertsFromCounts({
     vendasNaoPagas: unpaid,
     estornos: reversals,
     renovacoes: renewals,
+    franquiasAbaixoMeta,
+    vendedoresAtencao,
+    pendentesSeguradora,
   } = counts;
 
   const alerts: (DashboardAlert | null)[] = [
@@ -196,6 +227,57 @@ export function buildDashboardAlertsFromCounts({
           action: "Acompanhar",
           to: "/operacao/renovacoes" as const,
           search: period,
+        }
+      : null,
+    // V11.7.6b — sem filtro dedicado na tela de Franquias (fora de escopo desta
+    // rodada, ver PLANO_VISAO_GERAL_V11.md); o alerta só leva para a listagem,
+    // onde o `statusChip`/meta de cada franquia já fica visível.
+    franquiasAbaixoMeta
+      ? {
+          kind: "franquias-abaixo-meta" as const,
+          count: franquiasAbaixoMeta,
+          icon: "i-building",
+          tone: "warn" as const,
+          title: `${franquiasAbaixoMeta} franquia(s) abaixo da meta`,
+          description: "Vendas emitidas no período abaixo da meta pró-rata",
+          action: "Revisar",
+          to: "/operacao/franquias" as const,
+          search: {},
+        }
+      : null,
+    // V11.7.6b — sem deep-link para a sub-aba "Cadastros" (Acessos e permissões
+    // tem estados de aba independentes para Interno/Externo, sem suporte a
+    // busca por URL); o alerta leva para a tela, onde o selo de performance de
+    // cada pessoa já aparece nas abas Cadastros Matriz/Rede.
+    vendedoresAtencao
+      ? {
+          kind: "vendedores-atencao" as const,
+          count: vendedoresAtencao,
+          icon: "i-users",
+          tone: "warn" as const,
+          title: `${vendedoresAtencao} vendedor(es) em atenção ou travado`,
+          description: "Performance abaixo da régua — acompanhar cadastro",
+          action: "Acompanhar",
+          to: "/operacao/acessos" as const,
+          search: {},
+        }
+      : null,
+    // V11.7.6c — reaproveita a mesma RPC do chip "Pendente da seguradora" da
+    // Visão geral. Leva para a aba "Transmissão" de Controle de Vendas; essa
+    // aba ainda não distingue "não enviada" de "pendente da seguradora"
+    // internamente (fora de escopo, ver risco #1 do plano), então não há
+    // filtro adicional a passar além da aba.
+    pendentesSeguradora
+      ? {
+          kind: "pendentes-seguradora" as const,
+          count: pendentesSeguradora,
+          icon: "i-shield",
+          tone: "info" as const,
+          title: `${pendentesSeguradora} venda(s) pendente(s) da seguradora`,
+          description: "Transmitida, aguardando emissão da apólice",
+          action: "Acompanhar",
+          to: "/operacao/vendas" as const,
+          search: { ...period, tab: "transmissao" as const },
         }
       : null,
   ];
