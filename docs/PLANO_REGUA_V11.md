@@ -43,8 +43,8 @@ Infra que **já existe e será reaproveitada sem mudança**:
 | D4 | banco | Job periódico `recalcular_regua_performance()` (pg_cron diário, padrão do G6.1) — roda D3 para todo vendedor elegível (CLT interno, vendedor de rede, franqueado Individual-como-vendedor) e grava o sinal calculado | D1, D3 |
 | D5 | banco | `distribuir_lead_auto()` e `distribuir_fila_pendente()` passam a excluir quem está `travado` com `pausa_leads_ativa=true` na régua do próprio bloco | D1 |
 | D6 | banco | `fn_revisar_reativar_performance(profile_id, motivo?)` — Supervisor/Matriz registra a revisão; volta o sinal para `atenção` (não `ativo` — a régua reavalia no próximo job) e grava `performance_revisado_em/_por` | D1 |
-| D7 | front | Sub-aba **Performance** em Personalização geral (Matriz · interno e rede) e em Central da Franquia (Full) — os 3 blocos, mesmo componente parametrizado por bloco, salva via D2 | D2 |
-| D8 | front | Selo clicável (`Ativo`/`Atenção`/`Travado`) nas listas que já mostram vendedor/franqueado-vendedor (Cadastros Matriz, Cadastros Rede, Central da Franquia) — abre modal de resumo com números (D3) e motivo | D3, D4 |
+| D7 | front | Sub-aba **Performance** em Personalização geral (Matriz · interno e rede) — os 2 blocos, mesmo componente parametrizado por bloco, salva via D2. Bloco `full` fica pendente (ver nota abaixo) | D2 |
+| D8 | front | Selo clicável (`Ativo`/`Atenção`/`Travado`) nas listas que já mostram vendedor (Cadastros Matriz, Cadastros Rede) — abre modal de resumo com números (D3) e motivo. Central da Franquia fica pendente (ver nota abaixo) | D3, D4 |
 | D9 | front | Modal de resumo: botão **Notificar supervisor** (aviso local, sem persistência — mesmo nível do protótipo) e **Revisado — reativar** (só quando `travado`, chama D6) | D6, D8 |
 | D10 | testes | Travado com `pausa_leads_ativa` não recebe lead (auto **e** fila manual); reativação sem RPC de revisão não muda o sinal; cálculo de conversão/cancelamento da janela; gate de diretor bloqueia salvar régua sem senha (nos 3 blocos, inclusive `full`) | D5, D6, D2 |
 
@@ -75,6 +75,22 @@ Infra que **já existe e será reaproveitada sem mudança**:
    30 dias corridos, e evita recalcular a cada minuto sem necessidade.
 6. **As 3 réguas (`interno`/`rede`/`full`) ficam numa tabela só**, uma linha por bloco —
    não uma tabela por bloco. Simplifica a RPC de salvar e o job (que itera as 3 linhas).
+
+## Nota — bloco `full` sem tela própria por agora
+
+Descoberto ao começar D7: a página "Central da Franquia" (onde o franqueado
+Full veria/editaria a régua do próprio time) **não existe no app real** — só
+no protótipo (`data-nav="xcentral"`). Construí-la é exatamente a Frente 5
+(V11.5.1/V11.5.2 do `PLANO_TASKS_V11.md`), e V11.5.1 está **bloqueada por uma
+decisão pendente da Lis** (item 11 do Handoff: "endereço único" das
+configurações da Full — Central da Franquia × Acessos › Personalização).
+
+Decisão (confirmada com o usuário em 03/08/2026): D7/D8/D9 agora cobrem só
+Personalização geral (Matriz · interno e rede). O bloco `full` já está
+completo e testado no banco (D1-D6 tratam os 3 blocos igual) — só a tela do
+franqueado Full pra ver a própria régua/selo/resumo fica pendente até a
+Frente 5 resolver o endereço. D10 testa os 3 blocos no banco; os testes de
+front cobrem só o que tem tela.
 
 ## Riscos
 
