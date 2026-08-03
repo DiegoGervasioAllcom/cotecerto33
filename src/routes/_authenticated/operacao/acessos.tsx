@@ -1,17 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { ConvidarModal, type EscopoConvite } from "@/components/acessos/convidar-modal";
+import {
+  CadastroManualModal,
+  type EscopoCadastroManual,
+} from "@/components/acessos/cadastro-manual-modal";
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 import { SolicitacoesVendedorTab } from "@/components/acessos/solicitacoes-vendedor-tab";
+import { DesligamentoSolicitacoesTab } from "@/components/acessos/desligamento-solicitacoes-tab";
 import { useAcessosData } from "@/components/operacao/acessos/hooks/useAcessosData";
+import {
+  PENDENTES_SELECT,
+  mapPendentes,
+} from "@/components/operacao/acessos/hooks/pendentes-query";
 import { useAcessosTutorialPreview } from "@/components/operacao/acessos/hooks/useAcessosTutorialPreview";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { AcessosNavigation } from "@/components/operacao/acessos/AcessosNavigation";
 import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
 import { DesligamentosTab } from "@/components/operacao/acessos/desligamentos-tab";
 import { PersoGeral } from "@/components/operacao/acessos/perso-geral";
+import { CadastrosMatrizTab } from "@/components/operacao/acessos/cadastros-matriz-tab";
+import { CadastrosRedeTab } from "@/components/operacao/acessos/cadastros-rede-tab";
+import { CadMatrizModal } from "@/components/acessos/cad-matriz-modal";
 import { useRequireRole } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
@@ -20,7 +33,10 @@ export const Route = createFileRoute("/_authenticated/operacao/acessos")({
 });
 
 function Page() {
-  const denied = useRequireRole("matriz");
+  // V11 · C4 — coordenador também aciona "Cadastro manual · exceção"
+  // (fn_pode_criar_pendente_manual) e edita cargos (RLS de cargos/cargo_areas,
+  // H2/H3); sem isto a rota inteira ficava fechada para ele.
+  const denied = useRequireRole("matriz", "coordenador");
   const {
     tab,
     setTab,
@@ -58,6 +74,22 @@ function Page() {
     });
 
   const [convidando, setConvidando] = useState<EscopoConvite | null>(null);
+  const [cadastroManual, setCadastroManual] = useState<EscopoCadastroManual | null>(null);
+
+  // V11 · C3 — "Cadastro manual · exceção" vai direto para a classificação. Busca
+  // o pendente que acabou de nascer direto (o estado `pendentes` do closure ainda
+  // não reflete o `reload()` no mesmo tick) e recarrega a lista em paralelo.
+  async function aoCriarManual(empresaId: string) {
+    setCadastroManual(null);
+    void reload();
+    const { data } = await supabase
+      .from("empresas")
+      .select(PENDENTES_SELECT)
+      .eq("id", empresaId)
+      .single();
+    const [criado] = mapPendentes(data ? [data] : []);
+    if (criado) openAnalisar(criado);
+  }
 
   // V11 · F6 — dois blocos, espelhando o protótipo: MATRIZ · TIME INTERNO (POR
   // ESCOPO) e EXTERNOS · REDE. `bloco` só decide o realce visual (qual acc-group
@@ -65,6 +97,14 @@ function Page() {
   // de `convites.trilha`, e a RLS de F2 garante que o pendente do vendedor de
   // uma Franquia Full nunca chega a esta lista).
   const [blocoAtivo, setBlocoAtivo] = useState<"interno" | "externo">("interno");
+  // V11 · C4 — sub-aba do bloco Interno: Cadastros Matriz (novo) x Pendentes de
+  // aprovação (já existia). Independente de qual profile está sendo editado
+  // no momento (configurando), que é outro estado — o modal de edição.
+  const [tabInterno, setTabInterno] = useState<"cadastros" | "pend">("pend");
+  const [configurando, setConfigurando] = useState<{ id: string; isVendedorClt: boolean } | null>(
+    null,
+  );
+  const [cadastrosMatrizTick, setCadastrosMatrizTick] = useState(0);
   // O tour do módulo M5 (Acessos) força `visibleTab` via `prepare:
   // "acessos-pendentes"` etc., sem saber que agora existem dois blocos — todos
   // os `prepare` de acessos apontam para conteúdo do bloco EXTERNOS (pendentes,
@@ -135,8 +175,16 @@ function Page() {
         >
           MATRIZ · TIME INTERNO (POR ESCOPO)
           <button
-            className="btn btn-slate btn-sm"
+            className="btn btn-ghost btn-sm"
             style={{ marginLeft: "auto" }}
+            type="button"
+            onClick={() => setCadastroManual("interno")}
+          >
+            Cadastro manual · exceção
+          </button>
+          <button
+            className="btn btn-slate btn-sm"
+            style={{ marginLeft: 8 }}
             type="button"
             onClick={() => setConvidando("interno")}
           >
@@ -144,7 +192,22 @@ function Page() {
           </button>
         </div>
         <div className="toggle">
-          <button className={blocoParaConteudo === "interno" ? "on" : ""} onClick={abrirInterno}>
+          <button
+            className={tabInterno === "cadastros" ? "on" : ""}
+            onClick={() => {
+              abrirInterno();
+              setTabInterno("cadastros");
+            }}
+          >
+            Cadastros Matriz
+          </button>
+          <button
+            className={tabInterno === "pend" ? "on" : ""}
+            onClick={() => {
+              abrirInterno();
+              setTabInterno("pend");
+            }}
+          >
             Pendentes de aprovação <span style={{ opacity: 0.7 }}>({pendentesInterno.length})</span>
           </button>
         </div>
@@ -173,8 +236,16 @@ function Page() {
         >
           EXTERNOS · REDE
           <button
-            className="btn btn-slate btn-sm"
+            className="btn btn-ghost btn-sm"
             style={{ marginLeft: "auto" }}
+            type="button"
+            onClick={() => setCadastroManual("externo")}
+          >
+            Cadastro manual · exceção
+          </button>
+          <button
+            className="btn btn-slate btn-sm"
+            style={{ marginLeft: 8 }}
             type="button"
             onClick={() => setConvidando("externo")}
           >
@@ -189,9 +260,18 @@ function Page() {
         />
       </div>
 
-      {blocoParaConteudo === "interno" && (
+      {blocoParaConteudo === "interno" && tabInterno === "cadastros" && (
+        <CadastrosMatrizTab
+          key={cadastrosMatrizTick}
+          onConfigurar={(id, isVendedorClt) => setConfigurando({ id, isVendedorClt })}
+        />
+      )}
+
+      {blocoParaConteudo === "interno" && tabInterno === "pend" && (
         <PendentesTab pendentes={pendentesInterno} onAnalisar={openAnalisar} />
       )}
+
+      {blocoParaConteudo === "externo" && visibleTab === "cadastros" && <CadastrosRedeTab />}
 
       {blocoParaConteudo === "externo" && visibleTab === "pend" && (
         <PendentesTab pendentes={pendentesExterno} onAnalisar={openAnalisar} />
@@ -202,7 +282,10 @@ function Page() {
       )}
 
       {blocoParaConteudo === "externo" && visibleTab === "deslig" && (
-        <DesligamentosTab deslig={deslig} />
+        <>
+          <DesligamentoSolicitacoesTab />
+          <DesligamentosTab deslig={deslig} />
+        </>
       )}
 
       {blocoParaConteudo === "externo" && visibleTab === "modelos" && (
@@ -262,6 +345,24 @@ function Page() {
         </div>
       )}
       {convidando && <ConvidarModal escopo={convidando} onClose={() => setConvidando(null)} />}
+      {cadastroManual && (
+        <CadastroManualModal
+          escopo={cadastroManual}
+          onClose={() => setCadastroManual(null)}
+          onCriado={aoCriarManual}
+        />
+      )}
+      {configurando && (
+        <CadMatrizModal
+          profileId={configurando.id}
+          isVendedorClt={configurando.isVendedorClt}
+          onClose={() => setConfigurando(null)}
+          onSalvo={() => {
+            setConfigurando(null);
+            setCadastrosMatrizTick((t) => t + 1);
+          }}
+        />
+      )}
     </AppShell>
   );
 }

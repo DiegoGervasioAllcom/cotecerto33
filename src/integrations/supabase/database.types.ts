@@ -1309,6 +1309,85 @@ export type Database = {
           },
         ];
       };
+      desligamento_solicitacoes: {
+        Row: {
+          alvo_profile_id: string;
+          created_at: string;
+          id: string;
+          motivo: string;
+          observacao: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          solicitante_id: string;
+          status: string;
+        };
+        Insert: {
+          alvo_profile_id: string;
+          created_at?: string;
+          id?: string;
+          motivo: string;
+          observacao?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          solicitante_id: string;
+          status?: string;
+        };
+        Update: {
+          alvo_profile_id?: string;
+          created_at?: string;
+          id?: string;
+          motivo?: string;
+          observacao?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          solicitante_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "desligamento_solicitacoes_alvo_profile_id_fkey";
+            columns: ["alvo_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_alvo_profile_id_fkey";
+            columns: ["alvo_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_resolved_by_fkey";
+            columns: ["resolved_by"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_solicitante_id_fkey";
+            columns: ["solicitante_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desligamento_solicitacoes_solicitante_id_fkey";
+            columns: ["solicitante_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       distribuicao_config: {
         Row: {
           atualizado_em: string;
@@ -1414,6 +1493,7 @@ export type Database = {
           contato_emergencia: string | null;
           convite_id: string | null;
           created_at: string;
+          criado_por: string | null;
           dados_bancarios: string | null;
           dados_cadastro: Json;
           data_nascimento: string | null;
@@ -1457,6 +1537,7 @@ export type Database = {
           contato_emergencia?: string | null;
           convite_id?: string | null;
           created_at?: string;
+          criado_por?: string | null;
           dados_bancarios?: string | null;
           dados_cadastro?: Json;
           data_nascimento?: string | null;
@@ -1500,6 +1581,7 @@ export type Database = {
           contato_emergencia?: string | null;
           convite_id?: string | null;
           created_at?: string;
+          criado_por?: string | null;
           dados_bancarios?: string | null;
           dados_cadastro?: Json;
           data_nascimento?: string | null;
@@ -1542,6 +1624,20 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "convites";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "empresas_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "empresas_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
           },
           {
             foreignKeyName: "empresas_modelo_id_fkey";
@@ -2506,24 +2602,38 @@ export type Database = {
           bonus_campanha: number | null;
           cargo_id: string | null;
           comissao_modelo: number | null;
+          cpf: string | null;
           created_at: string;
+          data_nascimento: string | null;
           desligado_em: string | null;
           desligado_motivo: string | null;
           dia_pagamento: number | null;
+          dias_acesso: string[] | null;
           diretor: boolean;
           email: string;
+          email_pessoal: string | null;
           empresa_id: string | null;
           equipe: string | null;
+          estado_civil: string | null;
           faixa_elite_pct: number | null;
           faixa_elite_valor: number | null;
+          funcao: string | null;
+          hora_fim: string | null;
+          hora_inicio: string | null;
           id: string;
           leads_dia: number | null;
           nome: string;
+          periodo_fim: string | null;
+          periodo_inicio: string | null;
           royalties: number | null;
           salario_base: number | null;
+          sexo: string | null;
+          sobrenome: string | null;
           status: Database["public"]["Enums"]["empresa_status"];
           superior_id: string | null;
           telefone: string | null;
+          telefone_comercial: string | null;
+          telefone_residencial: string | null;
         };
         Insert: {
           aprovada_em?: string | null;
@@ -2531,24 +2641,38 @@ export type Database = {
           bonus_campanha?: number | null;
           cargo_id?: string | null;
           comissao_modelo?: number | null;
+          cpf?: string | null;
           created_at?: string;
+          data_nascimento?: string | null;
           desligado_em?: string | null;
           desligado_motivo?: string | null;
           dia_pagamento?: number | null;
+          dias_acesso?: string[] | null;
           diretor?: boolean;
           email?: string;
+          email_pessoal?: string | null;
           empresa_id?: string | null;
           equipe?: string | null;
+          estado_civil?: string | null;
           faixa_elite_pct?: number | null;
           faixa_elite_valor?: number | null;
+          funcao?: string | null;
+          hora_fim?: string | null;
+          hora_inicio?: string | null;
           id: string;
           leads_dia?: number | null;
           nome?: string;
+          periodo_fim?: string | null;
+          periodo_inicio?: string | null;
           royalties?: number | null;
           salario_base?: number | null;
+          sexo?: string | null;
+          sobrenome?: string | null;
           status?: Database["public"]["Enums"]["empresa_status"];
           superior_id?: string | null;
           telefone?: string | null;
+          telefone_comercial?: string | null;
+          telefone_residencial?: string | null;
         };
         Update: {
           aprovada_em?: string | null;
@@ -2556,24 +2680,38 @@ export type Database = {
           bonus_campanha?: number | null;
           cargo_id?: string | null;
           comissao_modelo?: number | null;
+          cpf?: string | null;
           created_at?: string;
+          data_nascimento?: string | null;
           desligado_em?: string | null;
           desligado_motivo?: string | null;
           dia_pagamento?: number | null;
+          dias_acesso?: string[] | null;
           diretor?: boolean;
           email?: string;
+          email_pessoal?: string | null;
           empresa_id?: string | null;
           equipe?: string | null;
+          estado_civil?: string | null;
           faixa_elite_pct?: number | null;
           faixa_elite_valor?: number | null;
+          funcao?: string | null;
+          hora_fim?: string | null;
+          hora_inicio?: string | null;
           id?: string;
           leads_dia?: number | null;
           nome?: string;
+          periodo_fim?: string | null;
+          periodo_inicio?: string | null;
           royalties?: number | null;
           salario_base?: number | null;
+          sexo?: string | null;
+          sobrenome?: string | null;
           status?: Database["public"]["Enums"]["empresa_status"];
           superior_id?: string | null;
           telefone?: string | null;
+          telefone_comercial?: string | null;
+          telefone_residencial?: string | null;
         };
         Relationships: [
           {
@@ -3235,6 +3373,20 @@ export type Database = {
         }[];
       };
       criar_leads_renovacao: { Args: never; Returns: Json };
+      criar_pendente_manual: {
+        Args: {
+          p_celular?: string;
+          p_cidade?: string;
+          p_criado_por: string;
+          p_documento: string;
+          p_email?: string;
+          p_nome: string;
+          p_tipo: string;
+          p_uf?: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       definir_negociacao_status: {
         Args: { p_proposta_id: string; p_status: string };
         Returns: {
@@ -3251,10 +3403,6 @@ export type Database = {
       };
       desarquivar_lead: { Args: { p_lead: string }; Returns: undefined };
       desbloquear_lead: { Args: { p_lead: string }; Returns: undefined };
-      desligar_usuario: {
-        Args: { motivo?: string; user_id: string };
-        Returns: undefined;
-      };
       distribuir_fila_pendente: { Args: never; Returns: number };
       empresas_visiveis: {
         Args: { _user_id: string };
@@ -3267,6 +3415,10 @@ export type Database = {
         Returns: string;
       };
       escalar_desconto: { Args: { p_id: string }; Returns: undefined };
+      excluir_cadastro_rede: {
+        Args: { p_motivo: string; p_user_id: string };
+        Returns: undefined;
+      };
       expirar_leads_nao_atendidos: {
         Args: { p_janela_seg?: number };
         Returns: number;
@@ -3340,6 +3492,10 @@ export type Database = {
       };
       fn_pode_aprovar_pedido: {
         Args: { _empresa_id: string; _uid: string };
+        Returns: boolean;
+      };
+      fn_pode_criar_pendente_manual: {
+        Args: { _uid?: string };
         Returns: boolean;
       };
       fn_pode_ver_solicitacao_desconto: {
@@ -3486,6 +3642,10 @@ export type Database = {
           versao: number;
         }[];
       };
+      resolver_desligamento: {
+        Args: { p_aprovar: boolean; p_id: string; p_observacao?: string };
+        Returns: undefined;
+      };
       resolver_solicitacao_vendedor: {
         Args: { p_aprovar: boolean; p_id: string; p_observacao?: string };
         Returns: undefined;
@@ -3507,6 +3667,10 @@ export type Database = {
           p_pct_pedido: number;
           p_seguradora_id: string;
         };
+        Returns: string;
+      };
+      solicitar_desligamento: {
+        Args: { p_alvo_profile_id: string; p_motivo: string };
         Returns: string;
       };
       solicitar_pendencia_acesso: {

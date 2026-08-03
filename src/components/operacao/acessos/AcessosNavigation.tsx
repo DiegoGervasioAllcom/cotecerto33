@@ -13,6 +13,9 @@ export function AcessosNavigation({
 }) {
   return (
     <div className="toggle" style={{ marginBottom: 18 }}>
+      <button className={tab === "cadastros" ? "on" : ""} onClick={() => onChange("cadastros")}>
+        Cadastros Rede
+      </button>
       <button
         className={tab === "pend" ? "on" : ""}
         data-tour="acessos-tab-pendentes"

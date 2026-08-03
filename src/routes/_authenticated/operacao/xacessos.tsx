@@ -9,6 +9,8 @@ import { ConvidarModal, type EscopoConvite } from "@/components/acessos/convidar
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 import { Icon } from "@/components/operacao/acessos/icon";
 import { CadastrarVendedorForm } from "@/components/acessos/cadastrar-vendedor-form";
+import { SolicitarDesligamentoModal } from "@/components/acessos/solicitar-desligamento-modal";
+import { MinhasSolicitacoesDesligamento } from "@/components/acessos/minhas-solicitacoes-desligamento";
 import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
 import { useFilaFranquiaData } from "@/components/operacao/acessos/hooks/useFilaFranquiaData";
 import type { FranquiaAprovada } from "@/components/operacao/acessos/types";
@@ -64,6 +66,11 @@ function Page() {
   const [err, setErr] = useState<string | null>(null);
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
+  // V11 · C8 — "Solicitar desligamento" só faz sentido para vendedor/franquia
+  // (o próprio solicitar_desligamento também barra o resto no banco); o
+  // reloadTick força o card "Minhas solicitações" a buscar de novo após enviar.
+  const [desligando, setDesligando] = useState<{ id: string; nome: string } | null>(null);
+  const [desligamentoReloadTick, setDesligamentoReloadTick] = useState(0);
 
   // V11 · F9 — a Franquia Full aprova o próprio vendedor (F1/F2: a RLS já
   // entrega só o pedido dela). Individual não tem equipe para aprovar — "o
@@ -291,11 +298,16 @@ function Page() {
                   <th>Tipo</th>
                   <th>Supervisão</th>
                   <th>Status</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {filtradas.map((u) => {
                   const desligado = !!u.desligado_em;
+                  // V11 · C8 — só vendedor/franquia são alvo válido de
+                  // solicitar_desligamento (a RPC barra o resto de novo).
+                  const podeDesligar =
+                    !desligado && (u.role === "vendedor" || u.role === "franqueado");
                   return (
                     <tr key={u.id}>
                       <td>
@@ -315,13 +327,24 @@ function Page() {
                           {desligado ? "Desativado" : "Ativo"}
                         </span>
                       </td>
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        {podeDesligar && (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            type="button"
+                            onClick={() => setDesligando({ id: u.id, nome: u.nome })}
+                          >
+                            <Icon id="trash" size={12} /> Solicitar desligamento
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
                 {filtradas.length === 0 && (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}
                     >
                       Nenhum usuário encontrado.
@@ -333,7 +356,23 @@ function Page() {
           )}
         </div>
       </div>
+
+      <div style={{ marginTop: 18 }}>
+        <MinhasSolicitacoesDesligamento reloadKey={desligamentoReloadTick} />
+      </div>
+
       {convidando && <ConvidarModal escopo={convidando} onClose={() => setConvidando(null)} />}
+      {desligando && (
+        <SolicitarDesligamentoModal
+          alvoId={desligando.id}
+          alvoNome={desligando.nome}
+          onClose={() => setDesligando(null)}
+          onEnviado={() => {
+            setDesligando(null);
+            setDesligamentoReloadTick((t) => t + 1);
+          }}
+        />
+      )}
       {fila.analisando && (
         <ClassificarAcessoModal
           pendente={fila.analisando}

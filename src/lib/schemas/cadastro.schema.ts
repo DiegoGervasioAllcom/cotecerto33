@@ -76,3 +76,33 @@ export const cpfCadastroSchema = z.object({
 export type CadastroFormValues =
   | z.infer<typeof cnpjCadastroSchema>
   | z.infer<typeof cpfCadastroSchema>;
+
+// V11 · C3 (Frente 3) — "Cadastro manual · exceção". Documento troca de tamanho
+// junto com `tipo` (pj=CNPJ, pf=CPF), por isso a checagem de formato entra via
+// superRefine em vez do primitivo `documento` (que aceita os dois tamanhos).
+export const cadastroManualSchema = z
+  .object({
+    nome,
+    tipo: z.enum(["pj", "pf"]),
+    documento: z.string().trim().min(1, "Informe o documento."),
+    email,
+    celular: optionalDigits(10, 11),
+    cidade: z.string().trim().max(120, "Cidade muito longa.").optional(),
+    uf: z
+      .string()
+      .optional()
+      .refine((v) => !v || v.trim().length === 2, { message: "UF inválida." }),
+  })
+  .superRefine((data, ctx) => {
+    const tamanho = data.tipo === "pj" ? 14 : 11;
+    const rotulo = data.tipo === "pj" ? "CNPJ" : "CPF";
+    if (onlyDigits(data.documento).length !== tamanho) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["documento"],
+        message: `${rotulo} inválido.`,
+      });
+    }
+  });
+
+export type CadastroManualValues = z.infer<typeof cadastroManualSchema>;

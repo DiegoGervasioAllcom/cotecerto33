@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { cnpjCadastroSchema, cpfCadastroSchema } from "@/lib/schemas/cadastro.schema";
+import {
+  cnpjCadastroSchema,
+  cpfCadastroSchema,
+  cadastroManualSchema,
+} from "@/lib/schemas/cadastro.schema";
 
 const cnpjValido = {
   nome: "Empresa LTDA",
@@ -110,5 +114,59 @@ describe("cpfCadastroSchema", () => {
     expect(cpfCadastroSchema.safeParse({ ...cpfValido, documento: "12345678000190" }).success).toBe(
       true,
     );
+  });
+});
+
+describe("cadastroManualSchema", () => {
+  const pfValido = {
+    nome: "Fulano de Tal",
+    tipo: "pf" as const,
+    documento: "123.456.789-00",
+    email: "fulano@email.com",
+  };
+  const pjValido = { ...pfValido, tipo: "pj" as const, documento: "12.345.678/0001-90" };
+
+  it("aceita PF com CPF (11 dígitos)", () => {
+    expect(cadastroManualSchema.safeParse(pfValido).success).toBe(true);
+  });
+
+  it("aceita PJ com CNPJ (14 dígitos)", () => {
+    expect(cadastroManualSchema.safeParse(pjValido).success).toBe(true);
+  });
+
+  it("rejeita PF com documento de 14 dígitos (CNPJ no lugar de CPF)", () => {
+    expect(
+      cadastroManualSchema.safeParse({ ...pfValido, documento: "12345678000190" }).success,
+    ).toBe(false);
+  });
+
+  it("rejeita PJ com documento de 11 dígitos (CPF no lugar de CNPJ)", () => {
+    expect(cadastroManualSchema.safeParse({ ...pjValido, documento: "12345678900" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejeita nome vazio", () => {
+    expect(cadastroManualSchema.safeParse({ ...pfValido, nome: "" }).success).toBe(false);
+  });
+
+  it("rejeita email inválido", () => {
+    expect(cadastroManualSchema.safeParse({ ...pfValido, email: "invalido" }).success).toBe(false);
+  });
+
+  it("rejeita tipo fora de pj/pf", () => {
+    expect(cadastroManualSchema.safeParse({ ...pfValido, tipo: "matriz" }).success).toBe(false);
+  });
+
+  it("aceita celular, cidade e uf ausentes (opcionais)", () => {
+    expect(cadastroManualSchema.safeParse(pfValido).success).toBe(true);
+  });
+
+  it("rejeita celular com formato inválido quando informado", () => {
+    expect(cadastroManualSchema.safeParse({ ...pfValido, celular: "123" }).success).toBe(false);
+  });
+
+  it("rejeita uf com mais de 2 caracteres", () => {
+    expect(cadastroManualSchema.safeParse({ ...pfValido, uf: "SPX" }).success).toBe(false);
   });
 });
