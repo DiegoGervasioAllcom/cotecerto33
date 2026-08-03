@@ -12,8 +12,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Icon } from "./icon";
+import { PerformanceResumoModal } from "@/components/acessos/performance-resumo-modal";
+import { PERFORMANCE_STATUS_LABEL, PERFORMANCE_STATUS_CHIP } from "@/lib/performance-status";
 
 type Kind = "master" | "franquia" | "vendedor";
+type PerformanceStatus = "ativo" | "atencao" | "travado" | null;
 
 type LinhaRede = {
   id: string; // profile id — alvo de Configurar/Excluir
@@ -25,6 +28,7 @@ type LinhaRede = {
   modeloNome: string;
   ano: string;
   desligadoEm: string | null;
+  performanceStatus: PerformanceStatus;
 };
 
 type ModeloOpcao = { id: string; nome: string };
@@ -45,6 +49,7 @@ export function CadastrosRedeTab() {
   const [busca, setBusca] = useState("");
   const [reloadTick, setReloadTick] = useState(0);
   const [configurando, setConfigurando] = useState<LinhaRede | null>(null);
+  const [resumoPerf, setResumoPerf] = useState<LinhaRede | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -85,7 +90,9 @@ export function CadastrosRedeTab() {
 
       const { data: profilesData, error: profilesErr } = await supabase
         .from("profiles")
-        .select("id,nome,email,empresa_id,equipe,aprovada_em,created_at,desligado_em,status")
+        .select(
+          "id,nome,email,empresa_id,equipe,aprovada_em,created_at,desligado_em,status,performance_status",
+        )
         .in("id", profileIds)
         .in("status", ["aprovada", "suspensa"]);
       if (!ativo) return;
@@ -104,6 +111,7 @@ export function CadastrosRedeTab() {
         created_at: string;
         desligado_em: string | null;
         status: string;
+        performance_status: PerformanceStatus;
       };
       const profiles = (profilesData ?? []) as ProfileBruto[];
       const empresaIds = Array.from(
@@ -156,6 +164,7 @@ export function CadastrosRedeTab() {
           modeloId: empresa?.modelo_id ?? null,
           modeloNome: modelo?.nome ?? "",
           modalidade: modelo?.modalidade ?? null,
+          performanceStatus: p.performance_status,
         };
         if (role === "master") {
           const nFranquias = p.empresa_id ? (franquiasPorMaster.get(p.empresa_id) ?? 0) : 0;
@@ -362,6 +371,19 @@ export function CadastrosRedeTab() {
                         <span className={`chip ${desligado ? "chip-outline" : "chip-ok"}`}>
                           {desligado ? "Desligado" : "Ativo"}
                         </span>
+                        {l.performanceStatus &&
+                          (l.kind === "vendedor" ||
+                            (l.kind === "franquia" && l.modalidade === "individual")) && (
+                            <button
+                              type="button"
+                              className={`chip ${PERFORMANCE_STATUS_CHIP[l.performanceStatus]}`}
+                              style={{ marginLeft: 6, cursor: "pointer", border: "none" }}
+                              onClick={() => setResumoPerf(l)}
+                              title="Ver resumo de performance"
+                            >
+                              {PERFORMANCE_STATUS_LABEL[l.performanceStatus]}
+                            </button>
+                          )}
                       </td>
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         <button
@@ -450,6 +472,14 @@ export function CadastrosRedeTab() {
             </div>
           </div>
         </div>
+      )}
+      {resumoPerf && (
+        <PerformanceResumoModal
+          profileId={resumoPerf.id}
+          nome={resumoPerf.nome}
+          onClose={() => setResumoPerf(null)}
+          onAlterado={() => setReloadTick((t) => t + 1)}
+        />
       )}
     </div>
   );

@@ -2627,6 +2627,7 @@ export type Database = {
           performance_motivo: Json | null;
           performance_revisado_em: string | null;
           performance_revisado_por: string | null;
+          performance_revisao_motivo: string | null;
           performance_status: string | null;
           periodo_fim: string | null;
           periodo_inicio: string | null;
@@ -2671,6 +2672,7 @@ export type Database = {
           performance_motivo?: Json | null;
           performance_revisado_em?: string | null;
           performance_revisado_por?: string | null;
+          performance_revisao_motivo?: string | null;
           performance_status?: string | null;
           periodo_fim?: string | null;
           periodo_inicio?: string | null;
@@ -2715,6 +2717,7 @@ export type Database = {
           performance_motivo?: Json | null;
           performance_revisado_em?: string | null;
           performance_revisado_por?: string | null;
+          performance_revisao_motivo?: string | null;
           performance_status?: string | null;
           periodo_fim?: string | null;
           periodo_inicio?: string | null;
@@ -3445,6 +3448,11 @@ export type Database = {
           area_chave: string;
         }[];
       };
+      fn_bloco_performance: { Args: { p_empresa_id: string }; Returns: string };
+      fn_calcular_performance_pessoa: {
+        Args: { p_bloco: string; p_profile_id: string };
+        Returns: Json;
+      };
       fn_comissao_clt: {
         Args: { p_competencia: string; p_vendedor: string };
         Returns: {
@@ -3516,6 +3524,25 @@ export type Database = {
           _senha: string;
         };
         Returns: string;
+      };
+      fn_revisar_reativar_performance: {
+        Args: { p_motivo?: string; p_profile_id: string };
+        Returns: undefined;
+      };
+      fn_salvar_regua_performance: {
+        Args: {
+          p_bloco: string;
+          p_cancelamentos_limite: number;
+          p_conv_atencao_pct: number;
+          p_conv_travado_pct: number;
+          p_dias_atencao: number;
+          p_dias_travado: number;
+          p_janela_dias: number;
+          p_notifica_supervisor: boolean;
+          p_pausa_leads_ativa: boolean;
+          p_senha: string;
+        };
+        Returns: undefined;
       };
       fn_tem_area: {
         Args: { _area: string; _user_id: string };
@@ -3602,6 +3629,7 @@ export type Database = {
         Returns: undefined;
       };
       puxar_lead_de_volta: { Args: { p_lead: string }; Returns: undefined };
+      recalcular_regua_performance: { Args: never; Returns: Json };
       recusar_empresa: {
         Args: { motivo?: string; p_empresa_id: string };
         Returns: string;
