@@ -108,6 +108,19 @@ function AuthPage() {
         <div className="auth-foot">
           Ainda não tem cadastro? <Link to="/auth/cadastro">Criar franquia</Link>
         </div>
+        <div className="auth-divider" />
+        <p className="auth-foot" style={{ margin: "0 0 12px" }}>
+          O acesso à plataforma é por convite.
+          <br />
+          Ainda não tem o seu?
+        </p>
+        <Link
+          to="/auth/contato"
+          className="auth-btn outline"
+          style={{ display: "inline-block", textAlign: "center", lineHeight: "48px" }}
+        >
+          Quero falar com a Cote Certo
+        </Link>
       </div>
     </div>
   );
