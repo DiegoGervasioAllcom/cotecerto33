@@ -1,10 +1,12 @@
 // Aba "Personalização geral" — Respostas padrão (G3.6). Textos rápidos que o
 // aprovador pode inserir na observação ao decidir um pedido de desconto.
-// `seguradora_id` NULL = geral (vale pra todas as seguradoras). Escrita
-// restrita à matriz via RLS.
+// `seguradora_id` NULL = geral (vale pra todas as seguradoras). Grava via
+// fn_salvar_resposta_padrao/fn_excluir_resposta_padrao (G6.1) — gate de
+// diretor, escrita direta é fechada pra authenticated desde então.
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/operacao/acessos/icon";
 import { supabase } from "@/integrations/supabase/client";
+import { SenhaDiretorModal } from "./senha-diretor-modal";
 
 const TITULO_MAX = 100;
 const TEXTO_MAX = 1000;
@@ -28,6 +30,12 @@ type FormState = {
 
 const EMPTY_FORM: FormState = { titulo: "", texto: "", seguradoraId: "", ativo: true };
 
+type AcaoPendente =
+  | { tipo: "criar"; form: FormState }
+  | { tipo: "editar"; id: string; form: FormState }
+  | { tipo: "toggle"; resposta: RespostaPadrao }
+  | { tipo: "excluir"; resposta: RespostaPadrao };
+
 export function RespostasPadraoPanel() {
   const [seguradoras, setSeguradoras] = useState<Seguradora[]>([]);
   const [respostas, setRespostas] = useState<RespostaPadrao[]>([]);
@@ -40,6 +48,7 @@ export function RespostasPadraoPanel() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
+  const [acaoPendente, setAcaoPendente] = useState<AcaoPendente | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -85,29 +94,14 @@ export function RespostasPadraoPanel() {
     return null;
   }
 
-  async function criar() {
+  function criar() {
     const problema = validar(form);
     if (problema) {
       setErr(problema);
       return;
     }
     setErr(null);
-    setBusy(true);
-    const { error } = await supabase.from("respostas_padrao").insert({
-      titulo: form.titulo.trim(),
-      texto: form.texto.trim(),
-      seguradora_id: form.seguradoraId || null,
-      ativo: form.ativo,
-    });
-    setBusy(false);
-    if (error) {
-      setErr(error.message);
-      return;
-    }
-    setForm(EMPTY_FORM);
-    setAddOpen(false);
-    setToast({ msg: "Resposta padrão criada", kind: "ok" });
-    await reload();
+    setAcaoPendente({ tipo: "criar", form });
   }
 
   function iniciarEdicao(r: RespostaPadrao) {
@@ -126,61 +120,83 @@ export function RespostasPadraoPanel() {
     setEditForm(EMPTY_FORM);
   }
 
-  async function salvarEdicao(id: string) {
+  function salvarEdicao(id: string) {
     const problema = validar(editForm);
     if (problema) {
       setErr(problema);
       return;
     }
     setErr(null);
-    setBusy(true);
-    const { error } = await supabase
-      .from("respostas_padrao")
-      .update({
-        titulo: editForm.titulo.trim(),
-        texto: editForm.texto.trim(),
-        seguradora_id: editForm.seguradoraId || null,
-        ativo: editForm.ativo,
-      })
-      .eq("id", id);
-    setBusy(false);
-    if (error) {
-      setErr(error.message);
-      return;
-    }
-    setToast({ msg: "Resposta padrão atualizada", kind: "ok" });
-    cancelarEdicao();
-    await reload();
+    setAcaoPendente({ tipo: "editar", id, form: editForm });
   }
 
-  async function alternarAtivo(r: RespostaPadrao) {
-    setBusy(true);
+  function alternarAtivo(r: RespostaPadrao) {
     setErr(null);
-    const { error } = await supabase
-      .from("respostas_padrao")
-      .update({ ativo: !r.ativo })
-      .eq("id", r.id);
-    setBusy(false);
-    if (error) {
-      setErr(error.message);
-      return;
-    }
-    setToast({ msg: r.ativo ? "Resposta desativada" : "Resposta ativada", kind: "ok" });
-    await reload();
+    setAcaoPendente({ tipo: "toggle", resposta: r });
   }
 
-  async function excluir(r: RespostaPadrao) {
+  function excluir(r: RespostaPadrao) {
     if (!confirm(`Excluir a resposta padrão "${r.titulo}"?`)) return;
-    setBusy(true);
     setErr(null);
-    const { error } = await supabase.from("respostas_padrao").delete().eq("id", r.id);
-    setBusy(false);
-    if (error) {
-      setErr(error.message);
-      return;
+    setAcaoPendente({ tipo: "excluir", resposta: r });
+  }
+
+  async function confirmarComSenha(senha: string): Promise<{ error: string | null }> {
+    if (!acaoPendente) return { error: "Nenhuma ação pendente." };
+    setBusy(true);
+    let resultado: { error: string | null };
+    if (acaoPendente.tipo === "excluir") {
+      const { error } = await supabase.rpc("fn_excluir_resposta_padrao", {
+        p_senha: senha,
+        p_id: acaoPendente.resposta.id,
+      });
+      resultado = { error: error?.message ?? null };
+    } else {
+      const f =
+        acaoPendente.tipo === "toggle"
+          ? {
+              titulo: acaoPendente.resposta.titulo,
+              texto: acaoPendente.resposta.texto,
+              seguradoraId: acaoPendente.resposta.seguradora_id ?? "",
+              ativo: !acaoPendente.resposta.ativo,
+            }
+          : acaoPendente.form;
+      const { error } = await supabase.rpc("fn_salvar_resposta_padrao", {
+        p_senha: senha,
+        p_id:
+          acaoPendente.tipo === "editar"
+            ? acaoPendente.id
+            : acaoPendente.tipo === "toggle"
+              ? acaoPendente.resposta.id
+              : undefined,
+        p_seguradora_id: f.seguradoraId || undefined,
+        p_titulo: f.titulo.trim(),
+        p_texto: f.texto.trim(),
+        p_ativo: f.ativo,
+      });
+      resultado = { error: error?.message ?? null };
     }
-    setToast({ msg: "Resposta padrão excluída", kind: "alert" });
+    setBusy(false);
+    if (resultado.error) return resultado;
+
+    if (acaoPendente.tipo === "criar") {
+      setForm(EMPTY_FORM);
+      setAddOpen(false);
+      setToast({ msg: "Resposta padrão criada", kind: "ok" });
+    } else if (acaoPendente.tipo === "editar") {
+      cancelarEdicao();
+      setToast({ msg: "Resposta padrão atualizada", kind: "ok" });
+    } else if (acaoPendente.tipo === "toggle") {
+      setToast({
+        msg: acaoPendente.resposta.ativo ? "Resposta desativada" : "Resposta ativada",
+        kind: "ok",
+      });
+    } else {
+      setToast({ msg: "Resposta padrão excluída", kind: "alert" });
+    }
+    setAcaoPendente(null);
     await reload();
+    return { error: null };
   }
 
   if (loading) {
@@ -399,6 +415,18 @@ export function RespostasPadraoPanel() {
           </tbody>
         </table>
       </div>
+
+      {acaoPendente && (
+        <SenhaDiretorModal
+          label={
+            acaoPendente.tipo === "excluir"
+              ? `a exclusão de "${acaoPendente.resposta.titulo}"`
+              : "as respostas padrão"
+          }
+          onConfirm={confirmarComSenha}
+          onClose={() => setAcaoPendente(null)}
+        />
+      )}
 
       {toast && (
         <div

@@ -5,6 +5,7 @@ import { maskPct } from "@/lib/masks";
 import { modeloFranquiaNomeSchema } from "@/lib/schemas/catalogos.schema";
 import { DescontoPoliticaPanel } from "@/components/acessos/desconto-politica-panel";
 import { RespostasPadraoPanel } from "@/components/acessos/respostas-padrao-panel";
+import { SenhaDiretorModal } from "@/components/acessos/senha-diretor-modal";
 import { PerformancePanel } from "./performance-panel";
 import { Icon } from "./icon";
 import { PARAMS } from "./constants";
@@ -66,9 +67,7 @@ export function PersoGeral({
           reload={reload}
         />
       )}
-      {sub === "clt" && (
-        <ModeloCltPanel clt={clt} setClt={setClt} onToast={onToast} onError={onError} />
-      )}
+      {sub === "clt" && <ModeloCltPanel clt={clt} setClt={setClt} onToast={onToast} />}
       {sub === "performance" && <PerformancePanel />}
       {sub !== "performance" && (
         <>
@@ -96,6 +95,7 @@ function ModeloFranquiaPanel({
   const [busy, setBusy] = useState(false);
   const [novoNome, setNovoNome] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   function patchModelo(id: string, patch: Partial<Modelo> & { params?: ModeloParams }) {
     setModelos((prev) =>
@@ -110,7 +110,7 @@ function ModeloFranquiaPanel({
     );
   }
 
-  async function salvar() {
+  function validarESolicitarSenha() {
     for (const m of modelos) {
       const check = modeloFranquiaNomeSchema.safeParse(m.nome);
       if (!check.success) {
@@ -118,26 +118,25 @@ function ModeloFranquiaPanel({
         return;
       }
     }
+    setConfirmando(true);
+  }
+
+  async function salvarComSenha(senha: string): Promise<{ error: string | null }> {
     setBusy(true);
-    const updates = modelos.map((m) =>
-      supabase
-        .from("modelos_franquia")
-        .update({
-          nome: m.nome,
-          params: m.params,
-          ordem: m.ordem,
-          modalidade: m.tipo === "franqueada" ? (m.modalidade ?? "individual") : null,
-        })
-        .eq("id", m.id),
-    );
-    const res = await Promise.all(updates);
+    const { error } = await supabase.rpc("fn_salvar_modelos_franquia", {
+      p_senha: senha,
+      p_modelos: modelos.map((m) => ({
+        id: m.id,
+        nome: m.nome,
+        ordem: m.ordem,
+        modalidade: m.tipo === "franqueada" ? (m.modalidade ?? "individual") : null,
+        params: m.params,
+      })),
+    });
     setBusy(false);
-    const erro = res.find((r) => r.error);
-    if (erro?.error) {
-      onError(erro.error.message);
-      return;
-    }
+    if (error) return { error: error.message };
     onToast("Parâmetros dos modelos atualizados", "ok");
+    return { error: null };
   }
 
   async function adicionar() {
@@ -198,11 +197,18 @@ function ModeloFranquiaPanel({
           <button className="btn btn-ghost btn-sm" onClick={() => setAddOpen((v) => !v)}>
             <Icon id="plus" size={13} /> Adicionar modelo
           </button>
-          <button className="btn btn-slate btn-sm" disabled={busy} onClick={salvar}>
+          <button className="btn btn-slate btn-sm" disabled={busy} onClick={validarESolicitarSenha}>
             <Icon id="check" size={13} /> Salvar parâmetros
           </button>
         </div>
       </div>
+      {confirmando && (
+        <SenhaDiretorModal
+          label="os parâmetros dos modelos de franquia"
+          onConfirm={salvarComSenha}
+          onClose={() => setConfirmando(false)}
+        />
+      )}
       {addOpen && (
         <div className="card-b" style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input
@@ -324,35 +330,29 @@ function ModeloCltPanel({
   clt,
   setClt,
   onToast,
-  onError,
 }: {
   clt: CltConfig;
   setClt: (c: CltConfig) => void;
   onToast: (msg: string, kind: "ok" | "alert") => void;
-  onError: (e: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
-  async function salvar() {
+  async function salvarComSenha(senha: string): Promise<{ error: string | null }> {
     setBusy(true);
-    const { error } = await supabase
-      .from("clt_config")
-      .update({
-        progressiva: clt.progressiva,
-        fator_novas: clt.fator_novas,
-        fator_remalho: clt.fator_remalho,
-        seguradora_planos: clt.seguradora_planos,
-        seguradora_adic: clt.seguradora_adic,
-        regras: clt.regras,
-        atualizado_em: new Date().toISOString(),
-      })
-      .eq("id", "default");
+    const { error } = await supabase.rpc("fn_salvar_clt_config", {
+      p_senha: senha,
+      p_progressiva: clt.progressiva,
+      p_fator_novas: clt.fator_novas,
+      p_fator_remalho: clt.fator_remalho,
+      p_seguradora_planos: clt.seguradora_planos,
+      p_seguradora_adic: clt.seguradora_adic,
+      p_regras: clt.regras,
+    });
     setBusy(false);
-    if (error) {
-      onError(error.message);
-      return;
-    }
+    if (error) return { error: error.message };
     onToast("Modelo CLT atualizado", "ok");
+    return { error: null };
   }
 
   return (
@@ -362,10 +362,21 @@ function ModeloCltPanel({
           <Icon id="info" size={13} /> Regras de remuneração do vendedor CLT (equipe interna), com
           base nas políticas SUP_POL_01 e SUP_POL_04.
         </div>
-        <button className="btn btn-slate btn-sm" disabled={busy} onClick={salvar}>
+        <button
+          className="btn btn-slate btn-sm"
+          disabled={busy}
+          onClick={() => setConfirmando(true)}
+        >
           <Icon id="check" size={13} /> Salvar Modelo CLT
         </button>
       </div>
+      {confirmando && (
+        <SenhaDiretorModal
+          label="o Modelo CLT"
+          onConfirm={salvarComSenha}
+          onClose={() => setConfirmando(false)}
+        />
+      )}
 
       <DynamicRangeCard
         title="Comissão de seguros — progressiva"
