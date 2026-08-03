@@ -3445,6 +3445,7 @@ export type Database = {
           area_chave: string;
         }[];
       };
+      fn_bloco_performance: { Args: { p_empresa_id: string }; Returns: string };
       fn_calcular_performance_pessoa: {
         Args: { p_bloco: string; p_profile_id: string };
         Returns: Json;
