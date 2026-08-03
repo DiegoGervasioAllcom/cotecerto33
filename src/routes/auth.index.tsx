@@ -117,7 +117,7 @@ function AuthPage() {
         <Link
           to="/auth/contato"
           className="auth-btn outline"
-          style={{ display: "inline-block", textAlign: "center", lineHeight: "48px" }}
+          style={{ display: "inline-block", textAlign: "center" }}
         >
           Quero falar com a Cote Certo
         </Link>
