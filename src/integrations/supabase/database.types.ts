@@ -2623,6 +2623,11 @@ export type Database = {
           id: string;
           leads_dia: number | null;
           nome: string;
+          performance_calculado_em: string | null;
+          performance_motivo: Json | null;
+          performance_revisado_em: string | null;
+          performance_revisado_por: string | null;
+          performance_status: string | null;
           periodo_fim: string | null;
           periodo_inicio: string | null;
           royalties: number | null;
@@ -2662,6 +2667,11 @@ export type Database = {
           id: string;
           leads_dia?: number | null;
           nome?: string;
+          performance_calculado_em?: string | null;
+          performance_motivo?: Json | null;
+          performance_revisado_em?: string | null;
+          performance_revisado_por?: string | null;
+          performance_status?: string | null;
           periodo_fim?: string | null;
           periodo_inicio?: string | null;
           royalties?: number | null;
@@ -2701,6 +2711,11 @@ export type Database = {
           id?: string;
           leads_dia?: number | null;
           nome?: string;
+          performance_calculado_em?: string | null;
+          performance_motivo?: Json | null;
+          performance_revisado_em?: string | null;
+          performance_revisado_por?: string | null;
+          performance_status?: string | null;
           periodo_fim?: string | null;
           periodo_inicio?: string | null;
           royalties?: number | null;
@@ -2734,6 +2749,20 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "v_franquia_kpis";
             referencedColumns: ["empresa_id"];
+          },
+          {
+            foreignKeyName: "profiles_performance_revisado_por_fkey";
+            columns: ["performance_revisado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profiles_performance_revisado_por_fkey";
+            columns: ["performance_revisado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
           },
           {
             foreignKeyName: "profiles_superior_id_fkey";
@@ -2924,6 +2953,63 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "oportunidades";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      regua_performance_config: {
+        Row: {
+          atualizado_em: string;
+          atualizado_por: string | null;
+          bloco: string;
+          cancelamentos_limite: number;
+          conv_atencao_pct: number;
+          conv_travado_pct: number;
+          dias_atencao: number;
+          dias_travado: number;
+          janela_dias: number;
+          notifica_supervisor: boolean;
+          pausa_leads_ativa: boolean;
+        };
+        Insert: {
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          bloco: string;
+          cancelamentos_limite?: number;
+          conv_atencao_pct?: number;
+          conv_travado_pct?: number;
+          dias_atencao?: number;
+          dias_travado?: number;
+          janela_dias?: number;
+          notifica_supervisor?: boolean;
+          pausa_leads_ativa?: boolean;
+        };
+        Update: {
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          bloco?: string;
+          cancelamentos_limite?: number;
+          conv_atencao_pct?: number;
+          conv_travado_pct?: number;
+          dias_atencao?: number;
+          dias_travado?: number;
+          janela_dias?: number;
+          notifica_supervisor?: boolean;
+          pausa_leads_ativa?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "regua_performance_config_atualizado_por_fkey";
+            columns: ["atualizado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "regua_performance_config_atualizado_por_fkey";
+            columns: ["atualizado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
           },
         ];
       };
