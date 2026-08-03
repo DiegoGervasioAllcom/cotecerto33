@@ -9,7 +9,7 @@ import { SenhaDiretorModal } from "@/components/acessos/senha-diretor-modal";
 import { PerformancePanel } from "./performance-panel";
 import { Icon } from "./icon";
 import { PARAMS } from "./constants";
-import { DynamicRangeCard, DynamicTrioCard } from "./dynamic-cards";
+import { DynamicPairCard, DynamicRangeCard } from "./dynamic-cards";
 import type { CltConfig, Modelo, ModeloParams, PersoSub } from "./types";
 
 export function PersoGeral({
@@ -418,7 +418,7 @@ function ModeloCltPanel({
         />
       </div>
 
-      <DynamicTrioCard
+      <DynamicPairCard
         title="Seguradora — comissão por plano (R$)"
         icon="car"
         lh="Plano"
@@ -427,7 +427,7 @@ function ModeloCltPanel({
         onChange={(rows) => setClt({ ...clt, seguradora_planos: rows })}
         valueMask="brl"
       />
-      <DynamicTrioCard
+      <DynamicPairCard
         title="Seguradora — serviços adicionais (R$)"
         icon="shield"
         lh="Adicional"

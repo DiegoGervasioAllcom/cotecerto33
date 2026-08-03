@@ -1,21 +1,6 @@
 // Constantes da tela "Acessos e permissões".
 import type { CltConfig } from "./types";
 
-export const SEGURADORAS = [
-  "Ituran",
-  "Porto Seguro",
-  "Azul Seguros",
-  "Bradesco Seguros",
-  "SulAmérica",
-  "HDI",
-  "Allianz",
-  "Mapfre",
-  "Tokio Marine",
-  "Liberty",
-  "Itaú",
-  "Zurich",
-];
-
 export const CLT_DEFAULT: CltConfig = {
   progressiva: [],
   fator_novas: [],

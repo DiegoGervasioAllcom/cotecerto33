@@ -62,7 +62,6 @@ export type Modelo = {
 };
 
 export type Pair = [string, string];
-export type Trio = [string, string, string]; // [seguradora, item, valor]
 export type CltRegras = {
   apuracao_ini: string;
   apuracao_fim: string;
@@ -74,8 +73,8 @@ export type CltConfig = {
   progressiva: Pair[];
   fator_novas: Pair[];
   fator_remalho: Pair[];
-  seguradora_planos: Trio[];
-  seguradora_adic: Trio[];
+  seguradora_planos: Pair[];
+  seguradora_adic: Pair[];
   regras: CltRegras;
 };
 
