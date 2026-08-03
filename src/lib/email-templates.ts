@@ -52,7 +52,7 @@ export type EmailTemplate =
 
 export type RenderedEmail = { subject: string; html: string; text: string };
 
-const escapeHtml = (value: string) =>
+export const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => {
     const entities: Record<string, string> = {
       "&": "&amp;",
