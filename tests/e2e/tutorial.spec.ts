@@ -128,6 +128,8 @@ async function monitorSupabaseMutations(page: Page) {
     "funis_por_canal_visao_geral",
     "normalizar_periodo_visao_geral",
     "saldo_comissao_visao_geral",
+    "franquias_abaixo_meta_visao_geral",
+    "contar_pendentes_seguradora_visao_geral",
   ]);
   await page.route("**/rest/v1/**", async (route) => {
     const request = route.request();
