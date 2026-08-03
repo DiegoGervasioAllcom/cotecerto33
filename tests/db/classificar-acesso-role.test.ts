@@ -2,11 +2,12 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { admin, loginMatriz, criarUsuario, uniq, uniqDoc, type Db } from "../helpers/supabase";
 
 /**
- * Regressão do bug S-crítica: cadastrar_franquia grava `user_roles.role =
- * 'vendedor'` para todo mundo, e a tela "Classificar acesso" precisa
- * SUBSTITUIR essa role (nunca só inserir/upsert em cima) pela role
- * definitiva escolhida pela Matriz — `user_roles` é UNIQUE(user_id, role) e
- * useAuth() espera no máximo 1 linha (`.maybeSingle()`).
+ * Regressão do bug S-crítica: cadastrar_franquia_admin (RPC que o Convite
+ * Supper chama de verdade hoje) grava `user_roles.role = 'vendedor'` para
+ * todo mundo, e a tela "Classificar acesso" precisa SUBSTITUIR essa role
+ * (nunca só inserir/upsert em cima) pela role definitiva escolhida pela
+ * Matriz — `user_roles` é UNIQUE(user_id, role) e useAuth() espera no
+ * máximo 1 linha (`.maybeSingle()`).
  *
  * Este teste simula a sequência client-side que
  * `classificar-acesso-modal.tsx` executa (delete + insert em user_roles),
@@ -20,14 +21,15 @@ describe("classificar acesso — substituição de role em user_roles", () => {
   });
 
   async function cadastrarPendente(prefix: string) {
-    const { client: dono, userId } = await criarUsuario(`${uniq(prefix)}@teste.local`);
-    const { data: empresaId, error } = await dono.rpc("cadastrar_franquia", {
+    const { userId } = await criarUsuario(`${uniq(prefix)}@teste.local`);
+    const { data: empresaId, error } = await admin.rpc("cadastrar_franquia_admin", {
       p: {
         nome: uniq(prefix),
         tipo: "pj",
         documento: uniqDoc(),
         email: `${uniq(prefix)}@teste.local`,
       },
+      p_user: userId,
     });
     expect(error).toBeNull();
     return { userId, empresaId: empresaId as string };
@@ -85,13 +87,14 @@ describe("classificar acesso — substituição de role em user_roles", () => {
 
   it("não-matriz NÃO consegue substituir a própria role (policy user_roles_matriz_admin)", async () => {
     const { client: dono, userId } = await criarUsuario(`${uniq("clf-neg")}@teste.local`);
-    await dono.rpc("cadastrar_franquia", {
+    await admin.rpc("cadastrar_franquia_admin", {
       p: {
         nome: uniq("clf-neg"),
         tipo: "pj",
         documento: uniqDoc(),
         email: `${uniq("clf-neg")}@teste.local`,
       },
+      p_user: userId,
     });
     const { error: delErr } = await dono.from("user_roles").delete().eq("user_id", userId);
     // RLS: delete de 0 linhas não é erro, mas o insert de uma role elevada deve falhar.

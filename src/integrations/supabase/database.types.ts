@@ -3328,7 +3328,6 @@ export type Database = {
         Args: { p_lead: string; p_motivo: string };
         Returns: undefined;
       };
-      cadastrar_franquia: { Args: { p: Json }; Returns: string };
       cadastrar_franquia_admin: {
         Args: { p: Json; p_user: string };
         Returns: string;
