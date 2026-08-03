@@ -152,4 +152,8 @@ C14 (fechar a porta antiga, só depois que C3 está validado em produção) → 
   `cadastrar_franquia` (a variante bem antiga, sem `_user`) também — tem teste de
   regressão de bug crítica; dropar do banco é decisão separada, não pré-requisito pra
   fechar a porta de entrada (que era a rota, não a RPC).
-- **C15 em andamento** — E2E novo (não havia nada pra adaptar).
+- **C15 fechada.** E2E novo (`tests/e2e/cadastros-ciclo-vida.spec.ts`) — não havia
+  nada pra adaptar. Cobre cadastro manual (pendente correto + abre classificação),
+  trava de exclusão (Master c/ franquia, franquia c/ vendedor) e desligamento
+  (motivo obrigatório → solicitar → aprovar), além de confirmar `/auth/cadastro`
+  fora do ar (C14). Com isso, a Frente 3 está inteiramente concluída.
