@@ -53,7 +53,11 @@ describe("V11 · C6 — excluir_cadastro_rede", () => {
     const franquia = await criarPersonaComEmpresa("franqueado", { parentId: master.empresaId });
     await admin
       .from("profiles")
-      .update({ desligado_em: new Date().toISOString(), status: "suspensa" })
+      .update({
+        desligado_em: new Date().toISOString(),
+        desligado_motivo: "teste",
+        status: "suspensa",
+      })
       .eq("id", franquia.userId);
     const matriz = await loginMatriz();
 
@@ -81,7 +85,11 @@ describe("V11 · C6 — excluir_cadastro_rede", () => {
     const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: franquia.empresaId });
     await admin
       .from("profiles")
-      .update({ desligado_em: new Date().toISOString(), status: "suspensa" })
+      .update({
+        desligado_em: new Date().toISOString(),
+        desligado_motivo: "teste",
+        status: "suspensa",
+      })
       .eq("id", vendedor.userId);
     const matriz = await loginMatriz();
 

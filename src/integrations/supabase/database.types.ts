@@ -3403,10 +3403,6 @@ export type Database = {
       };
       desarquivar_lead: { Args: { p_lead: string }; Returns: undefined };
       desbloquear_lead: { Args: { p_lead: string }; Returns: undefined };
-      desligar_usuario: {
-        Args: { motivo?: string; user_id: string };
-        Returns: undefined;
-      };
       distribuir_fila_pendente: { Args: never; Returns: number };
       empresas_visiveis: {
         Args: { _user_id: string };

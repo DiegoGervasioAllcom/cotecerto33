@@ -119,7 +119,11 @@ describe("V11 · C7 — solicitar_desligamento", () => {
     const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: franquia.empresaId });
     await admin
       .from("profiles")
-      .update({ desligado_em: new Date().toISOString(), status: "suspensa" })
+      .update({
+        desligado_em: new Date().toISOString(),
+        desligado_motivo: "teste",
+        status: "suspensa",
+      })
       .eq("id", vendedor.userId);
 
     const { error } = await master.client.rpc("solicitar_desligamento", {

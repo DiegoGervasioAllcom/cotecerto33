@@ -77,11 +77,25 @@ export function UsuariosModal({
 
   async function toggleAtivo(u: UserFull) {
     const ativo = !!u.desligado_em; // se já está desligado → reativar
-    const motivo = !ativo ? (prompt("Motivo da desativação (opcional):") ?? null) : null;
+    if (!ativo) {
+      const motivo = prompt("Motivo da desativação (obrigatório):");
+      if (motivo === null) return;
+      if (!motivo.trim()) {
+        setErr("O motivo é obrigatório.");
+        return;
+      }
+      const { error } = await supabase.rpc("admin_set_usuario_status", {
+        p_user_id: u.id,
+        p_ativo: false,
+        p_motivo: motivo.trim(),
+      });
+      if (error) setErr(error.message);
+      void load();
+      return;
+    }
     const { error } = await supabase.rpc("admin_set_usuario_status", {
       p_user_id: u.id,
-      p_ativo: ativo,
-      p_motivo: motivo ?? undefined,
+      p_ativo: true,
     });
     if (error) setErr(error.message);
     void load();
