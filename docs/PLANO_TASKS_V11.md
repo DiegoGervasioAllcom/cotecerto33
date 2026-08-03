@@ -206,12 +206,20 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 
 | Task    | Tag   | Descrição                                                                                                                                                                 | Depende de                              |
 | ------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| V11.7.1 | banco | **Período único** server-side (item 8): dia/semana/quinzena/mês/personalizado                                                                                             | —                                       |
+| V11.7.1 | banco | ✅ **Período único** server-side (item 8): dia/semana/quinzena/mês/personalizado                                                                                             | —                                       |
 | V11.7.2 | front | Todos os widgets da Visão geral lendo a mesma janela — hoje são 4 opções mensais no cliente (`visao-geral.tsx`)                                                           | V11.7.1                                 |
-| V11.7.3 | front | **4 funis por canal** (Movida/Google/Facebook/Manual) escalando com o período                                                                                             | V11.7.1, V11.0.4                        |
+| V11.7.3 | front | ✅ **4 funis por canal** (Movida/Google/Facebook/Manual) escalando com o período                                                                                             | V11.7.1, V11.0.4                        |
 | V11.7.4 | front | **Alertas clicáveis** derivados do estado real                                                                                                                            | V11.7.2                                 |
 | V11.7.5 | banco | Modelar o estado real de **pendência da seguradora** após a transmissão; não inferir pendência a partir de proposta apenas `gerada`                                       | regra operacional da pendência definida |
 | V11.7.6 | front | **Fechar os alertas adiados da Visão geral**: pendência da seguradora, franquia abaixo da meta e vendedor em atenção, usando os estados entregues pelas tasks dependentes | V11.7.5, V11.4.1, V11.8                 |
+
+> **V11.7.1 e V11.7.3 já tinham sido entregues em 29/07/2026** (commits `10e8bdd`,
+> `1d34317`), antes de a numeração de frentes virar prática — só não tinham sido marcadas
+> aqui. Descoberto e documentado ao planejar o fechamento da Frente 7 (03/08/2026), ver
+> `docs/PLANO_VISAO_GERAL_V11.md` para o levantamento completo do que estava pronto vs.
+> faltando em cada task desta frente, incluindo dois bugs vivos de heurística encontrados
+> na investigação (`visao-geral.tsx` e `operacao/vendas.tsx` tratavam `status='gerada'`/
+> ausência de `transmitida_em` como indistinto de pendência real da seguradora).
 
 ### Pendências rastreadas da V11.7.4
 
