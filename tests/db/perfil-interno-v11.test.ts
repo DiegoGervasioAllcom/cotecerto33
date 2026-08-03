@@ -12,7 +12,7 @@
  * 'interno' não.
  */
 import { describe, it, expect } from "vitest";
-import { admin, loginMatriz, criarPersonaComEmpresa, uniq } from "../helpers/supabase";
+import { admin, loginMatriz, criarPersonaComEmpresa } from "../helpers/supabase";
 
 /** Competência única por run, para não colidir com outros fechamentos. */
 function competenciaUnica(): string {
@@ -70,15 +70,5 @@ describe("V11 — perfil 'interno'", () => {
     expect(beneficiarios, "interno foi pago como se fosse supervisor").not.toContain(
       interno.userId,
     );
-  });
-
-  it("não é aceito como solicitante em solicitar_vendedor", async () => {
-    const interno = await criarPersonaComEmpresa("interno", { emailPrefix: "int-solic" });
-    const { error } = await interno.client.rpc("solicitar_vendedor", {
-      p_nome: uniq("Vendedor pedido"),
-      p_email: `${uniq("vend")}@teste.local`,
-    });
-    // A função aceita matriz/master/supervisor — 'interno' não é solicitante.
-    expect(error, "interno conseguiu solicitar vendedor").not.toBeNull();
   });
 });

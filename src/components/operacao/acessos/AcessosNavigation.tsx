@@ -23,9 +23,6 @@ export function AcessosNavigation({
       >
         Pendentes de aprovação <span style={{ opacity: 0.7 }}>({pendentes})</span>
       </button>
-      <button className={tab === "vendedores" ? "on" : ""} onClick={() => onChange("vendedores")}>
-        Solicitações de vendedor
-      </button>
       <button
         className={tab === "deslig" ? "on" : ""}
         data-tour="acessos-tab-desligamentos"
