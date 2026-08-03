@@ -3430,6 +3430,10 @@ export type Database = {
         Args: { p_token: string; p_user_id: string };
         Returns: boolean;
       };
+      contar_pendentes_seguradora_visao_geral: {
+        Args: { p_fim: string; p_inicio: string };
+        Returns: number;
+      };
       contrapropor_desconto: {
         Args: { p_id: string; p_obs?: string; p_pct_novo: number };
         Returns: undefined;
@@ -3495,6 +3499,14 @@ export type Database = {
         Returns: string;
       };
       escalar_desconto: { Args: { p_id: string }; Returns: undefined };
+      esta_pendente_seguradora: {
+        Args: {
+          p_cancelada_em: string;
+          p_emitida_em: string;
+          p_transmitida_em: string;
+        };
+        Returns: boolean;
+      };
       excluir_cadastro_rede: {
         Args: { p_motivo: string; p_user_id: string };
         Returns: undefined;
@@ -3667,6 +3679,10 @@ export type Database = {
         Returns: string;
       };
       fn_trimestre: { Args: { p_competencia: string }; Returns: number };
+      franquias_abaixo_meta_visao_geral: {
+        Args: { p_fim: string; p_inicio: string };
+        Returns: number;
+      };
       funis_por_canal_visao_geral: {
         Args: { p_fim: string; p_inicio: string };
         Returns: {
@@ -3745,6 +3761,10 @@ export type Database = {
       propor_alteracao_diretor: {
         Args: { p_acao: string; p_alvo_id: string; p_senha: string };
         Returns: string;
+      };
+      proposta_pendente_seguradora: {
+        Args: { p_proposta_id: string };
+        Returns: boolean;
       };
       puxar_lead_de_volta: { Args: { p_lead: string }; Returns: undefined };
       recalcular_regua_performance: { Args: never; Returns: Json };
