@@ -80,7 +80,7 @@ export type CltConfig = {
 };
 
 export type Tab = "cadastros" | "pend" | "deslig" | "modelos";
-export type PersoSub = "franquia" | "clt";
+export type PersoSub = "franquia" | "clt" | "performance";
 
 export type Superior = { id: string; nome: string; role: "master" | "supervisor" };
 export type FranquiaAprovada = {

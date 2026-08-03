@@ -5,6 +5,7 @@ import { maskPct } from "@/lib/masks";
 import { modeloFranquiaNomeSchema } from "@/lib/schemas/catalogos.schema";
 import { DescontoPoliticaPanel } from "@/components/acessos/desconto-politica-panel";
 import { RespostasPadraoPanel } from "@/components/acessos/respostas-padrao-panel";
+import { PerformancePanel } from "./performance-panel";
 import { Icon } from "./icon";
 import { PARAMS } from "./constants";
 import { DynamicRangeCard, DynamicTrioCard } from "./dynamic-cards";
@@ -48,8 +49,15 @@ export function PersoGeral({
         >
           Modelo CLT
         </button>
+        <button
+          className={sub === "performance" ? "on" : ""}
+          data-tour="acessos-performance"
+          onClick={() => setSub("performance")}
+        >
+          Performance
+        </button>
       </div>
-      {sub === "franquia" ? (
+      {sub === "franquia" && (
         <ModeloFranquiaPanel
           modelos={modelos}
           setModelos={setModelos}
@@ -57,11 +65,17 @@ export function PersoGeral({
           onError={onError}
           reload={reload}
         />
-      ) : (
+      )}
+      {sub === "clt" && (
         <ModeloCltPanel clt={clt} setClt={setClt} onToast={onToast} onError={onError} />
       )}
-      <DescontoPoliticaPanel />
-      <RespostasPadraoPanel />
+      {sub === "performance" && <PerformancePanel />}
+      {sub !== "performance" && (
+        <>
+          <DescontoPoliticaPanel />
+          <RespostasPadraoPanel />
+        </>
+      )}
     </>
   );
 }

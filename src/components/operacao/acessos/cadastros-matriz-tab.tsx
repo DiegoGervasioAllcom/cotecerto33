@@ -11,8 +11,12 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Icon } from "./icon";
 import { GerenciarCargosModal } from "@/components/acessos/gerenciar-cargos-modal";
+import { PerformanceResumoModal } from "@/components/acessos/performance-resumo-modal";
+import { PERFORMANCE_STATUS_LABEL, PERFORMANCE_STATUS_CHIP } from "@/lib/performance-status";
 
 type CargoOpcao = { id: string; nome: string };
+
+type PerformanceStatus = "ativo" | "atencao" | "travado" | null;
 
 type LinhaBase = {
   id: string;
@@ -27,6 +31,7 @@ type LinhaBase = {
   cargoId: string | null;
   cargoNome: string;
   areas: number | null;
+  performanceStatus: PerformanceStatus;
 };
 
 function anoDe(periodoInicio: string | null, aprovadaEm: string | null, createdAt: string): string {
@@ -58,6 +63,7 @@ export function CadastrosMatrizTab({
   const [busca, setBusca] = useState("");
   const [reloadTick, setReloadTick] = useState(0);
   const [gerenciandoCargos, setGerenciandoCargos] = useState(false);
+  const [resumoPerf, setResumoPerf] = useState<LinhaBase | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -69,7 +75,7 @@ export function CadastrosMatrizTab({
         supabase
           .from("profiles")
           .select(
-            "id,nome,sobrenome,email,diretor,desligado_em,cargo_id,periodo_inicio,aprovada_em,created_at,dias_acesso,hora_inicio,hora_fim,empresa_id",
+            "id,nome,sobrenome,email,diretor,desligado_em,cargo_id,periodo_inicio,aprovada_em,created_at,dias_acesso,hora_inicio,hora_fim,empresa_id,performance_status",
           )
           .not("empresa_id", "is", null),
       ]);
@@ -98,6 +104,7 @@ export function CadastrosMatrizTab({
         hora_inicio: string | null;
         hora_fim: string | null;
         empresa_id: string;
+        performance_status: PerformanceStatus;
       };
       const profiles = (profilesRes.data ?? []) as ProfileBruto[];
 
@@ -182,6 +189,7 @@ export function CadastrosMatrizTab({
           cargoId: p.cargo_id,
           cargoNome,
           areas,
+          performanceStatus: isVendedorClt ? p.performance_status : null,
         };
       });
       setLinhas(linhasNovas);
@@ -362,6 +370,17 @@ export function CadastrosMatrizTab({
                         <span className={`chip ${desligado ? "chip-outline" : "chip-ok"}`}>
                           {desligado ? "Desligado" : "Ativo"}
                         </span>
+                        {l.performanceStatus && (
+                          <button
+                            type="button"
+                            className={`chip ${PERFORMANCE_STATUS_CHIP[l.performanceStatus]}`}
+                            style={{ marginLeft: 6, cursor: "pointer", border: "none" }}
+                            onClick={() => setResumoPerf(l)}
+                            title="Ver resumo de performance"
+                          >
+                            {PERFORMANCE_STATUS_LABEL[l.performanceStatus]}
+                          </button>
+                        )}
                       </td>
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         <button
@@ -399,6 +418,14 @@ export function CadastrosMatrizTab({
       {gerenciandoCargos && (
         <GerenciarCargosModal
           onClose={() => setGerenciandoCargos(false)}
+          onAlterado={() => setReloadTick((t) => t + 1)}
+        />
+      )}
+      {resumoPerf && (
+        <PerformanceResumoModal
+          profileId={resumoPerf.id}
+          nome={`${resumoPerf.nome} ${resumoPerf.sobrenome ?? ""}`.trim()}
+          onClose={() => setResumoPerf(null)}
           onAlterado={() => setReloadTick((t) => t + 1)}
         />
       )}
