@@ -272,7 +272,13 @@ function Page() {
     (l) => (now - new Date(l.criado_em).getTime()) / 1000 > SLA_SECONDS,
   );
   const fechadosHoje = leadsMes.filter((l) => l.status_pipeline === "ganho");
-  const emTransmissao = propostasMes.filter((x) => x.status === "gerada");
+  // V11.7.5b — corrige a heurística antiga (status==='gerada', que é só "ainda
+  // não enviada à seguradora", não pendência). A contagem certa
+  // (transmitida/não emitida/não cancelada, dentro da janela normalizada) já
+  // é buscada por `useDashboardAlertCounts` para alimentar o alerta
+  // "pendentes-seguradora" — reaproveitamos o mesmo resultado aqui, em vez de
+  // chamar `contar_pendentes_seguradora_visao_geral` de novo.
+  const pendenteSeguradoraCount = dashboardAlertsQuery.data?.pendentesSeguradora ?? 0;
 
   const recebidosMes = leadsMes.length;
   const distribuidosMes = distribuidos.length;
@@ -573,9 +579,22 @@ function Page() {
         </div>
         <div className="card-b" style={{ paddingTop: 14 }}>
           <div className="summary-chips" style={{ marginBottom: 0 }}>
-            <div className="sum-chip" style={{ cursor: "pointer" }}>
-              <span className="sc-val">{emTransmissao.length}</span>
-              <span className="sc-lbl">Em transmissão</span>
+            <div
+              className="sum-chip"
+              style={{ cursor: "pointer" }}
+              onClick={() =>
+                navigate({
+                  to: "/operacao/vendas",
+                  search: {
+                    inicio: normalizedPeriod?.inicio,
+                    fim: normalizedPeriod?.fim,
+                    tab: "transmissao",
+                  },
+                })
+              }
+            >
+              <span className="sc-val">{pendenteSeguradoraCount}</span>
+              <span className="sc-lbl">Pendente da seguradora</span>
             </div>
             <div
               className="sum-chip alert"

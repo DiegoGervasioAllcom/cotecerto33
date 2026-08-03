@@ -4,14 +4,27 @@ import { describe, expect, it, vi } from "vitest";
 import { DashboardAlerts } from "@/components/comando/dashboard-alerts";
 import {
   buildDashboardAlerts,
+  buildDashboardAlertsFromCounts,
   dashboardDestinationPeriodSchema,
   leadsAlertSearchSchema,
   renewalsAlertSearchSchema,
   salesAlertSearchSchema,
+  type DashboardAlertCounts,
 } from "@/lib/dashboard-alerts";
 
 const inicio = "2026-07-01T00:00:00.000Z";
 const fim = "2026-08-01T00:00:00.000Z";
+
+const zeroCounts: DashboardAlertCounts = {
+  semAtendimento: 0,
+  slaEstourado: 0,
+  vendasNaoPagas: 0,
+  estornos: 0,
+  renovacoes: 0,
+  franquiasAbaixoMeta: 0,
+  vendedoresAtencao: 0,
+  pendentesSeguradora: 0,
+};
 
 describe("alertas reais da Visão geral", () => {
   it("deriva somente estados persistidos e aplica período apenas aos alertas temporais", () => {
@@ -179,6 +192,23 @@ describe("alertas reais da Visão geral", () => {
     }
   });
 
+  it("aceita timestamps com offset numérico (não só 'Z'), como os devolvidos por normalizar_periodo_visao_geral", () => {
+    // Bug ao vivo encontrado testando V11.7.6c no navegador: sem `offset: true`
+    // no z.string().datetime(), a navegação para Vendas/Estornos/Renovações
+    // quebrava com "Não foi possível carregar esta página" sempre que o
+    // período normalizado vinha com offset (`+00:00`) em vez de `Z`.
+    const inicioComOffset = "2026-07-01T03:00:00+00:00";
+    const fimComOffset = "2026-08-01T03:00:00+00:00";
+    for (const schema of [
+      dashboardDestinationPeriodSchema,
+      leadsAlertSearchSchema,
+      salesAlertSearchSchema,
+      renewalsAlertSearchSchema,
+    ]) {
+      expect(schema.safeParse({ inicio: inicioComOffset, fim: fimComOffset }).success).toBe(true);
+    }
+  });
+
   it("renderiza alertas como botões nomeados e ícones decorativos", () => {
     const alerts = buildDashboardAlerts({
       inicio,
@@ -202,5 +232,84 @@ describe("alertas reais da Visão geral", () => {
     expect(html).toContain("<button");
     expect(html).toContain('aria-label="1 leads sem atendimento. Agir"');
     expect(html).toContain('aria-hidden="true"');
+  });
+});
+
+describe("alertas V11.7.6b/7.6c (franquia abaixo da meta, vendedor em atenção, pendência da seguradora)", () => {
+  it("não aparecem quando a contagem é zero", () => {
+    const alerts = buildDashboardAlertsFromCounts({ counts: zeroCounts, inicio, fim });
+
+    expect(alerts.map(({ kind }) => kind)).toEqual([]);
+  });
+
+  it("aparecem quando a contagem é maior que zero, com destino e busca corretos", () => {
+    const alerts = buildDashboardAlertsFromCounts({
+      counts: {
+        ...zeroCounts,
+        franquiasAbaixoMeta: 2,
+        vendedoresAtencao: 3,
+        pendentesSeguradora: 5,
+      },
+      inicio,
+      fim,
+    });
+
+    expect(alerts.map(({ kind, count }) => [kind, count])).toEqual([
+      ["franquias-abaixo-meta", 2],
+      ["vendedores-atencao", 3],
+      ["pendentes-seguradora", 5],
+    ]);
+
+    const franquias = alerts.find((a) => a.kind === "franquias-abaixo-meta");
+    expect(franquias?.to).toBe("/operacao/franquias");
+    expect(franquias?.search).toEqual({});
+
+    const vendedores = alerts.find((a) => a.kind === "vendedores-atencao");
+    expect(vendedores?.to).toBe("/operacao/acessos");
+    expect(vendedores?.search).toEqual({});
+
+    const seguradora = alerts.find((a) => a.kind === "pendentes-seguradora");
+    expect(seguradora?.to).toBe("/operacao/vendas");
+    expect(seguradora?.search).toEqual({ inicio, fim, tab: "transmissao" });
+  });
+
+  it("cada alerta novo aparece isoladamente quando só a sua contagem é positiva", () => {
+    expect(
+      buildDashboardAlertsFromCounts({
+        counts: { ...zeroCounts, franquiasAbaixoMeta: 1 },
+        inicio,
+        fim,
+      }).map(({ kind }) => kind),
+    ).toEqual(["franquias-abaixo-meta"]);
+
+    expect(
+      buildDashboardAlertsFromCounts({
+        counts: { ...zeroCounts, vendedoresAtencao: 1 },
+        inicio,
+        fim,
+      }).map(({ kind }) => kind),
+    ).toEqual(["vendedores-atencao"]);
+
+    expect(
+      buildDashboardAlertsFromCounts({
+        counts: { ...zeroCounts, pendentesSeguradora: 1 },
+        inicio,
+        fim,
+      }).map(({ kind }) => kind),
+    ).toEqual(["pendentes-seguradora"]);
+  });
+
+  it("buildDashboardAlerts (heurística client-side) nunca gera os 3 alertas novos", () => {
+    const alerts = buildDashboardAlerts({
+      inicio,
+      fim,
+      now: new Date("2026-07-29T12:00:00.000Z").getTime(),
+      leads: [],
+      proposals: [],
+    });
+
+    expect(alerts.some(({ kind }) => (kind as string).includes("franquias"))).toBe(false);
+    expect(alerts.some(({ kind }) => (kind as string).includes("vendedores"))).toBe(false);
+    expect(alerts.some(({ kind }) => (kind as string).includes("pendentes"))).toBe(false);
   });
 });

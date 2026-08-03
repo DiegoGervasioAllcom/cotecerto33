@@ -16,51 +16,83 @@ export function useDashboardAlertCounts(
       const slaLimit = new Date(Date.now() - slaSeconds * 1000).toISOString();
       const renewalStart = period.inicio.slice(0, 10);
       const renewalEnd = period.fim.slice(0, 10);
-      const [semAtendimento, slaEstourado, vendasNaoPagas, estornos, renovacoes] =
-        await Promise.all([
-          supabase
-            .from("leads")
-            .select("id", { count: "exact", head: true })
-            .eq("status_pipeline", "novo")
-            .is("ultimo_atendimento_em", null)
-            .or("bloqueado.is.false,bloqueado.is.null")
-            .or("arquivado.is.false,arquivado.is.null"),
-          supabase
-            .from("leads")
-            .select("id", { count: "exact", head: true })
-            .eq("status_pipeline", "novo")
-            .is("ultimo_atendimento_em", null)
-            .or("bloqueado.is.false,bloqueado.is.null")
-            .or("arquivado.is.false,arquivado.is.null")
-            .lt("criado_em", slaLimit),
-          supabase
-            .from("propostas")
-            .select("id", { count: "exact", head: true })
-            .not("emitida_em", "is", null)
-            .is("pago_em", null)
-            .is("cancelada_em", null)
-            .gte("emitida_em", period.inicio)
-            .lt("emitida_em", period.fim),
-          supabase
-            .from("propostas")
-            .select("id", { count: "exact", head: true })
-            .not("cancelada_em", "is", null)
-            .gte("cancelada_em", period.inicio)
-            .lt("cancelada_em", period.fim),
-          supabase
-            .from("propostas")
-            .select("id", { count: "exact", head: true })
-            .is("cancelada_em", null)
-            .not("vencimento", "is", null)
-            .gte("vencimento", renewalStart)
-            .lt("vencimento", renewalEnd),
-        ]);
+      const [
+        semAtendimento,
+        slaEstourado,
+        vendasNaoPagas,
+        estornos,
+        renovacoes,
+        franquiasAbaixoMeta,
+        vendedoresAtencao,
+        pendentesSeguradora,
+      ] = await Promise.all([
+        supabase
+          .from("leads")
+          .select("id", { count: "exact", head: true })
+          .eq("status_pipeline", "novo")
+          .is("ultimo_atendimento_em", null)
+          .or("bloqueado.is.false,bloqueado.is.null")
+          .or("arquivado.is.false,arquivado.is.null"),
+        supabase
+          .from("leads")
+          .select("id", { count: "exact", head: true })
+          .eq("status_pipeline", "novo")
+          .is("ultimo_atendimento_em", null)
+          .or("bloqueado.is.false,bloqueado.is.null")
+          .or("arquivado.is.false,arquivado.is.null")
+          .lt("criado_em", slaLimit),
+        supabase
+          .from("propostas")
+          .select("id", { count: "exact", head: true })
+          .not("emitida_em", "is", null)
+          .is("pago_em", null)
+          .is("cancelada_em", null)
+          .gte("emitida_em", period.inicio)
+          .lt("emitida_em", period.fim),
+        supabase
+          .from("propostas")
+          .select("id", { count: "exact", head: true })
+          .not("cancelada_em", "is", null)
+          .gte("cancelada_em", period.inicio)
+          .lt("cancelada_em", period.fim),
+        supabase
+          .from("propostas")
+          .select("id", { count: "exact", head: true })
+          .is("cancelada_em", null)
+          .not("vencimento", "is", null)
+          .gte("vencimento", renewalStart)
+          .lt("vencimento", renewalEnd),
+        // V11.7.6a — pró-rata de meta por franquia; a própria RPC já escopa
+        // por empresas_visiveis(auth.uid()) e valida a janela.
+        supabase.rpc("franquias_abaixo_meta_visao_geral", {
+          p_inicio: period.inicio,
+          p_fim: period.fim,
+        }),
+        // V11.7.6b — snapshot de performance_status (não é derivado do
+        // período: é o status vigente agora), escopado pela mesma RLS de
+        // `profiles` que já filtra Cadastros Matriz/Rede. Exclui desligados,
+        // mesmo critério do job de recálculo (D4).
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .in("performance_status", ["atencao", "travado"])
+          .is("desligado_em", null),
+        // V11.7.5/7.6c — mesma RPC/contagem que alimenta o chip "Pendente da
+        // seguradora" no resumo do período (visao-geral.tsx).
+        supabase.rpc("contar_pendentes_seguradora_visao_geral", {
+          p_inicio: period.inicio,
+          p_fim: period.fim,
+        }),
+      ]);
       const queryError =
         semAtendimento.error ??
         slaEstourado.error ??
         vendasNaoPagas.error ??
         estornos.error ??
-        renovacoes.error;
+        renovacoes.error ??
+        franquiasAbaixoMeta.error ??
+        vendedoresAtencao.error ??
+        pendentesSeguradora.error;
       if (queryError) throw queryError;
       return {
         semAtendimento: semAtendimento.count ?? 0,
@@ -68,6 +100,9 @@ export function useDashboardAlertCounts(
         vendasNaoPagas: vendasNaoPagas.count ?? 0,
         estornos: estornos.count ?? 0,
         renovacoes: renovacoes.count ?? 0,
+        franquiasAbaixoMeta: franquiasAbaixoMeta.data ?? 0,
+        vendedoresAtencao: vendedoresAtencao.count ?? 0,
+        pendentesSeguradora: pendentesSeguradora.data ?? 0,
       };
     },
   });
