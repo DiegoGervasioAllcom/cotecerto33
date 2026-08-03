@@ -137,3 +137,23 @@ ponta) → C10 (motivo obrigatório, depois que o fluxo de desligamento novo já
 motivo sempre) → C11 (retirar o sistema paralelo, só depois que C3 prova que o caminho
 novo funciona) → C12 (parcial) → C13 (independente, pode entrar em qualquer ponto) →
 C14 (fechar a porta antiga, só depois que C3 está validado em produção) → C15.
+
+## Fechamento (03/08/2026)
+
+- **C12 fechada.** A parte que dependia da Frente 4 era ter uma coluna própria pro
+  sinal de performance, separada da situação do cadastro — a Frente 4 (D1) entregou
+  isso: `profiles.performance_status` (ativo/atenção/travado) é coluna própria,
+  calculada pelo job, e o front (D8) já renderiza os dois sinais como chips visualmente
+  distintos lado a lado (`chip-outline`/`chip-ok` pra situação do cadastro,
+  `chip-ok`/`chip-yellow`/`chip-alert` pro sinal de performance) — nunca um substituindo
+  o outro.
+- **C14 fechada.** `auth.cadastro.tsx` removida, link "Criar franquia" fora do login.
+  `cadastrar_franquia_admin` continua no banco (o Convite Supper reusa) e
+  `cadastrar_franquia` (a variante bem antiga, sem `_user`) também — tem teste de
+  regressão de bug crítica; dropar do banco é decisão separada, não pré-requisito pra
+  fechar a porta de entrada (que era a rota, não a RPC).
+- **C15 fechada.** E2E novo (`tests/e2e/cadastros-ciclo-vida.spec.ts`) — não havia
+  nada pra adaptar. Cobre cadastro manual (pendente correto + abre classificação),
+  trava de exclusão (Master c/ franquia, franquia c/ vendedor) e desligamento
+  (motivo obrigatório → solicitar → aprovar), além de confirmar `/auth/cadastro`
+  fora do ar (C14). Com isso, a Frente 3 está inteiramente concluída.

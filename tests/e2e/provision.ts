@@ -267,7 +267,7 @@ export async function limparVendedorComTutorial(v: VendedorComTutorial): Promise
   await limparVendedorComLead(v);
 }
 
-export type PersonaRole = "master" | "supervisor" | "franqueado";
+export type PersonaRole = "master" | "supervisor" | "franqueado" | "vendedor";
 export type PersonaModalidade = "individual" | "full";
 
 export type Persona = {
@@ -275,6 +275,7 @@ export type Persona = {
   senha: string;
   userId: string;
   empresaId: string;
+  nome: string;
 };
 
 /**
@@ -324,47 +325,93 @@ export async function criarPersona(opts: {
    * V11 quem define o cargo é a aprovação do cadastro.
    */
   cargo?: string;
+  /**
+   * `empresas.parent_id` — franquia filha de um Master (mesmo uso de C5/C6:
+   * "quantas franquias este Master tem" e a trava de exclusão).
+   */
+  parentEmpresaId?: string;
+  /**
+   * `profiles.superior_id` — cadeia de hierarquia usada por `empresas_visiveis()`
+   * (RLS) e por `solicitar_desligamento` pra saber "está na minha rede". Diverge
+   * de `parent_id` de propósito no C15 — ver risco registrado em
+   * docs/PLANO_CADASTROS_V11.md: os fixtures precisam setar os dois campos pro
+   * cenário ficar consistente.
+   */
+  superiorId?: string;
+  /**
+   * Reusa uma empresa já existente em vez de criar uma nova — necessário pro
+   * vendedor "dentro" de uma franquia: a trava de C6 (`excluir_cadastro_rede`)
+   * olha `vendedor.empresa_id = franquia.empresa_id`, o mesmo registro, não uma
+   * hierarquia de empresas separadas (mesmo padrão de
+   * `criarPersonaComEmpresa` em tests/helpers/supabase.ts).
+   */
+  empresaId?: string;
 }): Promise<Persona> {
-  const { role, modalidade, cargo } = opts;
+  const {
+    role,
+    modalidade,
+    cargo,
+    parentEmpresaId,
+    superiorId,
+    empresaId: empresaExistente,
+  } = opts;
   const senha = "Teste@123!";
   const email = `${uniq(`${role}-e2e`)}@teste.local`;
 
   let modeloId: string | null = null;
-  if (role === "franqueado") {
+  if (role === "franqueado" && !empresaExistente) {
     modeloId = await obterModeloId(modalidade ?? "individual");
   }
 
-  const { data: emp, error: eEmp } = await admin
-    .from("empresas")
-    .insert({
-      nome: uniq(`Empresa ${role} E2E`),
-      tipo: "pj",
-      documento: uniqDoc(),
-      status: "aprovada",
-      ...(modeloId ? { modelo_id: modeloId } : {}),
-    })
-    .select("id")
-    .single();
-  if (eEmp || !emp) throw new Error(`criar empresa (${role}): ${eEmp?.message}`);
+  let empresaId = empresaExistente;
+  if (!empresaId) {
+    const { data: emp, error: eEmp } = await admin
+      .from("empresas")
+      .insert({
+        nome: uniq(`Empresa ${role} E2E`),
+        tipo: "pj",
+        documento: uniqDoc(),
+        status: "aprovada",
+        ...(modeloId ? { modelo_id: modeloId } : {}),
+        ...(parentEmpresaId ? { parent_id: parentEmpresaId } : {}),
+      })
+      .select("id")
+      .single();
+    if (eEmp || !emp) throw new Error(`criar empresa (${role}): ${eEmp?.message}`);
+    empresaId = emp.id;
+  }
 
+  // Sem `user_metadata.nome`, `handle_new_user` cai no fallback pro e-mail
+  // (coalesce(raw_user_meta_data->>'nome', email)) — e esse fallback vaza pra
+  // qualquer tela que mostre "dono da empresa" por nome (ex.: a coluna Info
+  // de uma franquia mostra "Master {nome}"), fazendo o e-mail do Master
+  // aparecer também na linha da franquia — locators por e-mail ficam
+  // ambíguos. Um nome próprio evita a colisão.
+  const nome = uniq(`Pessoa ${role} E2E`);
   const { data: userData, error: eUser } = await admin.auth.admin.createUser({
     email,
     password: senha,
     email_confirm: true,
+    user_metadata: { nome },
   });
   if (eUser || !userData.user) throw new Error(`criar usuário (${role}): ${eUser?.message}`);
   const userId = userData.user.id;
 
   const { error: eProfile } = await admin
     .from("profiles")
-    .update({ empresa_id: emp.id, status: "aprovada", ...(cargo ? { cargo_id: cargo } : {}) })
+    .update({
+      empresa_id: empresaId,
+      status: "aprovada",
+      ...(cargo ? { cargo_id: cargo } : {}),
+      ...(superiorId ? { superior_id: superiorId } : {}),
+    })
     .eq("id", userId);
   if (eProfile) throw new Error(`atualizar profile (${role}): ${eProfile.message}`);
 
   const { error: eRole } = await admin.from("user_roles").insert({ user_id: userId, role });
   if (eRole) throw new Error(`inserir role (${role}): ${eRole.message}`);
 
-  return { email, senha, userId, empresaId: emp.id };
+  return { email, senha, userId, empresaId, nome };
 }
 
 /** Remove os dados criados por `criarPersona` (best-effort; `db reset` também resolve). */
@@ -372,6 +419,16 @@ export async function limparPersona(p: Persona): Promise<void> {
   await admin.from("user_roles").delete().eq("user_id", p.userId);
   await admin.auth.admin.deleteUser(p.userId);
   await admin.from("empresas").delete().eq("id", p.empresaId);
+}
+
+/**
+ * Igual a `limparPersona`, mas NÃO apaga a empresa — para quando `criarPersona`
+ * reusou uma empresa existente (`opts.empresaId`, ex.: vendedor "dentro" de uma
+ * franquia). Quem é dono da empresa (a franquia) limpa com `limparPersona`.
+ */
+export async function limparPersonaSemEmpresa(p: Pick<Persona, "userId">): Promise<void> {
+  await admin.from("user_roles").delete().eq("user_id", p.userId);
+  await admin.auth.admin.deleteUser(p.userId);
 }
 
 export type CotacaoQuiverFixture = {
@@ -440,6 +497,52 @@ export async function limparCotacaoQuiverFixture(f: CotacaoQuiverFixture): Promi
   await admin.from("user_roles").delete().eq("user_id", f.userId);
   await admin.auth.admin.deleteUser(f.userId);
   await admin.from("empresas").delete().eq("id", f.empresaId);
+}
+
+// ===========================================================================
+// Cadastro manual · exceção (V11 · C2/C3) e desligamento (C7)
+// ===========================================================================
+
+/** Id do profile da Matriz do seed — usado pra confirmar autoria (C1) do cadastro manual. */
+export async function matrizProfileId(): Promise<string> {
+  const { data, error } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("email", "desenvolvimento@suppercerto.com.br")
+    .single();
+  if (error || !data) throw new Error(`matriz do seed não encontrada: ${error?.message}`);
+  return data.id;
+}
+
+/** Empresa criada por "Cadastro manual · exceção" — encontrada pelo nome único do form. */
+export async function empresaPendentePorNome(nome: string) {
+  const { data } = await admin
+    .from("empresas")
+    .select("id,nome,status,convite_id,criado_por,tipo,documento")
+    .eq("nome", nome)
+    .maybeSingle();
+  return data;
+}
+
+/** Limpa o pendente + usuário criados por "Cadastro manual · exceção". */
+export async function limparCadastroManual(empresaId: string): Promise<void> {
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("empresa_id", empresaId)
+    .maybeSingle();
+  if (profile) await admin.auth.admin.deleteUser(profile.id);
+  await admin.from("empresas").delete().eq("id", empresaId);
+}
+
+/** Sinal de desligamento (`profiles.desligado_em`) — pra confirmar que a aprovação executou de fato. */
+export async function statusDesligamento(profileId: string) {
+  const { data } = await admin
+    .from("profiles")
+    .select("desligado_em,status")
+    .eq("id", profileId)
+    .single();
+  return data;
 }
 
 // ===========================================================================

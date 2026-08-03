@@ -105,9 +105,6 @@ function AuthPage() {
             {submitting ? "Entrando…" : "Entrar"}
           </button>
         </form>
-        <div className="auth-foot">
-          Ainda não tem cadastro? <Link to="/auth/cadastro">Criar franquia</Link>
-        </div>
         <div className="auth-divider" />
         <p className="auth-foot" style={{ margin: "0 0 12px" }}>
           O acesso à plataforma é por convite.
