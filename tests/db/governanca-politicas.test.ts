@@ -103,6 +103,35 @@ describe("V11 · G6.1 — fn_salvar_modelos_franquia", () => {
       .single();
     expect(depois?.nome).toBe(modelo!.nome);
   });
+
+  it("diretor com senha ERRADA é rejeitado, modelo não muda", async () => {
+    const diretor = await criarDiretor(uniq("gov-modelos-se"));
+    const { data: modelo } = await admin
+      .from("modelos_franquia")
+      .insert({
+        nome: uniq("Modelo Gov SE"),
+        tipo: "franqueada",
+        perc_comissao_padrao: 10,
+        params: {},
+      })
+      .select("*")
+      .single();
+
+    const { error } = await diretor.client.rpc("fn_salvar_modelos_franquia", {
+      p_senha: "senha-errada-de-verdade",
+      p_modelos: [
+        { id: modelo!.id, nome: "hackeado", ordem: modelo!.ordem, modalidade: null, params: {} },
+      ],
+    });
+    expect(error?.message).toContain("Seu acesso não permite esse tipo de alteração");
+
+    const { data: depois } = await admin
+      .from("modelos_franquia")
+      .select("nome")
+      .eq("id", modelo!.id)
+      .single();
+    expect(depois?.nome).toBe(modelo!.nome);
+  });
 });
 
 describe("V11 · G6.1 — fn_salvar_clt_config", () => {
@@ -150,6 +179,29 @@ describe("V11 · G6.1 — fn_salvar_clt_config", () => {
       .single();
     expect((aindaIgual?.regras as { rules: string[] }).rules).toContain(novaRegra);
     expect((aindaIgual?.regras as { rules: string[] }).rules).not.toContain("hack");
+  });
+
+  it("diretor com senha ERRADA é rejeitado, config não muda", async () => {
+    const diretor = await criarDiretor(uniq("gov-clt-se"));
+    const { data: atual } = await admin.from("clt_config").select("*").eq("id", "default").single();
+
+    const { error } = await diretor.client.rpc("fn_salvar_clt_config", {
+      p_senha: "senha-errada-de-verdade",
+      p_progressiva: atual!.progressiva,
+      p_fator_novas: atual!.fator_novas,
+      p_fator_remalho: atual!.fator_remalho,
+      p_seguradora_planos: atual!.seguradora_planos,
+      p_seguradora_adic: atual!.seguradora_adic,
+      p_regras: { ...(atual!.regras as object), rules: ["hack-senha-errada"] },
+    });
+    expect(error?.message).toContain("Seu acesso não permite esse tipo de alteração");
+
+    const { data: depois } = await admin
+      .from("clt_config")
+      .select("regras")
+      .eq("id", "default")
+      .single();
+    expect((depois?.regras as { rules: string[] }).rules).not.toContain("hack-senha-errada");
   });
 });
 
@@ -215,6 +267,26 @@ describe("V11 · G6.1 — fn_salvar_desconto_politicas", () => {
       .maybeSingle();
     expect(data?.pct_maximo).not.toBe(99);
   });
+
+  it("diretor com senha ERRADA é rejeitado, grade não muda", async () => {
+    const diretor = await criarDiretor(uniq("gov-desc-se"));
+    const { data: segs } = await admin.from("seguradoras").select("id").limit(1);
+
+    const { error } = await diretor.client.rpc("fn_salvar_desconto_politicas", {
+      p_senha: "senha-errada-de-verdade",
+      p_upsert: [{ modelo: "master", seguradora_id: segs![0].id, pct_maximo: 98 }],
+      p_delete: [],
+    });
+    expect(error?.message).toContain("Seu acesso não permite esse tipo de alteração");
+
+    const { data } = await admin
+      .from("desconto_politicas")
+      .select("pct_maximo")
+      .eq("modelo", "master")
+      .eq("seguradora_id", segs![0].id)
+      .maybeSingle();
+    expect(data?.pct_maximo).not.toBe(98);
+  });
 });
 
 describe("V11 · G6.1 — fn_salvar_resposta_padrao / fn_excluir_resposta_padrao", () => {
@@ -277,6 +349,26 @@ describe("V11 · G6.1 — fn_salvar_resposta_padrao / fn_excluir_resposta_padrao
       .from("respostas_padrao")
       .select("id")
       .eq("titulo", "Hack")
+      .maybeSingle();
+    expect(data).toBeNull();
+  });
+
+  it("diretor com senha ERRADA não cria resposta", async () => {
+    const diretor = await criarDiretor(uniq("gov-resp-se"));
+    const titulo = uniq("Hack Senha Errada");
+
+    const { error } = await diretor.client.rpc("fn_salvar_resposta_padrao", {
+      p_senha: "senha-errada-de-verdade",
+      p_titulo: titulo,
+      p_texto: "Hack.",
+      p_ativo: true,
+    });
+    expect(error?.message).toContain("Seu acesso não permite esse tipo de alteração");
+
+    const { data } = await admin
+      .from("respostas_padrao")
+      .select("id")
+      .eq("titulo", titulo)
       .maybeSingle();
     expect(data).toBeNull();
   });

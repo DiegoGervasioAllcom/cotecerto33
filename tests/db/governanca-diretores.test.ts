@@ -117,6 +117,30 @@ describe("V11 · G6.3 — propor_alteracao_diretor / confirmar_alteracao_diretor
     expect(proposta?.status).toBe("pendente");
   });
 
+  it("propor com senha ERRADA falha, nenhuma proposta é criada", async () => {
+    const alvo = await criarPersonaComEmpresa("matriz", { emailPrefix: uniq("g63-se-alvo") });
+
+    const { error } = await base.a.rpc("propor_alteracao_diretor", {
+      p_senha: "senha-errada-de-verdade",
+      p_alvo_id: alvo.userId,
+      p_acao: "incluir",
+    });
+    expect(error?.message).toContain("Seu acesso não permite esse tipo de alteração");
+
+    const { data: propostas } = await admin
+      .from("diretor_propostas")
+      .select("id")
+      .eq("alvo_id", alvo.userId);
+    expect(propostas ?? []).toHaveLength(0);
+
+    const { data: aindaNaoDiretor } = await admin
+      .from("profiles")
+      .select("diretor")
+      .eq("id", alvo.userId)
+      .single();
+    expect(aindaNaoDiretor?.diretor).toBe(false);
+  });
+
   it("propor remoção que deixaria só 1 diretor falha", async () => {
     const { error } = await base.b.rpc("propor_alteracao_diretor", {
       p_senha: SENHA,
