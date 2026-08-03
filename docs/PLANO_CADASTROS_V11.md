@@ -114,6 +114,20 @@ por dependerem de e-mail/criar-senha — resolvido no PR #104, em produção).
    TODO cadastro nasce de convite ou de "manual · exceção" acionado por alguém logado.
    Se sobrar algum fluxo dependendo do autocadastro espontâneo que eu não vi no
    levantamento, ele quebra. Vale um aviso antes do deploy, não só no código.
+4. **`empresas.parent_id` e `profiles.superior_id` são duas hierarquias independentes,
+   e podem divergir.** Achado ao testar C7: `empresas_visiveis()` (o que realmente
+   governa RLS/visibilidade — e o que `solicitar_desligamento` usa pra checar "está na
+   minha rede") desce por `profiles.superior_id`; já C5/C6 usam `empresas.parent_id`
+   pra "quantas franquias esse Master tem" e pra saber quem é dono de quem. Os dois só
+   coincidem se `aprovar_acesso` setar `superior_id` corretamente no momento da
+   aprovação (parâmetro `p_superior_id`, escolha manual de quem aprova) — nada garante
+   isso hoje. Efeito prático: uma franquia pode aparecer "vinculada" a um Master em
+   Cadastros Rede (C5) sem que esse Master consiga solicitar desligamento dela (C7),
+   porque o RLS não reconhece o vínculo. Não bloqueia nada hoje (nenhum teste falhou
+   por causa disso — os fixtures é que precisaram setar os dois campos), mas é uma
+   inconsistência de dado real esperando pra acontecer em produção. Resolver de verdade
+   significa escolher UM mecanismo como fonte da verdade e migrar o outro — fora do
+   escopo desta Frente; registrado aqui pra não se perder.
 
 ## Sequência
 
