@@ -1388,6 +1388,82 @@ export type Database = {
           },
         ];
       };
+      diretor_propostas: {
+        Row: {
+          acao: string;
+          alvo_id: string;
+          confirmado_por: string | null;
+          criado_em: string;
+          id: string;
+          proposto_por: string;
+          resolvido_em: string | null;
+          status: string;
+        };
+        Insert: {
+          acao: string;
+          alvo_id: string;
+          confirmado_por?: string | null;
+          criado_em?: string;
+          id?: string;
+          proposto_por: string;
+          resolvido_em?: string | null;
+          status?: string;
+        };
+        Update: {
+          acao?: string;
+          alvo_id?: string;
+          confirmado_por?: string | null;
+          criado_em?: string;
+          id?: string;
+          proposto_por?: string;
+          resolvido_em?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "diretor_propostas_alvo_id_fkey";
+            columns: ["alvo_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_alvo_id_fkey";
+            columns: ["alvo_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_confirmado_por_fkey";
+            columns: ["confirmado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_confirmado_por_fkey";
+            columns: ["confirmado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_proposto_por_fkey";
+            columns: ["proposto_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_proposto_por_fkey";
+            columns: ["proposto_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       distribuicao_config: {
         Row: {
           atualizado_em: string;
@@ -3346,6 +3422,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      confirmar_alteracao_diretor: {
+        Args: { p_aprovar: boolean; p_proposta_id: string; p_senha: string };
+        Returns: undefined;
+      };
       consumir_convite: {
         Args: { p_token: string; p_user_id: string };
         Returns: boolean;
@@ -3661,6 +3741,10 @@ export type Database = {
       presence_set: {
         Args: { p_status: string; p_user_agent?: string };
         Returns: undefined;
+      };
+      propor_alteracao_diretor: {
+        Args: { p_acao: string; p_alvo_id: string; p_senha: string };
+        Returns: string;
       };
       puxar_lead_de_volta: { Args: { p_lead: string }; Returns: undefined };
       recalcular_regua_performance: { Args: never; Returns: Json };
