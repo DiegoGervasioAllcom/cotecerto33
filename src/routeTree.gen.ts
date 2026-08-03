@@ -16,7 +16,6 @@ import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as AuthPendenteRouteImport } from './routes/auth.pendente'
 import { Route as AuthCriarSenhaRouteImport } from './routes/auth.criar-senha'
 import { Route as AuthContatoRouteImport } from './routes/auth.contato'
-import { Route as AuthCadastroRouteImport } from './routes/auth.cadastro'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
 import { Route as AuthenticatedVendaPropostasRouteImport } from './routes/_authenticated/venda/propostas'
 import { Route as AuthenticatedVendaPipelineRouteImport } from './routes/_authenticated/venda/pipeline'
@@ -81,11 +80,6 @@ const AuthCriarSenhaRoute = AuthCriarSenhaRouteImport.update({
 const AuthContatoRoute = AuthContatoRouteImport.update({
   id: '/auth/contato',
   path: '/auth/contato',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthCadastroRoute = AuthCadastroRouteImport.update({
-  id: '/auth/cadastro',
-  path: '/auth/cadastro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedInicioRoute = AuthenticatedInicioRouteImport.update({
@@ -277,7 +271,6 @@ const AuthenticatedOperacaoFranquiasIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/inicio': typeof AuthenticatedInicioRoute
-  '/auth/cadastro': typeof AuthCadastroRoute
   '/auth/contato': typeof AuthContatoRoute
   '/auth/criar-senha': typeof AuthCriarSenhaRoute
   '/auth/pendente': typeof AuthPendenteRoute
@@ -317,7 +310,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/inicio': typeof AuthenticatedInicioRoute
-  '/auth/cadastro': typeof AuthCadastroRoute
   '/auth/contato': typeof AuthContatoRoute
   '/auth/criar-senha': typeof AuthCriarSenhaRoute
   '/auth/pendente': typeof AuthPendenteRoute
@@ -359,7 +351,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
-  '/auth/cadastro': typeof AuthCadastroRoute
   '/auth/contato': typeof AuthContatoRoute
   '/auth/criar-senha': typeof AuthCriarSenhaRoute
   '/auth/pendente': typeof AuthPendenteRoute
@@ -401,7 +392,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/inicio'
-    | '/auth/cadastro'
     | '/auth/contato'
     | '/auth/criar-senha'
     | '/auth/pendente'
@@ -441,7 +431,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/inicio'
-    | '/auth/cadastro'
     | '/auth/contato'
     | '/auth/criar-senha'
     | '/auth/pendente'
@@ -482,7 +471,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/_authenticated/inicio'
-    | '/auth/cadastro'
     | '/auth/contato'
     | '/auth/criar-senha'
     | '/auth/pendente'
@@ -523,7 +511,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  AuthCadastroRoute: typeof AuthCadastroRoute
   AuthContatoRoute: typeof AuthContatoRoute
   AuthCriarSenhaRoute: typeof AuthCriarSenhaRoute
   AuthPendenteRoute: typeof AuthPendenteRoute
@@ -580,13 +567,6 @@ declare module '@tanstack/react-router' {
       path: '/auth/contato'
       fullPath: '/auth/contato'
       preLoaderRoute: typeof AuthContatoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/cadastro': {
-      id: '/auth/cadastro'
-      path: '/auth/cadastro'
-      fullPath: '/auth/cadastro'
-      preLoaderRoute: typeof AuthCadastroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/inicio': {
@@ -889,7 +869,6 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AuthCadastroRoute: AuthCadastroRoute,
   AuthContatoRoute: AuthContatoRoute,
   AuthCriarSenhaRoute: AuthCriarSenhaRoute,
   AuthPendenteRoute: AuthPendenteRoute,
