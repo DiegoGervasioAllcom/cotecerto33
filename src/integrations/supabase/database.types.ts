@@ -3621,6 +3621,7 @@ export type Database = {
         Returns: undefined;
       };
       puxar_lead_de_volta: { Args: { p_lead: string }; Returns: undefined };
+      recalcular_regua_performance: { Args: never; Returns: Json };
       recusar_empresa: {
         Args: { motivo?: string; p_empresa_id: string };
         Returns: string;
