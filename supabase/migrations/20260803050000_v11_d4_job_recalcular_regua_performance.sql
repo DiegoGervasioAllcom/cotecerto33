@@ -17,6 +17,13 @@
 -- Escreve em profiles via `set_config('regua.internal_write','true',true)`
 -- (mesma trava do D1) — não depende de `auth.role()='service_role'`, porque
 -- o pg_cron roda a função direto no Postgres, sem contexto de JWT.
+--
+-- `empresas.modelo_id is null` também é CLT interno — confirmado testando de
+-- verdade em Cadastros Matriz (D8): o próprio front já usa exatamente esse
+-- sinal pra separar "Vendedor Matriz" (`cadastros-matriz-tab.tsx`, comentário
+-- do topo do arquivo) de vendedor de rede. `left join` (não `join`) é o que
+-- faz isso funcionar — com `join`, todo vendedor sem modelo (a maioria em
+-- produção) ficava fora do loop inteiro, sem sinal nenhum.
 -- ===========================================================================
 
 create or replace function public.recalcular_regua_performance()
@@ -51,13 +58,14 @@ begin
   for v_pessoa in
     select p.id as profile_id,
       case
+        when m.id is null then 'interno'
         when m.tipo = 'clt' then 'interno'
         when m.modalidade = 'full' then 'full'
         else 'rede'
       end as bloco
       from public.profiles p
       join public.empresas e on e.id = p.empresa_id
-      join public.modelos_franquia m on m.id = e.modelo_id
+      left join public.modelos_franquia m on m.id = e.modelo_id
      where p.status = 'aprovada'
        and p.desligado_em is null
        and (

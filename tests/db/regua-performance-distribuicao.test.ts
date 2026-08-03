@@ -163,7 +163,7 @@ describe("V11 · D5 — travado não recebe lead", () => {
 });
 
 describe("V11 · fn_bloco_performance", () => {
-  it("deriva interno/rede/full/null pelo modelo da empresa", async () => {
+  it("deriva interno/rede/full pelo modelo da empresa — sem modelo também é interno", async () => {
     const clt = await criarEmpresaComModelo("clt", undefined, uniq("bloco-clt").toLowerCase());
     const rede = await criarEmpresaComModelo(
       "franqueada",
@@ -189,13 +189,13 @@ describe("V11 · fn_bloco_performance", () => {
     const { data: rClt } = await admin.rpc("fn_bloco_performance", { p_empresa_id: clt });
     const { data: rRede } = await admin.rpc("fn_bloco_performance", { p_empresa_id: rede });
     const { data: rFull } = await admin.rpc("fn_bloco_performance", { p_empresa_id: full });
-    const { data: rNull } = await admin.rpc("fn_bloco_performance", {
+    const { data: rSemModelo } = await admin.rpc("fn_bloco_performance", {
       p_empresa_id: semModelo!.id,
     });
 
     expect(rClt).toBe("interno");
     expect(rRede).toBe("rede");
     expect(rFull).toBe("full");
-    expect(rNull).toBeNull();
+    expect(rSemModelo).toBe("interno");
   });
 });

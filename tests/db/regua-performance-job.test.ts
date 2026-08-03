@@ -120,6 +120,22 @@ describe("V11 · D4 — classificação do sinal", () => {
     expect(sinal.performance_calculado_em).not.toBeNull();
   });
 
+  it("vendedor sem modelo de franquia (a maioria em produção) é avaliado como interno", async () => {
+    // criarPersonaComEmpresa não seta modelo_id — é exatamente o caso real:
+    // "Vendedor Matriz (CLT)" nunca tem modelo de franquia (mesmo sinal usado
+    // em cadastros-matriz-tab.tsx pra montar a aba Cadastros Matriz).
+    const vendedor = await criarPersonaComEmpresa("vendedor", {
+      emailPrefix: uniq("d4-sem-modelo"),
+    });
+    await inserirLeads(vendedor.empresaId, vendedor.userId, 4, 5);
+    await inserirVendas(vendedor.empresaId, vendedor.userId, 2, 3);
+
+    await rodarJob();
+    const sinal = await lerSinal(vendedor.userId);
+    expect(sinal.performance_status).not.toBeNull();
+    expect((sinal.performance_motivo as { bloco: string }).bloco).toBe("interno");
+  });
+
   it("vendedor de rede com conversão abaixo da meta (mas acima do travado) fica em atenção", async () => {
     const modeloId = await criarModelo("franqueada", "individual");
     const vendedor = await criarPersonaComEmpresa("vendedor", { emailPrefix: uniq("d4-atencao") });
@@ -155,7 +171,16 @@ describe("V11 · D4 — classificação do sinal", () => {
     await admin.from("empresas").update({ modelo_id: modeloId }).eq("id", vendedor.empresaId);
     await inserirLeads(vendedor.empresaId, vendedor.userId, 5, 5);
     await inserirVendas(vendedor.empresaId, vendedor.userId, 3, 3); // conv 60%, bem acima da meta
-    await inserirCancelamentos(vendedor.empresaId, vendedor.userId, 3, 2); // limite do interno = 3
+
+    // O limite de cancelamentos do interno é uma linha global compartilhada
+    // entre execuções da suíte (o teste de D2 a incrementa a cada rodada) —
+    // lê o valor atual em vez de assumir o default de D1 (3).
+    const { data: regua } = await admin
+      .from("regua_performance_config")
+      .select("cancelamentos_limite")
+      .eq("bloco", "interno")
+      .single();
+    await inserirCancelamentos(vendedor.empresaId, vendedor.userId, regua!.cancelamentos_limite, 2);
 
     await rodarJob();
     const sinal = await lerSinal(vendedor.userId);
@@ -205,13 +230,13 @@ describe("V11 · D4 — quem não é avaliado", () => {
     expect(sinal.performance_status).toBeNull();
   });
 
-  it("perfil sem modelo de franquia configurado não é avaliado", async () => {
-    const vendedor = await criarPersonaComEmpresa("vendedor", {
-      emailPrefix: uniq("d4-sem-modelo"),
+  it("franqueado sem modalidade definida (empresa sem modelo) não é avaliado", async () => {
+    const franqueado = await criarPersonaComEmpresa("franqueado", {
+      emailPrefix: uniq("d4-franq-sem-modelo"),
     });
 
     await rodarJob();
-    const sinal = await lerSinal(vendedor.userId);
+    const sinal = await lerSinal(franqueado.userId);
     expect(sinal.performance_status).toBeNull();
   });
 

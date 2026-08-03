@@ -8,9 +8,9 @@
 -- (interno/rede/full) é o MESMO pra todos os candidatos de uma mesma
 -- distribuição — dá pra resolver uma vez só, não por linha.
 --
--- `fn_bloco_performance` reusa a mesma derivação do job (D4): CLT → interno,
--- modalidade full → full, franqueada sem full → rede, sem modelo → null
--- (empresa sem modelo configurado não tem régua — não trava ninguém).
+-- `fn_bloco_performance` reusa a mesma derivação do job (D4): sem modelo (a
+-- maioria dos vendedores em produção, ver comentário do D4) ou modelo tipo
+-- CLT → interno; modalidade full → full; franqueada sem full → rede.
 --
 -- Se `pausa_leads_ativa=false` no bloco (ou não há régua pro bloco), quem
 -- está travado continua recebendo lead normalmente — a pausa é opt-in por
@@ -25,10 +25,10 @@ security definer
 set search_path to 'public'
 as $function$
   select case
+    when m.id is null then 'interno'
     when m.tipo = 'clt' then 'interno'
     when m.modalidade = 'full' then 'full'
-    when m.id is not null then 'rede'
-    else null
+    else 'rede'
   end
   from public.empresas e
   left join public.modelos_franquia m on m.id = e.modelo_id
@@ -37,8 +37,8 @@ $function$;
 
 comment on function public.fn_bloco_performance(uuid) is
   'V11 D5: bloco da régua de performance (interno/rede/full) de uma empresa,
-   pela mesma derivação de D4 (tipo CLT / modalidade full / franqueada). Null
-   se a empresa não tem modelo configurado — nenhuma régua se aplica.';
+   pela mesma derivação de D4 (sem modelo ou tipo CLT / modalidade full /
+   franqueada). Sempre resolve pra um dos 3 blocos — nunca null.';
 
 revoke all on function public.fn_bloco_performance(uuid) from public, anon;
 grant execute on function public.fn_bloco_performance(uuid) to authenticated, service_role;
@@ -128,7 +128,7 @@ begin
    where p.empresa_id = v_empresa
      and p.status = 'aprovada'
      and (not v_only_online or coalesce(vp.status_efetivo,'offline') = 'online')
-     and not (v_pausar_travado and p.performance_status = 'travado')
+     and (not v_pausar_travado or p.performance_status is distinct from 'travado')
    group by p.id, vp.status_efetivo
    order by count(l.id) asc, random()
    limit 1;
@@ -230,7 +230,7 @@ begin
      where p.empresa_id = v_empresa
        and p.status = 'aprovada'
        and (not v_only_online or coalesce(vp.status_efetivo,'offline') = 'online')
-       and not (v_pausar_travado and p.performance_status = 'travado')
+       and (not v_pausar_travado or p.performance_status is distinct from 'travado')
      group by p.id, vp.status_efetivo
      order by count(l.id) asc, random() limit 1;
 
