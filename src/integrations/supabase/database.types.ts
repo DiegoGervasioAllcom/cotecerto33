@@ -3517,6 +3517,21 @@ export type Database = {
         };
         Returns: string;
       };
+      fn_salvar_regua_performance: {
+        Args: {
+          p_bloco: string;
+          p_cancelamentos_limite: number;
+          p_conv_atencao_pct: number;
+          p_conv_travado_pct: number;
+          p_dias_atencao: number;
+          p_dias_travado: number;
+          p_janela_dias: number;
+          p_notifica_supervisor: boolean;
+          p_pausa_leads_ativa: boolean;
+          p_senha: string;
+        };
+        Returns: undefined;
+      };
       fn_tem_area: {
         Args: { _area: string; _user_id: string };
         Returns: boolean;
