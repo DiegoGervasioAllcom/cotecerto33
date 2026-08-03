@@ -8,7 +8,6 @@ import { useAuth } from "@/lib/auth";
 import { ConvidarModal, type EscopoConvite } from "@/components/acessos/convidar-modal";
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
 import { Icon } from "@/components/operacao/acessos/icon";
-import { CadastrarVendedorForm } from "@/components/acessos/cadastrar-vendedor-form";
 import { SolicitarDesligamentoModal } from "@/components/acessos/solicitar-desligamento-modal";
 import { MinhasSolicitacoesDesligamento } from "@/components/acessos/minhas-solicitacoes-desligamento";
 import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
@@ -23,8 +22,12 @@ import type { FranquiaAprovada } from "@/components/operacao/acessos/types";
  * garantido pelo RLS (`empresas_visiveis` multinível): a query de profiles já
  * volta só a rede do usuário logado — não é preciso filtrar de novo aqui.
  *
- * "Cadastrar vendedor" registra um pedido em `vendedor_solicitacoes`
- * (RPC `solicitar_vendedor`) para a Matriz aprovar — ver G1.6c.
+ * V11 · C11 — cadastrar vendedor passa a ser só via "Convidar" (Convite
+ * Supper, escopo master já tem as opções "Vendedor · da minha operação" e
+ * "Vendedor · de uma Franquia Full"). O caminho antigo (`vendedor_solicitacoes`/
+ * G1.6c: pedido→Matriz aprova→Matriz cria manualmente em Usuários) foi retirado
+ * — o convite já cria o usuário direto na aprovação, sem o passo manual que
+ * faltava ali.
  */
 
 type SistemaRole = "master" | "vendedor" | "franqueado" | "supervisor";
@@ -246,10 +249,6 @@ function Page() {
           <PendentesTab pendentes={fila.pendentes} onAnalisar={fila.openAnalisar} />
         </div>
       )}
-
-      <div style={{ marginBottom: 18 }}>
-        <CadastrarVendedorForm />
-      </div>
 
       <div className="card">
         <div className="card-h">

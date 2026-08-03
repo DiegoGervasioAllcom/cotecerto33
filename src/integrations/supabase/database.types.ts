@@ -3037,94 +3037,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      vendedor_solicitacoes: {
-        Row: {
-          celular: string | null;
-          cpf: string | null;
-          created_at: string;
-          email: string | null;
-          empresa_id: string | null;
-          id: string;
-          nome: string;
-          observacao: string | null;
-          resolved_at: string | null;
-          resolved_by: string | null;
-          solicitante_id: string;
-          status: string;
-        };
-        Insert: {
-          celular?: string | null;
-          cpf?: string | null;
-          created_at?: string;
-          email?: string | null;
-          empresa_id?: string | null;
-          id?: string;
-          nome: string;
-          observacao?: string | null;
-          resolved_at?: string | null;
-          resolved_by?: string | null;
-          solicitante_id: string;
-          status?: string;
-        };
-        Update: {
-          celular?: string | null;
-          cpf?: string | null;
-          created_at?: string;
-          email?: string | null;
-          empresa_id?: string | null;
-          id?: string;
-          nome?: string;
-          observacao?: string | null;
-          resolved_at?: string | null;
-          resolved_by?: string | null;
-          solicitante_id?: string;
-          status?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "vendedor_solicitacoes_empresa_id_fkey";
-            columns: ["empresa_id"];
-            isOneToOne: false;
-            referencedRelation: "empresas";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "vendedor_solicitacoes_empresa_id_fkey";
-            columns: ["empresa_id"];
-            isOneToOne: false;
-            referencedRelation: "v_franquia_kpis";
-            referencedColumns: ["empresa_id"];
-          },
-          {
-            foreignKeyName: "vendedor_solicitacoes_resolved_by_fkey";
-            columns: ["resolved_by"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "vendedor_solicitacoes_resolved_by_fkey";
-            columns: ["resolved_by"];
-            isOneToOne: false;
-            referencedRelation: "v_vendedor_kpis";
-            referencedColumns: ["user_id"];
-          },
-          {
-            foreignKeyName: "vendedor_solicitacoes_solicitante_id_fkey";
-            columns: ["solicitante_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "vendedor_solicitacoes_solicitante_id_fkey";
-            columns: ["solicitante_id"];
-            isOneToOne: false;
-            referencedRelation: "v_vendedor_kpis";
-            referencedColumns: ["user_id"];
-          },
-        ];
-      };
     };
     Views: {
       v_comissao_por_competencia: {
@@ -3646,10 +3558,6 @@ export type Database = {
         Args: { p_aprovar: boolean; p_id: string; p_observacao?: string };
         Returns: undefined;
       };
-      resolver_solicitacao_vendedor: {
-        Args: { p_aprovar: boolean; p_id: string; p_observacao?: string };
-        Returns: undefined;
-      };
       saldo_comissao_visao_geral: {
         Args: { p_fim: string; p_inicio: string };
         Returns: {
@@ -3675,15 +3583,6 @@ export type Database = {
       };
       solicitar_pendencia_acesso: {
         Args: { p_empresa_id: string; p_pendencia: string };
-        Returns: string;
-      };
-      solicitar_vendedor: {
-        Args: {
-          p_celular?: string;
-          p_cpf?: string;
-          p_email?: string;
-          p_nome: string;
-        };
         Returns: string;
       };
       transmitir_proposta: {

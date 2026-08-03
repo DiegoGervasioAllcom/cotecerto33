@@ -9,7 +9,6 @@ import {
   type EscopoCadastroManual,
 } from "@/components/acessos/cadastro-manual-modal";
 import { ClassificarAcessoModal } from "@/components/acessos/classificar-acesso-modal";
-import { SolicitacoesVendedorTab } from "@/components/acessos/solicitacoes-vendedor-tab";
 import { DesligamentoSolicitacoesTab } from "@/components/acessos/desligamento-solicitacoes-tab";
 import { useAcessosData } from "@/components/operacao/acessos/hooks/useAcessosData";
 import {
@@ -275,10 +274,6 @@ function Page() {
 
       {blocoParaConteudo === "externo" && visibleTab === "pend" && (
         <PendentesTab pendentes={pendentesExterno} onAnalisar={openAnalisar} />
-      )}
-
-      {blocoParaConteudo === "externo" && visibleTab === "vendedores" && (
-        <SolicitacoesVendedorTab />
       )}
 
       {blocoParaConteudo === "externo" && visibleTab === "deslig" && (
