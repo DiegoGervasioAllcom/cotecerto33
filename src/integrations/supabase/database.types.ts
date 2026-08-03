@@ -3483,6 +3483,10 @@ export type Database = {
       };
       fn_destino_pedido: { Args: { _empresa_id: string }; Returns: string };
       fn_eh_diretor: { Args: { _user_id: string }; Returns: boolean };
+      fn_excluir_resposta_padrao: {
+        Args: { p_id: string; p_senha: string };
+        Returns: undefined;
+      };
       fn_fila_franquia_id: { Args: { _empresa_id: string }; Returns: string };
       fn_modelo_alcada_desconto: {
         Args: { p_profile_id: string };
@@ -3528,6 +3532,26 @@ export type Database = {
         Args: { p_motivo?: string; p_profile_id: string };
         Returns: undefined;
       };
+      fn_salvar_clt_config: {
+        Args: {
+          p_fator_novas: Json;
+          p_fator_remalho: Json;
+          p_progressiva: Json;
+          p_regras: Json;
+          p_seguradora_adic: Json;
+          p_seguradora_planos: Json;
+          p_senha: string;
+        };
+        Returns: undefined;
+      };
+      fn_salvar_desconto_politicas: {
+        Args: { p_delete: Json; p_senha: string; p_upsert: Json };
+        Returns: undefined;
+      };
+      fn_salvar_modelos_franquia: {
+        Args: { p_modelos: Json; p_senha: string };
+        Returns: undefined;
+      };
       fn_salvar_regua_performance: {
         Args: {
           p_bloco: string;
@@ -3542,6 +3566,17 @@ export type Database = {
           p_senha: string;
         };
         Returns: undefined;
+      };
+      fn_salvar_resposta_padrao: {
+        Args: {
+          p_ativo: boolean;
+          p_id?: string;
+          p_seguradora_id?: string;
+          p_senha: string;
+          p_texto: string;
+          p_titulo: string;
+        };
+        Returns: string;
       };
       fn_tem_area: {
         Args: { _area: string; _user_id: string };

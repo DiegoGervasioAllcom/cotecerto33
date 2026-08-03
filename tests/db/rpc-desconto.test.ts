@@ -86,7 +86,10 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
       .delete()
       .eq("modelo", modelo)
       .eq("seguradora_id", seguradoraId);
-    const { error } = await matriz
+    // Fixture, não o assunto do teste — desde G6.1 a escrita direta em
+    // desconto_politicas é fechada pra authenticated (só via RPC com senha
+    // de diretor); `admin` (service_role) bypassa isso de propósito aqui.
+    const { error } = await admin
       .from("desconto_politicas")
       .insert({ modelo, seguradora_id: seguradoraId, pct_maximo: pctMaximo });
     expect(error).toBeNull();
