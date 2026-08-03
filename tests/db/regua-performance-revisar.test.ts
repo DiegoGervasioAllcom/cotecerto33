@@ -126,4 +126,26 @@ describe("V11 · D6 — fn_revisar_reativar_performance", () => {
       .eq("id", vendedor.userId);
     expect(error).not.toBeNull();
   });
+
+  // V11 · D10 — "reativação sem RPC de revisão não muda o sinal": nem a
+  // própria Matriz consegue reativar direto pela tabela — o sinal só sai de
+  // travado passando por fn_revisar_reativar_performance.
+  it("matriz tentando reativar direto (sem a RPC) é bloqueada — sinal continua travado", async () => {
+    const vendedor = await criarPersonaComEmpresa("vendedor", { emailPrefix: uniq("d6-sem-rpc") });
+    await marcarTravado(vendedor.userId);
+    const matriz = await loginMatriz();
+
+    const { error } = await matriz
+      .from("profiles")
+      .update({ performance_status: "atencao" })
+      .eq("id", vendedor.userId);
+    expect(error).not.toBeNull();
+
+    const { data } = await admin
+      .from("profiles")
+      .select("performance_status")
+      .eq("id", vendedor.userId)
+      .single();
+    expect(data?.performance_status).toBe("travado");
+  });
 });
