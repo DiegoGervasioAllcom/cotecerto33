@@ -1,9 +1,8 @@
-// Cartões de tabela dinâmica (pares/faixas/trios) usados na Personalização
+// Cartões de tabela dinâmica (pares/faixas) usados na Personalização
 // geral (Modelo CLT) de Acessos e permissões.
 import { applyMask, type Mask } from "@/lib/masks";
 import { Icon } from "./icon";
-import { SEGURADORAS } from "./constants";
-import type { Pair, Trio } from "./types";
+import type { Pair } from "./types";
 
 export function DynamicPairCard({
   title,
@@ -13,6 +12,7 @@ export function DynamicPairCard({
   rows,
   onChange,
   footer,
+  valueMask,
 }: {
   title: string;
   icon: string;
@@ -21,6 +21,7 @@ export function DynamicPairCard({
   rows: Pair[];
   onChange: (rows: Pair[]) => void;
   footer?: React.ReactNode;
+  valueMask?: Mask;
 }) {
   return (
     <div className="card">
@@ -70,11 +71,11 @@ export function DynamicPairCard({
                 <td>
                   <input
                     className="input input-mini"
+                    placeholder={valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""}
                     value={r[1]}
                     onChange={(e) => {
-                      const next = rows.map((x, j) =>
-                        j === i ? ([x[0], e.target.value] as Pair) : x,
-                      );
+                      const v = applyMask(e.target.value, valueMask);
+                      const next = rows.map((x, j) => (j === i ? ([x[0], v] as Pair) : x));
                       onChange(next);
                     }}
                   />
@@ -230,124 +231,6 @@ export function DynamicRangeCard({
         </table>
       </div>
       {footer && <div className="card-b">{footer}</div>}
-    </div>
-  );
-}
-
-export function toTrio(x: unknown): Trio {
-  if (Array.isArray(x)) {
-    if (x.length >= 3) return [String(x[0] ?? ""), String(x[1] ?? ""), String(x[2] ?? "")];
-    if (x.length === 2) return ["Ituran", String(x[0] ?? ""), String(x[1] ?? "")];
-  }
-  return ["", "", ""];
-}
-
-export function DynamicTrioCard({
-  title,
-  icon,
-  lh,
-  vh,
-  rows,
-  onChange,
-  valueMask,
-}: {
-  title: string;
-  icon: string;
-  lh: string;
-  vh: string;
-  rows: Trio[];
-  onChange: (rows: Trio[]) => void;
-  valueMask?: Mask;
-}) {
-  function patch(i: number, k: 0 | 1 | 2, v: string) {
-    const masked = k === 2 ? applyMask(v, valueMask) : v;
-    onChange(
-      rows.map((x, j) => {
-        if (j !== i) return x;
-        const n: Trio = [x[0], x[1], x[2]];
-        n[k] = masked;
-        return n;
-      }),
-    );
-  }
-  return (
-    <div className="card">
-      <div className="card-h">
-        <h3>
-          <Icon id={icon} size={16} /> {title}
-        </h3>
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ marginLeft: "auto" }}
-          onClick={() => onChange([...rows, ["", "", ""]])}
-        >
-          <Icon id="plus" size={13} /> Adicionar linha
-        </button>
-      </div>
-      <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
-        <table className="table-pipe acc-modelos">
-          <thead>
-            <tr>
-              <th style={{ width: 200 }}>Seguradora</th>
-              <th>{lh}</th>
-              <th style={{ width: 160 }}>{vh}</th>
-              <th style={{ width: 60 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={4} style={{ textAlign: "center", color: "var(--muted)", padding: 24 }}>
-                  Sem linhas.
-                </td>
-              </tr>
-            )}
-            {rows.map((r, i) => (
-              <tr key={i}>
-                <td>
-                  <select
-                    className="input input-mini"
-                    value={r[0]}
-                    onChange={(e) => patch(i, 0, e.target.value)}
-                    style={{ fontSize: 11 }}
-                  >
-                    <option value="">— Seguradora —</option>
-                    {SEGURADORAS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                    {r[0] && !SEGURADORAS.includes(r[0]) && <option value={r[0]}>{r[0]}</option>}
-                  </select>
-                </td>
-                <td>
-                  <input
-                    className="input input-mini"
-                    value={r[1]}
-                    onChange={(e) => patch(i, 1, e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    className="input input-mini"
-                    placeholder={valueMask === "brl" ? "R$ 0,00" : valueMask === "pct" ? "0%" : ""}
-                    value={r[2]}
-                    onChange={(e) => patch(i, 2, e.target.value)}
-                  />
-                </td>
-                <td style={{ textAlign: "right" }}>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => onChange(rows.filter((_, j) => j !== i))}
-                  >
-                    <Icon id="trash" size={13} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }

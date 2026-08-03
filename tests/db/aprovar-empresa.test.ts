@@ -1,26 +1,30 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { loginMatriz, criarUsuario, uniq, uniqDoc, type Db } from "../helpers/supabase";
+import { admin, loginMatriz, criarUsuario, uniq, uniqDoc, type Db } from "../helpers/supabase";
 
 /**
- * Fluxo: cadastrar_franquia (usuário novo) → aprovar_empresa (matriz).
- * Asserts SEMPRE com clients autenticados por persona (nunca service_role).
+ * Fluxo: cadastro (fixture via cadastrar_franquia_admin, RPC que o Convite
+ * Supper usa de verdade) → aprovar_empresa (matriz).
+ * Asserts SEMPRE com clients autenticados por persona (nunca service_role) —
+ * a fixture é a única parte que roda como admin.
  */
-describe("cadastrar_franquia → aprovar_empresa", () => {
+describe("cadastro → aprovar_empresa", () => {
   let matriz: Db;
   beforeAll(async () => {
     matriz = await loginMatriz();
   });
 
   it("cadastro cria empresa pendente com role vendedor; matriz aprova; não-matriz NÃO aprova", async () => {
-    // 1. usuário novo se cadastra
+    // 1. fixture: nasce pendente com role vendedor (mesmo formato de
+    // cadastrar_franquia_admin, que o Convite Supper chama de verdade).
     const { client: dono, userId } = await criarUsuario(`${uniq("franq")}@teste.local`);
-    const { data: empresaId, error: eCad } = await dono.rpc("cadastrar_franquia", {
+    const { data: empresaId, error: eCad } = await admin.rpc("cadastrar_franquia_admin", {
       p: {
         nome: uniq("Franquia Teste"),
         tipo: "pj",
         documento: uniqDoc(),
         email: `${uniq("f")}@teste.local`,
       },
+      p_user: userId,
     });
     expect(eCad).toBeNull();
     expect(empresaId).toBeTruthy();

@@ -196,7 +196,10 @@ describe("RLS empresas/profiles — visibilidade por rede", () => {
   /**
    * S2 — a policy "empresas insert self" (`with check (true)`) foi removida em
    * 20260714201955_fechar_insert_aberto_empresas.sql. Criação legítima só via
-   * RPCs security definer (cadastrar_franquia / cadastrar_franquia_admin).
+   * RPC security definer (cadastrar_franquia_admin, chamada com service_role
+   * pelo Convite Supper e pelo cadastro manual — não há mais nenhum caminho
+   * onde um client autenticado comum crie empresa direto por RPC própria; o
+   * autocadastro espontâneo que fazia isso foi removido em C14).
    */
   describe("S2 — insert direto em empresas fica bloqueado; RPC continua funcionando", () => {
     it("NEGATIVO: usuário autenticado comum não insere empresa direto", async () => {
@@ -210,28 +213,6 @@ describe("RLS empresas/profiles — visibilidade por rede", () => {
 
       const { data: real } = await admin.from("empresas").select("id").eq("documento", doc);
       expect(real ?? []).toHaveLength(0);
-    });
-
-    it("POSITIVO: cadastrar_franquia (RPC definer) via client autenticado comum continua criando empresa", async () => {
-      const doc = uniqDoc();
-      const { client } = await criarUsuario(`${uniq("cadastro-rpc")}@teste.local`);
-      const { data: empresaId, error } = await client.rpc("cadastrar_franquia", {
-        p: {
-          tipo: "pj",
-          nome: uniq("Franquia RPC"),
-          documento: doc,
-          email: "franquia-rpc@teste.local",
-        },
-      });
-      expect(error).toBeNull();
-      expect(empresaId).toBeTruthy();
-
-      const { data: real } = await admin
-        .from("empresas")
-        .select("id, documento")
-        .eq("id", empresaId as string)
-        .single();
-      expect(real?.documento).toBe(doc);
     });
 
     it("POSITIVO: cadastrar_franquia_admin (RPC definer, service_role) cria empresa", async () => {

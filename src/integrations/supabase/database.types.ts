@@ -1388,6 +1388,82 @@ export type Database = {
           },
         ];
       };
+      diretor_propostas: {
+        Row: {
+          acao: string;
+          alvo_id: string;
+          confirmado_por: string | null;
+          criado_em: string;
+          id: string;
+          proposto_por: string;
+          resolvido_em: string | null;
+          status: string;
+        };
+        Insert: {
+          acao: string;
+          alvo_id: string;
+          confirmado_por?: string | null;
+          criado_em?: string;
+          id?: string;
+          proposto_por: string;
+          resolvido_em?: string | null;
+          status?: string;
+        };
+        Update: {
+          acao?: string;
+          alvo_id?: string;
+          confirmado_por?: string | null;
+          criado_em?: string;
+          id?: string;
+          proposto_por?: string;
+          resolvido_em?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "diretor_propostas_alvo_id_fkey";
+            columns: ["alvo_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_alvo_id_fkey";
+            columns: ["alvo_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_confirmado_por_fkey";
+            columns: ["confirmado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_confirmado_por_fkey";
+            columns: ["confirmado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_proposto_por_fkey";
+            columns: ["proposto_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "diretor_propostas_proposto_por_fkey";
+            columns: ["proposto_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       distribuicao_config: {
         Row: {
           atualizado_em: string;
@@ -3328,7 +3404,6 @@ export type Database = {
         Args: { p_lead: string; p_motivo: string };
         Returns: undefined;
       };
-      cadastrar_franquia: { Args: { p: Json }; Returns: string };
       cadastrar_franquia_admin: {
         Args: { p: Json; p_user: string };
         Returns: string;
@@ -3345,6 +3420,10 @@ export type Database = {
           p_observacao?: string;
           p_submotivo: string;
         };
+        Returns: undefined;
+      };
+      confirmar_alteracao_diretor: {
+        Args: { p_aprovar: boolean; p_proposta_id: string; p_senha: string };
         Returns: undefined;
       };
       consumir_convite: {
@@ -3484,6 +3563,10 @@ export type Database = {
       };
       fn_destino_pedido: { Args: { _empresa_id: string }; Returns: string };
       fn_eh_diretor: { Args: { _user_id: string }; Returns: boolean };
+      fn_excluir_resposta_padrao: {
+        Args: { p_id: string; p_senha: string };
+        Returns: undefined;
+      };
       fn_fila_franquia_id: { Args: { _empresa_id: string }; Returns: string };
       fn_modelo_alcada_desconto: {
         Args: { p_profile_id: string };
@@ -3529,6 +3612,26 @@ export type Database = {
         Args: { p_motivo?: string; p_profile_id: string };
         Returns: undefined;
       };
+      fn_salvar_clt_config: {
+        Args: {
+          p_fator_novas: Json;
+          p_fator_remalho: Json;
+          p_progressiva: Json;
+          p_regras: Json;
+          p_seguradora_adic: Json;
+          p_seguradora_planos: Json;
+          p_senha: string;
+        };
+        Returns: undefined;
+      };
+      fn_salvar_desconto_politicas: {
+        Args: { p_delete: Json; p_senha: string; p_upsert: Json };
+        Returns: undefined;
+      };
+      fn_salvar_modelos_franquia: {
+        Args: { p_modelos: Json; p_senha: string };
+        Returns: undefined;
+      };
       fn_salvar_regua_performance: {
         Args: {
           p_bloco: string;
@@ -3543,6 +3646,17 @@ export type Database = {
           p_senha: string;
         };
         Returns: undefined;
+      };
+      fn_salvar_resposta_padrao: {
+        Args: {
+          p_ativo: boolean;
+          p_id?: string;
+          p_seguradora_id?: string;
+          p_senha: string;
+          p_texto: string;
+          p_titulo: string;
+        };
+        Returns: string;
       };
       fn_tem_area: {
         Args: { _area: string; _user_id: string };
@@ -3627,6 +3741,10 @@ export type Database = {
       presence_set: {
         Args: { p_status: string; p_user_agent?: string };
         Returns: undefined;
+      };
+      propor_alteracao_diretor: {
+        Args: { p_acao: string; p_alvo_id: string; p_senha: string };
+        Returns: string;
       };
       puxar_lead_de_volta: { Args: { p_lead: string }; Returns: undefined };
       recalcular_regua_performance: { Args: never; Returns: Json };

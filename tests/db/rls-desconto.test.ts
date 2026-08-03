@@ -7,9 +7,11 @@ import { admin, criarEmpresa, criarPersonaComEmpresa, type Db } from "../helpers
  * 20260718235007_g3_1_tabelas_desconto.sql cria 4 tabelas (schema apenas —
  * as RPCs de solicitar/aprovar/escalar são o PR2 G3.2):
  *
- * - desconto_politicas / respostas_padrao: SELECT liberado a authenticated,
- *   escrita só matriz (padrão comissao_regras/G4.1: grant amplo + policy
- *   matriz-only é a barreira).
+ * - desconto_politicas / respostas_padrao: SELECT liberado a authenticated;
+ *   escrita direta fechada pra QUALQUER authenticated (inclusive matriz)
+ *   desde a Frente 6 (G6.1) — só via RPC com gate de diretor
+ *   (fn_salvar_desconto_politicas / fn_salvar_resposta_padrao /
+ *   fn_excluir_resposta_padrao, testadas em governanca-politicas.test.ts).
  * - desconto_solicitacoes / desconto_trilha: SELECT restrito (solicitante,
  *   nivel_atual, matriz, ou rede visível do solicitante via
  *   empresas_visiveis()); insert/update fechados (sem policy) — só via RPC
@@ -40,18 +42,10 @@ describe("G3.1 — RLS desconto_politicas / desconto_solicitacoes / desconto_tri
       expect(error).toBeNull();
     });
 
-    it("vendedor NÃO escreve; matriz escreve", async () => {
+    it("nem vendedor nem matriz escrevem direto (G6.1 — só via RPC com senha de diretor)", async () => {
       const { data: segs } = await admin.from("seguradoras").select("id").limit(3);
       const segVend = segs![1].id;
       const segMatriz = segs![2].id;
-
-      // Suíte roda 2x seguidas sem truncates (padrão do repo) — limpa a linha
-      // desta combinação (modelo, seguradora) se já existir de um run anterior.
-      await admin
-        .from("desconto_politicas")
-        .delete()
-        .eq("modelo", "master")
-        .eq("seguradora_id", segMatriz);
 
       const { error: eVend } = await vendedor.from("desconto_politicas").insert({
         modelo: "master",
@@ -60,21 +54,16 @@ describe("G3.1 — RLS desconto_politicas / desconto_solicitacoes / desconto_tri
       });
       expect(eVend).not.toBeNull();
 
-      const { data, error: eMatriz } = await matriz
-        .from("desconto_politicas")
-        .insert({
-          modelo: "master",
-          seguradora_id: segMatriz,
-          pct_maximo: 10,
-        })
-        .select("id")
-        .single();
-      expect(eMatriz).toBeNull();
-      expect(data?.id).toBeTruthy();
+      const { error: eMatriz } = await matriz.from("desconto_politicas").insert({
+        modelo: "master",
+        seguradora_id: segMatriz,
+        pct_maximo: 10,
+      });
+      expect(eMatriz).not.toBeNull();
     });
 
-    it("check rejeita pct_maximo fora de 0-100", async () => {
-      const { error } = await matriz.from("desconto_politicas").insert({
+    it("check rejeita pct_maximo fora de 0-100 (via admin — a escrita comum é da RPC)", async () => {
+      const { error } = await admin.from("desconto_politicas").insert({
         modelo: "supervisor",
         seguradora_id: seguradoraId,
         pct_maximo: 150,
@@ -84,7 +73,7 @@ describe("G3.1 — RLS desconto_politicas / desconto_solicitacoes / desconto_tri
   });
 
   describe("respostas_padrao", () => {
-    it("authenticated (vendedor) lê; vendedor não escreve; matriz escreve", async () => {
+    it("authenticated (vendedor) lê; nem vendedor nem matriz escrevem direto (G6.1)", async () => {
       const { error: eSelect } = await vendedor.from("respostas_padrao").select("*");
       expect(eSelect).toBeNull();
 
@@ -94,13 +83,10 @@ describe("G3.1 — RLS desconto_politicas / desconto_solicitacoes / desconto_tri
       });
       expect(eVend).not.toBeNull();
 
-      const { data, error: eMatriz } = await matriz
+      const { error: eMatriz } = await matriz
         .from("respostas_padrao")
-        .insert({ titulo: "Resposta geral", texto: "Segue condição padrão." })
-        .select("id")
-        .single();
-      expect(eMatriz).toBeNull();
-      expect(data?.id).toBeTruthy();
+        .insert({ titulo: "Resposta geral", texto: "Segue condição padrão." });
+      expect(eMatriz).not.toBeNull();
     });
   });
 

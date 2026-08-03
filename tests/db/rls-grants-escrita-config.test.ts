@@ -14,15 +14,14 @@ import { loginMatriz, criarPersonaComEmpresa, uniq, type Db } from "../helpers/s
  * mensagens_prontas/empresas).
  */
 describe("RLS/grants — escrita nas tabelas de configuração (matriz sim, vendedor não)", () => {
-  it("POSITIVO: matriz atualiza clt_config (singleton)", async () => {
+  it("NEGATIVO: nem matriz atualiza clt_config direto (G6.1 — só via fn_salvar_clt_config)", async () => {
     const matriz = await loginMatriz();
-    const { data, error } = await matriz
+    const { error } = await matriz
       .from("clt_config")
       .update({ atualizado_em: new Date().toISOString() })
       .eq("id", "default")
       .select("id");
-    expect(error).toBeNull();
-    expect(data).toHaveLength(1);
+    expect(error).not.toBeNull();
   });
 
   it("POSITIVO: matriz atualiza configuracoes_gerais (singleton)", async () => {
@@ -36,7 +35,7 @@ describe("RLS/grants — escrita nas tabelas de configuração (matriz sim, vend
     expect(data).toHaveLength(1);
   });
 
-  it("POSITIVO: matriz insere, atualiza e apaga em modelos_franquia", async () => {
+  it("POSITIVO: matriz insere e apaga em modelos_franquia; UPDATE direto é bloqueado (G6.1)", async () => {
     const matriz = await loginMatriz();
     const nome = uniq("Modelo G4");
 
@@ -47,13 +46,14 @@ describe("RLS/grants — escrita nas tabelas de configuração (matriz sim, vend
       .single();
     expect(ins.error).toBeNull();
 
+    // "Adicionar modelo"/"Remover" continuam via RLS direta (fora do escopo
+    // de G6.1 — só "Salvar parâmetros", que agora é fn_salvar_modelos_franquia).
     const upd = await matriz
       .from("modelos_franquia")
       .update({ descricao: "editado no teste" })
       .eq("id", ins.data!.id)
       .select("id");
-    expect(upd.error).toBeNull();
-    expect(upd.data).toHaveLength(1);
+    expect(upd.error).not.toBeNull();
 
     const del = await matriz.from("modelos_franquia").delete().eq("id", ins.data!.id);
     expect(del.error).toBeNull();
@@ -99,19 +99,29 @@ describe("RLS/grants — escrita nas tabelas de configuração (matriz sim, vend
     }
   });
 
-  it("NEGATIVO: update de vendedor não afeta nenhuma linha (RLS filtra)", async () => {
+  it("NEGATIVO: update de vendedor é bloqueado (grant revogado em clt_config/modelos_franquia; RLS filtra nas outras)", async () => {
     const { client: vendedor } = await criarPersonaComEmpresa("vendedor", {
       emailPrefix: "g4-grants-vendedor-upd",
     });
 
+    // clt_config e modelos_franquia (UPDATE): grant revogado from authenticated
+    // (G6.1) — erra pra QUALQUER papel, não só filtra por RLS.
     const cltUpd = await vendedor
       .from("clt_config")
       .update({ atualizado_em: new Date().toISOString() })
       .eq("id", "default")
       .select("id");
-    expect(cltUpd.error).toBeNull();
-    expect(cltUpd.data).toHaveLength(0);
+    expect(cltUpd.error).not.toBeNull();
 
+    const modelosUpd = await vendedor
+      .from("modelos_franquia")
+      .update({ descricao: "hack" })
+      .neq("descricao", "x")
+      .select("id");
+    expect(modelosUpd.error).not.toBeNull();
+
+    // configuracoes_gerais e seguradoras: fora do escopo de G6.1 — grant
+    // continua amplo, a RLS matriz-only é que filtra silenciosamente.
     const confUpd = await vendedor
       .from("configuracoes_gerais")
       .update({ atualizado_em: new Date().toISOString() })
@@ -119,14 +129,6 @@ describe("RLS/grants — escrita nas tabelas de configuração (matriz sim, vend
       .select("id");
     expect(confUpd.error).toBeNull();
     expect(confUpd.data).toHaveLength(0);
-
-    const modelosUpd = await vendedor
-      .from("modelos_franquia")
-      .update({ descricao: "hack" })
-      .neq("descricao", "x")
-      .select("id");
-    expect(modelosUpd.error).toBeNull();
-    expect(modelosUpd.data).toHaveLength(0);
 
     const segUpd = await vendedor
       .from("seguradoras")

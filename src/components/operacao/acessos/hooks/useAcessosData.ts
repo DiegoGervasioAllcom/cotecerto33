@@ -15,21 +15,12 @@ import type {
   PersoSub,
   Superior,
   Tab,
-  Trio,
 } from "../types";
 import { CLT_DEFAULT } from "../constants";
 import type { AprovarAcessoParams } from "@/components/acessos/classificar-acesso-modal";
 import { fetchPendentes, mapPendentes } from "./pendentes-query";
 import { dispatchAccessEmail } from "@/lib/email.functions";
 import { findRetryableAccessEmail } from "@/lib/email-outbox-client";
-
-function toTrio(x: unknown): Trio {
-  if (Array.isArray(x)) {
-    if (x.length >= 3) return [String(x[0] ?? ""), String(x[1] ?? ""), String(x[2] ?? "")];
-    if (x.length === 2) return ["Ituran", String(x[0] ?? ""), String(x[1] ?? "")];
-  }
-  return ["", "", ""];
-}
 
 export function useAcessosData(enabled = true) {
   const [tab, setTab] = useState<Tab>("pend");
@@ -147,8 +138,8 @@ export function useAcessosData(enabled = true) {
         progressiva: (c.data.progressiva ?? []) as Pair[],
         fator_novas: (c.data.fator_novas ?? []) as Pair[],
         fator_remalho: (c.data.fator_remalho ?? []) as Pair[],
-        seguradora_planos: ((c.data.seguradora_planos ?? []) as unknown[]).map(toTrio),
-        seguradora_adic: ((c.data.seguradora_adic ?? []) as unknown[]).map(toTrio),
+        seguradora_planos: (c.data.seguradora_planos ?? []) as Pair[],
+        seguradora_adic: (c.data.seguradora_adic ?? []) as Pair[],
         regras: { ...CLT_DEFAULT.regras, ...((c.data.regras ?? {}) as Partial<CltRegras>) },
       });
     }

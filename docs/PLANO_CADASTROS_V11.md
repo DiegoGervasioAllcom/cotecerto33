@@ -148,10 +148,15 @@ C14 (fechar a porta antiga, só depois que C3 está validado em produção) → 
   `chip-ok`/`chip-yellow`/`chip-alert` pro sinal de performance) — nunca um substituindo
   o outro.
 - **C14 fechada.** `auth.cadastro.tsx` removida, link "Criar franquia" fora do login.
-  `cadastrar_franquia_admin` continua no banco (o Convite Supper reusa) e
-  `cadastrar_franquia` (a variante bem antiga, sem `_user`) também — tem teste de
-  regressão de bug crítica; dropar do banco é decisão separada, não pré-requisito pra
-  fechar a porta de entrada (que era a rota, não a RPC).
+  `cadastrar_franquia_admin` continua no banco (o Convite Supper reusa). A RPC antiga
+  `cadastrar_franquia(jsonb)` (sem `_user`) foi dropada também — ficou sem chamador
+  algum depois da rota sair; os 3 testes que dependiam dela como fixture (não como
+  assunto do teste) passaram a usar `cadastrar_franquia_admin` (mesmo formato,
+  inclusive o bug de origem `role='vendedor'` que motiva o teste de regressão de
+  `classificar-acesso-role.test.ts` — continua real, só que na RPC que hoje é usada
+  de verdade). Um `it` ficou obsoleto de fato (provava que um client autenticado
+  comum conseguia chamar uma RPC própria de auto-cadastro — não existe mais nenhuma)
+  e foi removido, não adaptado.
 - **C15 fechada.** E2E novo (`tests/e2e/cadastros-ciclo-vida.spec.ts`) — não havia
   nada pra adaptar. Cobre cadastro manual (pendente correto + abre classificação),
   trava de exclusão (Master c/ franquia, franquia c/ vendedor) e desligamento

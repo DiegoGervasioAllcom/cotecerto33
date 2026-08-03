@@ -1,11 +1,12 @@
 // Aba "Personalização geral" — Política de alçada (desconto máximo) (G3.5).
 // Grade seguradora x modelo com o % máximo de desconto que cada modelo pode
 // conceder por seguradora. Célula vazia = sem alçada definida (o pedido é
-// escalado direto à Matriz). Grava/limpa em `desconto_politicas` via RLS
-// (escrita restrita à matriz).
+// escalado direto à Matriz). Grava via fn_salvar_desconto_politicas (G6.1) —
+// gate de diretor, escrita direta é fechada pra authenticated desde então.
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/operacao/acessos/icon";
 import { supabase } from "@/integrations/supabase/client";
+import { SenhaDiretorModal } from "./senha-diretor-modal";
 
 type Seguradora = { id: string; nome: string };
 
@@ -30,6 +31,10 @@ export function DescontoPoliticaPanel() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; kind: "ok" | "alert" } | null>(null);
+  const [pendente, setPendente] = useState<{
+    upsert: { modelo: string; seguradora_id: string; pct_maximo: number }[];
+    delete: { modelo: string; seguradora_id: string }[];
+  } | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -66,7 +71,7 @@ export function DescontoPoliticaPanel() {
     setGrid((prev) => ({ ...prev, [key(modelo, seguradoraId)]: value }));
   }
 
-  async function salvar() {
+  function validarESolicitarSenha() {
     setErr(null);
     const keys = new Set([...Object.keys(grid), ...Object.keys(original)]);
     const toUpsert: { modelo: string; seguradora_id: string; pct_maximo: number }[] = [];
@@ -97,33 +102,23 @@ export function DescontoPoliticaPanel() {
       setToast({ msg: "Nada para salvar.", kind: "ok" });
       return;
     }
+    setPendente({ upsert: toUpsert, delete: toDelete });
+  }
 
+  async function salvarComSenha(senha: string): Promise<{ error: string | null }> {
+    if (!pendente) return { error: "Nada pendente para salvar." };
     setBusy(true);
-    if (toUpsert.length > 0) {
-      const { error } = await supabase
-        .from("desconto_politicas")
-        .upsert(toUpsert, { onConflict: "modelo,seguradora_id" });
-      if (error) {
-        setBusy(false);
-        setErr(error.message);
-        return;
-      }
-    }
-    for (const d of toDelete) {
-      const { error } = await supabase
-        .from("desconto_politicas")
-        .delete()
-        .eq("modelo", d.modelo)
-        .eq("seguradora_id", d.seguradora_id);
-      if (error) {
-        setBusy(false);
-        setErr(error.message);
-        return;
-      }
-    }
+    const { error } = await supabase.rpc("fn_salvar_desconto_politicas", {
+      p_senha: senha,
+      p_upsert: pendente.upsert,
+      p_delete: pendente.delete,
+    });
     setBusy(false);
+    if (error) return { error: error.message };
     setToast({ msg: "Política de alçada atualizada", kind: "ok" });
+    setPendente(null);
     await reload();
+    return { error: null };
   }
 
   if (loading) {
@@ -141,11 +136,18 @@ export function DescontoPoliticaPanel() {
           <Icon id="percent" size={16} /> Política de alçada (desconto máximo)
         </h3>
         <div style={{ marginLeft: "auto" }}>
-          <button className="btn btn-slate btn-sm" disabled={busy} onClick={salvar}>
+          <button className="btn btn-slate btn-sm" disabled={busy} onClick={validarESolicitarSenha}>
             <Icon id="check" size={13} /> Salvar política
           </button>
         </div>
       </div>
+      {pendente && (
+        <SenhaDiretorModal
+          label="a política de alçada (desconto máximo)"
+          onConfirm={salvarComSenha}
+          onClose={() => setPendente(null)}
+        />
+      )}
       {err && (
         <div className="card-b">
           <div className="banner alert">{err}</div>
