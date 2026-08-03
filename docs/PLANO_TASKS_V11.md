@@ -238,6 +238,27 @@ ser marcada como concluída antes de revisitar as quatro linhas acima.
 
 ## Frente 8 · Menus e escopo por perfil
 
+> **Frente 8 já entregue — sem trabalho novo.** As 6 tasks abaixo são exatamente o
+> escopo de H1–H10 (`docs/PLANO_HIERARQUIA_V11.md`), implementados e testados em
+> 28/07/2026, antes de a numeração de frentes virar prática (mesmo padrão do que
+> aconteceu com V11.7.1/7.3, ver Frente 7). Auditoria feita em 03/08/2026: reexecutei
+> `rls-hierarquia-v11-areas`, `rpc-desconto` e `cadastro-manual-v11` (38 testes, todos
+> verdes) e confirmei no código (`app-shell.tsx`, `fn_modelo_alcada_desconto`) que os 4
+> menus por perfil e a alçada por cargo com escalonamento Master → Coordenador → Matriz
+> continuam como descrito. Duas dívidas conscientes ficaram documentadas em
+> `PLANO_HIERARQUIA_V11.md` (não bloqueiam o fechamento): (1) `isGroupView` ainda rotula
+> o dashboard do Supervisor como "visão de grupo" em 6 telas — decisão de produto, fora
+> do escopo de H7/H8; (2) um override de `profile_areas` pode remover a área `maprov` de
+> quem tem alçada de desconto, mantendo a autoridade sem a tela — separação considerada
+> correta por design.
+>
+> ✅ V11.8.1 — H8 (menu Coordenador, 17 áreas)
+> ✅ V11.8.2 — H8 (menu Supervisor de Vendas, 11 áreas)
+> ✅ V11.8.3 — H8 (menu Supervisor Operacional, 4 áreas)
+> ✅ V11.8.4 — H8 (menu por cargo: Backoffice, Assistente Comercial, Marketing)
+> ✅ V11.8.5 — H6 (alçada por cargo; H9 confirma escalonamento Master → Coordenador → Matriz)
+> ✅ V11.8.6 — H9/H10 (testes de RLS por perfil, positivo e negativo)
+
 | Task    | Tag    | Descrição                                                                                                                    | Depende de |
 | ------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | V11.8.1 | front  | Menu do **Coordenador Comercial**: as 17 áreas (vê tudo que a Matriz vê, mas não altera comissionamento por não ser diretor) | V11.0.2    |
