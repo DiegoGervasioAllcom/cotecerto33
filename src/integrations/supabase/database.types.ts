@@ -2627,6 +2627,7 @@ export type Database = {
           performance_motivo: Json | null;
           performance_revisado_em: string | null;
           performance_revisado_por: string | null;
+          performance_revisao_motivo: string | null;
           performance_status: string | null;
           periodo_fim: string | null;
           periodo_inicio: string | null;
@@ -2671,6 +2672,7 @@ export type Database = {
           performance_motivo?: Json | null;
           performance_revisado_em?: string | null;
           performance_revisado_por?: string | null;
+          performance_revisao_motivo?: string | null;
           performance_status?: string | null;
           periodo_fim?: string | null;
           periodo_inicio?: string | null;
@@ -2715,6 +2717,7 @@ export type Database = {
           performance_motivo?: Json | null;
           performance_revisado_em?: string | null;
           performance_revisado_por?: string | null;
+          performance_revisao_motivo?: string | null;
           performance_status?: string | null;
           periodo_fim?: string | null;
           periodo_inicio?: string | null;
@@ -3521,6 +3524,10 @@ export type Database = {
           _senha: string;
         };
         Returns: string;
+      };
+      fn_revisar_reativar_performance: {
+        Args: { p_motivo?: string; p_profile_id: string };
+        Returns: undefined;
       };
       fn_salvar_regua_performance: {
         Args: {
