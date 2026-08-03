@@ -3445,6 +3445,10 @@ export type Database = {
           area_chave: string;
         }[];
       };
+      fn_calcular_performance_pessoa: {
+        Args: { p_bloco: string; p_profile_id: string };
+        Returns: Json;
+      };
       fn_comissao_clt: {
         Args: { p_competencia: string; p_vendedor: string };
         Returns: {
