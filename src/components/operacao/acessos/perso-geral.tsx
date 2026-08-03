@@ -8,6 +8,7 @@ import { RespostasPadraoPanel } from "@/components/acessos/respostas-padrao-pane
 import { SenhaDiretorModal } from "@/components/acessos/senha-diretor-modal";
 import { PerformancePanel } from "./performance-panel";
 import { DiretoresPanel } from "./diretores-panel";
+import { HistoricoPanel } from "./historico-panel";
 import { Icon } from "./icon";
 import { PARAMS } from "./constants";
 import { DynamicPairCard, DynamicRangeCard } from "./dynamic-cards";
@@ -65,6 +66,13 @@ export function PersoGeral({
         >
           Diretores
         </button>
+        <button
+          className={sub === "historico" ? "on" : ""}
+          data-tour="acessos-historico"
+          onClick={() => setSub("historico")}
+        >
+          Histórico
+        </button>
       </div>
       {sub === "franquia" && (
         <ModeloFranquiaPanel
@@ -78,7 +86,8 @@ export function PersoGeral({
       {sub === "clt" && <ModeloCltPanel clt={clt} setClt={setClt} onToast={onToast} />}
       {sub === "performance" && <PerformancePanel />}
       {sub === "diretores" && <DiretoresPanel />}
-      {sub !== "performance" && sub !== "diretores" && (
+      {sub === "historico" && <HistoricoPanel />}
+      {sub !== "performance" && sub !== "diretores" && sub !== "historico" && (
         <>
           <DescontoPoliticaPanel />
           <RespostasPadraoPanel />
