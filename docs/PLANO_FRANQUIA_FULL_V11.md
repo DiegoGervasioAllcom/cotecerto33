@@ -139,6 +139,42 @@ em 04/08/2026, depois de eu investigar e achar 3 problemas no desenho original:
 arriscar retrabalho. PR aberto agora com o que está pronto; V11.5.4/5.5/5.6 voltam como
 Frente 5b quando o r41 e o Handoff atualizado chegarem.
 
+## Frente 5b — fechada em 04/08/2026
+
+O r41 chegou junto com Regras Decididas + Handoff atualizado + Respostas de produto,
+resolvendo as 3 dúvidas que travavam (ver seção acima). Entregue e testado:
+
+- **V11.5b.1** — `fn_registrar_alteracao_franquia`: porta de escrita do histórico da
+  franquia, gate por identidade (franqueado dono da empresa + modalidade Full via
+  `fn_bloco_performance`), nunca senha de diretor.
+- **V11.5b.2** — `fn_salvar_regua_performance_full`: a Full salva a própria régua
+  (bloco `'full'`, linha COMPARTILHADA de `regua_performance_config`, D1) direto, sem
+  senha, sem o toggle "Notificar o supervisor" (r41 confirma que não existe pro bloco
+  full).
+- **V11.5b.3** — tabela `full_comissao_complementos` (1 linha por empresa) +
+  `fn_salvar_complementos_full`: comissão de venda/renovação (%) + bônus de
+  campanha/meta da equipe (texto livre, r41 confirma), sem senha.
+- **V11.5b.4/5** — `xacessos.tsx` ganhou toggle de 3 seções (Meu time / Personalização
+  geral / Performance) — só visível pra Full (`isFranqFull`, nunca Master/Supervisor).
+  Personalização geral tem 2 sub-abas: Modelo CLT (resumo somente-leitura do
+  `clt_config` global + card editável "Complementos do time") e Histórico (só da
+  própria franquia, filtro explícito de `empresa_id`).
+
+**Decisão consciente, não bug:** nenhuma das 3 RPCs novas tem bypass de Matriz/Coordenador
+(diferente de `fn_salvar_sla_empresa`, V11.5.3, que permite) — o r41 não mostra nenhum
+caminho de Matriz editar régua/complementos de uma Full específica; é autonomia
+exclusiva da "matrizinha" (regra 8). Se a operação real precisar de um override
+administrativo, é task nova.
+
+**Testado:** 553 testes de banco (30 novos) + 216 unitários + 29 E2E, verificado
+manualmente no navegador (login real como Franquia Full, salvar Complementos e régua
+sem nenhum modal de senha, ver a entrada no Histórico da franquia). Um bug de teste
+(locator ambíguo, `<h1>` duplicado entre app-shell e a página) corrigido durante a
+verificação — não é bug de produto.
+
+Com isso, **a Frente 5 fecha por completo** — não fica mais nenhuma task V11.5.x
+bloqueada.
+
 ## Frente 5b — desbloqueada em 04/08/2026 (r41 + Regras Decididas + Handoff atualizado + Respostas)
 
 O r41 (`cotecerto_prototipo_v11.html`, função `fullAcessosPage()`/`fullPersoBody()`/
