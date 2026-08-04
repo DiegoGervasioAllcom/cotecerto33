@@ -40,6 +40,7 @@ o item do WhatsApp Business API pendente de conta externa. Detalhe completo em
 
 | Documento                 | Finalidade                                                              |
 | -------------------------- | ------------------------------------------------------------------------ |
+| `DOC_BANCO_V11.md`        | **documentação do banco** — schema completo por domínio (diagramas ER, colunas, RLS, RPCs), gerada por introspecção direta do Postgres. Regenerar após qualquer migration nova relevante — não é mantida à mão |
 | `Q4_ROTEIRO_QA_MANUAL.md` | roteiro de QA manual — **reescrito em 04/08/2026** para cobrir tudo da V11 (substitui a versão V10) |
 | `SETUP_DEV.md`            | preparação do ambiente local                                            |
 | `RUNBOOK_DEPLOY.md`       | operação da produção self-hosted                                        |
