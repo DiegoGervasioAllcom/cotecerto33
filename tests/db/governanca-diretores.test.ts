@@ -41,32 +41,34 @@ async function criarDiretor(prefix: string) {
 }
 
 /**
- * Reduz o total global de diretores para exatamente 2, um a um (a trava do
- * V11.0.5 bloqueia remoção quando restariam menos de 2 — o loop simplesmente
- * para de conseguir remover quando chega em 2). Se o total já era 0, cria 2
- * diretores novos. Devolve os dois clients logados.
+ * Garante 2 diretores com senha CONHECIDA pelo teste (`criarDiretor`, senha
+ * padrão de fixture) e reduz o resto do total global a zero.
+ *
+ * Cria os 2 novos ANTES de demover qualquer diretor pré-existente — assim o
+ * total nunca passa pelo mínimo de 2 nesse meio-tempo, e a trava do V11.0.5
+ * nunca bloqueia a demoção dos antigos (o pool só cresce até demover, depois
+ * encolhe de uma vez). Isso importa desde que `supabase/seed.sql` (regra 2
+ * das Regras Decididas) passou a criar 2 diretores reais (Ana/Melo) com senha
+ * própria (`Supper@123!`) — a versão antiga desta function tentava logar com
+ * a senha genérica de fixture em QUALQUER diretor pré-existente, o que quebra
+ * contra os do seed.
  */
 async function garantirDoisDiretores(): Promise<{ a: Db; aId: string; b: Db; bId: string }> {
-  const { data: todos } = await admin.from("profiles").select("id").eq("diretor", true);
-  for (const { id } of todos ?? []) {
+  const a = await criarDiretor(uniq("g63-base-a"));
+  const b = await criarDiretor(uniq("g63-base-b"));
+
+  const { data: outros } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("diretor", true)
+    .not("id", "in", `(${a.userId},${b.userId})`);
+  for (const { id } of outros ?? []) {
     await admin.from("profiles").update({ diretor: false }).eq("id", id);
   }
 
-  const { data: restantes } = await admin.from("profiles").select("id").eq("diretor", true);
-  let ids = (restantes ?? []).map((r) => r.id);
-
-  if (ids.length === 0) {
-    const a = await criarDiretor(uniq("g63-base-a"));
-    const b = await criarDiretor(uniq("g63-base-b"));
-    ids = [a.userId, b.userId];
-  }
-
-  expect(ids, "esperava exatamente 2 diretores após reduzir o total global").toHaveLength(2);
-
-  const [aId, bId] = ids;
-  const a = await loginComoProfile(aId);
-  const b = await loginComoProfile(bId);
-  return { a, aId, b, bId };
+  const aClient = await loginComoProfile(a.userId);
+  const bClient = await loginComoProfile(b.userId);
+  return { a: aClient, aId: a.userId, b: bClient, bId: b.userId };
 }
 
 describe("V11 · G6.3 — propor_alteracao_diretor / confirmar_alteracao_diretor", () => {
