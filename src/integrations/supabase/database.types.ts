@@ -342,6 +342,33 @@ export type Database = {
           },
         ];
       };
+      comissao_origem_config: {
+        Row: {
+          ativo: boolean;
+          atualizado_em: string;
+          atualizado_por: string | null;
+          descricao: string | null;
+          origem: string;
+          pct: number;
+        };
+        Insert: {
+          ativo?: boolean;
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          descricao?: string | null;
+          origem: string;
+          pct: number;
+        };
+        Update: {
+          ativo?: boolean;
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          descricao?: string | null;
+          origem?: string;
+          pct?: number;
+        };
+        Relationships: [];
+      };
       comissao_regras: {
         Row: {
           atualizado_em: string;
@@ -3154,6 +3181,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      sla_empresa_config: {
+        Row: {
+          atualizado_em: string;
+          atualizado_por: string | null;
+          empresa_id: string;
+          sla_segundos: number;
+        };
+        Insert: {
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          empresa_id: string;
+          sla_segundos: number;
+        };
+        Update: {
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          empresa_id?: string;
+          sla_segundos?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sla_empresa_config_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: true;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "sla_empresa_config_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: true;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       user_presence: {
         Row: {
           atualizado_em: string;
@@ -3584,8 +3647,16 @@ export type Database = {
         Args: { p_profile_id: string };
         Returns: string;
       };
+      fn_origem_lead: { Args: { p_canal_id: string }; Returns: string };
       fn_pct_comissao_efetivo: {
         Args: { p_empresa_id: string };
+        Returns: {
+          fonte: string;
+          pct: number;
+        }[];
+      };
+      fn_pct_comissao_por_origem: {
+        Args: { p_canal_id: string; p_empresa_id: string };
         Returns: {
           fonte: string;
           pct: number;
@@ -3636,6 +3707,28 @@ export type Database = {
         };
         Returns: undefined;
       };
+      fn_salvar_comissao_origem: {
+        Args: {
+          p_ativo?: boolean;
+          p_descricao?: string;
+          p_origem: string;
+          p_pct: number;
+        };
+        Returns: {
+          ativo: boolean;
+          atualizado_em: string;
+          atualizado_por: string | null;
+          descricao: string | null;
+          origem: string;
+          pct: number;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "comissao_origem_config";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       fn_salvar_desconto_politicas: {
         Args: { p_delete: Json; p_senha: string; p_upsert: Json };
         Returns: undefined;
@@ -3670,6 +3763,23 @@ export type Database = {
         };
         Returns: string;
       };
+      fn_salvar_sla_empresa: {
+        Args: { p_empresa_id: string; p_sla_segundos: number };
+        Returns: {
+          atualizado_em: string;
+          atualizado_por: string | null;
+          empresa_id: string;
+          sla_segundos: number;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "sla_empresa_config";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      fn_sla_aplicavel_lead: { Args: { p_lead_id: string }; Returns: number };
+      fn_sla_efetivo: { Args: { p_empresa_id: string }; Returns: number };
       fn_tem_area: {
         Args: { _area: string; _user_id: string };
         Returns: boolean;

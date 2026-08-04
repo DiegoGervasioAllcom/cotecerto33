@@ -1,6 +1,10 @@
 # Perguntas de produto em aberto — para a Lis
 
-**Atualizado em:** 30/07/2026
+**Atualizado em:** 03/08/2026 — itens 2, 3, 4, 5, 6 e 7 respondidos pela Lis. Item 1
+segue pendente (o arquivo existe, mas não foi enviado ainda por falha no pacote — a
+Lis vai anexar). Junto das respostas, 4 arquivos a caminho: respostas detalhadas,
+"Regras Decididas", protótipo **r41** (já traz 2 e 3 corrigidos) e Handoff atualizado
+(item 11 resolvido).
 
 As decisões que a engenharia não deve tomar sozinha. Estavam espalhadas entre
 `ANALISE_LACUNAS_V11.md` e `PLANO_TASKS_V11.md`; ficam reunidas aqui para nenhuma se
@@ -8,6 +12,12 @@ perder. Cada linha diz **o que trava**, **por que não decidimos internamente** 
 de cada saída** — para a conversa ser curta.
 
 ## 1. Documento "Regras Decididas" não veio no pacote
+
+⏳ **Ainda pendente em 03/08/2026.** O arquivo existe e a Lis vai anexar — ficou fora
+do pacote original por falha no envio. Continua sem bloquear nada que já foi entregue
+(Frente 4 e os presets de cargo usaram o `const MENUS` dos Fluxos como fonte
+alternativa); só volta a travar se o conteúdo, quando chegar, contradisser algo já
+implementado.
 
 **Trava:** a régua de performance (Frente 4) e os escopos dos presets de cargo.
 
@@ -22,80 +32,36 @@ Regras Decididas contradisserem, a Frente 0 volta.
 
 ## 2. Endereço único das configurações da Franquia Full
 
-**Trava:** as telas finais da Frente 5 (V11.5.2 e V11.5.4).
-
-É o **item 11 do próprio Handoff**, já registrado lá como "decisão de produto pendente
-(Lis)". Hoje o protótipo tem dois caminhos: Central da Franquia × Acessos › Personalização.
-
-**Pergunta:** qual dos dois é o endereço definitivo?
+✅ **Resolvido em 03/08/2026 — destrava a Frente 5.** Endereço definitivo: **Acessos e
+permissões › Personalização/Performance**. A Central da Franquia fica só com a
+operação de leads. Já corrigido no protótipo r41 (a caminho).
 
 ## 3. Estornos para o Supervisor de Vendas
 
-**Trava:** nada — está implementado seguindo o r40. Mas é divergência entre fontes.
-
-O protótipo r40 dá **10 áreas** ao cargo Supervisor de Vendas e **não** inclui Estornos. O
-`const MENUS` dos Fluxos dá **11**, com Estornos.
-
-Seguimos o r40 (é a referência que o QA compara), com o teste apontando a divergência. Mas
-a estrutura sugere que o r40 esqueceu: a lista dos Fluxos é exatamente *"o menu do Master
-sem Acessos"*, uma derivação limpa que o r40 quebra sem justificativa na descrição do cargo.
-E o Master e a Franquia Full têm Estornos — o Supervisor de Vendas seria o único papel de
-supervisão comercial sem ver a comissão voltando.
-
-**Custo de mudar:** uma linha de `insert` na migration e um assert no teste.
+✅ **Resolvido em 03/08/2026.** O r40 tinha esquecido mesmo: o Supervisor de Vendas
+ganha Estornos (**11 áreas**). Aplicar a linha na migration (`cargo_areas`) e virar o
+teste que hoje documenta a divergência (esperava 10, sem Estornos) para 11, com
+Estornos. r41 já traz corrigido.
 
 ## 4. Carteira de Recuperação
 
-**Trava:** nada hoje; decide se entra na V11 ou fica para a V12.
-
-O fluxo de distribuição de leads define dois destinos para a perda — Carteira de Recuperação
-(segunda lista dentro da Central, com motivo e data, para retrabalho manual) ou exclusão
-definitiva — e o espelho disso na Franquia Full. **O protótipo r40 não tem essa tela.**
-
-Como os Fluxos são a fonte da verdade das regras, ou a tela entra na V11 sem referência
-visual, ou a regra fica para a V12.
-
-**Pergunta:** V11 sem protótipo, ou V12?
+✅ **Resolvido em 03/08/2026.** Fica para a **V12**. Prioridade agora é o teste com o
+canal Movida.
 
 ## 5. Quem aprova o vendedor de Franquia Full — hoje e depois
 
-**Trava:** nada. Implementado como o r40 manda; a pergunta é sobre o futuro.
-
-**Como está:** o pedido de um vendedor de Franquia Full **não entra na fila da Matriz** —
-cai na fila da própria franquia, que aprova sozinha. Os Fluxos dizem isso duas vezes ("o
-pedido não vai para a Matriz", "aprova sem depender da Matriz") e o protótipo filtra o caso
-antes de montar as filas da Matriz. A Matriz continua vendo os vendedores das Fulls em
-**Cadastros Rede**, depois de aprovados — o que ela não tem é o poder de aprovar.
-
-**A pergunta:** mais adiante a Matriz deve poder aprovar também? E se sim, em que forma?
-
-| Saída | O que significa | Custo |
-| --- | --- | --- |
-| **Override** | a Matriz sempre pode aprovar, em paralelo à Full | 1 linha em `fn_pode_aprovar_pedido` + inverter um teste. Custo real não é técnico: a autonomia da Full deixa de ser garantia e passa a ser convenção |
-| **Fallback** | a Matriz só assume se a Full não agir em N dias | precisa de prazo, job periódico e regra de "abandonado"; conversa com a régua de performance (Frente 4) |
-| **Escalonamento** | a Full pede à Matriz, com motivo e rastro | trabalho médio, e é o padrão que a V11 já usa noutros lugares (o Master *pede* desligamento à Matriz em vez de fazer) |
-
-**Nota de engenharia:** o código já foi escrito com essa costura pronta —
-`fn_destino_pedido` (de quem é a fila) e `fn_pode_aprovar_pedido` (quem pode aprovar) são
-funções separadas de propósito, justamente para essa mudança ser local depois. O comentário
-da migration diz qual linha muda em cada cenário.
-
-**Palpite nosso, para provocar a conversa:** escalonamento, por ser o padrão do resto do
-documento. Mas é palpite.
+✅ **Resolvido em 03/08/2026.** Fica como está: a Full aprova sozinha, sem mudança de
+código. Se a operação real pedir uma das 3 saídas (override/fallback/escalonamento),
+revisitamos na V12 — `fn_destino_pedido`/`fn_pode_aprovar_pedido` continuam separadas
+de propósito para essa mudança ser local quando/se vier.
 
 ## 6. Escopo de dados do time de apoio (Assistente Comercial e Marketing)
 
-**Trava:** nada hoje; mas o menu abre telas que o dado não preenche.
-
-O perfil `interno` existe e o menu sai certo pelo cargo. Só que o escopo de dados é estreito:
-Marketing tem Leads, Distribuição e Relatórios no menu justamente para olhar a captação
-inteira, e hoje enxerga pouco.
-
-Dar leitura ampla **sem** dar escrita exige separar os dois eixos nas 22 policies de SELECT —
-mudança larga. E depende de decidir o que exatamente esses dois cargos devem ver.
-
-**Pergunta:** Marketing e Assistente Comercial enxergam a operação toda (leitura), ou só o
-que passa pela empresa deles?
+✅ **Resolvido em 03/08/2026.** Marketing e Assistente Comercial enxergam **só a
+operação da Matriz** (leitura), **sem** os dados das franquias Full. Ainda precisa de
+implementação: separar leitura de escrita nas policies de SELECT afetadas (mudança
+larga, ~22 policies, mapeadas em `docs/ANALISE_LACUNAS_V11.md`) — candidato a task
+própria, fora da Frente 5.
 
 ## 7. Remetente dos e-mails de acesso
 

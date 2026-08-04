@@ -546,6 +546,31 @@ export async function statusDesligamento(profileId: string) {
 }
 
 // ===========================================================================
+// SLA por empresa (V11.5.3/V11.5.2b) — helpers pra confirmar, via banco, que
+// o SLA da Full é isolado do singleton `distribuicao_config` (id='default').
+// ===========================================================================
+
+/** Override de SLA da empresa em `sla_empresa_config` (null = nunca configurou). */
+export async function lerSlaOverrideEmpresa(empresaId: string): Promise<number | null> {
+  const { data } = await admin
+    .from("sla_empresa_config")
+    .select("sla_segundos")
+    .eq("empresa_id", empresaId)
+    .maybeSingle();
+  return data?.sla_segundos ?? null;
+}
+
+/** `distribuicao_config.sla_segundos` — o singleton global da Matriz (id='default'). */
+export async function lerSlaSingletonMatriz(): Promise<number | null> {
+  const { data } = await admin
+    .from("distribuicao_config")
+    .select("sla_segundos")
+    .eq("id", "default")
+    .maybeSingle();
+  return data?.sla_segundos ?? null;
+}
+
+// ===========================================================================
 // Convite Supper (V11 · Frente 1)
 // ===========================================================================
 

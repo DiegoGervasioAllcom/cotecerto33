@@ -37,6 +37,7 @@ import { usePresence } from "@/lib/use-presence";
 import { useGroupScope } from "@/lib/group-scope";
 import { useNavBadges } from "@/lib/nav-badges";
 import { useAreas, ehPerfilInterno, type AreaChave } from "@/lib/use-areas";
+import { resolveNavExperiencia, ehAreaDaFull } from "@/lib/nav-experience";
 import type { Perfil } from "@/integrations/supabase/client";
 import { SidebarUserMenu, useAccessibilityPrefs } from "@/components/user-menu";
 import {
@@ -125,9 +126,58 @@ function recortarPorArea(groups: Group[], temArea: (a: AreaChave) => boolean): G
 }
 
 /**
- * Master / Supervisor / Franquia Full — 12 itens (área de grupo).
- * As telas são as mesmas para os 3 perfis; o escopo dos dados é resolvido
- * pelo RLS (`empresas_visiveis` multinível) + `useGroupScope()`.
+ * Rotas que a Matriz usa nas 17 áreas mas que, pra Franquia Full, já têm um
+ * equivalente próprio construído em outra frente — a Full não acessa a tela
+ * da Matriz (RLS/escopo diferente), usa a versão que já existe pra ela.
+ * Só `macessos` hoje: a Matriz classifica cadastros da rede inteira em
+ * `/operacao/acessos` (exclusivo dela); a Full acompanha o próprio time em
+ * `/operacao/xacessos` — a mesma tela que Master já usa em `GRUPO_GROUP`.
+ */
+const FULL_ROTA_OVERRIDE: Partial<Record<AreaChave, string>> = {
+  macessos: "/operacao/xacessos",
+};
+
+/**
+ * Franquia Full — espelho da Matriz com 14 áreas (V11.5.2a abriu com 15;
+ * V11.5.2b tirou `mmsgs` — ver abaixo). A exclusão em si (regra 8 das Regras
+ * Decididas: só Franquias e Configurações globais ficam de fora, + Mensagens
+ * por decisão desta task) mora em `ehAreaDaFull` (`nav-experience.ts`),
+ * testável isolada.
+ *
+ * Reaproveita label/ícone/rota das listas da Matriz acima (mesma fonte, sem
+ * duplicar) via `FULL_ROTA_OVERRIDE` para a única que precisa de tela
+ * própria. Full NÃO passa pelo recorte de cargo (`temArea`/
+ * `fn_areas_do_usuario` são exclusivos do time interno, ver docstring de
+ * `useAreas`) — ganha o conjunto inteiro de uma vez, sem override por pessoa.
+ *
+ * V11.5.2b resolveu o gap apontado por V11.5.2a: `/comando/leads` e
+ * `/comando/distribuicao` trocaram `useRequireRole("matriz")` por
+ * `useRequireMatrizOuFranquiaFull()` (`require-role.tsx`) — a Full abre as
+ * duas sem cair em `/inicio`. Distribuição usa uma visão reduzida pra Full
+ * (SLA próprio via `sla_empresa_config`/V11.5.3 + canais próprios), nunca o
+ * singleton `distribuicao_config` da Matriz. `/operacao/mensagens` NÃO foi
+ * desbloqueada (mistura escopo global/pessoal, fora do recorte "só leads"
+ * desta task) — por isso saiu do menu (`mmsgs` em `AREAS_FORA_DA_FULL`) em
+ * vez de ficar quebrada no clique.
+ */
+const FULL_GRUPO_GROUP: Group = {
+  label: "GRUPO",
+  items: [MATRIZ_COMANDO_GROUP, MATRIZ_OPERACAO_GROUP]
+    .flatMap((g) => g.items)
+    .filter((i) => !i.area || ehAreaDaFull(i.area))
+    .map((i) => {
+      const override = i.area && FULL_ROTA_OVERRIDE[i.area];
+      return override ? { ...i, to: override } : i;
+    }),
+};
+
+/**
+ * Master — 12 itens (área de grupo). O escopo dos dados é resolvido pelo RLS
+ * (`empresas_visiveis` multinível) + `useGroupScope()`.
+ *
+ * Supervisor saiu daqui no H7 (virou time interno, menu por cargo). Franquia
+ * Full sai daqui em V11.5.2a — ganha `FULL_GRUPO_GROUP`, o espelho de 14
+ * áreas da Matriz (V11.5.2b), em vez do menu de 12 do Master.
  */
 const GRUPO_GROUP: Group = {
   label: "GRUPO",
@@ -173,7 +223,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const { role, profile, empresa, session, signOut } = useAuth();
-  const { isGroupView, isFranqIndividual, loading: scopeLoading } = useGroupScope();
+  const { isGroupView, isFranqIndividual, isFranqFull, loading: scopeLoading } = useGroupScope();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isOpen: tutorialOpen, openTutorial } = useTutorialController();
@@ -185,30 +235,29 @@ export function AppShell({
     navigate({ to: "/auth", replace: true });
   };
 
-  // 3 experiências de navegação (ver docs/MAPA_PROTOTIPO_PERFIS.md §2-3):
-  // venLike = vendedor + franquia Individual · grpLike = master/franquia Full ·
+  // 3 experiências de navegação (ver docs/MAPA_PROTOTIPO_PERFIS.md §2-3 e
+  // `resolveNavExperiencia`): venLike = vendedor + franquia Individual ·
+  // fullLike = franquia Full (V11.5.2a) · grpLike = master/supervisor ·
   // interno = matriz/coordenador/supervisor, recortado por ÁREA (V11 · H7).
   // Só o franqueado depende da query de modelo (Individual/Full); enquanto ela
   // carrega, não computamos a experiência para não "piscar" a nav errada.
   const franqPend = role === "franqueado" && scopeLoading;
-  const venLike =
-    !franqPend && (role === "vendedor" || (role === "franqueado" && isFranqIndividual));
+  const { venLike, fullLike, grpLike } = resolveNavExperiencia({
+    role,
+    isFranqIndividual,
+    isFranqFull,
+    isGroupView,
+    franqPend,
+  });
   const isMatriz = role === "matriz";
   const ehInterno = ehPerfilInterno(role);
-
-  // V11: o supervisor deixa de ter nav de grupo — ele é time interno da Matriz e
-  // recebe o menu do cargo dele. `isGroupView` continua devolvendo true para
-  // supervisor porque 6 telas usam esse mesmo sinal para decidir CONTEÚDO
-  // ("Visão geral do grupo" etc.); mudar isso é task própria, fora do H7/H8.
-  // Aqui excluímos supervisor só da navegação, para não somar duas navs.
-  const grpLike = !franqPend && isGroupView && role !== "supervisor";
 
   const { temArea, cargoNome, loading: areasLoading } = useAreas();
 
   const { leadsPendentes, aprovacoesPendentes, leadMaisAntigoElapsed } = useNavBadges({
     isMatriz,
     verLeads: temArea("mleads"),
-    verAprovacoes: temArea("maprov") || grpLike,
+    verAprovacoes: temArea("maprov") || grpLike || fullLike,
   });
   // Interno só entra depois das áreas carregarem — senão a nav pisca vazia (ou
   // completa) antes do recorte do cargo chegar.
@@ -217,6 +266,7 @@ export function AppShell({
       ? recortarPorArea([MATRIZ_COMANDO_GROUP, MATRIZ_OPERACAO_GROUP], temArea)
       : []),
     ...(venLike ? [VENDA_GROUP] : []),
+    ...(fullLike ? [FULL_GRUPO_GROUP] : []),
     ...(grpLike ? [GRUPO_GROUP] : []),
   ];
 
