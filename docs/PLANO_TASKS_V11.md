@@ -290,9 +290,9 @@ detalhes da hierarquia estão em `docs/PLANO_HIERARQUIA_V11.md`.
 
 1. ✅ **Base implementada** — V11.0.2, V11.0.3 e V11.0.8 estabeleceram a
    hierarquia; V11.1.1–V11.1.5 e V11.1.8 entregaram o núcleo do convite;
-   V11.2.3–V11.2.9 entregaram filas e aprovação. V11.2.1 e V11.2.2 estão
-   implementadas localmente; V11.1.6 e V11.1.7 continuam adiadas, e e-mail/senha
-   aguardam configuração e prova real no ambiente publicado.
+   V11.2.3–V11.2.9 entregaram filas e aprovação. V11.2.1 e V11.2.2 foram para
+   produção em 01/08/2026 (PR #104); V11.1.6 e V11.1.7, que dependiam delas,
+   fecharam junto (ver Frente 1).
 2. **Pedidos disparados em paralelo, porque têm prazo de terceiro:** V11.9.3 ("Regras
    Decididas", que trava a Frente 4) e V11.5.1 (endereço das configurações da Full).
 3. **Frente 3** — começar por V11.3.1 e V11.3.2 (Cadastros Matriz e Rede), que já
@@ -302,8 +302,8 @@ detalhes da hierarquia estão em `docs/PLANO_HIERARQUIA_V11.md`.
 6. **Frente 7** (visão geral) em paralelo a partir da taxonomia de canais.
 7. **Frente 8** — auditar o status das tasks contra as entregas H7–H10 da hierarquia
    antes de abrir nova implementação, evitando refazer menus, alçada e testes já cobertos.
-8. **Boas-vindas e senha (V11.2.2, V11.1.6, V11.1.7)** — pendência e recusa da
-   V11.2.1 já foram retomadas; só depois da senha o autocadastro sai do ar.
+8. ✅ **Boas-vindas e senha (V11.2.2, V11.1.6, V11.1.7)** — fecharam junto com a
+   ida para produção do e-mail (01/08/2026) e a remoção do autocadastro (03/08/2026).
 9. **Frente 9** por último, exceto os pedidos do item 2.
 
 ## Decisões pendentes que bloqueiam tasks
