@@ -1,5 +1,11 @@
 # Plano — Frente 7 · Visão geral com período único
 
+**Status:** ✅ implementado e concluído — V7.5 a V7.8 (a tabela "O que falta de fato"
+abaixo) foram todas entregues em 03/08/2026, com V11.7.4/7.5/7.6 já marcadas ✅ em
+`docs/PLANO_TASKS_V11.md`. V11.7.2 (mover KPI grid/rankings/gráfico para RPC) ficou
+fora de escopo por decisão (ver "Decisões" abaixo) — segue client-side de propósito,
+não é pendência esquecida.
+
 ## O que já existe hoje (achado ao investigar, plano oficial estava desatualizado)
 
 `docs/PLANO_TASKS_V11.md` lista V11.7.1 a V11.7.6 sem marcar nenhuma como ✅, mas boa parte

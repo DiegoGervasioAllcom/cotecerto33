@@ -1,6 +1,7 @@
 # Plano — Frente 6 · Governança e histórico
 
-**Aberto em:** 03/08/2026 · **Status:** aguardando aprovação para implementar
+**Aberto em:** 03/08/2026 · **Status:** ✅ implementado e concluído (G6.1–G6.6, PR mergeado
+03/08/2026)
 
 **Escopo:** V11.6.1 a V11.6.5 do `PLANO_TASKS_V11.md`.
 
@@ -21,6 +22,16 @@ A infra de V11.0.5/V11.0.6/V11.0.7 já está pronta e testada:
 - **Não existe nenhuma tela hoje** que leia `historico_alteracoes` (é 100% infra sem
   consumidor de leitura) nem nenhuma UI para incluir/remover diretor (a marcação só
   pode ter sido feita direto no banco).
+
+> **Atualização pós-implementação:** o parágrafo acima descreve o estado ANTES desta
+> frente — G6.4/G6.5 fecharam exatamente essas duas lacunas (sub-aba Diretores com
+> dupla aprovação, e tela Histórico). Além disso, `supabase/seed.sql` já cria a Ana e
+> o Melo com `diretor = true` de fábrica em qualquer ambiente novo (dev local ou
+> primeira carga de produção) — não é preciso nenhum `update` manual no banco para ter
+> os 2 diretores mínimos num ambiente recém-criado; o `update` manual (comentado como
+> "marcação só pode ter sido feita direto no banco") só é necessário em produção real,
+> quando os diretores de fato são pessoas que já se cadastraram pelo convite (ver
+> `docs/RUNBOOK_DEPLOY.md` §6.6).
 
 ### Os "9 botões" da V11.6.1 não são 9 hoje
 
@@ -55,7 +66,7 @@ perna de banco — registrado aqui pra não repetir a surpresa do C14/D4.
 
 | Task | Tag | Descrição | Depende de |
 | ---- | --- | --------- | ---------- |
-| G6.1 | banco | 4 RPCs `fn_salvar_modelos_franquia`/`fn_salvar_clt_config`/`fn_salvar_desconto_politicas`/`fn_salvar_respostas_padrao` — cada uma chama `fn_registrar_alteracao` (DE/PARA por campo, mesmo padrão de D2) e só então grava; revoke da escrita direta nas 4 tabelas para `authenticated` | — |
+| G6.1 | banco | 4 RPCs `fn_salvar_modelos_franquia`/`fn_salvar_clt_config`/`fn_salvar_desconto_politicas`/`fn_salvar_resposta_padrao` (singular — grava uma linha por vez, ver Risco #3 abaixo) — cada uma chama `fn_registrar_alteracao` (DE/PARA por campo, mesmo padrão de D2) e só então grava; revoke da escrita direta nas 4 tabelas para `authenticated` | — |
 | G6.2 | front | Os 4 painéis passam a chamar as RPCs de G6.1 via `SenhaDiretorModal` (reusa D2) em vez de `.update()` direto — fecha V11.6.1/V11.6.2 (a mensagem de erro já é a certa, só precisa aparecer) | G6.1 |
 | G6.3 | banco | Tabela `diretor_propostas` (alvo, ação incluir/remover, proposto_por, confirmado_por, status) + RPCs `propor_alteracao_diretor`/`confirmar_alteracao_diretor` (senha nos dois passos; quem confirma ≠ quem propôs; bloqueia remoção que deixaria menos de 2) | — |
 | G6.4 | front | Sub-aba "Diretores" em Personalização geral (mesmo padrão de sub-aba da Performance, D7): lista diretores atuais, propor alteração, confirmar/rejeitar proposta pendente | G6.3 |

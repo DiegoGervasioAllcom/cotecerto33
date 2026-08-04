@@ -16,8 +16,11 @@ por CI (`ci`, `db-tests`) e pelas suítes de teste do repositório (banco, unit�
 E2E) — este roteiro cobre o que só se percebe usando a tela.
 
 > **Ambiente:** `https://cote-certo.sandboxallcom.com`
-> **Login inicial (Matriz/diretor):** `desenvolvimento@suppercerto.com.br` · senha
-> `Supper@123!`
+> **Login inicial (Matriz):** `desenvolvimento@suppercerto.com.br` · senha
+> `Supper@123!` — **esta conta não é diretora** (o seed não marca `diretor=true` para
+> ela). Para testar Governança (Bloco 6), use uma das 2 contas que o seed já marca
+> como diretoras: `ana@suppercerto.com.br` ou `melo@suppercerto.com.br`, senha
+> `Supper@123!` em ambas.
 > As outras personas **não existem no seed** (exceto quando indicado) — você as cria
 > pela própria aplicação, pelo fluxo de **convite** (Bloco 0). Isso é proposital: o
 > convite, o cadastro por link e a aprovação também são parte do teste.
@@ -32,7 +35,8 @@ aconteceu** (e print se der). Junte tudo e me manda que eu trato.
 
 | Persona de teste                     | Perfil / cargo (RLS)              | Experiência              | Tela inicial              |
 | ------------------------------------- | ---------------------------------- | ------------------------ | -------------------------- |
-| Matriz (diretor)                      | `matriz`                           | gestão total              | Visão geral da Matriz      |
+| Matriz                                | `matriz`                           | gestão total              | Visão geral da Matriz      |
+| Diretor (Ana/Melo, já no seed)         | `matriz`, `diretor=true`           | gestão total + governança | Visão geral da Matriz      |
 | Coordenador Comercial                 | `coordenador` (cargo `coord_com`)  | gestão total, não diretor | Visão geral da Matriz      |
 | Supervisor de Vendas                  | `supervisor` (cargo `sup_vendas`)  | comando comercial         | Visão geral (11 áreas)     |
 | Supervisor Operacional                | `supervisor` (cargo `sup_operacional`) | comando operacional  | Visão geral (4 áreas)      |
@@ -48,8 +52,9 @@ aconteceu** (e print se der). Junte tudo e me manda que eu trato.
 
 ## Bloco 0 — Matriz: convite, filas de aprovação e onboarding
 
-Logado como **Matriz/diretor**. Isso testa o convite, as duas filas de aprovação, o
-e-mail real e a montagem da hierarquia inteira.
+Logado como **Matriz** (`desenvolvimento@suppercerto.com.br`). Isso testa o convite, as
+duas filas de aprovação, o e-mail real e a montagem da hierarquia inteira — nenhum
+passo deste bloco exige ser diretor.
 
 - [ ] **Login** entra e cai na **Visão geral da Matriz** (não vê "Novo lead"). O selo
       da marca mostra MATRIZ.
@@ -170,8 +175,11 @@ Franquia Full, as seções extras do Bloco 4.
       - Supervisor Operacional: **4 áreas** — Visão geral, Leads, Distribuição,
         Acessos e permissões.
       - Master: menu de comando do grupo, sem Configurações globais.
-      - Franquia Full: quase o menu da Matriz, sem Franquias e sem Configurações
-        globais, **+ Canais** e **+ Central da Franquia** (Bloco 4).
+      - Franquia Full: **14 áreas** — quase o menu da Matriz, sem Franquias, sem
+        Configurações globais e sem Mensagens prontas. Não existe uma área "Canais"
+        nem "Central da Franquia" separadas no menu — "Central da Franquia" é o
+        comportamento das próprias áreas Leads/Distribuição pra Full (leads/SLA/canais
+        próprios, ver Bloco 4), não um item novo.
 - [ ] **Escopo crítico:** cada persona de grupo **só vê a própria sub-rede** —
       Master não vê a rede de outro Master; Coordenador vê tudo da Matriz;
       Supervisor vê o que o cargo permite. Confirme trocando entre elas.
@@ -256,8 +264,10 @@ Volte para a **Matriz** e valide as telas de comando (a Matriz vê **tudo**).
 
 ## Bloco 6 — Governança e histórico (diretor)
 
-Ainda como **Matriz/diretor** (crie um segundo diretor se possível, para o item de
-dupla aprovação).
+Logout → entre como **Ana** (`ana@suppercerto.com.br` · `Supper@123!`) ou **Melo**
+(`melo@suppercerto.com.br` · mesma senha) — o seed já marca as duas como diretoras
+(`diretor=true`), então **não precisa criar ninguém**: já há 2 diretoras prontas para
+testar o item de dupla aprovação (uma propõe, a outra confirma).
 
 - [ ] Nos botões **"Salvar política"** das telas de configuração (réguas
       interna/rede, e demais políticas sensíveis da Matriz — não confundir com os

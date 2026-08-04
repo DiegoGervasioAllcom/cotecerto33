@@ -63,10 +63,22 @@ Só `Canais` (do menu da Full) é nova, e ela é da Frente 5, não desta etapa.
 | Coordenador Comercial  | 17 | as mesmas 17 — a diferença é não ser diretor, não é o menu                     |
 | Supervisor de Vendas   | 11 | Visão geral, Aprovações, Vendedores, Supervisão, Pipeline geral, Vendas, Comissões, Premiações, Estornos, Renovações, Relatórios |
 | Supervisor Operacional | 4  | Visão geral, Leads, Distribuição, Acessos e permissões                        |
-| Cargo por escopo       | n  | recorte livre (ex.: Marketing = Visão geral, Leads, Distribuição, Relatórios, Mensagens) |
+| Cargo por escopo       | n  | recorte livre (ex.: Marketing = Visão geral, Leads, Distribuição, Relatórios, área "Marketing" ainda sem tela) |
 | Master                 | 12 | menu de comando do grupo, sem Configurações                                    |
 | Franquia Full          | 16 | quase o da Matriz, sem Franquias e sem Configurações globais (+ Canais)        |
 | Vendedor / Individual  | 9  | menu de venda                                                                  |
+
+> **Atualização pós-Frente 5 (04/08/2026):** a linha da Franquia Full acima é a
+> projeção original desta etapa (H8, 28/07) — a implementação real (V11.5.2a/2b)
+> abriu com 15 áreas e depois **fechou em 14**: além de Franquias e Configurações
+> globais, "Mensagens prontas" (`mmsgs`) também saiu do menu da Full por decisão de
+> V11.5.2b. `Canais` nunca existiu como área própria no catálogo `areas` — a
+> "Central da Franquia" (leads/SLA/canais próprios da Full) é um comportamento das
+> áreas Leads/Distribuição existentes, não uma área nova. Fonte da verdade hoje:
+> `AREAS_FORA_DA_FULL` em `src/lib/nav-experience.ts`. O exemplo do cargo Marketing
+> também mudou: o preset real (`cargo_areas`) dá a ele Visão geral/Leads/Distribuição/
+> Relatórios + a área-placeholder "Marketing" (`mkt`, sem rota ainda) — não
+> "Mensagens".
 
 ## Tasks
 

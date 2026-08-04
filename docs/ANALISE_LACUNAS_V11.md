@@ -1,5 +1,12 @@
 # Análise de Lacunas — CoteCerto V11
 
+> **Documento histórico — fechado em 04/08/2026.** Este é o diagnóstico do CORTE de
+> 28/07/2026: registra o que faltava naquele momento, antes de qualquer task da V11
+> ser implementada. Todas as lacunas listadas abaixo (convites, régua de performance,
+> diretor/histórico, Full como matrizinha etc.) **já foram entregues** — ver
+> `docs/PLANO_TASKS_V11.md` para o status atual, frente por frente. Mantido como
+> registro do ponto de partida, não como descrição do estado do produto hoje.
+
 **Corte:** 28/07/2026
 
 **Base de comparação:** `main` em `23f7a4d` (V10 fechada para go-live), 83 migrations
