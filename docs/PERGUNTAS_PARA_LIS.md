@@ -1,10 +1,9 @@
 # Perguntas de produto em aberto — para a Lis
 
-**Atualizado em:** 03/08/2026 — itens 2, 3, 4, 5, 6 e 7 respondidos pela Lis. Item 1
-segue pendente (o arquivo existe, mas não foi enviado ainda por falha no pacote — a
-Lis vai anexar). Junto das respostas, 4 arquivos a caminho: respostas detalhadas,
-"Regras Decididas", protótipo **r41** (já traz 2 e 3 corrigidos) e Handoff atualizado
-(item 11 resolvido).
+**Atualizado em:** 04/08/2026 — todos os 7 itens resolvidos. O item 1 (documento
+"Regras Decididas") chegou em 04/08/2026 junto do protótipo **r41**, do Handoff
+atualizado e das Respostas de Produto/TI — destravou a Frente 5b (ver
+`docs/PLANO_FRANQUIA_FULL_V11.md`).
 
 As decisões que a engenharia não deve tomar sozinha. Estavam espalhadas entre
 `ANALISE_LACUNAS_V11.md` e `PLANO_TASKS_V11.md`; ficam reunidas aqui para nenhuma se
@@ -13,22 +12,16 @@ de cada saída** — para a conversa ser curta.
 
 ## 1. Documento "Regras Decididas" não veio no pacote
 
-⏳ **Ainda pendente em 03/08/2026.** O arquivo existe e a Lis vai anexar — ficou fora
-do pacote original por falha no envio. Continua sem bloquear nada que já foi entregue
-(Frente 4 e os presets de cargo usaram o `const MENUS` dos Fluxos como fonte
-alternativa); só volta a travar se o conteúdo, quando chegar, contradisser algo já
-implementado.
+✅ **Resolvido em 04/08/2026.** O arquivo (`CoteCerto_Regras_Decididas.html`, datado de
+27/07) chegou junto do protótipo r41, do Handoff atualizado e das Respostas de Produto/TI
+— não contradisse nada já implementado com o `const MENUS` dos Fluxos como fonte
+alternativa. Foi o gatilho que destravou a Frente 5b (Central da Franquia/
+Personalização/Performance/Histórico da Full) — ver `docs/PLANO_FRANQUIA_FULL_V11.md`.
 
-**Trava:** a régua de performance (Frente 4) e os escopos dos presets de cargo.
-
-O Relatório DE/PARA e o Handoff citam esse documento como o "porquê" das regras, e ele é
-referência de 5 linhas do relatório (regras 3, 4, 5, 6, 7 e 12). Não está no pacote.
-
-A régua (regra 12) e os escopos (regra 5) dependem dele para implementar sem adivinhar. Os
-escopos foram extraídos do `const MENUS` dos Fluxos, que é fonte da verdade — mas se as
-Regras Decididas contradisserem, a Frente 0 volta.
-
-**Pedido:** o arquivo.
+> Nota de rastreabilidade: o arquivo foi recebido como anexo de chat, não commitado em
+> `docs/` — `supabase/seed.sql` cita o caminho `docs/CoteCerto_Regras_Decididas.html`
+> num comentário (regra 2, diretores), mas esse caminho não existe no repositório. Se
+> for preciso auditar a regra depois, o arquivo original está fora do controle de versão.
 
 ## 2. Endereço único das configurações da Franquia Full
 

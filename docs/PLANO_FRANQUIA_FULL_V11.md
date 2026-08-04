@@ -1,5 +1,11 @@
 # Plano — Frente 5 · Franquia Full como matrizinha (V11)
 
+**Status final:** ✅ Frente 5 inteiramente concluída (Frente 5b fechou o que faltava em
+04/08/2026 — ver a seção "Frente 5b — fechada em 04/08/2026" mais abaixo, que é a fonte
+da verdade sobre o que de fato foi entregue). As seções acima dela (tabela de tasks
+original, "Fechamento parcial", "BLOQUEADAS") registram o histórico de como o desenho
+mudou — mantidas por valor de decisão, não porque ainda descrevem o estado atual.
+
 **Aberto em:** 03/08/2026 · **Gatilho:** a Lis respondeu as 6 perguntas em aberto
 (`docs/PERGUNTAS_PARA_LIS.md`) e enviou `CoteCerto_Regras_Decididas.html` — as duas
 travas que impediam planejar esta frente em detalhe (endereço das configurações e o
@@ -39,8 +45,9 @@ listadas abaixo como o plano original, para registro.
   protótipo r41 (a caminho).
 - **Regra 8:** Full é "matrizinha" — gerencia o próprio time com autonomia (inclui/exclui
   sem depender da Matriz, mas o vendedor dela se autocadastra e a fila é da própria
-  franquia — já implementado em F9). Menu espelha a Matriz com **16 áreas**, de fora só
-  Franquias e Configurações globais. Comissionamento e modelo operacional são
+  franquia — já implementado em F9). Menu espelha a Matriz com **16 áreas** (número da
+  Lis — a implementação real fechou em **14**, ver nota da V11.5.2a mais abaixo), de
+  fora só Franquias e Configurações globais. Comissionamento e modelo operacional são
   **customizados por operação**, não uma tabela fixa por classificação.
 - **Regra 9:** comissão por origem do lead (canal próprio da Full × repassado pela
   Matriz) é **definida pela Matriz**, nas configurações — não pela franquia.
@@ -56,9 +63,9 @@ listadas abaixo como o plano original, para registro.
 | V11.5.2a | banco  | Menu de 16 áreas pro franqueado Full (espelho da Matriz sem Franquias/Configurações globais) — nova função/regra de escopo em `app-shell.tsx`/RLS         | —                |
 | V11.5.2b | front  | **Central da Franquia**: só leads — Central de leads, Distribuição, SLA, Canais próprios (leads próprios × repassados da Matriz)                          | V11.5.2a          |
 | V11.5.3  | banco  | Tabela de SLA **por empresa** (não mais singleton); repassado segue o SLA da Matriz, próprio segue o da Full                                                | V11.5.2a          |
-| V11.5.4  | front  | Acessos e permissões da Full: Personalização geral/Performance espelhando a Matriz (Modelo Franquia/CLT, Desconto, Respostas, **Performance**, sem Diretores/Histórico) | V11.5.1, V11.5.2a |
-| V11.5.5  | front  | Modelo CLT + complementos pra Full; cadastro direto passa pela configuração (produtos/canais/comissão por pessoa, selo "personalizado")                    | V11.5.4           |
-| V11.5.6  | front  | Régua própria **opcional** da Full na sub-aba Performance — banco já existe (bloco `'full'` do D1); só falta permitir a Full chamar `fn_salvar_regua_performance`/ver seu próprio bloco | V11.5.4           |
+| V11.5.4  | front  | ~~Acessos e permissões da Full: Personalização geral/Performance espelhando a Matriz (Modelo Franquia/CLT, Desconto, Respostas, **Performance**, sem Diretores/Histórico)~~ — **entregue diferente**: só Personalização geral (CLT leitura + Complementos) + Performance + **Histórico da própria franquia** (V11.5b.4/5) — Desconto/Respostas nunca entraram (Full não edita política de diretor), e Histórico entrou (o oposto do que esta linha previa) | V11.5.1, V11.5.2a |
+| V11.5.5  | front  | ~~Modelo CLT + complementos pra Full; cadastro direto passa pela configuração (produtos/canais/comissão por pessoa, selo "personalizado")~~ — **entregue diferente**: Modelo CLT ficou só leitura (é singleton global da Matriz); "complementos" virou 4 campos por empresa (comissão venda/renovação %, bônus, meta) — sem produtos/canais/comissão por pessoa nem selo "personalizado" (V11.5b.3) | V11.5.4           |
+| V11.5.6  | front  | ~~Régua própria **opcional** da Full na sub-aba Performance — banco já existe (bloco `'full'` do D1); só falta permitir a Full chamar `fn_salvar_regua_performance`/ver seu próprio bloco~~ — **subestimado**: não deu pra reusar `fn_salvar_regua_performance` (exige senha de diretor, Full nunca é diretora) — precisou de uma RPC irmã nova, `fn_salvar_regua_performance_full` (V11.5b.2) | V11.5.4           |
 | V11.5.7  | banco  | Lead repassado que dá perda ou estoura SLA **cruza a fronteira** e volta como Devolvido/Perda da Matriz                                                    | V11.5.3           |
 | V11.5.8  | banco  | Comissão por origem do lead: regra diferente pra canal próprio × repassado, **definida pela Matriz** nas configurações (não pela franquia)                 | V11.5.2a          |
 | V11.5.9  | testes | RLS + regras de negócio das tasks acima (escopo de 16 áreas, SLA por empresa, régua opcional, comissão por origem, cruzamento de fronteira)                | todas acima       |
@@ -79,7 +86,9 @@ listadas abaixo como o plano original, para registro.
 4. **Fora de escopo desta frente:** Carteira de Recuperação (Lis decidiu V12); override
    de aprovação da Matriz sobre vendedor Full (Lis decidiu manter como está); escopo de
    leitura do Marketing/Assistente Comercial (decidido, mas é mudança de ~22 policies
-   sem relação com a Full — task separada, fora desta frente).
+   sem relação com a Full — task separada, fora desta frente). *(Atualização: a
+   implementação real, `docs/PLANO_ESCOPO_INTERNO_V11.md`, tocou 16 policies — a
+   estimativa aqui era um número solto, não a contagem final.)*
 5. **Hierarquia Coordenador acima dos Supervisores (regra 5):** investigado — H6
    deriva a alçada de desconto por `has_role`/cargo direto, não por `superior_id`
    recursivo pros dois Supervisores. Apontar `superior_id` deles pro Coordenador não
@@ -109,6 +118,15 @@ migration `20260803160000`). 523 testes de banco + 216 unitários + 23 E2E, todo
 Configurações globais) sobre as 17 do time interno dá **15**. Implementado como 15
 (exclusão nomeada, não forçada pra bater com o número) — divergência pra confirmar
 com a Lis quando o r41 chegar.
+
+> **Atualização (V11.5.2b, mesmo dia):** ao construir a Central da Franquia, "Mensagens
+> prontas" (`mmsgs`) saiu do menu da Full também — a tela tem guard próprio e não fazia
+> sentido pra quem gerencia a rede, não vende direto. Número final: **14 áreas**
+> (17 − Franquias − Configurações globais − Mensagens prontas), não 15 nem 16. `Canais`
+> nunca existiu como área própria no catálogo `areas` — o que existe é o comportamento
+> de leads/SLA/canais próprios dentro das áreas Leads/Distribuição existentes (é a
+> "Central da Franquia" da V11.5.2b, não um item de menu novo). Fonte da verdade:
+> `AREAS_FORA_DA_FULL` em `src/lib/nav-experience.ts`.
 
 **V11.5.4/5.5/5.6 BLOQUEADAS, movidas pra uma futura Frente 5b** — decisão do usuário
 em 04/08/2026, depois de eu investigar e achar 3 problemas no desenho original:
