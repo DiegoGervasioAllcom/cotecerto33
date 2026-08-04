@@ -23,6 +23,7 @@ import { WizardFooter } from "@/components/venda/novo-lead/WizardFooter";
 import { ResumoCotacao } from "@/components/venda/novo-lead/ResumoCotacao";
 import { ClassificarPerdaModal } from "@/components/venda/novo-lead/ClassificarPerdaModal";
 import { LeadManualGate } from "@/components/venda/novo-lead/LeadManualGate";
+import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
@@ -220,8 +221,15 @@ function Page() {
 
   const { id: routeId, step: routeStep } = Route.useSearch();
   // V11 · Lead Manual — origem: quem retoma um rascunho (?id=) já passou por
-  // aqui; só lead novo (sem SLA da Central) vê o gate.
+  // aqui; só lead novo (sem SLA da Central) vê o gate. O tour guiado também
+  // pula o gate enquanto está aberto — é a única forma de chegar em
+  // /venda/novo-lead sem ?id= durante uma demonstração, e alguns passos do
+  // tour (ex.: "Agende um retorno", que mira o botão Histórico do wizard)
+  // não redeclaram um `prepare` próprio, então não dá pra usar só o valor
+  // atual de `tutorialPreview` — teria buracos no meio da mesma jornada.
+  const { isOpen: tutorialIsOpen } = useTutorialController();
   const [leadManualDone, setLeadManualDone] = useState(!!routeId);
+  const leadManualGateAtivo = !leadManualDone && !tutorialIsOpen;
   const { cotacaoId, saveState, lastSavedAt, loading, persistir } = useCotacaoRascunho({
     f,
     setF,
@@ -260,7 +268,7 @@ function Page() {
     void simularCalculo();
   }
 
-  if (!leadManualDone) {
+  if (leadManualGateAtivo) {
     return (
       <AppShell title="Novo lead">
         <ProtoIcons />
