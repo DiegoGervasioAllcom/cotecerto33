@@ -147,7 +147,10 @@ test.describe("navegação por perfil — fullLike (franquia Full)", () => {
     await expect(menu.getByRole("link", { name: "Vendedores" })).toBeVisible();
     await expect(menu.getByRole("link", { name: "Leads" })).toBeVisible();
     await expect(menu.getByRole("link", { name: "Distribuição" })).toBeVisible();
-    await expect(menu.getByRole("link", { name: "Mensagens" })).toBeVisible();
+    // V11.5.2b: Mensagens ficou de fora do menu da Full — a tela mantém o
+    // guard `useRequireRole("matriz")` (mistura escopo global/pessoal, fora
+    // do recorte desta task, que é só leads/distribuição/SLA/canais).
+    await expect(menu.getByRole("link", { name: "Mensagens" })).toHaveCount(0);
     await expect(menu.getByRole("link", { name: "Franquias" })).toHaveCount(0);
     await expect(menu.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Novo lead" })).toHaveCount(0);

@@ -1,6 +1,7 @@
 import { Navigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
+import { useGroupScope } from "@/lib/group-scope";
 import type { Perfil } from "@/integrations/supabase/client";
 
 /**
@@ -24,6 +25,28 @@ export function useRequireRole(...allowed: Perfil[]): ReactNode | null {
 
   if (loading) return null;
   if (role && allowed.includes(role)) return null;
+
+  return <Navigate to="/inicio" replace />;
+}
+
+/**
+ * Guard para as 2 telas que a Matriz e a Franquia Full compartilham desde
+ * V11.5.2b (Central da Franquia: `/comando/leads`, `/comando/distribuicao`).
+ *
+ * Não dá pra expressar isto com `useRequireRole("matriz", "franqueado")`
+ * porque "Full" não é um valor do enum `perfil` — franqueado Full e
+ * Individual têm o mesmo `role`; quem distingue é `useGroupScope().isFranqFull`
+ * (lê `modelos_franquia.modalidade` via `empresa.modelo_id`). Franquia
+ * Individual continua batendo em `/inicio`, igual a qualquer outro perfil não
+ * autorizado.
+ */
+export function useRequireMatrizOuFranquiaFull(): ReactNode | null {
+  const { loading: authLoading, role } = useAuth();
+  const { loading: scopeLoading, isFranqFull } = useGroupScope();
+
+  if (authLoading || scopeLoading) return null;
+  if (role === "matriz") return null;
+  if (role === "franqueado" && isFranqFull) return null;
 
   return <Navigate to="/inicio" replace />;
 }

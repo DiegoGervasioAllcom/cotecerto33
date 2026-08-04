@@ -4,7 +4,9 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
-import { useRequireRole } from "@/lib/require-role";
+import { useRequireMatrizOuFranquiaFull } from "@/lib/require-role";
+import { useAuth } from "@/lib/auth";
+import { useGroupScope } from "@/lib/group-scope";
 import { leadsAlertSearchSchema } from "@/lib/dashboard-alerts";
 
 export const Route = createFileRoute("/_authenticated/comando/leads")({
@@ -36,7 +38,7 @@ type Lead = {
 };
 type Empresa = { id: string; nome: string | null };
 type Profile = { id: string; nome: string | null; empresa_id?: string | null };
-type Canal = { id: string; nome: string; tipo: string };
+type Canal = { id: string; nome: string; tipo: string; empresa_id: string | null };
 type Evento = {
   id: string;
   tipo: string;
@@ -133,7 +135,19 @@ const STAGE_META: Record<string, { titulo: string; descricao: string; icon: stri
 
 function Page() {
   const search = Route.useSearch();
-  const denied = useRequireRole("matriz");
+  const denied = useRequireMatrizOuFranquiaFull();
+  const { role } = useAuth();
+  const { isFranqFull } = useGroupScope();
+  // V11.5.2b: Central da Franquia — Full só vê/monitora os leads dela (RLS já
+  // escopa a query). As ações abaixo (redistribuir/puxar de volta/bloquear/
+  // distribuir automático) chamam RPCs restritas a matriz/master no banco
+  // (`redistribuir_lead`, `puxar_lead_de_volta`, `bloquear_lead`,
+  // `desbloquear_lead`, `distribuir_fila_pendente` — ver 20240101000016/019/024)
+  // e sempre retornariam "forbidden" pra Full; escondidas em vez de oferecer
+  // um botão que 100% falha. Gap conhecido: sem RPC própria pra Full reatribuir
+  // lead dentro do time dela por aqui — hoje o vendedor pega o lead da fila da
+  // franquia direto pelo pipeline dele (`assumir_lead`, sem esse gate).
+  const isFull = role === "franqueado" && isFranqFull;
   const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
@@ -187,7 +201,11 @@ function Page() {
           supabase.from("profiles").select("id,nome,empresa_id"),
           // V11 · F11: filtro e selo de mídia paga passam a ler daqui — a tabela
           // canais é a lista canônica, não mais os valores livres de `origem`.
-          supabase.from("canais").select("id,nome,tipo").eq("ativo", true).order("ordem"),
+          supabase
+            .from("canais")
+            .select("id,nome,tipo,empresa_id")
+            .eq("ativo", true)
+            .order("ordem"),
         ]);
       if (error) setErr(error.message);
       setLeads((lds ?? []) as Lead[]);
@@ -429,25 +447,34 @@ function Page() {
             </svg>{" "}
             Regras
           </button>
-          <button
-            className="btn btn-yellow"
-            onClick={() => navigate({ to: "/comando/distribuicao" })}
-          >
-            <svg width="14" height="14">
-              <use href="#i-share"></use>
-            </svg>{" "}
-            Distribuir pendentes ({kpis.pendentes})
-          </button>
-          <button
-            className="btn btn-slate"
-            onClick={executarDistribuicaoAuto}
-            disabled={distAutoLoading || kpis.pendentes === 0}
-          >
-            <svg width="14" height="14">
-              <use href="#i-spark"></use>
-            </svg>{" "}
-            {distAutoLoading ? "Distribuindo…" : "Distribuir automático"}
-          </button>
+          {/* V11.5.2b: "Distribuir pendentes"/"Distribuir automático" agem sobre a
+              fila GLOBAL (leads sem empresa_id — RLS nem entrega essas linhas pra
+              Full) e chamam `distribuir_fila_pendente`, restrita a matriz/master
+              no banco. Escondidas pra Full em vez de oferecer um botão que sempre
+              falharia. */}
+          {!isFull && (
+            <button
+              className="btn btn-yellow"
+              onClick={() => navigate({ to: "/comando/distribuicao" })}
+            >
+              <svg width="14" height="14">
+                <use href="#i-share"></use>
+              </svg>{" "}
+              Distribuir pendentes ({kpis.pendentes})
+            </button>
+          )}
+          {!isFull && (
+            <button
+              className="btn btn-slate"
+              onClick={executarDistribuicaoAuto}
+              disabled={distAutoLoading || kpis.pendentes === 0}
+            >
+              <svg width="14" height="14">
+                <use href="#i-spark"></use>
+              </svg>{" "}
+              {distAutoLoading ? "Distribuindo…" : "Distribuir automático"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -693,6 +720,21 @@ function Page() {
                           </small>
                         </>
                       )}
+                      {/* V11.5.2b: a distinção "canal próprio × repassado pela
+                          Matriz" (regra 9) mora em canais.empresa_id — não
+                          mostra pra canal de sistema (cotação direta/renovação,
+                          que não é captação). */}
+                      {canal && canal.tipo !== "sistema" && (
+                        <>
+                          <br />
+                          <span
+                            className={`chip ${canal.empresa_id ? "chip-yellow" : "chip-slate"}`}
+                            style={{ fontSize: 9.5, marginTop: 3, display: "inline-block" }}
+                          >
+                            {canal.empresa_id ? "canal próprio" : "canal da Matriz"}
+                          </span>
+                        </>
+                      )}
                     </td>
                     <td>
                       {l.cidade || "—"}
@@ -776,7 +818,14 @@ function Page() {
                         className="row-actions"
                         style={{ justifyContent: "flex-end", gap: 4, flexWrap: "nowrap" }}
                       >
-                        {!l.bloqueado && !l.distribuido && !isFechado && !isPerdido && (
+                        {/* V11.5.2b: distribuir/redistribuir/reativar (RedistModal),
+                            puxar de volta e bloquear/desbloquear chamam RPCs
+                            restritas a matriz/master no banco
+                            (redistribuir_lead, puxar_lead_de_volta,
+                            bloquear_lead, desbloquear_lead) — pra Full sempre
+                            dariam "forbidden". Escondidas em vez de oferecer um
+                            botão que sempre falha. */}
+                        {!isFull && !l.bloqueado && !l.distribuido && !isFechado && !isPerdido && (
                           <button
                             className="ic-mini"
                             title="Distribuir"
@@ -787,7 +836,7 @@ function Page() {
                             </svg>
                           </button>
                         )}
-                        {!l.bloqueado && isPerdido && (
+                        {!isFull && !l.bloqueado && isPerdido && (
                           <button
                             className="ic-mini"
                             title="Reativar e distribuir"
@@ -798,7 +847,7 @@ function Page() {
                             </svg>
                           </button>
                         )}
-                        {!l.bloqueado && l.distribuido && !isFechado && !isPerdido && (
+                        {!isFull && !l.bloqueado && l.distribuido && !isFechado && !isPerdido && (
                           <button
                             className="ic-mini"
                             title="Redistribuir"
@@ -809,7 +858,7 @@ function Page() {
                             </svg>
                           </button>
                         )}
-                        {!l.bloqueado && l.distribuido && !isFechado && (
+                        {!isFull && !l.bloqueado && l.distribuido && !isFechado && (
                           <button
                             className="ic-mini"
                             title="Puxar de volta"
@@ -829,15 +878,17 @@ function Page() {
                             <use href="#i-clock"></use>
                           </svg>
                         </button>
-                        <button
-                          className="ic-mini"
-                          title={l.bloqueado ? "Desbloquear" : "Bloquear lead"}
-                          onClick={() => setModal({ kind: "block", lead: l })}
-                        >
-                          <svg width="14" height="14">
-                            <use href="#i-lock"></use>
-                          </svg>
-                        </button>
+                        {!isFull && (
+                          <button
+                            className="ic-mini"
+                            title={l.bloqueado ? "Desbloquear" : "Bloquear lead"}
+                            onClick={() => setModal({ kind: "block", lead: l })}
+                          >
+                            <svg width="14" height="14">
+                              <use href="#i-lock"></use>
+                            </svg>
+                          </button>
+                        )}
                         {(l.arquivado || !l.distribuido || l.em_avaliacao_matriz) && (
                           <button
                             className="ic-mini"

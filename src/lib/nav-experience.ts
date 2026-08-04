@@ -51,8 +51,15 @@ export function resolveNavExperiencia(input: {
  * contagem da Lis e a exclusão nomeada, não forçada aqui (ver relatório da
  * task V11.5.2a). `mconf` é só a tela GLOBAL de Configurações da Matriz — uma
  * eventual tela de configuração da própria franquia não entra nesta lista.
+ *
+ * `mmsgs` (Mensagens prontas) saiu nesta lista na V11.5.2b: a tela tem guard
+ * `useRequireRole("matriz")` e mistura mensagens de escopo global (só Matriz
+ * cria) com pessoal — dar acesso à Full exigiria decidir o que ela vê/edita
+ * lá, fora do escopo desta task ("só leads" — Central de leads, Distribuição,
+ * SLA, Canais). Mais fácil reverter um "esconder" do que um "abrir" errado;
+ * o guard da tela não foi relaxado.
  */
-const AREAS_FORA_DA_FULL = new Set<AreaChave>(["mfranq", "mconf"]);
+const AREAS_FORA_DA_FULL = new Set<AreaChave>(["mfranq", "mconf", "mmsgs"]);
 
 export function ehAreaDaFull(area: AreaChave): boolean {
   return !AREAS_FORA_DA_FULL.has(area);

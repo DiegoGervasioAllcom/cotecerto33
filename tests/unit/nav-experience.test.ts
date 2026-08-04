@@ -107,15 +107,17 @@ describe("ehAreaDaFull", () => {
     "mconf",
   ];
 
-  it("exclui só Franquias e Configurações globais (regra 8)", () => {
+  it("exclui Franquias, Configurações globais e Mensagens (regra 8 + V11.5.2b)", () => {
     expect(ehAreaDaFull("mfranq")).toBe(false);
     expect(ehAreaDaFull("mconf")).toBe(false);
+    expect(ehAreaDaFull("mmsgs")).toBe(false);
   });
 
-  it("mantém as outras 15 áreas do time interno", () => {
+  it("mantém as outras 14 áreas do time interno", () => {
     const restantes = TODAS_AS_AREAS.filter(ehAreaDaFull);
-    expect(restantes).toHaveLength(15);
+    expect(restantes).toHaveLength(14);
     expect(restantes).not.toContain("mfranq");
     expect(restantes).not.toContain("mconf");
+    expect(restantes).not.toContain("mmsgs");
   });
 });

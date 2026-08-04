@@ -138,9 +138,11 @@ const FULL_ROTA_OVERRIDE: Partial<Record<AreaChave, string>> = {
 };
 
 /**
- * Franquia Full — espelho da Matriz com 15 áreas (V11.5.2a). A exclusão em si
- * (regra 8 das Regras Decididas: só Franquias e Configurações globais ficam
- * de fora) mora em `ehAreaDaFull` (`nav-experience.ts`), testável isolada.
+ * Franquia Full — espelho da Matriz com 14 áreas (V11.5.2a abriu com 15;
+ * V11.5.2b tirou `mmsgs` — ver abaixo). A exclusão em si (regra 8 das Regras
+ * Decididas: só Franquias e Configurações globais ficam de fora, + Mensagens
+ * por decisão desta task) mora em `ehAreaDaFull` (`nav-experience.ts`),
+ * testável isolada.
  *
  * Reaproveita label/ícone/rota das listas da Matriz acima (mesma fonte, sem
  * duplicar) via `FULL_ROTA_OVERRIDE` para a única que precisa de tela
@@ -148,13 +150,15 @@ const FULL_ROTA_OVERRIDE: Partial<Record<AreaChave, string>> = {
  * `fn_areas_do_usuario` são exclusivos do time interno, ver docstring de
  * `useAreas`) — ganha o conjunto inteiro de uma vez, sem override por pessoa.
  *
- * Achado ao implementar, não resolvido nesta task (é navegação, não RLS —
- * ver relatório): três destas rotas (`/comando/leads`, `/comando/distribuicao`,
- * `/operacao/mensagens`) têm guard `useRequireRole("matriz")` na própria
- * tela — aparecem no menu mas hoje redirecionam a Full pra `/inicio` ao
- * clicar. `distribuicao_config` além disso é um singleton (SLA global da
- * Matriz); não dá pra desbloquear sem risco antes de V11.5.3 (SLA por
- * empresa). Leads/Mensagens ficam como gap de escopo pra V11.5.2b e além.
+ * V11.5.2b resolveu o gap apontado por V11.5.2a: `/comando/leads` e
+ * `/comando/distribuicao` trocaram `useRequireRole("matriz")` por
+ * `useRequireMatrizOuFranquiaFull()` (`require-role.tsx`) — a Full abre as
+ * duas sem cair em `/inicio`. Distribuição usa uma visão reduzida pra Full
+ * (SLA próprio via `sla_empresa_config`/V11.5.3 + canais próprios), nunca o
+ * singleton `distribuicao_config` da Matriz. `/operacao/mensagens` NÃO foi
+ * desbloqueada (mistura escopo global/pessoal, fora do recorte "só leads"
+ * desta task) — por isso saiu do menu (`mmsgs` em `AREAS_FORA_DA_FULL`) em
+ * vez de ficar quebrada no clique.
  */
 const FULL_GRUPO_GROUP: Group = {
   label: "GRUPO",
@@ -172,8 +176,8 @@ const FULL_GRUPO_GROUP: Group = {
  * (`empresas_visiveis` multinível) + `useGroupScope()`.
  *
  * Supervisor saiu daqui no H7 (virou time interno, menu por cargo). Franquia
- * Full sai daqui em V11.5.2a — ganha `FULL_GRUPO_GROUP`, o espelho de 15
- * áreas da Matriz, em vez do menu de 12 do Master.
+ * Full sai daqui em V11.5.2a — ganha `FULL_GRUPO_GROUP`, o espelho de 14
+ * áreas da Matriz (V11.5.2b), em vez do menu de 12 do Master.
  */
 const GRUPO_GROUP: Group = {
   label: "GRUPO",

@@ -4,7 +4,10 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { veiculoLabel } from "@/lib/veiculo";
-import { useRequireRole } from "@/lib/require-role";
+import { useRequireMatrizOuFranquiaFull } from "@/lib/require-role";
+import { useAuth } from "@/lib/auth";
+import { useGroupScope } from "@/lib/group-scope";
+import { FullDistribuicaoSlaCanais } from "@/components/comando/full-distribuicao-sla-canais";
 
 export const Route = createFileRoute("/_authenticated/comando/distribuicao")({
   head: () => ({ meta: [{ title: "Distribuição · CoteCerto" }] }),
@@ -59,7 +62,16 @@ const DEFAULT_CRIT: Criterios = {
 };
 
 function Page() {
-  const denied = useRequireRole("matriz");
+  const denied = useRequireMatrizOuFranquiaFull();
+  const { role, empresa } = useAuth();
+  const { isFranqFull } = useGroupScope();
+  // V11.5.2b (risco 2 do plano): `distribuicao_config` é o SINGLETON global da
+  // Matriz (id='default', sla_segundos da rede inteira) — nunca reusar essa
+  // config pra Full. Ela tem a própria (`sla_empresa_config` +
+  // `fn_salvar_sla_empresa`, V11.5.3); por isso o branch abaixo troca a tela
+  // inteira por uma visão reduzida (só SLA + canais), em vez de reaproveitar
+  // os campos de `cfg` desta página pra ela.
+  const isFull = role === "franqueado" && isFranqFull;
   const navigate = useNavigate();
   const [cfg, setCfg] = useState<Config>({
     id: "default",
@@ -191,9 +203,11 @@ function Page() {
     setLoading(false);
   }
   useEffect(() => {
-    if (denied) return;
+    // Full não usa nenhum destes dados (fila/devolvidos/singleton são da
+    // Matriz) — evita disparar as queries desta página pra ela.
+    if (denied || isFull) return;
     load();
-  }, [denied]);
+  }, [denied, isFull]);
 
   const tempoMedioManual = useMemo(() => {
     const distribuidosRecentes = fila.filter((l) => l.distribuido_em);
@@ -340,6 +354,35 @@ function Page() {
   }
 
   if (denied) return denied;
+
+  // V11.5.2b: Central da Franquia da Full — visão reduzida (SLA próprio +
+  // canais próprios), nunca a config global da Matriz. Ver decisão no topo
+  // do componente.
+  if (isFull) {
+    return (
+      <AppShell title="Distribuição">
+        <ProtoIcons />
+        <div className="page-head">
+          <div>
+            <h1>Distribuição · SLA · Canais</h1>
+            <div className="sub">
+              Sua operação como matrizinha: SLA de atendimento e canais próprios de captação — tudo
+              seu, independente da Matriz
+            </div>
+          </div>
+          <div className="tools">
+            <button className="btn btn-ghost" onClick={() => navigate({ to: "/comando/leads" })}>
+              <svg width="14" height="14">
+                <use href="#i-chevron-left"></use>
+              </svg>{" "}
+              Voltar à Central
+            </button>
+          </div>
+        </div>
+        {empresa?.id && <FullDistribuicaoSlaCanais empresaId={empresa.id} />}
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="Distribuição">
