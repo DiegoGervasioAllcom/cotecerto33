@@ -70,7 +70,11 @@ async function criarFranqueado(empresaId: string) {
 async function criarCanal(empresaId: string | null) {
   const { data, error } = await admin
     .from("canais")
-    .insert({ nome: uniq("Canal SLA"), tipo: empresaId ? "manual" : "supper", empresa_id: empresaId })
+    .insert({
+      nome: uniq("Canal SLA"),
+      tipo: empresaId ? "manual" : "supper",
+      empresa_id: empresaId,
+    })
     .select("id")
     .single();
   if (error) throw error;

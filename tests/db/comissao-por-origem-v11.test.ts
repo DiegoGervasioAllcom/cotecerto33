@@ -162,7 +162,9 @@ describe("V11.5.8 — comissão por origem do lead", () => {
     it("origem indeterminada (sem canal) cai no % normal, mesmo com override ativo", async () => {
       await limparConfigOrigem();
       const empresaFull = await criarEmpresaComModalidade("full");
-      await admin.from("comissao_origem_config").insert({ origem: "proprio", pct: 25, ativo: true });
+      await admin
+        .from("comissao_origem_config")
+        .insert({ origem: "proprio", pct: 25, ativo: true });
 
       const base = await pctEfetivoEsperado(empresaFull);
       const resultado = await pctPorOrigem(empresaFull, null);
@@ -188,7 +190,9 @@ describe("V11.5.8 — comissão por origem do lead", () => {
       // Canal "próprio" tecnicamente pertence à empresa individual (empresa_id
       // preenchido); mas a distinção só é aplicável dentro do contexto Full.
       const canalProprio = await criarCanal(empresaIndividual);
-      await admin.from("comissao_origem_config").insert({ origem: "proprio", pct: 25, ativo: true });
+      await admin
+        .from("comissao_origem_config")
+        .insert({ origem: "proprio", pct: 25, ativo: true });
 
       const base = await pctEfetivoEsperado(empresaIndividual);
       const resultado = await pctPorOrigem(empresaIndividual, canalProprio);

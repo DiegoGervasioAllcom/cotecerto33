@@ -44,7 +44,10 @@ async function criarEmpresaComModalidade(modalidade: "individual" | "full") {
 
 async function criarVendedor(empresaId: string) {
   const { userId } = await criarUsuario(`${uniq("vend-fronteira")}@teste.local`);
-  await admin.from("profiles").update({ empresa_id: empresaId, status: "aprovada" }).eq("id", userId);
+  await admin
+    .from("profiles")
+    .update({ empresa_id: empresaId, status: "aprovada" })
+    .eq("id", userId);
   await admin.from("user_roles").insert({ user_id: userId, role: "vendedor" });
   return userId;
 }
@@ -52,7 +55,11 @@ async function criarVendedor(empresaId: string) {
 async function criarCanal(empresaId: string | null) {
   const { data, error } = await admin
     .from("canais")
-    .insert({ nome: uniq("Canal Fronteira"), tipo: empresaId ? "manual" : "supper", empresa_id: empresaId })
+    .insert({
+      nome: uniq("Canal Fronteira"),
+      tipo: empresaId ? "manual" : "supper",
+      empresa_id: empresaId,
+    })
     .select("id")
     .single();
   if (error) throw error;
@@ -132,7 +139,10 @@ describe("V11.5.7 — SLA por lead + fronteira Full/Matriz (expirar_leads_nao_at
   });
 
   afterAll(async () => {
-    await admin.from("distribuicao_config").update({ sla_segundos: slaGlobalOriginal }).eq("id", "default");
+    await admin
+      .from("distribuicao_config")
+      .update({ sla_segundos: slaGlobalOriginal })
+      .eq("id", "default");
   });
 
   // Cada teste chama a RPC explicitamente (não depende do pg_cron de fundo) —
