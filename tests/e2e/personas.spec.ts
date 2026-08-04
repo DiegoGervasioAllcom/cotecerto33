@@ -61,26 +61,20 @@ test.describe("navegação por perfil — matriz", () => {
   });
 });
 
-test.describe("navegação por perfil — grpLike (master/supervisor/franquia Full)", () => {
+test.describe("navegação por perfil — grpLike (master/supervisor)", () => {
   let master: Persona;
   let supervisor: Persona;
-  let franquiaFull: Persona;
 
   test.beforeAll(async () => {
-    [master, supervisor, franquiaFull] = await Promise.all([
+    [master, supervisor] = await Promise.all([
       criarPersona({ role: "master" }),
       // V11: o supervisor precisa de cargo — o menu dele vem das áreas do cargo.
       criarPersona({ role: "supervisor", cargo: "sup_vendas" }),
-      criarPersona({ role: "franqueado", modalidade: "full" }),
     ]);
   });
 
   test.afterAll(async () => {
-    await Promise.all([
-      limparPersona(master),
-      limparPersona(supervisor),
-      limparPersona(franquiaFull),
-    ]);
+    await Promise.all([limparPersona(master), limparPersona(supervisor)]);
   });
 
   test("master vê a nav de GRUPO (Vendedores) e não vê Novo lead/Distribuição", async ({
@@ -120,16 +114,43 @@ test.describe("navegação por perfil — grpLike (master/supervisor/franquia Fu
     await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByText("SUPERVISOR DE VENDAS", { exact: true }).first()).toBeVisible();
   });
+});
 
-  test("franquia Full vê a nav de GRUPO (Vendedores) e não vê Novo lead/Distribuição", async ({
+/**
+ * V11.5.2a: a franquia Full sai do `grpLike` (12 itens, igual Master) e ganha
+ * o espelho de 15 áreas da Matriz — regra 8 das Regras Decididas (Lis,
+ * 26/07/2026): "de fora só Franquias e Configurações globais". Por isso ela
+ * agora vê Leads/Distribuição (que master nunca viu), mas continua sem
+ * Franquias/Configurações (exclusivas da Matriz) e sem a nav de venda.
+ */
+test.describe("navegação por perfil — fullLike (franquia Full)", () => {
+  let franquiaFull: Persona;
+
+  test.beforeAll(async () => {
+    franquiaFull = await criarPersona({ role: "franqueado", modalidade: "full" });
+  });
+
+  test.afterAll(async () => {
+    await limparPersona(franquiaFull);
+  });
+
+  test("franquia Full vê o espelho da Matriz (Leads/Distribuição) e não vê Franquias/Configurações/Novo lead", async ({
     page,
   }) => {
     await loginAs(page, franquiaFull.email, franquiaFull.senha);
     await navPronta(page);
 
-    await expect(page.getByRole("link", { name: "Vendedores" })).toBeVisible();
+    // Sidebar (role complementary) — a home de venda em /inicio também renderiza
+    // um botão "Mensagens" (pra /venda/mensagens-prontas) com o mesmo nome
+    // acessível; escopar ao menu evita colisão com esse atalho não relacionado.
+    const menu = page.getByRole("complementary");
+    await expect(menu.getByRole("link", { name: "Vendedores" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Leads" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Distribuição" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Mensagens" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Franquias" })).toHaveCount(0);
+    await expect(menu.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Novo lead" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Distribuição" })).toHaveCount(0);
     // franquia Full não é "· individual" no avatar (esse selo só sai na Individual).
     await expect(page.getByText("· individual")).toHaveCount(0);
   });

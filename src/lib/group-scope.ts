@@ -20,6 +20,12 @@ export interface GroupScope {
   isGroupView: boolean;
   /** true quando o perfil é `franquia` e o modelo contratado é Individual (não Full). */
   isFranqIndividual: boolean;
+  /**
+   * true quando o perfil é `franqueado` e o modelo contratado é Full — a
+   * "matrizinha" (V11 · Frente 5). Usado pelo `app-shell` para trocar a nav de
+   * grupo (12 itens, igual ao Master) pelo espelho da Matriz (V11.5.2a).
+   */
+  isFranqFull: boolean;
 }
 
 /**
@@ -81,5 +87,5 @@ export function useGroupScope(): GroupScope {
     groupPct = 0;
   }
 
-  return { loading, group, groupPct, isGroupView, isFranqIndividual };
+  return { loading, group, groupPct, isGroupView, isFranqIndividual, isFranqFull };
 }
