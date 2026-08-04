@@ -68,8 +68,8 @@ flowchart LR
     R_gua_de_performance --> Identidade_e_hierarquia
     Franquia_Full___matrizinha --> Identidade_e_hierarquia
     Governan_a__pol_tica_e_hist_rico --> Identidade_e_hierarquia
-    Governan_a__pol_tica_e_hist_rico --> Comercial___leads_e_cota__o
     Governan_a__pol_tica_e_hist_rico --> Vendas_e_propostas
+    Governan_a__pol_tica_e_hist_rico --> Comercial___leads_e_cota__o
     Infra_e_mensageria --> Identidade_e_hierarquia
 ```
 
@@ -393,8 +393,8 @@ erDiagram
 ### `cargos`
 
 > H3: cargos do time interno da Matriz. Os 7 do protótipo V11 nascem com
-   preset=true; a tela Configuracoes > Cargos cria/duplica os demais (preset=false).
-   Vendedor Matriz (Modelo CLT) NÃO é cargo — é opção à parte de convite/cadastro.
+>    preset=true; a tela Configuracoes > Cargos cria/duplica os demais (preset=false).
+>    Vendedor Matriz (Modelo CLT) NÃO é cargo — é opção à parte de convite/cadastro.
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -421,9 +421,9 @@ erDiagram
 ### `areas`
 
 > H2: catálogo de áreas do sistema (unidade de recorte de menu/escopo do time
-   interno). Chaves iguais ao protótipo V11 (MATRIZ_AREAS). disponivel=false são
-   as áreas "em breve" (Marketing/Financeiro/Compras/Facilities) — existem para
-   um cargo poder referenciá-las antes de a tela existir.
+>    interno). Chaves iguais ao protótipo V11 (MATRIZ_AREAS). disponivel=false são
+>    as áreas "em breve" (Marketing/Financeiro/Compras/Facilities) — existem para
+>    um cargo poder referenciá-las antes de a tela existir.
 
 **RLS:** ✅ enabled  ·  **PK:** `chave`
 
@@ -449,7 +449,7 @@ erDiagram
 ### `cargo_areas`
 
 > H3: áreas que compõem o preset de um cargo. É ponto de partida — o escopo
-   efetivo da pessoa pode ser sobrescrito em profile_areas (H4).
+>    efetivo da pessoa pode ser sobrescrito em profile_areas (H4).
 
 **RLS:** ✅ enabled  ·  **PK:** `cargo_id`, `area_chave`
 
@@ -467,8 +467,8 @@ erDiagram
 ### `profile_areas`
 
 > H4: escopo próprio da pessoa, definido na aprovação ("cargo + áreas
-   ajustáveis"). Presença de QUALQUER linha aqui substitui o preset do cargo
-   por completo — não é união. Ausência total = usa o preset.
+>    ajustáveis"). Presença de QUALQUER linha aqui substitui o preset do cargo
+>    por completo — não é união. Ausência total = usa o preset.
 
 **RLS:** ✅ enabled  ·  **PK:** `profile_id`, `area_chave`
 
@@ -607,9 +607,9 @@ erDiagram
 ### `convites`
 
 > V11 C1: Convite Supper — link nominal de uso único que carrega perfil e vínculo.
-   `codigo` é o rótulo humano (SC-XXXXXX); `token` é o segredo que vai na URL.
-   O payload (trilha/perfil/cargo_id/vinc_*) classifica o pedido antes da
-   aprovação e é o que roteia a fila na Frente 2.
+>    `codigo` é o rótulo humano (SC-XXXXXX); `token` é o segredo que vai na URL.
+>    O payload (trilha/perfil/cargo_id/vinc_*) classifica o pedido antes da
+>    aprovação e é o que roteia a fila na Frente 2.
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -651,8 +651,8 @@ erDiagram
 ### `desligamento_solicitacoes`
 
 > V11 C7: pedidos de desligamento feitos por Master/Franqueado Full sobre a
-   própria rede (vendedor ou franquia). A Matriz resolve; aprovar já executa o
-   desligamento via excluir_cadastro_rede (C6), com a mesma trava de dependentes.
+>    própria rede (vendedor ou franquia). A Matriz resolve; aprovar já executa o
+>    desligamento via excluir_cadastro_rede (C6), com a mesma trava de dependentes.
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -1012,9 +1012,9 @@ erDiagram
 ### `canais`
 
 > V11.0.4 (item 9): taxonomia única de canais de lead. empresa_id nulo = canal
-   Supper (da Matriz); preenchido = canal próprio de uma Franquia Full. tipo
-   separa captação paga (supper), entrada manual do vendedor (manual) e lead que
-   nasce de dentro do sistema (sistema: cotação direta, renovação).
+>    Supper (da Matriz); preenchido = canal próprio de uma Franquia Full. tipo
+>    separa captação paga (supper), entrada manual do vendedor (manual) e lead que
+>    nasce de dentro do sistema (sistema: cotação direta, renovação).
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -1044,8 +1044,8 @@ erDiagram
 ### `profile_canais`
 
 > V11.0.4: "de quais canais este acesso recebe" (ex.: vendedor só da Movida),
-   definido na aprovação do cadastro. Ausência de linhas = não recebe de canal
-   nenhum — é o caso do Master franqueado, que não vende nem recebe leads.
+>    definido na aprovação do cadastro. Ausência de linhas = não recebe de canal
+>    nenhum — é o caso do Master franqueado, que não vende nem recebe leads.
 
 **RLS:** ✅ enabled  ·  **PK:** `profile_id`, `canal_id`
 
@@ -1675,8 +1675,8 @@ erDiagram
 ### `produtos`
 
 > F3: catálogo de produtos (ramos) comercializáveis. `fixo` marca o que entra em
-   todo acesso — hoje só Auto. `tem_jornada` separa o que já tem wizard de
-   cotação do que a tela mostra como "em breve".
+>    todo acesso — hoje só Auto. `tem_jornada` separa o que já tem wizard de
+>    cotação do que a tela mostra como "em breve".
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -1702,7 +1702,7 @@ erDiagram
 ### `produtos_padrao`
 
 > F3: produtos que cada bloco herda na aprovação — interno todos, externo só
-   Auto. Editável na Personalização geral, por isso é tabela.
+>    Auto. Editável na Personalização geral, por isso é tabela.
 
 **RLS:** ✅ enabled  ·  **PK:** `bloco`, `produto_id`
 
@@ -1726,7 +1726,7 @@ erDiagram
 ### `profile_produtos`
 
 > F4: produtos que este acesso comercializa, definidos na aprovação. Ausência de
-   linhas = nenhum produto; é o caso do Master franqueado, que não vende.
+>    linhas = nenhum produto; é o caso do Master franqueado, que não vende.
 
 **RLS:** ✅ enabled  ·  **PK:** `profile_id`, `produto_id`
 
@@ -1930,12 +1930,12 @@ erDiagram
 ### `comissao_origem_config`
 
 > V11.5.8 (regra 9): % de comissão por origem do lead (proprio = canal da
-   própria Full via canais.empresa_id; repassado = canal Supper/Matriz,
-   canais.empresa_id NULL), só aplicável dentro do contexto de uma Franquia
-   Full (ver fn_pct_comissao_por_origem). ativo=false (default) = configurado
-   mas sem efeito ainda — liga só quando a Matriz decidir. Escrita só via
-   fn_salvar_comissao_origem; sem grant de insert/update/delete pra
-   authenticated.
+>    própria Full via canais.empresa_id; repassado = canal Supper/Matriz,
+>    canais.empresa_id NULL), só aplicável dentro do contexto de uma Franquia
+>    Full (ver fn_pct_comissao_por_origem). ativo=false (default) = configurado
+>    mas sem efeito ainda — liga só quando a Matriz decidir. Escrita só via
+>    fn_salvar_comissao_origem; sem grant de insert/update/delete pra
+>    authenticated.
 
 **RLS:** ✅ enabled  ·  **PK:** `origem`
 
@@ -2117,9 +2117,9 @@ erDiagram
 ### `sla_empresa_config`
 
 > V11.5.3: override de SLA de atendimento por empresa (regra 10 — só faz
-   sentido pra Franquia Full). Ausência de linha para uma empresa = usa
-   distribuicao_config.sla_segundos (singleton da Matriz). Escrita só via
-   fn_salvar_sla_empresa; sem grant de insert/update/delete pra authenticated.
+>    sentido pra Franquia Full). Ausência de linha para uma empresa = usa
+>    distribuicao_config.sla_segundos (singleton da Matriz). Escrita só via
+>    fn_salvar_sla_empresa; sem grant de insert/update/delete pra authenticated.
 
 **RLS:** ✅ enabled  ·  **PK:** `empresa_id`
 
@@ -2145,8 +2145,8 @@ Classificação Ativo/Atenção/Travado por bloco (interno/rede/full), calculada
 ### `regua_performance_config`
 
 > V11 D1: limites configuráveis da régua de performance, um bloco por linha
-   (interno/rede/full). Escrita só via fn_salvar_regua_performance (D2) — grava
-   no histórico append-only via fn_registrar_alteracao, com gate de diretor.
+>    (interno/rede/full). Escrita só via fn_salvar_regua_performance (D2) — grava
+>    no histórico append-only via fn_registrar_alteracao, com gate de diretor.
 
 **RLS:** ✅ enabled  ·  **PK:** `bloco`
 
@@ -2187,9 +2187,9 @@ Personalização própria da Franquia Full sobre o próprio time (gate por ident
 ### `full_comissao_complementos`
 
 > V11.5b.3: complementos de comissão do time da Franquia Full (regra 8,
-   "matrizinha") — comissão de venda/renovação (%) + bônus de campanha/meta da
-   equipe (texto livre, r41: unidade embutida, ex. "12 vendas/mês"). 1 linha
-   por empresa. Escrita só via fn_salvar_complementos_full.
+>    "matrizinha") — comissão de venda/renovação (%) + bônus de campanha/meta da
+>    equipe (texto livre, r41: unidade embutida, ex. "12 vendas/mês"). 1 linha
+>    por empresa. Escrita só via fn_salvar_complementos_full.
 
 **RLS:** ✅ enabled  ·  **PK:** `empresa_id`
 
@@ -2383,10 +2383,10 @@ erDiagram
 ### `desconto_politicas`
 
 > G3.1 + H6: alçada de desconto (% máximo) por modelo x seguradora, configurada
-   pela Matriz. Nasce vazia — ausência de linha para um par (modelo, seguradora_id)
-   significa que o pedido escala ao nível de cima (lógica na RPC do G3.2).
-   V11: o modelo do time interno vem do CARGO (só Supervisor de Vendas e
-   Coordenador têm alçada); Operacional e Backoffice não têm modelo, de propósito.
+>    pela Matriz. Nasce vazia — ausência de linha para um par (modelo, seguradora_id)
+>    significa que o pedido escala ao nível de cima (lógica na RPC do G3.2).
+>    V11: o modelo do time interno vem do CARGO (só Supervisor de Vendas e
+>    Coordenador têm alçada); Operacional e Backoffice não têm modelo, de propósito.
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -2412,9 +2412,9 @@ erDiagram
 ### `desconto_solicitacoes`
 
 > G3.1: pedido de desconto adicional em uma cotação, por seguradora, escalando
-   pela hierarquia (nivel_atual = a quem está pendente agora). Resolução do
-   fluxo (aprovar/negar/escalar/contrapropor) é RPC security definer do G3.2 —
-   sem policy de insert/update aqui.
+>    pela hierarquia (nivel_atual = a quem está pendente agora). Resolução do
+>    fluxo (aprovar/negar/escalar/contrapropor) é RPC security definer do G3.2 —
+>    sem policy de insert/update aqui.
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -2444,8 +2444,8 @@ erDiagram
 ### `desconto_trilha`
 
 > G3.1: trilha de auditoria append-only de um pedido de desconto. Insert só
-   via RPC security definer do G3.2 (junto com a mudança de status/nivel_atual
-   em desconto_solicitacoes, na mesma transação).
+>    via RPC security definer do G3.2 (junto com a mudança de status/nivel_atual
+>    em desconto_solicitacoes, na mesma transação).
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -2472,7 +2472,7 @@ erDiagram
 ### `respostas_padrao`
 
 > G3.1: textos de resposta rápida do fluxo de desconto (G3.6). seguradora_id
-   nulo = resposta geral (não específica de uma seguradora).
+>    nulo = resposta geral (não específica de uma seguradora).
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -2497,9 +2497,9 @@ erDiagram
 ### `diretor_propostas`
 
 > V11.6.4/G6.3: dupla aprovação para incluir/remover diretor. Quem confirma
-   precisa ser diferente de quem propôs (checado nas RPCs). Escrita só via
-   propor_alteracao_diretor/confirmar_alteracao_diretor — sem insert/update/
-   delete direto para authenticated.
+>    precisa ser diferente de quem propôs (checado nas RPCs). Escrita só via
+>    propor_alteracao_diretor/confirmar_alteracao_diretor — sem insert/update/
+>    delete direto para authenticated.
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
@@ -2526,9 +2526,9 @@ erDiagram
 ### `historico_alteracoes`
 
 > V11.0.6: histórico imutável de alterações de política (item 7 do Handoff).
-   Append-only por grant + trigger; a única escrita é via
-   fn_registrar_alteracao (V11.0.5), que exige diretor autenticado com senha.
-   empresa_id nulo = histórico da Matriz; preenchido = histórico da franquia.
+>    Append-only por grant + trigger; a única escrita é via
+>    fn_registrar_alteracao (V11.0.5), que exige diretor autenticado com senha.
+>    empresa_id nulo = histórico da Matriz; preenchido = histórico da franquia.
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
 
