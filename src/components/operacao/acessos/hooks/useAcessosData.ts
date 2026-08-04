@@ -22,6 +22,55 @@ import { fetchPendentes, mapPendentes } from "./pendentes-query";
 import { dispatchAccessEmail } from "@/lib/email.functions";
 import { findRetryableAccessEmail } from "@/lib/email-outbox-client";
 
+type DesligBruto = {
+  id: string;
+  nome: string;
+  email: string;
+  desligado_em: string;
+  desligado_motivo: string | null;
+  empresa_id: string | null;
+  cargo_id: string | null;
+};
+
+// Mesmo critério de `CadastrosMatrizTab` para separar time interno de rede
+// externa: cargo_id definido, ou role='vendedor' numa empresa sem modelo de
+// franquia (Vendedor Matriz — nunca é dono/vinculado de uma franquia).
+async function classificarDeslig(perfis: DesligBruto[]): Promise<Deslig[]> {
+  if (perfis.length === 0) return [];
+  const empresaIds = [
+    ...new Set(perfis.map((p) => p.empresa_id).filter((id): id is string => !!id)),
+  ];
+  const [empresasRes, rolesRes] = await Promise.all([
+    supabase
+      .from("empresas")
+      .select("id,modelo_id")
+      .in("id", empresaIds.length ? empresaIds : ["00000000-0000-0000-0000-000000000000"]),
+    supabase
+      .from("user_roles")
+      .select("user_id,role")
+      .in(
+        "user_id",
+        perfis.map((p) => p.id),
+      ),
+  ]);
+  const modeloPorEmpresa = new Map(
+    ((empresasRes.data ?? []) as { id: string; modelo_id: string | null }[]).map((e) => [
+      e.id,
+      e.modelo_id,
+    ]),
+  );
+  const roleByUser = new Map(
+    ((rolesRes.data ?? []) as { user_id: string; role: string }[]).map((r) => [r.user_id, r.role]),
+  );
+  return perfis.map((p) => {
+    const interno =
+      !!p.cargo_id ||
+      (roleByUser.get(p.id) === "vendedor" &&
+        (p.empresa_id == null || modeloPorEmpresa.get(p.empresa_id) == null));
+    return { ...p, bloco: interno ? "interno" : "externo" };
+  });
+}
+
 export function useAcessosData(enabled = true) {
   const [tab, setTab] = useState<Tab>("pend");
   const [pendentes, setPendentes] = useState<Pendente[]>([]);
@@ -49,7 +98,7 @@ export function useAcessosData(enabled = true) {
       fetchPendentes(),
       supabase
         .from("profiles")
-        .select("id,nome,email,desligado_em,desligado_motivo,empresa_id")
+        .select("id,nome,email,desligado_em,desligado_motivo,empresa_id,cargo_id")
         .not("desligado_em", "is", null)
         .order("desligado_em", { ascending: false }),
       supabase.from("modelos_franquia").select("*").order("ordem").order("nome"),
@@ -58,7 +107,7 @@ export function useAcessosData(enabled = true) {
     ]);
     if (p.error) setErr(p.error.message);
     setPendentes(mapPendentes(p.data));
-    setDeslig((d.data ?? []) as Deslig[]);
+    setDeslig(await classificarDeslig((d.data ?? []) as DesligBruto[]));
     const modelosData = ((m.data ?? []) as Modelo[]).map((x) => ({
       ...x,
       params: (x.params ?? {}) as ModeloParams,

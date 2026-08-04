@@ -25,6 +25,7 @@ import { CadastrosMatrizTab } from "@/components/operacao/acessos/cadastros-matr
 import { CadastrosRedeTab } from "@/components/operacao/acessos/cadastros-rede-tab";
 import { CadMatrizModal } from "@/components/acessos/cad-matriz-modal";
 import { useRequireRole } from "@/lib/require-role";
+import type { Tab } from "@/components/operacao/acessos/types";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
   head: () => ({ meta: [{ title: "Acessos e permissões · CoteCerto" }] }),
@@ -96,10 +97,12 @@ function Page() {
   // de `convites.trilha`, e a RLS de F2 garante que o pendente do vendedor de
   // uma Franquia Full nunca chega a esta lista).
   const [blocoAtivo, setBlocoAtivo] = useState<"interno" | "externo">("interno");
-  // V11 · C4 — sub-aba do bloco Interno: Cadastros Matriz (novo) x Pendentes de
-  // aprovação (já existia). Independente de qual profile está sendo editado
-  // no momento (configurando), que é outro estado — o modal de edição.
-  const [tabInterno, setTabInterno] = useState<"cadastros" | "pend">("pend");
+  // V11 · C4/F6 — sub-aba do bloco Interno: Cadastros Matriz, Pendentes de
+  // aprovação, Desligamentos e Personalização geral, espelhando as 4 abas do
+  // bloco Externo (protótipo mostra as mesmas 4 nos dois blocos). Independente
+  // de qual profile está sendo editado no momento (configurando), que é outro
+  // estado — o modal de edição.
+  const [tabInterno, setTabInterno] = useState<Tab>("pend");
   const [configurando, setConfigurando] = useState<{ id: string; isVendedorClt: boolean } | null>(
     null,
   );
@@ -114,6 +117,8 @@ function Page() {
   const blocoParaConteudo = tutorialPreview?.startsWith("acessos-") ? "externo" : blocoAtivo;
   const pendentesInterno = pendentes.filter((p) => p.bloco === "interno");
   const pendentesExterno = pendentes.filter((p) => p.bloco === "externo");
+  const desligInterno = deslig.filter((d) => d.bloco === "interno");
+  const desligExterno = deslig.filter((d) => d.bloco === "externo");
 
   function abrirInterno() {
     setBlocoAtivo("interno");
@@ -121,9 +126,33 @@ function Page() {
   function abrirExterno(t: typeof visibleTab) {
     setBlocoAtivo("externo");
     setVisibleTab(t);
+    if (t === "modelos") setVisiblePersoSub("franquia");
   }
 
   if (denied) return denied;
+
+  // V11 · F6 — mesmo painel nos dois blocos: Modelo Franquia é o único das 5
+  // sub-abas específico de rede externa (Modelo CLT, Performance, Diretores e
+  // Histórico são governança da Matriz como um todo — ver Interno acima).
+  const personalizacaoGeral = (
+    <PersoGeral
+      sub={visiblePersoSub}
+      setSub={setVisiblePersoSub}
+      modelos={modelos.filter((m) => m.tipo === "franqueada")}
+      setModelos={(updater) =>
+        setModelos((prev) => {
+          const fran = prev.filter((m) => m.tipo === "franqueada");
+          const next = typeof updater === "function" ? updater(fran) : updater;
+          return [...next, ...prev.filter((m) => m.tipo !== "franqueada")];
+        })
+      }
+      clt={clt}
+      setClt={setClt}
+      onToast={(msg, kind) => setToast({ msg, kind })}
+      onError={(e) => setErr(e)}
+      reload={reload}
+    />
+  );
 
   return (
     <AppShell title="Acessos e permissões">
@@ -209,6 +238,25 @@ function Page() {
           >
             Pendentes de aprovação <span style={{ opacity: 0.7 }}>({pendentesInterno.length})</span>
           </button>
+          <button
+            className={tabInterno === "deslig" ? "on" : ""}
+            onClick={() => {
+              abrirInterno();
+              setTabInterno("deslig");
+            }}
+          >
+            Desligamentos <span style={{ opacity: 0.7 }}>({desligInterno.length})</span>
+          </button>
+          <button
+            className={tabInterno === "modelos" ? "on" : ""}
+            onClick={() => {
+              abrirInterno();
+              setTabInterno("modelos");
+              setVisiblePersoSub("clt");
+            }}
+          >
+            Personalização geral
+          </button>
         </div>
       </div>
 
@@ -254,7 +302,7 @@ function Page() {
         <AcessosNavigation
           tab={visibleTab}
           pendentes={pendentesExterno.length}
-          desligamentos={deslig.length}
+          desligamentos={desligExterno.length}
           onChange={abrirExterno}
         />
       </div>
@@ -270,6 +318,12 @@ function Page() {
         <PendentesTab pendentes={pendentesInterno} onAnalisar={openAnalisar} />
       )}
 
+      {blocoParaConteudo === "interno" && tabInterno === "deslig" && (
+        <DesligamentosTab deslig={desligInterno} />
+      )}
+
+      {blocoParaConteudo === "interno" && tabInterno === "modelos" && personalizacaoGeral}
+
       {blocoParaConteudo === "externo" && visibleTab === "cadastros" && <CadastrosRedeTab />}
 
       {blocoParaConteudo === "externo" && visibleTab === "pend" && (
@@ -279,29 +333,11 @@ function Page() {
       {blocoParaConteudo === "externo" && visibleTab === "deslig" && (
         <>
           <DesligamentoSolicitacoesTab />
-          <DesligamentosTab deslig={deslig} />
+          <DesligamentosTab deslig={desligExterno} />
         </>
       )}
 
-      {blocoParaConteudo === "externo" && visibleTab === "modelos" && (
-        <PersoGeral
-          sub={visiblePersoSub}
-          setSub={setVisiblePersoSub}
-          modelos={modelos.filter((m) => m.tipo === "franqueada")}
-          setModelos={(updater) =>
-            setModelos((prev) => {
-              const fran = prev.filter((m) => m.tipo === "franqueada");
-              const next = typeof updater === "function" ? updater(fran) : updater;
-              return [...next, ...prev.filter((m) => m.tipo !== "franqueada")];
-            })
-          }
-          clt={clt}
-          setClt={setClt}
-          onToast={(msg, kind) => setToast({ msg, kind })}
-          onError={(e) => setErr(e)}
-          reload={reload}
-        />
-      )}
+      {blocoParaConteudo === "externo" && visibleTab === "modelos" && personalizacaoGeral}
 
       {analisando && (
         <ClassificarAcessoModal
