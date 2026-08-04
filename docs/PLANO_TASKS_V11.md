@@ -60,10 +60,6 @@ Sem isso, toda tela da V11 nasce em cima de premissa errada.
 
 ## Frente 1 · Convite Supper e porta de entrada
 
-⚠️ **Ordem obrigatória.** A Etapa 1 remove o autocadastro. Nada de `auth.cadastro.tsx`
-sai do ar antes de V11.1.4 estar de pé, e a criação direta pela Matriz continua
-funcionando como exceção durante toda a transição.
-
 | Task    | Tag    | Descrição                                                                                                                                                                                             | Depende de                |
 | ------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | V11.1.1 | banco  | ✅ Tabela de **convites**: token nominal, uso único, validade configurável (demo 7d), perfil e vínculo embutidos                                                                                      | V11.0.2, V11.0.3          |
@@ -71,33 +67,29 @@ funcionando como exceção durante toda a transição.
 | V11.1.3 | front  | ✅ Saídas do convite: WhatsApp via wa.me, Copiar, **PDF com arte oficial e link clicável**, pré-visualização no modal                                                                                 | V11.1.2                   |
 | V11.1.4 | front  | ✅ Rota **`/convite/{token}`** (item 1): valida token, abre cadastro pré-preenchido com perfil e vínculo em texto fixo                                                                                | V11.1.1                   |
 | V11.1.5 | front  | ✅ Erro amigável para link expirado/reusado, com opção de pedir novo convite                                                                                                                          | V11.1.4                   |
-| V11.1.6 | front  | ⏸ **adiada** (depende de e-mail) · Botão **"Quero falar com a Cote Certo"** no login: nome, e-mail, tema, mensagem → e-mail à Matriz, sem persistir                                                   | V11.2.1                   |
-| V11.1.7 | front  | ⏸ **adiada** (sem criar senha, não há como aprovar alguém) · Remover o cadastro espontâneo de `auth.cadastro.tsx`; criação direta pela Matriz vira exceção com log                                    | V11.1.4, V11.2.2, V11.2.3 |
+| V11.1.6 | front  | ✅ Botão **"Quero falar com a Cote Certo"** no login: nome, e-mail, tema, mensagem → e-mail à Matriz, sem persistir (`auth.index.tsx`, C13)                                                            | V11.2.1                   |
+| V11.1.7 | front  | ✅ Cadastro espontâneo removido (`auth.cadastro.tsx`, commit `0c09ba5`, C14); criação direta pela Matriz é exceção com log (`empresas.criado_por`, C1/C2)                                              | V11.1.4, V11.2.2, V11.2.3 |
 | V11.1.8 | testes | ✅ E2E do convite: emitir → abrir link → cadastrar → cair na fila certa; e os casos de expirado e reuso                                                                                               | V11.1.4                   |
 
-> **Frente 1 concluída** (detalhes em `PLANO_CONVITE_V11.md`), menos as duas tasks que
-> dependem da frente de e-mail. O convite carrega o payload que classifica o pedido, e
-> `empresas.convite_id` liga o pedido ao convite — é dali que a Frente 2 lê para abrir o
-> modal travado e rotear a fila. A validação de escopo é da RPC `criar_convite`, no
-> servidor: Master e Full têm o vínculo forçado neles, ignorando o que a tela enviar.
+> **Frente 1 concluída** (detalhes em `PLANO_CONVITE_V11.md`) — inclusive as 2 tasks que
+> dependiam da frente de e-mail, que entrou em produção em 01/08/2026 (ver Frente 2). O
+> convite carrega o payload que classifica o pedido, e `empresas.convite_id` liga o
+> pedido ao convite — é dali que a Frente 2 lê para abrir o modal travado e rotear a
+> fila. A validação de escopo é da RPC `criar_convite`, no servidor: Master e Full têm
+> o vínculo forçado neles, ignorando o que a tela enviar.
 >
-> **A porta de entrada antiga continua no ar.** Enquanto V11.1.7 estiver adiada,
-> `auth.cadastro.tsx` segue aceitando cadastro espontâneo com senha digitada por quem
-> cadastra. Convite e autocadastro coexistem — é dívida consciente, não esquecimento.
+> **A porta de entrada antiga saiu do ar em 03/08/2026** (C14, `auth.cadastro.tsx`
+> removido) — só existe cadastro por convite ou a exceção manual da Matriz, com log.
 
 ## Frente 2 · Filas de aprovação, e-mails e senha
 
-> **E-mail implementado localmente em 31/07/2026.** V11.2.1 entrega pendência e
-> recusa com outbox; V11.2.2 entrega boas-vindas, link recovery de 48h e a tela
-> Criar senha. Falta configurar/testar Resend e GoTrue no ambiente publicado. V11.1.6
-> continua fora do caminho crítico. Consequências, para não virar surpresa:
+> **E-mail em produção desde 01/08/2026** (PR #104 — "emails de acesso V11 e deploy
+> controlado"). V11.2.1 entrega pendência e recusa com outbox; V11.2.2 entrega
+> boas-vindas, link recovery de 48h e a tela Criar senha. Smoke test de ponta a ponta
+> feito no navegador contra produção real: convite → cadastro → aprovação → e-mail de
+> boas-vindas chegou → link de criar senha funcionou. Ver `docs/RUNBOOK_DEPLOY.md`
+> §6.2-6.5.
 >
-> - **O convite não trava.** As saídas do Convite Supper são WhatsApp, Copiar e PDF
->   (V11.1.3) — nenhuma delas depende de e-mail. Frentes 1, 2 e 3 seguem.
-> - **V11.1.7 adia junto.** Sem a tela de criar senha, quem for aprovado não tem como
->   definir a própria senha. Então o caminho atual de `auth.cadastro.tsx` (senha digitada
->   por quem cadastra, `cadastro.functions.ts:41`) **continua no ar** como exceção até a
->   frente de e-mail entrar. É o oposto do que a V11 quer, e é dívida consciente.
 > - ✅ **DNS concluído em 30/07/2026.** O domínio
 >   `cote-certo.sandboxallcom.com` está verificado no Resend, com DKIM, SPF e
 >   DMARC (`p=none`) publicados no Cloudflare. Remetente:
@@ -132,8 +124,8 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 
 | Task    | Tag    | Descrição                                                                                                                                                                                                           | Depende de       |
 | ------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| V11.2.1 | infra  | 🟡 **implementada e validada localmente** · Pendência e recusa com outbox transacional, Resend e retry; falta envio real no ambiente publicado                                                                      | —                |
-| V11.2.2 | front  | 🟡 **implementada e validada localmente** · Boas-vindas atômica com a aprovação, `generateLink`, link recovery 48h de uso único e tela Criar senha (8+, letras e números); falta configurar GoTrue/Resend publicado | V11.2.1          |
+| V11.2.1 | infra  | ✅ **em produção** · Pendência e recusa com outbox transacional, Resend e retry                                                                      | —                |
+| V11.2.2 | front  | ✅ **em produção** · Boas-vindas atômica com a aprovação, `generateLink`, link recovery 48h de uso único e tela Criar senha (8+, letras e números)                                                    | V11.2.1          |
 | V11.2.0 | infra  | ✅ Domínio `cote-certo.sandboxallcom.com` verificado no Resend; DKIM, SPF e DMARC publicados. Remetente `acesso@cote-certo.sandboxallcom.com`; Reply-To `diego.gervasio@allcomtelecom.com`                          | —                |
 | V11.2.3 | banco  | ✅ Roteamento da fila pelo vínculo estruturado do pedido (trilha/perfil/vincTipo/vincId) — vendedor de Full **nunca** chega à Matriz                                                                                | V11.1.1          |
 | V11.2.4 | front  | ✅ Pendentes em dois blocos: time interno no bloco Matriz, rede no bloco Externos                                                                                                                                   | V11.2.3          |
@@ -148,14 +140,12 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 > decidem fila e autoridade no banco, não na tela; `aprovar_acesso` grava
 > papel/cargo/áreas/produtos/canais/superior numa única transação. Testado com 20 testes de
 > banco (`tests/db/filas-aprovacao-v11.test.ts`) e 30 E2E (`tests/e2e/`, incluindo o novo
-> `filas-aprovacao.spec.ts`). **V11.2.1 e V11.2.2 estão implementadas e validadas
-> localmente**; a conclusão de produção depende da configuração e do envio real por
-> Resend/GoTrue no ambiente publicado. A V11.2.0 foi concluída em 30/07 — não
-> bloqueiam a Frente 3. Decisão em aberto
-> com a Lis sobre a Matriz também
-> aprovar o vendedor de uma Full: `docs/PERGUNTAS_PARA_LIS.md` item 5; a separação
-> `fn_destino_pedido`/`fn_pode_aprovar_pedido` foi feita de propósito para isso custar
-> pouco quando decidido.
+> `filas-aprovacao.spec.ts`). **V11.2.1 e V11.2.2 foram pra produção em 01/08/2026**
+> (PR #104), com smoke test de ponta a ponta validado. **Resolvido com a Lis em
+> 03/08/2026** (`docs/PERGUNTAS_PARA_LIS.md` item 5): a Full continua aprovando o
+> próprio vendedor sozinha, sem override da Matriz — `fn_destino_pedido`/
+> `fn_pode_aprovar_pedido` continuam separadas de propósito, caso a operação real peça
+> revisão na V12.
 
 ## Frente 3 · Cadastros e ciclo de vida
 
@@ -287,9 +277,9 @@ ser marcada como concluída antes de revisitar as quatro linhas acima.
 
 | Task    | Tag   | Descrição                                                                                                                                                             | Depende de |
 | ------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| V11.9.1 | infra | **WhatsApp Business API** (item 4): convite com PDF anexado automaticamente, sem passo manual. Exige conta e aprovação de template                                    | V11.1.3    |
-| V11.9.2 | —     | **Decisão pendente:** Carteira de Recuperação está nos Fluxos mas não no protótipo r40 — entra na V11 sem referência visual ou fica para a V12?                       | —          |
-| V11.9.3 | —     | **Pedir à Lis:** documento "Regras Decididas", citado pelo DE/PARA e pelo Handoff e ausente do pacote. Regra 12 (régua) e regra 5 (escopos dos presets) dependem dele | —          |
+| V11.9.1 | infra | **WhatsApp Business API** (item 4): convite com PDF anexado automaticamente, sem passo manual. Exige conta e aprovação de template — aguardando o usuário abrir a conta; paliativo (`wa.me` + PDF manual) segue no ar | V11.1.3    |
+| V11.9.2 | —     | ✅ **Resolvido pela Lis em 03/08/2026:** Carteira de Recuperação fica pra V12, fora da V11                     | —          |
+| V11.9.3 | —     | ✅ **Resolvido em 04/08/2026:** documento "Regras Decididas" chegou (`CoteCerto_Regras_Decididas.html`, 27/07) | —          |
 | V11.9.4 | infra | **Persistência geral** (item 10): filas, cadastros, solicitações e motivos em banco — varredura final de que nada ficou só no navegador                               | todas      |
 
 ## Sequência recomendada
@@ -300,9 +290,9 @@ detalhes da hierarquia estão em `docs/PLANO_HIERARQUIA_V11.md`.
 
 1. ✅ **Base implementada** — V11.0.2, V11.0.3 e V11.0.8 estabeleceram a
    hierarquia; V11.1.1–V11.1.5 e V11.1.8 entregaram o núcleo do convite;
-   V11.2.3–V11.2.9 entregaram filas e aprovação. V11.2.1 e V11.2.2 estão
-   implementadas localmente; V11.1.6 e V11.1.7 continuam adiadas, e e-mail/senha
-   aguardam configuração e prova real no ambiente publicado.
+   V11.2.3–V11.2.9 entregaram filas e aprovação. V11.2.1 e V11.2.2 foram para
+   produção em 01/08/2026 (PR #104); V11.1.6 e V11.1.7, que dependiam delas,
+   fecharam junto (ver Frente 1).
 2. **Pedidos disparados em paralelo, porque têm prazo de terceiro:** V11.9.3 ("Regras
    Decididas", que trava a Frente 4) e V11.5.1 (endereço das configurações da Full).
 3. **Frente 3** — começar por V11.3.1 e V11.3.2 (Cadastros Matriz e Rede), que já
@@ -312,8 +302,8 @@ detalhes da hierarquia estão em `docs/PLANO_HIERARQUIA_V11.md`.
 6. **Frente 7** (visão geral) em paralelo a partir da taxonomia de canais.
 7. **Frente 8** — auditar o status das tasks contra as entregas H7–H10 da hierarquia
    antes de abrir nova implementação, evitando refazer menus, alçada e testes já cobertos.
-8. **Boas-vindas e senha (V11.2.2, V11.1.6, V11.1.7)** — pendência e recusa da
-   V11.2.1 já foram retomadas; só depois da senha o autocadastro sai do ar.
+8. ✅ **Boas-vindas e senha (V11.2.2, V11.1.6, V11.1.7)** — fecharam junto com a
+   ida para produção do e-mail (01/08/2026) e a remoção do autocadastro (03/08/2026).
 9. **Frente 9** por último, exceto os pedidos do item 2.
 
 ## Decisões pendentes que bloqueiam tasks
