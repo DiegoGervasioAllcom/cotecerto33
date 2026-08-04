@@ -3638,6 +3638,12 @@ export type Database = {
       };
       fn_destino_pedido: { Args: { _empresa_id: string }; Returns: string };
       fn_eh_diretor: { Args: { _user_id: string }; Returns: boolean };
+      fn_empresa_matriz: {
+        Args: never;
+        Returns: {
+          empresa_id: string;
+        }[];
+      };
       fn_excluir_resposta_padrao: {
         Args: { p_id: string; p_senha: string };
         Returns: undefined;

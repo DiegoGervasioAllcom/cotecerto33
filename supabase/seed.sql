@@ -23,11 +23,19 @@ begin
   -- 1) Empresa Matriz ------------------------------------------------------
   select id into _empresa_id from public.empresas where nome = 'Matriz CoteCerto' limit 1;
   if _empresa_id is null then
+    -- tipo='matriz' (não 'pj'): migrations 025/026 (fix_enum_empresa_tipo_matriz
+    -- / set_matriz_tipo) já preparam o enum e corrigem esta linha por nome, mas
+    -- só rodam UMA vez, antes deste seed existir — em `db reset` local elas
+    -- não têm o que corrigir (a empresa nasce aqui, depois delas). Sem isto, a
+    -- Matriz seedada localmente fica com tipo='pj' e passa despercebida pelos
+    -- filtros `tipo <> 'matriz'` da distribuição automática (024/028/032) e
+    -- pela V11.I.1 (`fn_empresa_matriz`, 20260804120000) — nenhuma linha
+    -- responderia por "a operação própria da Matriz".
     insert into public.empresas (nome, tipo, documento, status)
-    values ('Matriz CoteCerto', 'pj', '00.000.000/0001-00', 'aprovada')
+    values ('Matriz CoteCerto', 'matriz', '00.000.000/0001-00', 'aprovada')
     returning id into _empresa_id;
   else
-    update public.empresas set status = 'aprovada' where id = _empresa_id;
+    update public.empresas set status = 'aprovada', tipo = 'matriz' where id = _empresa_id;
   end if;
 
   -- 2) Usuário auth.users --------------------------------------------------
