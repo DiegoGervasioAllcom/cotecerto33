@@ -46,6 +46,13 @@ export type Deslig = {
   desligado_em: string;
   desligado_motivo: string | null;
   empresa_id: string | null;
+  /**
+   * Mesmo critério de `CadastrosMatrizTab`: cargo_id definido (time interno
+   * com cargo) OU role='vendedor' cuja empresa não tem modelo de franquia
+   * (Vendedor Matriz). Sem isso, "Desligamentos" da rede externa misturava
+   * saídas do time interno.
+   */
+  bloco: "interno" | "externo";
 };
 
 export type ModeloParams = Record<string, string>;
