@@ -51,12 +51,14 @@ describe("H2/H3 — catálogo de áreas e cargos preset", () => {
     expect(futuras).toBe(4);
   });
 
-  it("cada cargo preset tem o número de áreas do protótipo r40", async () => {
+  it("cada cargo preset tem o número de áreas do protótipo r41", async () => {
     // Contagens conferidas contra const CARGOS de cotecerto_prototipo_v11.html.
+    // sup_vendas: 11 desde 03/08/2026 (Lis resolveu a divergência r40 x Fluxos
+    // a favor dos Fluxos — Estornos entra; r41 já traz o preset corrigido).
     const esperado: Record<string, number> = {
       matriz_total: 17,
       coord_com: 17,
-      sup_vendas: 10,
+      sup_vendas: 11,
       sup_operacional: 4,
       sup_backoffice: 5,
       assist_com: 3,
@@ -92,17 +94,16 @@ describe("H4/H10 — resolução do escopo de áreas", () => {
     expect(areas).not.toContain("maprov");
   });
 
-  it("supervisor com cargo sup_vendas recebe 10 áreas, incluindo Aprovações", async () => {
+  it("supervisor com cargo sup_vendas recebe 11 áreas, incluindo Aprovações e Estornos", async () => {
     const sup = await criarPersonaComEmpresa("supervisor", { emailPrefix: "sup-vend" });
     await admin.from("profiles").update({ cargo_id: "sup_vendas" }).eq("id", sup.userId);
 
     const areas = await areasDe(sup.client, sup.userId);
-    expect(areas).toHaveLength(10);
+    expect(areas).toHaveLength(11);
     expect(areas).toContain("maprov");
-    // O protótipo r40 não dá Estornos ao Supervisor de Vendas, embora os Fluxos
-    // listem. Divergência registrada em docs/ANALISE_LACUNAS_V11.md: se a
-    // decisão for seguir os Fluxos, este assert é o que quebra primeiro.
-    expect(areas).not.toContain("mestorno");
+    // Divergência r40 x Fluxos resolvida pela Lis em 03/08/2026 a favor dos
+    // Fluxos — ver docs/PERGUNTAS_PARA_LIS.md item 3.
+    expect(areas).toContain("mestorno");
   });
 
   it("override em profile_areas SUBSTITUI o preset do cargo, não soma", async () => {
@@ -129,11 +130,11 @@ describe("H4/H10 — resolução do escopo de áreas", () => {
     await admin.from("profiles").update({ cargo_id: "sup_vendas" }).eq("id", alvo.userId);
     const curioso = await criarPersonaComEmpresa("vendedor", { emailPrefix: "vend-curioso" });
 
-    // A função é security definer: sem o guard, devolveria as 10 áreas do alvo.
+    // A função é security definer: sem o guard, devolveria as 11 áreas do alvo.
     expect(await areasDe(curioso.client, alvo.userId)).toEqual([]);
     // A Matriz pode, porque administra acesso (tela Cadastros Matriz).
     const matriz = await loginMatriz();
-    expect(await areasDe(matriz, alvo.userId)).toHaveLength(10);
+    expect(await areasDe(matriz, alvo.userId)).toHaveLength(11);
   });
 });
 
