@@ -95,7 +95,10 @@ function Page() {
         "id,numero,status,seguradora,premio,valor,forma_pagamento,vencimento,criado_em," +
           "transmitida_em,aceita_em,emitida_em,transmissao_obs," +
           "cotacoes(segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))," +
-          "leads(origem)",
+          // FK explícita: `leads` tem duas relações com `propostas`
+          // (propostas.lead_id e leads.renovacao_proposta_id, da G6) —
+          // sem isto o PostgREST recusa o embed por ambiguidade.
+          "leads!propostas_lead_id_fkey(origem)",
       )
       .eq("status", "gerada")
       .order("criado_em", { ascending: true });
