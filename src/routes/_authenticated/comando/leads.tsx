@@ -138,16 +138,19 @@ function Page() {
   const denied = useRequireMatrizOuFranquiaFull();
   const { role } = useAuth();
   const { isFranqFull } = useGroupScope();
-  // V11.5.2b: Central da Franquia — Full só vê/monitora os leads dela (RLS já
-  // escopa a query). As ações abaixo (redistribuir/puxar de volta/bloquear/
-  // distribuir automático) chamam RPCs restritas a matriz/master no banco
-  // (`redistribuir_lead`, `puxar_lead_de_volta`, `bloquear_lead`,
-  // `desbloquear_lead`, `distribuir_fila_pendente` — ver 20240101000016/019/024)
-  // e sempre retornariam "forbidden" pra Full; escondidas em vez de oferecer
-  // um botão que 100% falha. Gap conhecido: sem RPC própria pra Full reatribuir
-  // lead dentro do time dela por aqui — hoje o vendedor pega o lead da fila da
-  // franquia direto pelo pipeline dele (`assumir_lead`, sem esse gate).
+  // V11.5.2b/V11.I: Central da Franquia — Full e interno (Marketing) só
+  // vêem/monitoram os leads da Matriz (RLS já escopa a query, V11.I.2). As
+  // ações abaixo (redistribuir/puxar de volta/bloquear/distribuir automático)
+  // chamam RPCs restritas a matriz/master no banco (`redistribuir_lead`,
+  // `puxar_lead_de_volta`, `bloquear_lead`, `desbloquear_lead`,
+  // `distribuir_fila_pendente` — ver 20240101000016/019/024) e sempre
+  // retornariam "forbidden" pra Full OU interno; escondidas pros dois em vez
+  // de oferecer um botão que 100% falha. Gap conhecido: sem RPC própria pra
+  // Full reatribuir lead dentro do time dela por aqui — hoje o vendedor pega
+  // o lead da fila da franquia direto pelo pipeline dele (`assumir_lead`,
+  // sem esse gate).
   const isFull = role === "franqueado" && isFranqFull;
+  const semAcaoDeMatriz = isFull || role === "interno";
   const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
@@ -452,7 +455,7 @@ function Page() {
               Full) e chamam `distribuir_fila_pendente`, restrita a matriz/master
               no banco. Escondidas pra Full em vez de oferecer um botão que sempre
               falharia. */}
-          {!isFull && (
+          {!semAcaoDeMatriz && (
             <button
               className="btn btn-yellow"
               onClick={() => navigate({ to: "/comando/distribuicao" })}
@@ -463,7 +466,7 @@ function Page() {
               Distribuir pendentes ({kpis.pendentes})
             </button>
           )}
-          {!isFull && (
+          {!semAcaoDeMatriz && (
             <button
               className="btn btn-slate"
               onClick={executarDistribuicaoAuto}
@@ -825,18 +828,22 @@ function Page() {
                             bloquear_lead, desbloquear_lead) — pra Full sempre
                             dariam "forbidden". Escondidas em vez de oferecer um
                             botão que sempre falha. */}
-                        {!isFull && !l.bloqueado && !l.distribuido && !isFechado && !isPerdido && (
-                          <button
-                            className="ic-mini"
-                            title="Distribuir"
-                            onClick={() => setModal({ kind: "redist", lead: l })}
-                          >
-                            <svg width="14" height="14">
-                              <use href="#i-share"></use>
-                            </svg>
-                          </button>
-                        )}
-                        {!isFull && !l.bloqueado && isPerdido && (
+                        {!semAcaoDeMatriz &&
+                          !l.bloqueado &&
+                          !l.distribuido &&
+                          !isFechado &&
+                          !isPerdido && (
+                            <button
+                              className="ic-mini"
+                              title="Distribuir"
+                              onClick={() => setModal({ kind: "redist", lead: l })}
+                            >
+                              <svg width="14" height="14">
+                                <use href="#i-share"></use>
+                              </svg>
+                            </button>
+                          )}
+                        {!semAcaoDeMatriz && !l.bloqueado && isPerdido && (
                           <button
                             className="ic-mini"
                             title="Reativar e distribuir"
@@ -847,18 +854,22 @@ function Page() {
                             </svg>
                           </button>
                         )}
-                        {!isFull && !l.bloqueado && l.distribuido && !isFechado && !isPerdido && (
-                          <button
-                            className="ic-mini"
-                            title="Redistribuir"
-                            onClick={() => setModal({ kind: "redist", lead: l })}
-                          >
-                            <svg width="14" height="14">
-                              <use href="#i-refresh"></use>
-                            </svg>
-                          </button>
-                        )}
-                        {!isFull && !l.bloqueado && l.distribuido && !isFechado && (
+                        {!semAcaoDeMatriz &&
+                          !l.bloqueado &&
+                          l.distribuido &&
+                          !isFechado &&
+                          !isPerdido && (
+                            <button
+                              className="ic-mini"
+                              title="Redistribuir"
+                              onClick={() => setModal({ kind: "redist", lead: l })}
+                            >
+                              <svg width="14" height="14">
+                                <use href="#i-refresh"></use>
+                              </svg>
+                            </button>
+                          )}
+                        {!semAcaoDeMatriz && !l.bloqueado && l.distribuido && !isFechado && (
                           <button
                             className="ic-mini"
                             title="Puxar de volta"
@@ -878,7 +889,7 @@ function Page() {
                             <use href="#i-clock"></use>
                           </svg>
                         </button>
-                        {!isFull && (
+                        {!semAcaoDeMatriz && (
                           <button
                             className="ic-mini"
                             title={l.bloqueado ? "Desbloquear" : "Bloquear lead"}
