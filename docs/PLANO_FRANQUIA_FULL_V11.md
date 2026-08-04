@@ -138,3 +138,95 @@ em 04/08/2026, depois de eu investigar e achar 3 problemas no desenho original:
 **Decisão do usuário:** esperar o r41 chegar antes de desenhar essa tela, em vez de
 arriscar retrabalho. PR aberto agora com o que está pronto; V11.5.4/5.5/5.6 voltam como
 Frente 5b quando o r41 e o Handoff atualizado chegarem.
+
+## Frente 5b — fechada em 04/08/2026
+
+O r41 chegou junto com Regras Decididas + Handoff atualizado + Respostas de produto,
+resolvendo as 3 dúvidas que travavam (ver seção acima). Entregue e testado:
+
+- **V11.5b.1** — `fn_registrar_alteracao_franquia`: porta de escrita do histórico da
+  franquia, gate por identidade (franqueado dono da empresa + modalidade Full via
+  `fn_bloco_performance`), nunca senha de diretor.
+- **V11.5b.2** — `fn_salvar_regua_performance_full`: a Full salva a própria régua
+  (bloco `'full'`, linha COMPARTILHADA de `regua_performance_config`, D1) direto, sem
+  senha, sem o toggle "Notificar o supervisor" (r41 confirma que não existe pro bloco
+  full).
+- **V11.5b.3** — tabela `full_comissao_complementos` (1 linha por empresa) +
+  `fn_salvar_complementos_full`: comissão de venda/renovação (%) + bônus de
+  campanha/meta da equipe (texto livre, r41 confirma), sem senha.
+- **V11.5b.4/5** — `xacessos.tsx` ganhou toggle de 3 seções (Meu time / Personalização
+  geral / Performance) — só visível pra Full (`isFranqFull`, nunca Master/Supervisor).
+  Personalização geral tem 2 sub-abas: Modelo CLT (resumo somente-leitura do
+  `clt_config` global + card editável "Complementos do time") e Histórico (só da
+  própria franquia, filtro explícito de `empresa_id`).
+
+**Decisão consciente, não bug:** nenhuma das 3 RPCs novas tem bypass de Matriz/Coordenador
+(diferente de `fn_salvar_sla_empresa`, V11.5.3, que permite) — o r41 não mostra nenhum
+caminho de Matriz editar régua/complementos de uma Full específica; é autonomia
+exclusiva da "matrizinha" (regra 8). Se a operação real precisar de um override
+administrativo, é task nova.
+
+**Testado:** 553 testes de banco (30 novos) + 216 unitários + 29 E2E, verificado
+manualmente no navegador (login real como Franquia Full, salvar Complementos e régua
+sem nenhum modal de senha, ver a entrada no Histórico da franquia). Um bug de teste
+(locator ambíguo, `<h1>` duplicado entre app-shell e a página) corrigido durante a
+verificação — não é bug de produto.
+
+Com isso, **a Frente 5 fecha por completo** — não fica mais nenhuma task V11.5.x
+bloqueada.
+
+## Frente 5b — desbloqueada em 04/08/2026 (r41 + Regras Decididas + Handoff atualizado + Respostas)
+
+O r41 (`cotecerto_prototipo_v11.html`, função `fullAcessosPage()`/`fullPersoBody()`/
+`perfRulesCard()`/`fullComCard()`) tem a tela real, não é mais suposição. Achados que
+resolvem as 3 dúvidas do fechamento parcial:
+
+1. **A régua da Full não passa por senha de diretor.** `perfSaveGate(scope)` no r41:
+   pra `scope==='full'` salva direto e grava no histórico da franquia; pra `int`/`rede`
+   passa por `dirGate` (senha de diretor). Bloco `'full'` continua **compartilhado**
+   (uma linha só, não por empresa) — minha suspeita anterior de precisar de tabela de
+   override por empresa estava errada. `regua_performance_config` (D1) já serve como
+   está; só falta uma RPC de salvar sem senha, gate por identidade (é você mesma,
+   franqueada Full) em vez de diretor.
+2. **"Modelo CLT" pra Full = leitura do modelo global da Matriz + edição de
+   "Complementos do time" (própria da franquia)** — não é o painel `ModeloCltPanel`
+   inteiro editável. Complementos = 4 campos por empresa (comissão de venda %,
+   comissão na renovação %, bônus de campanha, meta padrão da equipe), sem senha,
+   mesmo gate de identidade da régua. Tabela nova (`full_comissao_complementos` ou
+   nome equivalente, PK `empresa_id`).
+3. **`historico_alteracoes` já tem `empresa_id`** desde a V11.0.6 ("nulo = Matriz,
+   preenchido = franquia") — a tabela não precisa de nada novo. O que falta é a
+   **porta de escrita**: `fn_registrar_alteracao` (a única hoje) exige
+   `fn_confirmar_senha_diretor` sempre — incompatível com Full nunca ser diretora.
+   Precisa de uma RPC irmã, `fn_registrar_alteracao_franquia(p_empresa_id, area,
+   o_que, de_para)`, com gate de identidade (`has_role('franqueado')`,
+   `profiles.empresa_id = p_empresa_id`, `fn_bloco_performance(p_empresa_id) =
+   'full'`) em vez de senha — usada tanto pela régua quanto pelos complementos.
+
+Estrutura confirmada da tela (`fullAcessosPage()`, 5 abas): Meu time / Pendentes de
+aprovação / Desligamentos (as 3 já implementadas, F1-F9) + **Personalização geral**
+(2 sub-abas: Modelo CLT·comissionamento, Histórico) + **Performance** (régua própria).
+`xacessos.tsx` hoje não tem esse sistema de abas (as 3 primeiras seções aparecem juntas,
+sem toggle) — as 2 novas entram como seções com toggle, no mesmo padrão de
+`perso-geral.tsx` (`toggle-sub`).
+
+### Tasks
+
+| Task     | Tag    | Descrição                                                                                                    | Depende de |
+| -------- | ------ | ------------------------------------------------------------------------------------------------------------- | ---------- |
+| V11.5b.1 | banco  | `fn_registrar_alteracao_franquia(p_empresa_id, area, o_que, de_para)` — porta de escrita do histórico da franquia, gate por identidade (não senha) | —          |
+| V11.5b.2 | banco  | `fn_salvar_regua_performance_full()` — só bloco `'full'`, sem senha, gate por identidade, grava via V11.5b.1  | V11.5b.1   |
+| V11.5b.3 | banco  | Tabela `full_comissao_complementos` (empresa_id PK) + `fn_salvar_complementos_full(...)`, sem senha, gate por identidade, grava via V11.5b.1 | V11.5b.1   |
+| V11.5b.4 | front  | `xacessos.tsx`: seções Personalização geral (CLT leitura + Complementos edição) e Performance, com toggle    | V11.5b.2, V11.5b.3 |
+| V11.5b.5 | front  | Sub-aba Histórico da franquia — reusa o padrão de `HistoricoPanel` (G6.5), filtrado por `empresa_id` própria | V11.5b.1   |
+| V11.5b.6 | testes | RLS das 3 RPCs novas (só a própria Full, nunca outra franquia, nunca sem ser Full); histórico da franquia aparece certo | todas acima |
+
+### Riscos
+
+1. **Gate de identidade precisa ser preciso**: `has_role('franqueado')` sozinho não
+   basta — Individual também é `franqueado`. Sempre combinar com
+   `fn_bloco_performance(p_empresa_id) = 'full'` (D5, já usado em V11.5.3/V11.5.7).
+2. **`perfRulesCard('full')` no r41 esconde o toggle "Notificar o supervisor"** (só
+   existe pra int/rede) — replicar essa omissão no front, não é esquecimento.
+3. **Não criar tabela de override por empresa pra régua** — é o erro que eu ia cometer
+   antes do r41 chegar. Bloco `'full'` é uma linha só, compartilhada.

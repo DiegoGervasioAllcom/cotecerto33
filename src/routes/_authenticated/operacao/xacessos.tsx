@@ -13,6 +13,8 @@ import { MinhasSolicitacoesDesligamento } from "@/components/acessos/minhas-soli
 import { PendentesTab } from "@/components/operacao/acessos/pendentes-tab";
 import { useFilaFranquiaData } from "@/components/operacao/acessos/hooks/useFilaFranquiaData";
 import type { FranquiaAprovada } from "@/components/operacao/acessos/types";
+import { FullPersonalizacaoPanel } from "@/components/operacao/acessos/full-personalizacao-panel";
+import { FullPerformancePanel } from "@/components/operacao/acessos/full-performance-panel";
 
 /**
  * Acessos da equipe (xacessos) — visão de grupo (master/supervisor/franquia Full).
@@ -51,15 +53,27 @@ type Membro = {
   supervisaoLabel: string;
 };
 
+/**
+ * V11.5b.4 — a Full ganha 2 seções novas ("Personalização geral",
+ * "Performance") além do que já existia (equipe/pendentes/desligamentos,
+ * agrupados sob "Meu time"). Toggle no mesmo padrão de `toggle-sub` de
+ * `perso-geral.tsx`. Master/Supervisor continuam vendo só "Meu time", sem o
+ * toggle aparecer — `isFranqFull` (via `useGroupScope`, modalidade
+ * `modelos_franquia` — não `empresa.tipo`, que é só pj/pf documental) é o
+ * único gate.
+ */
+type Secao = "equipe" | "perso" | "performance";
+
 export const Route = createFileRoute("/_authenticated/operacao/xacessos")({
   head: () => ({ meta: [{ title: "Acessos da equipe · CoteCerto" }] }),
   component: Page,
 });
 
 function Page() {
-  const { group, groupPct } = useGroupScope();
+  const { group, groupPct, isFranqFull } = useGroupScope();
   const { role, profile, empresa } = useAuth();
   const [convidando, setConvidando] = useState<EscopoConvite | null>(null);
+  const [secao, setSecao] = useState<Secao>("equipe");
 
   // V11: o Master convida a rede dele; a Franquia Full, o time dela.
   const escopoConvite: EscopoConvite | null =
@@ -233,132 +247,163 @@ function Page() {
         </div>
       )}
 
-      {isFull && (
-        <div style={{ marginBottom: 18 }}>
-          <div
-            className="small muted"
-            style={{ fontWeight: 800, letterSpacing: ".08em", marginBottom: 8 }}
+      {isFranqFull && (
+        <div className="toggle toggle-sub" style={{ marginBottom: 18 }}>
+          <button className={secao === "equipe" ? "on" : ""} onClick={() => setSecao("equipe")}>
+            Meu time
+          </button>
+          <button className={secao === "perso" ? "on" : ""} onClick={() => setSecao("perso")}>
+            Personalização geral
+          </button>
+          <button
+            className={secao === "performance" ? "on" : ""}
+            onClick={() => setSecao("performance")}
           >
-            PENDENTES DE APROVAÇÃO ({fila.pendentes.length})
-          </div>
-          {fila.err && (
-            <div className="banner alert" style={{ marginBottom: 14 }}>
-              {fila.err}
-            </div>
-          )}
-          <PendentesTab pendentes={fila.pendentes} onAnalisar={fila.openAnalisar} />
+            Performance
+          </button>
         </div>
       )}
 
-      <div className="card">
-        <div className="card-h">
-          <h3>
-            <Icon id="users" size={16} /> Equipe
-          </h3>
-          <span className="small muted">
-            {filtradas.length} de {rows.length} usuário(s)
-          </span>
-        </div>
-        <div className="card-b" style={{ display: "flex", gap: 10 }}>
-          <select
-            className="input"
-            style={{ maxWidth: 220 }}
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
-          >
-            <option value="">Todos os tipos</option>
-            {tipos.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <select
-            className="input"
-            style={{ maxWidth: 180 }}
-            value={filtroStatus}
-            onChange={(e) => setFiltroStatus(e.target.value)}
-          >
-            <option value="">Todos os status</option>
-            <option value="ativo">Ativo</option>
-            <option value="desativado">Desativado</option>
-          </select>
-        </div>
-        <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
-          {loading ? (
-            <div className="muted small" style={{ padding: 16 }}>
-              Carregando…
+      {secao === "equipe" && (
+        <>
+          {isFull && (
+            <div style={{ marginBottom: 18 }}>
+              <div
+                className="small muted"
+                style={{ fontWeight: 800, letterSpacing: ".08em", marginBottom: 8 }}
+              >
+                PENDENTES DE APROVAÇÃO ({fila.pendentes.length})
+              </div>
+              {fila.err && (
+                <div className="banner alert" style={{ marginBottom: 14 }}>
+                  {fila.err}
+                </div>
+              )}
+              <PendentesTab pendentes={fila.pendentes} onAnalisar={fila.openAnalisar} />
             </div>
-          ) : (
-            <table className="table-pipe">
-              <thead>
-                <tr>
-                  <th>Usuário</th>
-                  <th>Tipo</th>
-                  <th>Supervisão</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtradas.map((u) => {
-                  const desligado = !!u.desligado_em;
-                  // V11 · C8 — só vendedor/franquia são alvo válido de
-                  // solicitar_desligamento (a RPC barra o resto de novo).
-                  const podeDesligar =
-                    !desligado && (u.role === "vendedor" || u.role === "franqueado");
-                  return (
-                    <tr key={u.id}>
-                      <td>
-                        <strong>{u.nome}</strong>
-                        <div className="muted small">{u.email}</div>
-                      </td>
-                      <td>
-                        <span className={`chip ${TIPO_CHIP_CLASS[u.tipoLabel] ?? "chip-outline"}`}>
-                          {u.tipoLabel}
-                        </span>
-                      </td>
-                      <td>
-                        <small className="muted">{u.supervisaoLabel}</small>
-                      </td>
-                      <td>
-                        <span className={`chip ${desligado ? "chip-outline" : "chip-ok"}`}>
-                          {desligado ? "Desativado" : "Ativo"}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        {podeDesligar && (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            type="button"
-                            onClick={() => setDesligando({ id: u.id, nome: u.nome })}
-                          >
-                            <Icon id="trash" size={12} /> Solicitar desligamento
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filtradas.length === 0 && (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}
-                    >
-                      Nenhum usuário encontrado.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
           )}
-        </div>
-      </div>
 
-      <div style={{ marginTop: 18 }}>
-        <MinhasSolicitacoesDesligamento reloadKey={desligamentoReloadTick} />
-      </div>
+          <div className="card">
+            <div className="card-h">
+              <h3>
+                <Icon id="users" size={16} /> Equipe
+              </h3>
+              <span className="small muted">
+                {filtradas.length} de {rows.length} usuário(s)
+              </span>
+            </div>
+            <div className="card-b" style={{ display: "flex", gap: 10 }}>
+              <select
+                className="input"
+                style={{ maxWidth: 220 }}
+                value={filtroTipo}
+                onChange={(e) => setFiltroTipo(e.target.value)}
+              >
+                <option value="">Todos os tipos</option>
+                {tipos.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="input"
+                style={{ maxWidth: 180 }}
+                value={filtroStatus}
+                onChange={(e) => setFiltroStatus(e.target.value)}
+              >
+                <option value="">Todos os status</option>
+                <option value="ativo">Ativo</option>
+                <option value="desativado">Desativado</option>
+              </select>
+            </div>
+            <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
+              {loading ? (
+                <div className="muted small" style={{ padding: 16 }}>
+                  Carregando…
+                </div>
+              ) : (
+                <table className="table-pipe">
+                  <thead>
+                    <tr>
+                      <th>Usuário</th>
+                      <th>Tipo</th>
+                      <th>Supervisão</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtradas.map((u) => {
+                      const desligado = !!u.desligado_em;
+                      // V11 · C8 — só vendedor/franquia são alvo válido de
+                      // solicitar_desligamento (a RPC barra o resto de novo).
+                      const podeDesligar =
+                        !desligado && (u.role === "vendedor" || u.role === "franqueado");
+                      return (
+                        <tr key={u.id}>
+                          <td>
+                            <strong>{u.nome}</strong>
+                            <div className="muted small">{u.email}</div>
+                          </td>
+                          <td>
+                            <span
+                              className={`chip ${TIPO_CHIP_CLASS[u.tipoLabel] ?? "chip-outline"}`}
+                            >
+                              {u.tipoLabel}
+                            </span>
+                          </td>
+                          <td>
+                            <small className="muted">{u.supervisaoLabel}</small>
+                          </td>
+                          <td>
+                            <span className={`chip ${desligado ? "chip-outline" : "chip-ok"}`}>
+                              {desligado ? "Desativado" : "Ativo"}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                            {podeDesligar && (
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                type="button"
+                                onClick={() => setDesligando({ id: u.id, nome: u.nome })}
+                              >
+                                <Icon id="trash" size={12} /> Solicitar desligamento
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filtradas.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}
+                        >
+                          Nenhum usuário encontrado.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 18 }}>
+            <MinhasSolicitacoesDesligamento reloadKey={desligamentoReloadTick} />
+          </div>
+        </>
+      )}
+
+      {secao === "perso" && isFranqFull && empresa?.id && (
+        <FullPersonalizacaoPanel empresaId={empresa.id} />
+      )}
+
+      {secao === "performance" && isFranqFull && empresa?.id && (
+        <FullPerformancePanel empresaId={empresa.id} />
+      )}
 
       {convidando && <ConvidarModal escopo={convidando} onClose={() => setConvidando(null)} />}
       {desligando && (

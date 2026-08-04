@@ -1765,6 +1765,51 @@ export type Database = {
           },
         ];
       };
+      full_comissao_complementos: {
+        Row: {
+          atualizado_em: string;
+          atualizado_por: string | null;
+          bonus_campanha: string | null;
+          comissao_renovacao_pct: number;
+          comissao_venda_pct: number;
+          empresa_id: string;
+          meta_padrao_equipe: string | null;
+        };
+        Insert: {
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          bonus_campanha?: string | null;
+          comissao_renovacao_pct: number;
+          comissao_venda_pct: number;
+          empresa_id: string;
+          meta_padrao_equipe?: string | null;
+        };
+        Update: {
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          bonus_campanha?: string | null;
+          comissao_renovacao_pct?: number;
+          comissao_venda_pct?: number;
+          empresa_id?: string;
+          meta_padrao_equipe?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "full_comissao_complementos_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: true;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "full_comissao_complementos_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: true;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       historico_alteracoes: {
         Row: {
           area: string;
@@ -3697,6 +3742,15 @@ export type Database = {
         };
         Returns: string;
       };
+      fn_registrar_alteracao_franquia: {
+        Args: {
+          p_area: string;
+          p_de_para?: Json;
+          p_empresa_id: string;
+          p_o_que: string;
+        };
+        Returns: string;
+      };
       fn_revisar_reativar_performance: {
         Args: { p_motivo?: string; p_profile_id: string };
         Returns: undefined;
@@ -3735,6 +3789,30 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      fn_salvar_complementos_full: {
+        Args: {
+          p_bonus_campanha: string;
+          p_comissao_renovacao_pct: number;
+          p_comissao_venda_pct: number;
+          p_empresa_id: string;
+          p_meta_padrao_equipe: string;
+        };
+        Returns: {
+          atualizado_em: string;
+          atualizado_por: string | null;
+          bonus_campanha: string | null;
+          comissao_renovacao_pct: number;
+          comissao_venda_pct: number;
+          empresa_id: string;
+          meta_padrao_equipe: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "full_comissao_complementos";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       fn_salvar_desconto_politicas: {
         Args: { p_delete: Json; p_senha: string; p_upsert: Json };
         Returns: undefined;
@@ -3755,6 +3833,19 @@ export type Database = {
           p_notifica_supervisor: boolean;
           p_pausa_leads_ativa: boolean;
           p_senha: string;
+        };
+        Returns: undefined;
+      };
+      fn_salvar_regua_performance_full: {
+        Args: {
+          p_cancelamentos_limite: number;
+          p_conv_atencao_pct: number;
+          p_conv_travado_pct: number;
+          p_dias_atencao: number;
+          p_dias_travado: number;
+          p_empresa_id: string;
+          p_janela_dias: number;
+          p_pausa_leads_ativa: boolean;
         };
         Returns: undefined;
       };
