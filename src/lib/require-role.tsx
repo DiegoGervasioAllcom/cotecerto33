@@ -30,8 +30,9 @@ export function useRequireRole(...allowed: Perfil[]): ReactNode | null {
 }
 
 /**
- * Guard para as 2 telas que a Matriz e a Franquia Full compartilham desde
- * V11.5.2b (Central da Franquia: `/comando/leads`, `/comando/distribuicao`).
+ * Guard para as telas que a Matriz, a Franquia Full e o time interno
+ * (Marketing) compartilham desde V11.5.2b/V11.I (Central da Franquia:
+ * `/comando/leads`, `/comando/distribuicao`).
  *
  * Não dá pra expressar isto com `useRequireRole("matriz", "franqueado")`
  * porque "Full" não é um valor do enum `perfil` — franqueado Full e
@@ -39,13 +40,20 @@ export function useRequireRole(...allowed: Perfil[]): ReactNode | null {
  * (lê `modelos_franquia.modalidade` via `empresa.modelo_id`). Franquia
  * Individual continua batendo em `/inicio`, igual a qualquer outro perfil não
  * autorizado.
+ *
+ * `interno` (Marketing/Assistente Comercial) entra aqui por role, não por
+ * área — o RLS (V11.I.2) já escopa o dado pra "operação própria da Matriz"
+ * independente do cargo; quem decide se a tela aparece no MENU é
+ * `cargo_areas` (Marketing tem `mleads`/`mdist`, Assistente Comercial não).
+ * Um Assistente Comercial que navegue pra cá manualmente só vê o mesmo dado
+ * escopado à Matriz — sem furo de segurança, só uma tela fora do menu dele.
  */
 export function useRequireMatrizOuFranquiaFull(): ReactNode | null {
   const { loading: authLoading, role } = useAuth();
   const { loading: scopeLoading, isFranqFull } = useGroupScope();
 
   if (authLoading || scopeLoading) return null;
-  if (role === "matriz") return null;
+  if (role === "matriz" || role === "interno") return null;
   if (role === "franqueado" && isFranqFull) return null;
 
   return <Navigate to="/inicio" replace />;

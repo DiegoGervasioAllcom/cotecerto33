@@ -236,6 +236,15 @@ function Page() {
   }
 
   async function patchCfg(partial: Partial<Config>) {
+    // V11.I: interno (Marketing) chegou nesta tela via V11.I.4, mas a decisão
+    // da Lis é só leitura — "sem escrita além do que os presets já dão". A
+    // RLS de distribuicao_config já bloqueia (só matriz escreve), mas
+    // travamos aqui também pra não depender de cada botão individual estar
+    // certo, e pra dar um erro claro em vez de deixar o RLS falhar silencioso.
+    if (role === "interno") {
+      setErr("Seu acesso é somente leitura — configuração de distribuição é exclusiva da Matriz.");
+      return;
+    }
     const next = { ...cfg, ...partial };
     setCfg(next);
     setSaving(true);
@@ -257,6 +266,11 @@ function Page() {
   }
 
   async function setDestinoPerda(leadId: string, decisao: "Remalho" | "Descarte" | "Reativar") {
+    // V11.I: mesma trava de patchCfg — triagem de perda é ação, não leitura.
+    if (role === "interno") {
+      setErr("Seu acesso é somente leitura — triagem de perda é exclusiva da Matriz.");
+      return;
+    }
     setBusyId(leadId);
     setErr(null);
     const obs = (obsDecisao[leadId] || "").trim() || null;
@@ -404,6 +418,11 @@ function Page() {
         </div>
       </div>
 
+      {role === "interno" && (
+        <div className="audit-note" style={{ marginBottom: 12 }}>
+          Acesso de leitura — a configuração de distribuição é exclusiva da Matriz.
+        </div>
+      )}
       {err && (
         <div
           className="audit-note"

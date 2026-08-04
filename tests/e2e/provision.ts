@@ -267,7 +267,7 @@ export async function limparVendedorComTutorial(v: VendedorComTutorial): Promise
   await limparVendedorComLead(v);
 }
 
-export type PersonaRole = "master" | "supervisor" | "franqueado" | "vendedor";
+export type PersonaRole = "master" | "supervisor" | "franqueado" | "vendedor" | "interno";
 export type PersonaModalidade = "individual" | "full";
 
 export type Persona = {
