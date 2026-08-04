@@ -363,6 +363,25 @@ sudo docker inspect -f '{{.State.Health.Status}}' cotecerto-app
 - validar pendência, recusa e retry da outbox sem envio duplicado;
 - verificar logs apenas por status/ID, nunca imprimir payload, token ou chave.
 
+### 6.6 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
+
+`profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
+(dev/local) cria Ana e Melo. Em produção, os diretores reais **já existem como
+contas próprias** (cadastradas pelo fluxo normal de convite); falta só marcar
+`diretor = true`. Sem isso, nenhuma tela de Governança funciona (Salvar
+política, Diretores, Histórico) — `fn_eh_diretor` retorna falso pra todo mundo.
+
+Rode uma única vez, com os e-mails reais dos 2 diretores:
+
+```sql
+update public.profiles
+   set diretor = true
+ where email in ('email-do-diretor-1@...', 'email-do-diretor-2@...');
+```
+
+Confirme depois: `select id, nome, email, diretor from public.profiles where diretor;`
+deve retornar exatamente 2 linhas.
+
 ---
 
 ## 7. Rollback
