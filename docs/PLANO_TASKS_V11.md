@@ -182,6 +182,21 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 
 ## Frente 5 · Franquia Full como matrizinha
 
+> **Fechamento parcial em 04/08/2026** (PR em preparação). Plano detalhado em
+> `docs/PLANO_FRANQUIA_FULL_V11.md`. V11.5.4/5.5/5.6 ficaram bloqueadas — investigação
+> achou que a régua trava por gate de diretor (Full nunca pode ser diretora) e precisa
+> de tabela nova (override por empresa); "Modelo CLT" é singleton global sem relação
+> com o time da Full; o r40 nunca teve essa tela pra Full. Decisão do usuário: esperar
+> o protótipo r41 (a caminho, citado pela Lis) antes de desenhar, em vez de adivinhar.
+> Virou Frente 5b.
+>
+> ✅ V11.5.1 — decisão da Lis: Acessos e permissões › Personalização geral/Performance
+> ✅ V11.5.2 → V11.5.2a (menu 15 áreas) + V11.5.2b (Central da Franquia)
+> ✅ V11.5.3 — SLA por empresa (`sla_empresa_config`, não mais singleton)
+> ⏳ V11.5.4/5.5/5.6 — bloqueadas, Frente 5b (esperando r41)
+> ✅ V11.5.7 — SLA por lead + fronteira repassado/próprio
+> ✅ V11.5.8 (novo, fora da tabela original) — comissão por origem do lead
+
 | Task    | Tag   | Descrição                                                                                                                                      | Depende de       |
 | ------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
 | V11.5.1 | —     | **Decisão da Lis (item 11):** endereço único das configurações da Full — Central da Franquia × Acessos › Personalização. Bloqueia a tela final | —                |

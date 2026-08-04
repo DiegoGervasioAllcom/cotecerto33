@@ -9,6 +9,12 @@ Este documento substitui a tabela solta de V11.5.1-7 em `docs/PLANO_TASKS_V11.md
 um plano com sequência, dependências e o que já está construído de graça por outras
 frentes.
 
+**Fechamento parcial em 04/08/2026:** V11.5.1/2a/2b/3/7/8 entregues, testadas
+(523 testes de banco + 216 unitários + 23 E2E, todos verdes) e prontas pra PR.
+V11.5.4/5.5/5.6 (Personalização/Performance da Full) ficaram **bloqueadas** — ver
+"Fechamento parcial" no fim deste documento — até o protótipo r41 chegar. Continuam
+listadas abaixo como o plano original, para registro.
+
 ## O que já existe hoje (achado ao planejar)
 
 - **Régua de performance (D1, Frente 4) já tem um bloco `'full'`** em
@@ -89,3 +95,46 @@ frentes.
    V11.5.4 (Acessos/Personalização) → V11.5.5 (Modelo CLT) → V11.5.6 (régua opcional).
 3. **V11.5.9 (testes)** fecha a frente, com `supabase db reset` limpo antes da contagem
    final — mesmo padrão das frentes anteriores.
+
+## Fechamento parcial (04/08/2026)
+
+**Entregue e testado** — V11.5.1 (decisão), V11.5.2a (menu 15 áreas — ver nota abaixo),
+V11.5.2b (Central da Franquia: leads/distribuição/SLA/canais), V11.5.3 (SLA por
+empresa), V11.5.7 (SLA por lead + fronteira repassado/próprio), V11.5.8 (config +
+resolução de comissão por origem, sem integrar ainda no motor de fechamento — ver
+migration `20260803160000`). 523 testes de banco + 216 unitários + 23 E2E, todos verdes,
+2 rodadas com `supabase db reset` limpo.
+
+**Nota sobre V11.5.2a:** a Lis registrou "16 áreas"; a exclusão nomeada (Franquias +
+Configurações globais) sobre as 17 do time interno dá **15**. Implementado como 15
+(exclusão nomeada, não forçada pra bater com o número) — divergência pra confirmar
+com a Lis quando o r41 chegar.
+
+**V11.5.4/5.5/5.6 BLOQUEADAS, movidas pra uma futura Frente 5b** — decisão do usuário
+em 04/08/2026, depois de eu investigar e achar 3 problemas no desenho original:
+
+1. **Desconto e Respostas padrão só podem ser leitura pra Full** — a escrita é
+   `has_role('matriz')` + gate de diretor (G6.1), e diretor é marcação exclusiva de
+   perfil Matriz (regra 2). Não tem como a Full editar essas duas por design.
+2. **"Modelo CLT" (`clt_config`) é um singleton global da Matriz**, igual
+   `distribuicao_config` era antes da V11.5.3 — define o modelo de comissão do
+   Vendedor Matriz interno, sem relação com o time da própria Full. A V11.5.5 original
+   ("Modelo CLT + complementos pra Full") provavelmente lia mal o task original do
+   plano — precisa reinterpretar à luz do r41, não assumir que é reaproveitar o painel
+   global.
+3. **A régua de performance trava pra Full por completo hoje**: `fn_salvar_regua_
+   performance` exige gate de diretor pros 3 blocos (interno/rede/full), e Full nunca
+   pode ser diretora — o comentário da própria migration D2 já admitia a divergência
+   ("diverge do protótipo, que deixava o bloco full sem senha"). Além disso hoje existe
+   **1 linha compartilhada** pro bloco `'full'` inteiro — se "régua própria" (regra 12)
+   for por franquia (não uma só pra todas as Fulls), falta uma tabela de override por
+   empresa, mesmo padrão da V11.5.3 (SLA), não só destravar a RPC existente.
+4. **Consultado `docs/MAPA_PROTOTIPO_PERFIS.md` (r40):** a Full hoje só usa o mesmo
+   Acessos do Master (`xacessos`, lista de equipe) — o r40 nunca teve uma aba de
+   Personalização/Performance pra Full. Essas 3 tasks vieram da leitura das Regras
+   Decididas, não de uma tela existente no protótipo — e a Lis avisou que o r41 (ainda
+   não recebido) já corrige itens relacionados a esta frente.
+
+**Decisão do usuário:** esperar o r41 chegar antes de desenhar essa tela, em vez de
+arriscar retrabalho. PR aberto agora com o que está pronto; V11.5.4/5.5/5.6 voltam como
+Frente 5b quando o r41 e o Handoff atualizado chegarem.
