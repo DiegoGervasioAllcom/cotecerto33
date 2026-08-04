@@ -1,6 +1,7 @@
 # Plano — Frente 4 · Régua de performance
 
-**Aberto em:** 03/08/2026 · **Status:** aguardando aprovação para implementar
+**Aberto em:** 03/08/2026 · **Status:** ✅ implementado e concluído (D1–D10, mais o
+bloco `full` reaberto e entregue pela Frente 5b — ver nota de fechamento abaixo)
 
 **Escopo:** V11.4.1 a V11.4.6 do `PLANO_TASKS_V11.md` — regra 12 do Relatório DE/PARA,
 item 5 do Handoff de Produção.
@@ -117,3 +118,24 @@ front cobrem só o que tem tela.
 D1 (schema) → D2 (salvar régua, reusa diretor+histórico) → D3 (cálculo da janela) → D4
 (job, chama D3) → D5 (trava na distribuição, lê o sinal que D4 grava) → D6 (revisão) →
 D7/D8/D9 (front, depende de D2/D3/D4/D6 já existirem) → D10 (testes, fecha tudo).
+
+## Fechamento — a Decisão #2 foi revertida pela Frente 5b (04/08/2026)
+
+D1–D10 fecharam como desenhado para os blocos `interno`/`rede` (Matriz, com senha de
+diretor). O bloco `full`, que este doc deixou como **read-only para o franqueado** por
+governança (Decisão #2 acima) e sem tela própria (nota "bloco `full` sem tela própria
+por agora"), foi **reaberto e resolvido diferente** quando a Lis trouxe o protótipo r41:
+a Franquia Full **edita a própria régua sim**, sem senha de diretor — o gate passou a
+ser por **identidade** (dona da própria empresa + `fn_bloco_performance(empresa) = 'full'`),
+não por senha, porque a Full nunca é diretora. Ver `fn_salvar_regua_performance_full`
+(`20260804140000_v11_5b_2_salvar_regua_performance_full.sql`) e
+`docs/PLANO_FRANQUIA_FULL_V11.md` (Frente 5b).
+
+A preocupação original da Decisão #2 (mudar a régua de **todas** as Fulls de uma vez,
+por ser bloco global) continua valenda e ficou documentada como risco consciente na
+Frente 5b — não foi ignorada, foi pesada e aceita.
+
+O "endereço único" (item 2 da tabela de pendências do `PLANO_TASKS_V11.md`) também
+saiu resolvido: não nasceu uma tela "Central da Franquia" nova para a régua — a Full
+vê e edita a própria régua dentro de `/operacao/xacessos`, seção "Performance"
+(`full-performance-panel.tsx`), ao lado de "Personalização geral".

@@ -172,18 +172,24 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 
 ## Frente 5 · Franquia Full como matrizinha
 
-> **Fechamento parcial em 04/08/2026** (PR em preparação). Plano detalhado em
-> `docs/PLANO_FRANQUIA_FULL_V11.md`. V11.5.4/5.5/5.6 ficaram bloqueadas — investigação
-> achou que a régua trava por gate de diretor (Full nunca pode ser diretora) e precisa
-> de tabela nova (override por empresa); "Modelo CLT" é singleton global sem relação
-> com o time da Full; o r40 nunca teve essa tela pra Full. Decisão do usuário: esperar
-> o protótipo r41 (a caminho, citado pela Lis) antes de desenhar, em vez de adivinhar.
-> Virou Frente 5b.
+> **✅ Frente 5 inteiramente concluída em 04/08/2026** (PR #120, incluindo a Frente 5b
+> que fechou o que faltava). Plano detalhado em `docs/PLANO_FRANQUIA_FULL_V11.md`.
+>
+> V11.5.4/5.5/5.6 chegaram a ficar bloqueadas (a régua trava por gate de diretor — Full
+> nunca pode ser diretora; "Modelo CLT" é singleton global sem relação com o time da
+> Full; o r40 nunca teve essa tela pra Full) esperando o protótipo r41. O r41 chegou
+> junto com "Regras Decididas" em 04/08/2026 e resolveu as 3 dúvidas — virou **Frente
+> 5b** (V11.5b.1-6), entregue no mesmo PR #120, sem precisar da tabela de override por
+> empresa que a investigação original previu (o bloco `full` da régua continua **uma
+> linha compartilhada**, só ganhou uma RPC de salvar sem senha).
 >
 > ✅ V11.5.1 — decisão da Lis: Acessos e permissões › Personalização geral/Performance
-> ✅ V11.5.2 → V11.5.2a (menu 15 áreas) + V11.5.2b (Central da Franquia)
+> ✅ V11.5.2 → V11.5.2a (menu 14 áreas, não 15 nem 16 — ver nota no plano detalhado) + V11.5.2b (Central da Franquia)
 > ✅ V11.5.3 — SLA por empresa (`sla_empresa_config`, não mais singleton)
-> ⏳ V11.5.4/5.5/5.6 — bloqueadas, Frente 5b (esperando r41)
+> ✅ V11.5.4/5.5/5.6 → **Frente 5b** (V11.5b.1-6): histórico da franquia sem senha
+>   (gate por identidade), régua própria sem senha, Complementos do time (4 campos,
+>   não o Modelo CLT inteiro nem produtos/canais/comissão por pessoa), tudo dentro de
+>   `/operacao/xacessos` (não uma tela "Acessos da Full com 5 abas" nova)
 > ✅ V11.5.7 — SLA por lead + fronteira repassado/próprio
 > ✅ V11.5.8 (novo, fora da tabela original) — comissão por origem do lead
 
@@ -192,9 +198,9 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 | V11.5.1 | —     | **Decisão da Lis (item 11):** endereço único das configurações da Full — Central da Franquia × Acessos › Personalização. Bloqueia a tela final | —                |
 | V11.5.2 | front | **Central da Franquia**: leads próprios × repassados da Matriz, SLA e canais próprios                                                          | V11.0.4, V11.5.1 |
 | V11.5.3 | banco | SLA por origem do lead: repassado segue o SLA da Matriz, próprio segue o da Full                                                               | V11.5.2          |
-| V11.5.4 | front | Acessos da Full com 5 abas espelhando a Matriz                                                                                                 | V11.2.5, V11.3.1 |
-| V11.5.5 | front | Modelo CLT + complementos; cadastro direto passando pela **configuração** (produtos/canais/comissão por pessoa, selo "personalizado")          | V11.2.7          |
-| V11.5.6 | banco | Régua e histórico próprios da Full                                                                                                             | V11.4.1, V11.0.6 |
+| V11.5.4 | front | ~~Acessos da Full com 5 abas espelhando a Matriz~~ — entregue como 2 seções novas (Personalização geral/Performance) dentro de `/operacao/xacessos` (V11.5b.4) | V11.2.5, V11.3.1 |
+| V11.5.5 | front | ~~Modelo CLT + complementos; cadastro direto passando pela configuração (produtos/canais/comissão por pessoa, selo "personalizado")~~ — entregue como Modelo CLT (leitura) + Complementos do time, 4 campos (V11.5b.3) | V11.2.7          |
+| V11.5.6 | banco | ~~Régua e histórico próprios da Full~~ — entregue via RPCs novas com gate de identidade, sem senha (V11.5b.1/2)                                | V11.4.1, V11.0.6 |
 | V11.5.7 | banco | Lead repassado que dá perda ou estoura SLA **cruza a fronteira** e volta como Devolvido/Perda da Matriz                                        | V11.5.3          |
 
 ## Frente 6 · Governança e histórico
@@ -308,11 +314,9 @@ detalhes da hierarquia estão em `docs/PLANO_HIERARQUIA_V11.md`.
 
 ## Decisões pendentes que bloqueiam tasks
 
-| #   | Pendência                                                     | Bloqueia                | Com quem |
-| --- | ------------------------------------------------------------- | ----------------------- | -------- |
-| 1   | Documento "Regras Decididas" não veio no pacote               | Frentes 4 e 2 (escopos) | Lis      |
-| 2   | Endereço único das configurações da Full (item 11 do Handoff) | V11.5.2, V11.5.4        | Lis      |
-| 3   | Carteira de Recuperação: V11 sem referência visual, ou V12?   | V11.9.2                 | Lis      |
+**Nenhuma.** As 3 pendências que bloquearam tasks foram todas resolvidas pela Lis (ver
+"Decisões já resolvidas" abaixo) — a última delas em 04/08/2026. Tabela mantida vazia
+de propósito, para reaparecer só se uma decisão nova travar alguma task.
 
 ### Decisões já resolvidas
 
@@ -326,3 +330,12 @@ detalhes da hierarquia estão em `docs/PLANO_HIERARQUIA_V11.md`.
   SPF e DMARC (`p=none`) publicados no Cloudflare. O remetente é
   `acesso@cote-certo.sandboxallcom.com` e o `Reply-To` é
   `diego.gervasio@allcomtelecom.com`.
+- ✅ **Documento "Regras Decididas" não veio no pacote:** chegou em 04/08/2026
+  (`CoteCerto_Regras_Decididas.html`, junto do protótipo r41, do Handoff atualizado e
+  das Respostas de Produto/TI) — destravou a Frente 5b. Ver `docs/PERGUNTAS_PARA_LIS.md`
+  item 1 e `docs/PLANO_FRANQUIA_FULL_V11.md`.
+- ✅ **Endereço único das configurações da Full (item 11 do Handoff):** resolvido em
+  03/08/2026 — **Acessos e permissões › Personalização geral/Performance**, não uma
+  tela "Central da Franquia" separada. Ver `docs/PERGUNTAS_PARA_LIS.md` item 2.
+- ✅ **Carteira de Recuperação:** resolvido em 03/08/2026 — fica para a V12, fora do
+  escopo da V11 (V11.9.2). Ver `docs/PERGUNTAS_PARA_LIS.md` item 4.

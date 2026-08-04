@@ -33,7 +33,7 @@ Preencher o `.env` com o mapeamento (a CLI atual chama as chaves de Publishable/
 | **Secret** key                         | `SELF_SUPABASE_SERVICE_ROLE_KEY`          |
 
 ```bash
-# 3. Aplicar as 82 migrations atuais + seed num banco limpo
+# 3. Aplicar as migrations atuais (131 em 04/08/2026) + seed num banco limpo
 supabase db reset
 
 # 4. Instalar dependências e subir o app

@@ -1,6 +1,7 @@
 # Plano — Frente 3 · Cadastros e ciclo de vida
 
-**Aberto em:** 01/08/2026 · **Status:** aguardando aprovação para implementar
+**Aberto em:** 01/08/2026 · **Status:** ✅ implementado e concluído (Frente 3
+inteiramente fechada em 03/08/2026 — ver "Fechamento" abaixo)
 
 **Escopo:** V11.3.1 a V11.3.7 do `PLANO_TASKS_V11.md`, **mais V11.1.6 e V11.1.7** (adiadas
 por dependerem de e-mail/criar-senha — resolvido no PR #104, em produção).
@@ -162,3 +163,8 @@ C14 (fechar a porta antiga, só depois que C3 está validado em produção) → 
   trava de exclusão (Master c/ franquia, franquia c/ vendedor) e desligamento
   (motivo obrigatório → solicitar → aprovar), além de confirmar `/auth/cadastro`
   fora do ar (C14). Com isso, a Frente 3 está inteiramente concluída.
+- **C13 fechada** (não listada nas linhas acima por descuido de bookkeeping — a
+  implementação sempre esteve pronta). Botão "Quero falar com a Cote Certo" em
+  `src/routes/auth.index.tsx`, server function `src/lib/contato.functions.ts`
+  (rate-limit em memória, chamada direta ao Resend, sem outbox — dispara-e-esquece,
+  como decidido acima).

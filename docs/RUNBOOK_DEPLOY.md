@@ -54,8 +54,10 @@ Domínios:
 > Necessário **só na primeira vez** ou quando quiser reconstruir o schema do zero.
 > Para mudanças incrementais depois, ver §6.
 
-O schema é definido pelas 82 migrations atuais em `supabase/migrations/` +
-`supabase/seed.sql`. Confirme a contagem antes de cada rebuild; esse número cresce.
+O schema é definido pelas migrations atuais em `supabase/migrations/` (131 em
+04/08/2026, rebuild completo do fechamento da V11) + `supabase/seed.sql`. Confirme a
+contagem antes de cada rebuild (`ls supabase/migrations/*.sql | wc -l`); esse número
+cresce.
 O procedimento gera um **artefato único** (`bootstrap_prod.sql`) validado localmente e o
 aplica no Postgres de produção.
 
