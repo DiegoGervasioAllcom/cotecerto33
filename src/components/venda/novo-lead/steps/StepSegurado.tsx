@@ -61,13 +61,15 @@ export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
           )}
         </div>
         <div className="field-group full">
-          <label>Nome social</label>
+          <label>
+            Nome social<span className="req">*</span>
+          </label>
           <input
             className="input"
             value={f.nomeSocial}
             maxLength={150}
             onChange={(e) => up("nomeSocial", e.target.value)}
-            placeholder="Opcional"
+            placeholder="Nome e sobrenome"
           />
           {erros.nomeSocial && (
             <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
@@ -196,43 +198,13 @@ export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
           )}
         </div>
         <div className="field-group">
-          <label>Logradouro</label>
+          <label>Cidade / UF</label>
           <input
             className="input"
-            value={f.logradouro}
-            maxLength={2000}
-            onChange={(e) => up("logradouro", e.target.value)}
+            value={f.cidade ? `${f.cidade} / ${f.uf}` : ""}
+            readOnly
+            style={{ background: "var(--offwhite)" }}
             placeholder="Preenche via CEP"
-          />
-        </div>
-        <div className="field-group">
-          <label>Bairro</label>
-          <input
-            className="input"
-            value={f.bairro}
-            maxLength={2000}
-            onChange={(e) => up("bairro", e.target.value)}
-            placeholder="Preenche via CEP"
-          />
-        </div>
-        <div className="field-group">
-          <label>Cidade</label>
-          <input
-            className="input"
-            value={f.cidade}
-            maxLength={150}
-            onChange={(e) => up("cidade", e.target.value)}
-            placeholder="Preenche via CEP"
-          />
-        </div>
-        <div className="field-group">
-          <label>UF</label>
-          <input
-            className="input"
-            value={f.uf}
-            maxLength={2}
-            onChange={(e) => up("uf", e.target.value.toUpperCase())}
-            placeholder="UF"
           />
         </div>
         <div className="field-group">

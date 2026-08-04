@@ -249,8 +249,10 @@ test.describe("roteiro de vendas", () => {
     expect(mutations, "selo demonstrativo não pode persistir formulário inválido").toEqual([]);
     await dialog.getByRole("button", { name: "Sair", exact: true }).click();
     await expect(ready).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Dados do Segurado" })).toBeVisible();
-    await expect(page.locator(".stepper .step").first()).toHaveClass(/current/);
+    // Fora do preview do tour (sem ?id=, sem tutorialPreview ativo), a página
+    // real de "Novo lead" volta a mostrar o gate — nenhum progresso de fato
+    // foi feito durante a demonstração.
+    await expect(page.getByRole("heading", { name: "Lead Manual — origem" })).toBeVisible();
 
     await posicionarTutorial(page, vendedor.userId, "sales", 2, 13);
     dialog = await esperarPasso(page, "Agende um retorno — e seja lembrada", "14 / 15");

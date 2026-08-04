@@ -1,4 +1,6 @@
 export type Form = {
+  // Lead Manual — origem (capturada no gate antes do wizard, V11)
+  canalOrigem: string;
   // Segurado
   cpf: string;
   pessoa: string;
