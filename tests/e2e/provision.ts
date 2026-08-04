@@ -570,6 +570,49 @@ export async function lerSlaSingletonMatriz(): Promise<number | null> {
   return data?.sla_segundos ?? null;
 }
 
+/**
+ * `regua_performance_config` do bloco `'full'` — UMA LINHA COMPARTILHADA por
+ * todas as Fulls (V11.5b.2), não uma por empresa.
+ */
+export async function lerReguaPerformanceFull() {
+  const { data, error } = await admin
+    .from("regua_performance_config")
+    .select(
+      "janela_dias,conv_atencao_pct,conv_travado_pct,dias_atencao,dias_travado,cancelamentos_limite,pausa_leads_ativa",
+    )
+    .eq("bloco", "full")
+    .maybeSingle();
+  if (error) throw new Error(`ler regua_performance_config (full): ${error.message}`);
+  return data;
+}
+
+/** `full_comissao_complementos` de UMA empresa (V11.5b.3, 1 linha por Full). */
+export async function lerComplementosFull(empresaId: string) {
+  const { data, error } = await admin
+    .from("full_comissao_complementos")
+    .select("comissao_venda_pct,comissao_renovacao_pct,bonus_campanha,meta_padrao_equipe")
+    .eq("empresa_id", empresaId)
+    .maybeSingle();
+  if (error) throw new Error(`ler full_comissao_complementos: ${error.message}`);
+  return data;
+}
+
+export type ReguaPerformanceFull = NonNullable<Awaited<ReturnType<typeof lerReguaPerformanceFull>>>;
+
+/**
+ * Restaura a linha COMPARTILHADA do bloco 'full' (V11.5b.2) — usar sempre no
+ * `afterAll` de specs que salvam a régua da Full via UI, para não vazar
+ * estado entre specs/execuções em paralelo (`admin` bypassa o gate por
+ * identidade, então serve para desfazer sem precisar logar como a persona).
+ */
+export async function restaurarReguaPerformanceFull(original: ReguaPerformanceFull): Promise<void> {
+  const { error } = await admin
+    .from("regua_performance_config")
+    .update(original)
+    .eq("bloco", "full");
+  if (error) throw new Error(`restaurar regua_performance_config (full): ${error.message}`);
+}
+
 // ===========================================================================
 // Convite Supper (V11 · Frente 1)
 // ===========================================================================
