@@ -22,6 +22,7 @@ import { Stepper } from "@/components/venda/novo-lead/Stepper";
 import { WizardFooter } from "@/components/venda/novo-lead/WizardFooter";
 import { ResumoCotacao } from "@/components/venda/novo-lead/ResumoCotacao";
 import { ClassificarPerdaModal } from "@/components/venda/novo-lead/ClassificarPerdaModal";
+import { LeadManualGate } from "@/components/venda/novo-lead/LeadManualGate";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
@@ -53,6 +54,7 @@ function Page() {
   }, []);
 
   const [f, setF] = useState<Form>({
+    canalOrigem: "",
     cpf: "",
     pessoa: "Física",
     nome: "",
@@ -217,6 +219,9 @@ function Page() {
   const { erros, validarEtapa } = useValidacaoEtapas(f, marcas, modelos, fipeValor);
 
   const { id: routeId, step: routeStep } = Route.useSearch();
+  // V11 · Lead Manual — origem: quem retoma um rascunho (?id=) já passou por
+  // aqui; só lead novo (sem SLA da Central) vê o gate.
+  const [leadManualDone, setLeadManualDone] = useState(!!routeId);
   const { cotacaoId, saveState, lastSavedAt, loading, persistir } = useCotacaoRascunho({
     f,
     setF,
@@ -253,6 +258,26 @@ function Page() {
 
   function doSimularCalculo() {
     void simularCalculo();
+  }
+
+  if (!leadManualDone) {
+    return (
+      <AppShell title="Novo lead">
+        <ProtoIcons />
+        <LeadManualGate
+          onIniciar={(dados) => {
+            setF((p) => ({
+              ...p,
+              nome: dados.nome,
+              celular: dados.celular,
+              placa: dados.placa,
+              canalOrigem: dados.canal,
+            }));
+            setLeadManualDone(true);
+          }}
+        />
+      </AppShell>
+    );
   }
 
   return (

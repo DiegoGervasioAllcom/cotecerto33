@@ -205,6 +205,9 @@ export function useCotacaoRascunho(params: {
     const { data, error } = await supabase.rpc("salvar_cotacao_rascunho", {
       p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
       p_payload: buildPayload() as never,
+      // Canal capturado no gate "Lead Manual — origem" (só importa na criação
+      // do lead; a RPC ignora em updates). Sem valor, cai no default 'cotacao'.
+      p_origem: f.canalOrigem || undefined,
     });
     if (error) {
       console.error("[cotacao] save error", error);
