@@ -183,6 +183,16 @@ Franquia Full, as seções extras do Bloco 4.
 - [ ] **Escopo crítico:** cada persona de grupo **só vê a própria sub-rede** —
       Master não vê a rede de outro Master; Coordenador vê tudo da Matriz;
       Supervisor vê o que o cargo permite. Confirme trocando entre elas.
+- [ ] **Solicitar desligamento** (Master ou Franquia): peça o desligamento de um
+      vendedor da própria rede — tente enviar **sem motivo** primeiro (deve
+      bloquear, motivo é obrigatório); confirme com motivo preenchido. A
+      solicitação vai pra Matriz decidir (retome em "Aprovar desligamento" no
+      Bloco 5). Confira também "Minhas solicitações" mostrando o status
+      (pendente/aprovado/negado).
+- [ ] **Trava de exclusão:** tente excluir direto (sem passar por desligamento) um
+      Master que tem franquia/vendedor embaixo, ou uma franquia que tem vendedor
+      embaixo — deve **bloquear** com mensagem clara, não deixar excluir
+      silenciosamente e órfãos ficarem soltos na hierarquia.
 
 ---
 
@@ -248,13 +258,29 @@ Volte para a **Matriz** e valide as telas de comando (a Matriz vê **tudo**).
       um pedido. Confira: aprovar **atualiza o prêmio** automaticamente;
       contraproposta volta ao solicitante; escalar sobe na cadeia
       **Master → Coordenador → Matriz**.
+- [ ] **Aprovar desligamento**: retome a solicitação do Bloco 3 — em **Acessos** →
+      aba **Desligamentos**, confirme que o motivo aparece pra decisão; aprove uma
+      e negue outra (se tiver 2). Depois de aprovado, a pessoa sai da rede ativa e
+      vai para a lista de desligados; confirme que "Minhas solicitações" do lado de
+      quem pediu reflete o status novo.
+- [ ] **Vendas** (visão da rede, diferente do Extrato pessoal do vendedor): confira
+      que mostra as vendas de toda a operação, com filtro por franquia/vendedor.
+- [ ] **Franquias**: abra o detalhe de uma franquia já cadastrada (não a que você
+      acabou de criar por convite) e confirme que os dados carregam e são editáveis
+      onde deveriam ser.
 - [ ] **Comissões**: fechamento por competência; KPIs; comissão por
       franquia/seguradora; top vendedores.
 - [ ] **Premiações**: cadastre uma campanha, lance um ganhador manualmente, marque
       **pago/a pagar**.
-- [ ] **Estornos**: lista de vendas canceladas com prêmio/comissão revertidos.
+- [ ] **Estornos**: cancele uma apólice (não só veja a lista) e confirme que ela
+      aparece aqui com prêmio/comissão revertidos automaticamente.
 - [ ] **Renovações**: apólices a vencer (janela de 60 dias); "Iniciar renovação"
       cria o lead na distribuição padrão.
+- [ ] **Mensagens prontas (biblioteca/admin)**: cadastre ou edite uma mensagem —
+      confirme que ela aparece pro vendedor consumir (Bloco 1).
+- [ ] **Motivos e submotivos de perda (catálogo)**: confira a lista configurada —
+      se der pra ajustar aqui, teste que a mudança reflete no modal "Classificar
+      perda" que o vendedor usa (Bloco 1).
 - [ ] **Relatórios**: gere cada um dos relatórios em **PDF** e em **Excel/CSV** e
       confira que baixam e abrem.
 - [ ] **Supervisão**: caça-gargalos e comparativo de vendedores.
