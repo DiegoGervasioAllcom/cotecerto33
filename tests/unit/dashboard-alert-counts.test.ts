@@ -88,9 +88,10 @@ describe("consultas dos alertas reais da Visão geral", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-29T12:00:00.000Z"));
     mock.queryOptions = undefined;
-    // 6 consultas via .from(): sem-atendimento, sla-estourado, vendas-não-pagas,
-    // estornos, renovações e vendedores em atenção/travado (profiles).
-    mock.results = Array.from({ length: 6 }, (_, index) => ({
+    // 9 consultas via .from(): sem-atendimento, sla-estourado, vendas-não-pagas,
+    // estornos, renovações, vendedores em atenção/travado (profiles), leads
+    // bloqueados, cadastros pendentes e desligamentos pendentes (barra ALERTAS).
+    mock.results = Array.from({ length: 9 }, (_, index) => ({
       count: index + 1,
       error: null,
     }));
@@ -103,7 +104,7 @@ describe("consultas dos alertas reais da Visão geral", () => {
     mock.rpcCalls.length = 0;
   });
 
-  it("faz seis contagens exact/head e duas RPCs, preservando a RLS do client autenticado", async () => {
+  it("faz nove contagens exact/head e duas RPCs, preservando a RLS do client autenticado", async () => {
     useDashboardAlertCounts(period, Date.now(), 180);
     const result = await mock.queryOptions?.queryFn();
 
@@ -116,8 +117,11 @@ describe("consultas dos alertas reais da Visão geral", () => {
       franquiasAbaixoMeta: 10,
       vendedoresAtencao: 6,
       pendentesSeguradora: 20,
+      leadsBloqueados: 7,
+      cadastrosPendentes: 8,
+      desligamentosPendentes: 9,
     });
-    expect(mock.queries).toHaveLength(6);
+    expect(mock.queries).toHaveLength(9);
     for (const query of mock.queries) {
       expect(query.operations[0]).toEqual(["select", "id", { count: "exact", head: true }]);
     }
@@ -138,6 +142,12 @@ describe("consultas dos alertas reais da Visão geral", () => {
       ["atencao", "travado"],
     ]);
     expect(mock.queries[5]?.operations).toContainEqual(["is", "desligado_em", null]);
+    expect(mock.queries[6]?.table).toBe("leads");
+    expect(mock.queries[6]?.operations).toContainEqual(["eq", "bloqueado", true]);
+    expect(mock.queries[7]?.table).toBe("empresas");
+    expect(mock.queries[7]?.operations).toContainEqual(["eq", "status", "pendente"]);
+    expect(mock.queries[8]?.table).toBe("desligamento_solicitacoes");
+    expect(mock.queries[8]?.operations).toContainEqual(["eq", "status", "pendente"]);
 
     expect(mock.rpcCalls).toHaveLength(2);
     expect(mock.rpcCalls[0]).toEqual({
