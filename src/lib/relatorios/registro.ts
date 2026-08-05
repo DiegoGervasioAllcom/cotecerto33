@@ -10,12 +10,14 @@ export type ResultadoRelatorio = {
   resumo?: string[];
 };
 
+export type FiltrosRelatorio = { empresaId?: string; vendedorId?: string };
+
 export type RelatorioDef = {
   key: string;
   titulo: string;
   descricao: string;
   icone: string;
-  fetch: (periodo: Periodo) => Promise<ResultadoRelatorio>;
+  fetch: (periodo: Periodo, filtros: FiltrosRelatorio) => Promise<ResultadoRelatorio>;
 };
 
 async function loadEmpresas() {
@@ -29,21 +31,32 @@ async function loadProfiles() {
 }
 
 /* ---------- 1) Performance comercial ---------- */
-async function fetchPerformanceComercial(periodo: Periodo): Promise<ResultadoRelatorio> {
+async function fetchPerformanceComercial(
+  periodo: Periodo,
+  filtros: FiltrosRelatorio,
+): Promise<ResultadoRelatorio> {
+  let leadsQuery = supabase
+    .from("leads")
+    .select("id,empresa_id,responsavel_id")
+    .gte("criado_em", periodo.ini)
+    .lt("criado_em", periodo.fim)
+    .limit(LIMITE);
+  if (filtros.empresaId) leadsQuery = leadsQuery.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) leadsQuery = leadsQuery.eq("responsavel_id", filtros.vendedorId);
+
+  let propostasQuery = supabase
+    .from("propostas")
+    .select("id,empresa_id,responsavel_id,premio,valor")
+    .not("emitida_em", "is", null)
+    .gte("emitida_em", periodo.ini)
+    .lt("emitida_em", periodo.fim)
+    .limit(LIMITE);
+  if (filtros.empresaId) propostasQuery = propostasQuery.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) propostasQuery = propostasQuery.eq("responsavel_id", filtros.vendedorId);
+
   const [leadsRes, propostasRes, empresas, profiles] = await Promise.all([
-    supabase
-      .from("leads")
-      .select("id,empresa_id,responsavel_id")
-      .gte("criado_em", periodo.ini)
-      .lt("criado_em", periodo.fim)
-      .limit(LIMITE),
-    supabase
-      .from("propostas")
-      .select("id,empresa_id,responsavel_id,premio,valor")
-      .not("emitida_em", "is", null)
-      .gte("emitida_em", periodo.ini)
-      .lt("emitida_em", periodo.fim)
-      .limit(LIMITE),
+    leadsQuery,
+    propostasQuery,
     loadEmpresas(),
     loadProfiles(),
   ]);
@@ -108,18 +121,25 @@ async function fetchPerformanceComercial(periodo: Periodo): Promise<ResultadoRel
 }
 
 /* ---------- 2) Financeiro ---------- */
-async function fetchFinanceiro(periodo: Periodo): Promise<ResultadoRelatorio> {
+async function fetchFinanceiro(
+  periodo: Periodo,
+  filtros: FiltrosRelatorio,
+): Promise<ResultadoRelatorio> {
+  let query = supabase
+    .from("propostas")
+    .select(
+      "id,numero,apolice_numero,seguradora,premio,valor,emitida_em,pago_em,cancelada_em,empresa_id,responsavel_id",
+    )
+    .not("emitida_em", "is", null)
+    .gte("emitida_em", periodo.ini)
+    .lt("emitida_em", periodo.fim)
+    .order("emitida_em", { ascending: false })
+    .limit(LIMITE);
+  if (filtros.empresaId) query = query.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) query = query.eq("responsavel_id", filtros.vendedorId);
+
   const [{ data, error }, empresas, profiles] = await Promise.all([
-    supabase
-      .from("propostas")
-      .select(
-        "id,numero,apolice_numero,seguradora,premio,valor,emitida_em,pago_em,cancelada_em,empresa_id,responsavel_id",
-      )
-      .not("emitida_em", "is", null)
-      .gte("emitida_em", periodo.ini)
-      .lt("emitida_em", periodo.fim)
-      .order("emitida_em", { ascending: false })
-      .limit(LIMITE),
+    query,
     loadEmpresas(),
     loadProfiles(),
   ]);
@@ -177,16 +197,23 @@ async function fetchFinanceiro(periodo: Periodo): Promise<ResultadoRelatorio> {
 }
 
 /* ---------- 3) Comissão ---------- */
-async function fetchComissao(periodo: Periodo): Promise<ResultadoRelatorio> {
+async function fetchComissao(
+  periodo: Periodo,
+  filtros: FiltrosRelatorio,
+): Promise<ResultadoRelatorio> {
+  let query = supabase
+    .from("v_comissao_por_competencia")
+    .select(
+      "beneficiario_id,competencia,empresa_id,total_creditos,total_debitos,saldo,qtd_creditos,qtd_debitos",
+    )
+    .eq("competencia", periodo.competencia)
+    .order("saldo", { ascending: false })
+    .limit(LIMITE);
+  if (filtros.empresaId) query = query.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) query = query.eq("beneficiario_id", filtros.vendedorId);
+
   const [{ data, error }, profiles, empresas] = await Promise.all([
-    supabase
-      .from("v_comissao_por_competencia")
-      .select(
-        "beneficiario_id,competencia,empresa_id,total_creditos,total_debitos,saldo,qtd_creditos,qtd_debitos",
-      )
-      .eq("competencia", periodo.competencia)
-      .order("saldo", { ascending: false })
-      .limit(LIMITE),
+    query,
     loadProfiles(),
     loadEmpresas(),
   ]);
@@ -232,17 +259,24 @@ async function fetchComissao(periodo: Periodo): Promise<ResultadoRelatorio> {
 }
 
 /* ---------- 4) Premiação ---------- */
-async function fetchPremiacao(periodo: Periodo): Promise<ResultadoRelatorio> {
+async function fetchPremiacao(
+  periodo: Periodo,
+  filtros: FiltrosRelatorio,
+): Promise<ResultadoRelatorio> {
+  let query = supabase
+    .from("premiacao_lancamentos")
+    .select(
+      "id,campanha_id,vendedor_id,empresa_id,competencia,valor,status,pago_em," +
+        "campanha:premiacao_campanhas(nome)",
+    )
+    .eq("competencia", periodo.competencia)
+    .order("valor", { ascending: false })
+    .limit(LIMITE);
+  if (filtros.empresaId) query = query.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) query = query.eq("vendedor_id", filtros.vendedorId);
+
   const [{ data, error }, profiles, empresas] = await Promise.all([
-    supabase
-      .from("premiacao_lancamentos")
-      .select(
-        "id,campanha_id,vendedor_id,empresa_id,competencia,valor,status,pago_em," +
-          "campanha:premiacao_campanhas(nome)",
-      )
-      .eq("competencia", periodo.competencia)
-      .order("valor", { ascending: false })
-      .limit(LIMITE),
+    query,
     loadProfiles(),
     loadEmpresas(),
   ]);
@@ -297,18 +331,25 @@ async function fetchPremiacao(periodo: Periodo): Promise<ResultadoRelatorio> {
 }
 
 /* ---------- 5) Estornos ---------- */
-async function fetchEstornos(periodo: Periodo): Promise<ResultadoRelatorio> {
+async function fetchEstornos(
+  periodo: Periodo,
+  filtros: FiltrosRelatorio,
+): Promise<ResultadoRelatorio> {
+  let query = supabase
+    .from("propostas")
+    .select(
+      "id,numero,apolice_numero,seguradora,premio,valor,comissao_valor,cancelada_em,cancelamento_motivo,empresa_id,responsavel_id",
+    )
+    .not("cancelada_em", "is", null)
+    .gte("cancelada_em", periodo.ini)
+    .lt("cancelada_em", periodo.fim)
+    .order("cancelada_em", { ascending: false })
+    .limit(LIMITE);
+  if (filtros.empresaId) query = query.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) query = query.eq("responsavel_id", filtros.vendedorId);
+
   const [{ data, error }, empresas, profiles] = await Promise.all([
-    supabase
-      .from("propostas")
-      .select(
-        "id,numero,apolice_numero,seguradora,premio,valor,comissao_valor,cancelada_em,cancelamento_motivo,empresa_id,responsavel_id",
-      )
-      .not("cancelada_em", "is", null)
-      .gte("cancelada_em", periodo.ini)
-      .lt("cancelada_em", periodo.fim)
-      .order("cancelada_em", { ascending: false })
-      .limit(LIMITE),
+    query,
     loadEmpresas(),
     loadProfiles(),
   ]);
@@ -355,39 +396,52 @@ async function fetchEstornos(periodo: Periodo): Promise<ResultadoRelatorio> {
 }
 
 /* ---------- 6) Renovações ---------- */
-async function fetchRenovacoes(periodo: Periodo): Promise<ResultadoRelatorio> {
+async function fetchRenovacoes(
+  periodo: Periodo,
+  filtros: FiltrosRelatorio,
+): Promise<ResultadoRelatorio> {
   const windowDays = 90;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const limit = new Date(today);
   limit.setDate(limit.getDate() + windowDays);
 
+  let vencendoQuery = supabase
+    .from("propostas")
+    .select("id,numero,apolice_numero,seguradora,premio,valor,vencimento,empresa_id,responsavel_id")
+    .not("vencimento", "is", null)
+    .is("cancelada_em", null)
+    .gte("vencimento", today.toISOString().slice(0, 10))
+    .lte("vencimento", limit.toISOString().slice(0, 10))
+    .order("vencimento", { ascending: true })
+    .limit(LIMITE);
+  if (filtros.empresaId) vencendoQuery = vencendoQuery.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) vencendoQuery = vencendoQuery.eq("responsavel_id", filtros.vendedorId);
+
+  let renovQuery = supabase
+    .from("propostas")
+    .select("id", { count: "exact", head: true })
+    .eq("tipo_venda", "renovacao")
+    .not("emitida_em", "is", null)
+    .gte("emitida_em", periodo.ini)
+    .lt("emitida_em", periodo.fim);
+  if (filtros.empresaId) renovQuery = renovQuery.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) renovQuery = renovQuery.eq("responsavel_id", filtros.vendedorId);
+
+  let perdQuery = supabase
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("origem", "renovacao")
+    .eq("status_pipeline", "perdido")
+    .gte("atualizado_em", periodo.ini)
+    .lt("atualizado_em", periodo.fim);
+  if (filtros.empresaId) perdQuery = perdQuery.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) perdQuery = perdQuery.eq("responsavel_id", filtros.vendedorId);
+
   const [vencendo, renov, perd, empresas, profiles] = await Promise.all([
-    supabase
-      .from("propostas")
-      .select(
-        "id,numero,apolice_numero,seguradora,premio,valor,vencimento,empresa_id,responsavel_id",
-      )
-      .not("vencimento", "is", null)
-      .is("cancelada_em", null)
-      .gte("vencimento", today.toISOString().slice(0, 10))
-      .lte("vencimento", limit.toISOString().slice(0, 10))
-      .order("vencimento", { ascending: true })
-      .limit(LIMITE),
-    supabase
-      .from("propostas")
-      .select("id", { count: "exact", head: true })
-      .eq("tipo_venda", "renovacao")
-      .not("emitida_em", "is", null)
-      .gte("emitida_em", periodo.ini)
-      .lt("emitida_em", periodo.fim),
-    supabase
-      .from("leads")
-      .select("id", { count: "exact", head: true })
-      .eq("origem", "renovacao")
-      .eq("status_pipeline", "perdido")
-      .gte("atualizado_em", periodo.ini)
-      .lt("atualizado_em", periodo.fim),
+    vencendoQuery,
+    renovQuery,
+    perdQuery,
     loadEmpresas(),
     loadProfiles(),
   ]);
@@ -426,17 +480,24 @@ async function fetchRenovacoes(periodo: Periodo): Promise<ResultadoRelatorio> {
 }
 
 /* ---------- 7) Leads ---------- */
-async function fetchLeads(periodo: Periodo): Promise<ResultadoRelatorio> {
+async function fetchLeads(
+  periodo: Periodo,
+  filtros: FiltrosRelatorio,
+): Promise<ResultadoRelatorio> {
+  let query = supabase
+    .from("leads")
+    .select(
+      "id,nome,origem,status_pipeline,empresa_id,responsavel_id,criado_em,distribuido_em,ultimo_atendimento_em",
+    )
+    .gte("criado_em", periodo.ini)
+    .lt("criado_em", periodo.fim)
+    .order("criado_em", { ascending: false })
+    .limit(LIMITE);
+  if (filtros.empresaId) query = query.eq("empresa_id", filtros.empresaId);
+  if (filtros.vendedorId) query = query.eq("responsavel_id", filtros.vendedorId);
+
   const [{ data, error }, empresas, profiles] = await Promise.all([
-    supabase
-      .from("leads")
-      .select(
-        "id,nome,origem,status_pipeline,empresa_id,responsavel_id,criado_em,distribuido_em,ultimo_atendimento_em",
-      )
-      .gte("criado_em", periodo.ini)
-      .lt("criado_em", periodo.fim)
-      .order("criado_em", { ascending: false })
-      .limit(LIMITE),
+    query,
     loadEmpresas(),
     loadProfiles(),
   ]);

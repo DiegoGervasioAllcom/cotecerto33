@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { supabase } from "@/integrations/supabase/client";
 import { exportCsv, exportPdf } from "@/lib/export-relatorio";
-import { monthPeriodo, periodoOptions } from "@/lib/relatorios/periodo";
+import { monthPeriodo, periodoOptions, ultimosDiasPeriodo } from "@/lib/relatorios/periodo";
 import { RELATORIOS } from "@/lib/relatorios/registro";
 
 export const Route = createFileRoute("/_authenticated/operacao/relatorios")({
@@ -68,13 +69,33 @@ function RepCard({
   );
 }
 
+const PERIODO_90_DIAS = "90dias";
+
 function Page() {
-  const [periodOffset, setPeriodOffset] = useState(0);
-  const periodo = useMemo(() => monthPeriodo(periodOffset), [periodOffset]);
+  const [periodOffset, setPeriodOffset] = useState<number | typeof PERIODO_90_DIAS>(0);
+  const periodo = useMemo(
+    () => (periodOffset === PERIODO_90_DIAS ? ultimosDiasPeriodo(90) : monthPeriodo(periodOffset)),
+    [periodOffset],
+  );
   const periodOpts = useMemo(() => periodoOptions(), []);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [formatoAtivo, setFormatoAtivo] = useState<"pdf" | "csv" | null>(null);
   const [erros, setErros] = useState<Record<string, string | null>>({});
+  const [franquiaId, setFranquiaId] = useState("");
+  const [vendedorId, setVendedorId] = useState("");
+  const [franquias, setFranquias] = useState<{ id: string; nome: string }[]>([]);
+  const [vendedores, setVendedores] = useState<{ id: string; nome: string }[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      const [em, pr] = await Promise.all([
+        supabase.from("empresas").select("id,nome").order("nome"),
+        supabase.from("profiles").select("id,nome").order("nome"),
+      ]);
+      setFranquias((em.data ?? []) as { id: string; nome: string }[]);
+      setVendedores((pr.data ?? []) as { id: string; nome: string }[]);
+    })();
+  }, []);
 
   async function gerar(reportKey: string, formato: "pdf" | "csv") {
     const def = RELATORIOS.find((r) => r.key === reportKey);
@@ -83,7 +104,10 @@ function Page() {
     setFormatoAtivo(formato);
     setErros((prev) => ({ ...prev, [reportKey]: null }));
     try {
-      const { colunas, linhas, resumo } = await def.fetch(periodo);
+      const { colunas, linhas, resumo } = await def.fetch(periodo, {
+        empresaId: franquiaId || undefined,
+        vendedorId: vendedorId || undefined,
+      });
       if (formato === "csv") {
         exportCsv(`${def.titulo}-${periodo.label}`, colunas, linhas);
       } else {
@@ -115,11 +139,40 @@ function Page() {
         <select
           className="select-mini"
           value={periodOffset}
-          onChange={(e) => setPeriodOffset(Number(e.target.value))}
+          onChange={(e) =>
+            setPeriodOffset(
+              e.target.value === PERIODO_90_DIAS ? PERIODO_90_DIAS : Number(e.target.value),
+            )
+          }
         >
           {periodOpts.map((p) => (
             <option key={p.off} value={p.off}>
               {p.label}
+            </option>
+          ))}
+          <option value={PERIODO_90_DIAS}>Últimos 90 dias</option>
+        </select>
+        <select
+          className="select-mini"
+          value={franquiaId}
+          onChange={(e) => setFranquiaId(e.target.value)}
+        >
+          <option value="">Todas as franquias</option>
+          {franquias.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.nome}
+            </option>
+          ))}
+        </select>
+        <select
+          className="select-mini"
+          value={vendedorId}
+          onChange={(e) => setVendedorId(e.target.value)}
+        >
+          <option value="">Todos os vendedores</option>
+          {vendedores.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.nome}
             </option>
           ))}
         </select>
