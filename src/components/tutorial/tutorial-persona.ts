@@ -20,6 +20,10 @@ export function resolveTutorialKind({
   if (role === "matriz") return "matriz";
   if (role === "franqueado" && scopeLoading) return null;
   if (role === "vendedor" || (role === "franqueado" && isFranqIndividual)) return "sales";
+  // supervisor é sempre um dos 3 cargos internos (H1-H8) e por isso saiu de
+  // `isGroupView` (não supervisiona franquia) — mas o roteiro de tutorial
+  // dele é independente disso e continua com copy própria abaixo.
+  if (role === "supervisor") return "group";
   return isGroupView ? "group" : null;
 }
 
