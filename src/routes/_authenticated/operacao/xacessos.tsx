@@ -126,7 +126,8 @@ function Page() {
       (ur.data ?? []).forEach((x) => {
         roleByUser[x.user_id] ??= x.role as SistemaRole;
       });
-      const ids = Object.keys(roleByUser);
+      // não lista o próprio gestor logado na tabela de equipe
+      const ids = Object.keys(roleByUser).filter((id) => id !== profile?.id);
       if (ids.length === 0) {
         setRows([]);
         setLoading(false);
@@ -179,7 +180,6 @@ function Page() {
 
       setRows(
         ids
-          // não lista o próprio gestor logado na tabela de equipe
           .map((id) => {
             const p = profileById[id];
             const role = roleByUser[id];
