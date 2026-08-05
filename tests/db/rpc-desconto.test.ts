@@ -592,7 +592,6 @@ describe("G3.2 — RPCs do fluxo de desconto", () => {
       const master = await criarPersonaComEmpresa("master", { emailPrefix: "g32-franq-master" });
       const franqueado = await criarPersonaComEmpresa("franqueado", {
         emailPrefix: "g32-franq-individual",
-        parentId: master.empresaId,
         superiorId: master.userId,
       });
 

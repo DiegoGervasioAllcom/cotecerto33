@@ -24,11 +24,11 @@ import {
  * O trigger `_sync_comissao_lancamento` (crédito/débito automático ao
  * pagar/cancelar proposta) não foi tocado.
  *
- * Rede A: master A (empresa própria) + franquia filha F1 (parent_id = empresa do
- * master A; o vendedor de F1 tem `profiles.superior_id` = master A — é essa cadeia
- * de pessoas que a empresas_visiveis() multinível (G1.2) usa, não mais só
- * parent_id). Rede B: vendedor independente, fora da rede A — usado para o caso
- * negativo de escopo.
+ * Rede A: master A (empresa própria) + franquia filha F1; o vendedor de F1 tem
+ * `profiles.superior_id` = master A — é essa cadeia de pessoas que a
+ * empresas_visiveis() multinível (G1.2) usa (empresas.parent_id foi removida —
+ * nunca era a fonte real). Rede B: vendedor independente, fora da rede A — usado
+ * para o caso negativo de escopo.
  */
 describe("S3 — insert direto em comissao_lancamentos fica bloqueado; RPC valida valor/rede", () => {
   let matriz: Db;
@@ -65,7 +65,6 @@ describe("S3 — insert direto em comissao_lancamentos fica bloqueado; RPC valid
         tipo: "pj",
         documento: uniqDoc(),
         status: "aprovada",
-        parent_id: empA.id,
       })
       .select("id")
       .single();

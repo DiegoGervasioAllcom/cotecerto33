@@ -21,9 +21,8 @@ describe("RPCs de perfil — vendedor é barrado, matriz/master passam", () => {
   beforeAll(async () => {
     const master = await criarPersonaComEmpresa("master", { emailPrefix: "master-rpc" });
     masterA = master.client;
-    const empresaMasterA = master.empresaId;
 
-    const filha = await criarEmpresa({ nome: "Filha RPC A", parent_id: empresaMasterA });
+    const filha = await criarEmpresa({ nome: "Filha RPC A" });
     empresaFilhaA = filha.id;
 
     const v1 = await criarPersonaComEmpresa("vendedor", {

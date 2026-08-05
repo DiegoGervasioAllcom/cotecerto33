@@ -13,10 +13,10 @@ import { admin, loginMatriz, criarPersonaComEmpresa, uniqDoc, type Db } from "..
  *  3) "cc lanc select self or rede" em comissao_lancamentos (era irrestrito para
  *     has_role(master)/has_role(franqueado)).
  *
- * Rede A: master A (empresa própria) + franquia filha F1 (parent_id = empresa do
- * master A; o vendedor de F1 tem `profiles.superior_id` = master A, que é o que a
- * empresas_visiveis() multinível (G1.2) usa para enxergar a rede — parent_id sozinho
- * não basta mais). Rede B: master B independente, com um vendedor — usada nos casos
+ * Rede A: master A (empresa própria) + franquia filha F1; o vendedor de F1 tem
+ * `profiles.superior_id` = master A, que é o que a empresas_visiveis() multinível
+ * (G1.2) usa para enxergar a rede (empresas.parent_id foi removida — nunca era a
+ * fonte real). Rede B: master B independente, com um vendedor — usada nos casos
  * negativos.
  */
 describe("RLS — views security_invoker + escopo de comissão/presença por rede", () => {
@@ -51,7 +51,6 @@ describe("RLS — views security_invoker + escopo de comissão/presença por red
         tipo: "pj",
         documento: uniqDoc(),
         status: "aprovada",
-        parent_id: empresaMasterA,
       })
       .select("id")
       .single();

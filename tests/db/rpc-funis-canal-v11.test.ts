@@ -192,7 +192,6 @@ describe("V11.7.3 — funis_por_canal_visao_geral()", () => {
       emailPrefix: "funil-canal-master",
     });
     const vendedorDaRede = await criarPersonaComEmpresa("vendedor", {
-      parentId: master.empresaId,
       superiorId: master.userId,
       emailPrefix: "funil-canal-rede-master",
     });

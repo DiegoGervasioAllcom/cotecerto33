@@ -1611,7 +1611,6 @@ export type Database = {
           leads_dia: number | null;
           modelo_id: string | null;
           nome: string;
-          parent_id: string | null;
           pendencia_em: string | null;
           pendencia_motivo: string | null;
           perc_comissao: number | null;
@@ -1655,7 +1654,6 @@ export type Database = {
           leads_dia?: number | null;
           modelo_id?: string | null;
           nome: string;
-          parent_id?: string | null;
           pendencia_em?: string | null;
           pendencia_motivo?: string | null;
           perc_comissao?: number | null;
@@ -1699,7 +1697,6 @@ export type Database = {
           leads_dia?: number | null;
           modelo_id?: string | null;
           nome?: string;
-          parent_id?: string | null;
           pendencia_em?: string | null;
           pendencia_motivo?: string | null;
           perc_comissao?: number | null;
@@ -1748,20 +1745,6 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "modelos_franquia";
             referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "empresas_parent_id_fkey";
-            columns: ["parent_id"];
-            isOneToOne: false;
-            referencedRelation: "empresas";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "empresas_parent_id_fkey";
-            columns: ["parent_id"];
-            isOneToOne: false;
-            referencedRelation: "v_franquia_kpis";
-            referencedColumns: ["empresa_id"];
           },
         ];
       };
@@ -4025,7 +4008,7 @@ export type Database = {
         }[];
       };
       salvar_cotacao_rascunho: {
-        Args: { p_cotacao_id: string; p_payload: Json };
+        Args: { p_cotacao_id: string; p_origem?: string; p_payload: Json };
         Returns: string;
       };
       solicitar_desconto: {

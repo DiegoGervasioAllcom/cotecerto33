@@ -94,10 +94,7 @@ describe("G3.1 — RLS desconto_politicas / desconto_solicitacoes / desconto_tri
     it("solicitante e nivel_atual veem; rede B não vê; matriz vê", async () => {
       // Rede A: master -> vendedor (superior_id), pedido do vendedor pendente no master.
       const masterA = await criarPersonaComEmpresa("master", { emailPrefix: "g31-masterA" });
-      const empVendedorA = await criarEmpresa({
-        nome: "G31 Vendedor A",
-        parent_id: masterA.empresaId,
-      });
+      const empVendedorA = await criarEmpresa({ nome: "G31 Vendedor A" });
       const vendedorA = await criarPersonaComEmpresa("vendedor", {
         empresaId: empVendedorA.id,
         emailPrefix: "g31-vendedorA",

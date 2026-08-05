@@ -12,7 +12,7 @@ import { admin, criarPersonaComEmpresa, loginMatriz } from "../helpers/supabase"
 describe("V11 · C6 — excluir_cadastro_rede", () => {
   it("bloqueia excluir Master com franquia ativa vinculada", async () => {
     const master = await criarPersonaComEmpresa("master");
-    await criarPersonaComEmpresa("franqueado", { parentId: master.empresaId });
+    await criarPersonaComEmpresa("franqueado", { superiorId: master.userId });
     const matriz = await loginMatriz();
 
     const { error } = await matriz.rpc("excluir_cadastro_rede", {
@@ -50,7 +50,7 @@ describe("V11 · C6 — excluir_cadastro_rede", () => {
 
   it("permite excluir Master cuja única franquia já está desligada", async () => {
     const master = await criarPersonaComEmpresa("master");
-    const franquia = await criarPersonaComEmpresa("franqueado", { parentId: master.empresaId });
+    const franquia = await criarPersonaComEmpresa("franqueado", { superiorId: master.userId });
     await admin
       .from("profiles")
       .update({

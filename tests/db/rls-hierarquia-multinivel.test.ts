@@ -26,10 +26,7 @@ describe("RLS empresas — visibilidade multinível (master › franqueado › v
     master = m.client;
     empresaMaster = m.empresaId;
 
-    const empFranqueado = await criarEmpresa({
-      nome: "Multi Franqueado",
-      parent_id: empresaMaster,
-    });
+    const empFranqueado = await criarEmpresa({ nome: "Multi Franqueado" });
     empresaFranqueado = empFranqueado.id;
 
     const f = await criarPersonaComEmpresa("franqueado", {
@@ -39,10 +36,7 @@ describe("RLS empresas — visibilidade multinível (master › franqueado › v
     });
     franqueado = f.client;
 
-    const empVendedor = await criarEmpresa({
-      nome: "Multi Vendedor",
-      parent_id: empresaFranqueado,
-    });
+    const empVendedor = await criarEmpresa({ nome: "Multi Vendedor" });
     empresaVendedor = empVendedor.id;
 
     const v = await criarPersonaComEmpresa("vendedor", {

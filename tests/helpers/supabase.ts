@@ -64,15 +64,13 @@ export async function criarUsuario(email: string, senha = "Teste@123!") {
 type Perfil = Database["public"]["Enums"]["perfil"];
 
 /**
- * Cria uma empresa aprovada via admin (fixture). `overrides.parent_id` monta rede
- * (franquia filha de um master/matriz).
+ * Cria uma empresa aprovada via admin (fixture).
  */
 export async function criarEmpresa(overrides?: {
   nome?: string;
   tipo?: Database["public"]["Enums"]["empresa_tipo"];
   documento?: string;
   status?: Database["public"]["Enums"]["empresa_status"];
-  parent_id?: string;
   uf?: string;
   cidade?: string;
 }): Promise<{ id: string }> {
@@ -83,7 +81,6 @@ export async function criarEmpresa(overrides?: {
       tipo: overrides?.tipo ?? "pj",
       documento: overrides?.documento ?? uniqDoc(),
       status: overrides?.status ?? "aprovada",
-      parent_id: overrides?.parent_id,
       uf: overrides?.uf,
       cidade: overrides?.cidade,
     })
@@ -98,18 +95,18 @@ export async function criarEmpresa(overrides?: {
  * profiles.empresa_id/status='aprovada' → admin insere user_roles) usado em
  * distribuicao-lead.test.ts e user-roles-select-rede.test.ts.
  *
- * Sem `opts.empresaId`, cria uma empresa nova (use `opts.parentId` para pendurá-la
- * como filha de uma empresa existente — monta rede master→franquia).
+ * Sem `opts.empresaId`, cria uma empresa nova.
  *
- * `opts.superiorId` religa `profiles.superior_id` (hierarquia de pessoas usada por
- * `empresas_visiveis()` desde a G1.2 — visibilidade multinível não depende mais só
- * de `empresas.parent_id`).
+ * `opts.superiorId` religa `profiles.superior_id` — única fonte de hierarquia
+ * (rede master→franquia, `empresas_visiveis()`, trava de exclusão C6);
+ * `empresas.parent_id` foi removida (nunca era escrita pela aprovação real —
+ * ver migration 20260804170000).
  */
 export async function criarPersonaComEmpresa(
   role: Perfil,
-  opts?: { empresaId?: string; parentId?: string; emailPrefix?: string; superiorId?: string },
+  opts?: { empresaId?: string; emailPrefix?: string; superiorId?: string },
 ): Promise<{ client: Db; userId: string; empresaId: string; email: string }> {
-  const empresaId = opts?.empresaId ?? (await criarEmpresa({ parent_id: opts?.parentId })).id;
+  const empresaId = opts?.empresaId ?? (await criarEmpresa()).id;
   const { client, userId, email } = await criarUsuario(
     `${uniq(opts?.emailPrefix ?? role)}@teste.local`,
   );

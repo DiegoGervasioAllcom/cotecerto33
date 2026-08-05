@@ -91,7 +91,7 @@ export function CadastrosRedeTab() {
       const { data: profilesData, error: profilesErr } = await supabase
         .from("profiles")
         .select(
-          "id,nome,email,empresa_id,equipe,aprovada_em,created_at,desligado_em,status,performance_status",
+          "id,nome,email,empresa_id,equipe,aprovada_em,created_at,desligado_em,status,performance_status,superior_id",
         )
         .in("id", profileIds)
         .in("status", ["aprovada", "suspensa"]);
@@ -112,6 +112,7 @@ export function CadastrosRedeTab() {
         desligado_em: string | null;
         status: string;
         performance_status: PerformanceStatus;
+        superior_id: string | null;
       };
       const profiles = (profilesData ?? []) as ProfileBruto[];
       const empresaIds = Array.from(
@@ -120,34 +121,30 @@ export function CadastrosRedeTab() {
 
       const { data: empresasData } = await supabase
         .from("empresas")
-        .select("id,nome,cidade,uf,parent_id,modelo_id")
+        .select("id,nome,cidade,uf,modelo_id")
         .in("id", empresaIds.length ? empresaIds : ["00000000-0000-0000-0000-000000000000"]);
       type EmpresaBruta = {
         id: string;
         nome: string;
         cidade: string | null;
         uf: string | null;
-        parent_id: string | null;
         modelo_id: string | null;
       };
       const empresas = (empresasData ?? []) as EmpresaBruta[];
       const empresaById = new Map(empresas.map((e) => [e.id, e]));
 
-      // Dono de cada empresa (Master ou Franqueado) — não há coluna "dono"
-      // direta em `empresas`; o dono é o profile cujo empresa_id aponta pra
-      // ela (mesmo padrão de `useAcessosData.ts`, franquiasAprovadas).
-      const nomeDonoPorEmpresa = new Map<string, string>();
-      for (const p of profiles) {
-        const role = roleByUser.get(p.id);
-        if (p.empresa_id && (role === "master" || role === "franqueado")) {
-          nomeDonoPorEmpresa.set(p.empresa_id, p.nome);
-        }
-      }
-      // Quantas franquias cada Master tem (empresas cujo parent_id é a empresa do Master).
+      // Dono de cada franquia = quem esse franqueado reporta (profiles.superior_id)
+      // — é a mesma hierarquia que empresas_visiveis() e excluir_cadastro_rede já
+      // usam pra RLS/trava; empresas.parent_id foi removido (nunca era escrito
+      // pela aprovação real, só por fixtures de teste — achado da unificação).
+      const profileById = new Map(profiles.map((p) => [p.id, p]));
+
+      // Quantas franquias cada Master tem: franqueados cujo superior_id é o
+      // profile do Master.
       const franquiasPorMaster = new Map<string, number>();
-      for (const e of empresas) {
-        if (e.parent_id) {
-          franquiasPorMaster.set(e.parent_id, (franquiasPorMaster.get(e.parent_id) ?? 0) + 1);
+      for (const p of profiles) {
+        if (roleByUser.get(p.id) === "franqueado" && p.superior_id) {
+          franquiasPorMaster.set(p.superior_id, (franquiasPorMaster.get(p.superior_id) ?? 0) + 1);
         }
       }
 
@@ -167,7 +164,7 @@ export function CadastrosRedeTab() {
           performanceStatus: p.performance_status,
         };
         if (role === "master") {
-          const nFranquias = p.empresa_id ? (franquiasPorMaster.get(p.empresa_id) ?? 0) : 0;
+          const nFranquias = franquiasPorMaster.get(p.id) ?? 0;
           return {
             ...base,
             kind: "master" as const,
@@ -175,7 +172,7 @@ export function CadastrosRedeTab() {
           };
         }
         if (role === "franqueado") {
-          const dono = empresa?.parent_id ? nomeDonoPorEmpresa.get(empresa.parent_id) : undefined;
+          const dono = p.superior_id ? profileById.get(p.superior_id)?.nome : undefined;
           const local = [empresa?.cidade, empresa?.uf].filter(Boolean).join(" · ");
           return {
             ...base,

@@ -38,7 +38,6 @@ describe("RLS — premiacao_campanhas / premiacao_lancamentos", () => {
     empresaMasterA = master.empresaId;
 
     const vendedorA = await criarPersonaComEmpresa("vendedor", {
-      parentId: empresaMasterA,
       superiorId: master.userId,
       emailPrefix: "g51-vend-a",
     });
