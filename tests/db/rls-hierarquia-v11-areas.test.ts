@@ -210,7 +210,7 @@ describe("H5 — cadeia com o Coordenador Comercial", () => {
       superiorId: coord.userId,
     });
     // Franquia pendurada no master, com uma pessoa reportando a ele.
-    const franqEmpresa = await criarEmpresa({ parent_id: master.empresaId });
+    const franqEmpresa = await criarEmpresa();
     const franq = await criarPersonaComEmpresa("franqueado", {
       empresaId: franqEmpresa.id,
       emailPrefix: "franq-cadeia",

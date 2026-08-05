@@ -42,7 +42,7 @@ type Lead = {
   arquivado: boolean | null;
   valor: number | null;
 };
-type Empresa = { id: string; nome: string; tipo: string; parent_id: string | null };
+type Empresa = { id: string; nome: string; tipo: string };
 type Profile = { id: string; nome: string; empresa_id: string | null };
 type Proposta = {
   id: string;
@@ -146,7 +146,7 @@ function Page() {
           .gte("criado_em", normalizedPeriod.inicio)
           .lt("criado_em", normalizedPeriod.fim)
           .limit(5000),
-        supabase.from("empresas").select("id,nome,tipo,parent_id").limit(500),
+        supabase.from("empresas").select("id,nome,tipo").limit(500),
         supabase.from("profiles").select("id,nome,empresa_id").limit(2000),
         supabase
           .from("propostas")

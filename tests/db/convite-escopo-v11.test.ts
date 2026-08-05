@@ -222,7 +222,7 @@ describe("C2 — escopo do Master", () => {
   it("convida vendedor de Franquia Full da rede dele, e não de fora", async () => {
     const master = await criarPersonaComEmpresa("master", { emailPrefix: "cv-master-v" });
     // Full pendurada na rede do master.
-    const fullNaRede = await criarEmpresa({ parent_id: master.empresaId });
+    const fullNaRede = await criarEmpresa();
     await criarPersonaComEmpresa("franqueado", {
       empresaId: fullNaRede.id,
       emailPrefix: "cv-full-rede",

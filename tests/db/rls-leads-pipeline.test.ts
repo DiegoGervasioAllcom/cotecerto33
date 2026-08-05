@@ -49,9 +49,8 @@ describe("RLS leads/clientes/oportunidades/propostas — visibilidade por rede",
     const master = await criarPersonaComEmpresa("master", { emailPrefix: "master-a" });
     masterA = master.client;
     const masterAId = master.userId;
-    const empresaMasterA = master.empresaId;
 
-    const filha = await criarEmpresa({ nome: "Filha Pipeline A", parent_id: empresaMasterA });
+    const filha = await criarEmpresa({ nome: "Filha Pipeline A" });
     empresaFilhaA = filha.id;
 
     const v1 = await criarPersonaComEmpresa("vendedor", {

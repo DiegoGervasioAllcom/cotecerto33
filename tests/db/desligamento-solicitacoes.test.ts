@@ -13,7 +13,6 @@ describe("V11 · C7 — solicitar_desligamento", () => {
   it("master solicita desligamento de vendedor da própria rede", async () => {
     const master = await criarPersonaComEmpresa("master");
     const franquia = await criarPersonaComEmpresa("franqueado", {
-      parentId: master.empresaId,
       superiorId: master.userId,
     });
     const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: franquia.empresaId });
@@ -49,7 +48,6 @@ describe("V11 · C7 — solicitar_desligamento", () => {
   it("master solicita desligamento da própria franquia", async () => {
     const master = await criarPersonaComEmpresa("master");
     const franquia = await criarPersonaComEmpresa("franqueado", {
-      parentId: master.empresaId,
       superiorId: master.userId,
     });
 
@@ -63,7 +61,6 @@ describe("V11 · C7 — solicitar_desligamento", () => {
   it("rejeita motivo vazio", async () => {
     const master = await criarPersonaComEmpresa("master");
     const franquia = await criarPersonaComEmpresa("franqueado", {
-      parentId: master.empresaId,
       superiorId: master.userId,
     });
     const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: franquia.empresaId });
@@ -88,8 +85,7 @@ describe("V11 · C7 — solicitar_desligamento", () => {
 
   it("rejeita alvo fora da rede de quem solicita", async () => {
     const masterA = await criarPersonaComEmpresa("master");
-    const masterB = await criarPersonaComEmpresa("master");
-    const franquiaB = await criarPersonaComEmpresa("franqueado", { parentId: masterB.empresaId });
+    const franquiaB = await criarPersonaComEmpresa("franqueado");
     const vendedorB = await criarPersonaComEmpresa("vendedor", { empresaId: franquiaB.empresaId });
 
     const { error } = await masterA.client.rpc("solicitar_desligamento", {
@@ -113,7 +109,6 @@ describe("V11 · C7 — solicitar_desligamento", () => {
   it("rejeita alvo já desligado", async () => {
     const master = await criarPersonaComEmpresa("master");
     const franquia = await criarPersonaComEmpresa("franqueado", {
-      parentId: master.empresaId,
       superiorId: master.userId,
     });
     const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: franquia.empresaId });
@@ -202,7 +197,6 @@ describe("V11 · C7 — resolver_desligamento", () => {
   it("aprovar franquia com vendedor ativo dispara a trava da C6 e o pedido continua pendente", async () => {
     const master = await criarPersonaComEmpresa("master");
     const franquia = await criarPersonaComEmpresa("franqueado", {
-      parentId: master.empresaId,
       superiorId: master.userId,
     });
     await criarPersonaComEmpresa("vendedor", { empresaId: franquia.empresaId });

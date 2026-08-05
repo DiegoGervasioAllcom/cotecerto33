@@ -150,22 +150,18 @@ describe("V11.7.6a — franquias_abaixo_meta_visao_geral()", () => {
     const master = await criarPersonaComEmpresa("master", { emailPrefix: "franq-meta-master" });
 
     const abaixo = await criarPersonaComEmpresa("vendedor", {
-      parentId: master.empresaId,
       superiorId: master.userId,
       emailPrefix: "franq-meta-abaixo",
     });
     const acima = await criarPersonaComEmpresa("vendedor", {
-      parentId: master.empresaId,
       superiorId: master.userId,
       emailPrefix: "franq-meta-acima",
     });
     const semMeta = await criarPersonaComEmpresa("vendedor", {
-      parentId: master.empresaId,
       superiorId: master.userId,
       emailPrefix: "franq-meta-sem",
     });
     const canceladaConta = await criarPersonaComEmpresa("vendedor", {
-      parentId: master.empresaId,
       superiorId: master.userId,
       emailPrefix: "franq-meta-cancel",
     });
@@ -217,7 +213,6 @@ describe("V11.7.6a — franquias_abaixo_meta_visao_geral()", () => {
   it("RLS: só conta franquias visíveis ao usuário (master não vê rede lateral)", async () => {
     const master = await criarPersonaComEmpresa("master", { emailPrefix: "franq-meta-rls-master" });
     const franquiaRede = await criarPersonaComEmpresa("vendedor", {
-      parentId: master.empresaId,
       superiorId: master.userId,
       emailPrefix: "franq-meta-rls-rede",
     });

@@ -326,16 +326,10 @@ export async function criarPersona(opts: {
    */
   cargo?: string;
   /**
-   * `empresas.parent_id` — franquia filha de um Master (mesmo uso de C5/C6:
-   * "quantas franquias este Master tem" e a trava de exclusão).
-   */
-  parentEmpresaId?: string;
-  /**
-   * `profiles.superior_id` — cadeia de hierarquia usada por `empresas_visiveis()`
-   * (RLS) e por `solicitar_desligamento` pra saber "está na minha rede". Diverge
-   * de `parent_id` de propósito no C15 — ver risco registrado em
-   * docs/PLANO_CADASTROS_V11.md: os fixtures precisam setar os dois campos pro
-   * cenário ficar consistente.
+   * `profiles.superior_id` — única fonte de hierarquia (rede master→franquia,
+   * `empresas_visiveis()`/RLS, `solicitar_desligamento`, trava de exclusão C6:
+   * "quantas franquias este Master tem"). `empresas.parent_id` foi removida —
+   * nunca era escrita pela aprovação real (ver migration 20260804170000).
    */
   superiorId?: string;
   /**
@@ -347,14 +341,7 @@ export async function criarPersona(opts: {
    */
   empresaId?: string;
 }): Promise<Persona> {
-  const {
-    role,
-    modalidade,
-    cargo,
-    parentEmpresaId,
-    superiorId,
-    empresaId: empresaExistente,
-  } = opts;
+  const { role, modalidade, cargo, superiorId, empresaId: empresaExistente } = opts;
   const senha = "Teste@123!";
   const email = `${uniq(`${role}-e2e`)}@teste.local`;
 
@@ -373,7 +360,6 @@ export async function criarPersona(opts: {
         documento: uniqDoc(),
         status: "aprovada",
         ...(modeloId ? { modelo_id: modeloId } : {}),
-        ...(parentEmpresaId ? { parent_id: parentEmpresaId } : {}),
       })
       .select("id")
       .single();

@@ -99,7 +99,6 @@ test.describe("C15 · Trava de exclusão (C6)", () => {
     franquia = await criarPersona({
       role: "franqueado",
       modalidade: "individual",
-      parentEmpresaId: master.empresaId,
       superiorId: master.userId,
     });
     vendedor = await criarPersona({
@@ -179,7 +178,6 @@ test.describe("C15 · Solicitar → aprovar desligamento (C7/C8/C9)", () => {
     master = await criarPersona({ role: "master" });
     vendedor = await criarPersona({
       role: "vendedor",
-      parentEmpresaId: master.empresaId,
       superiorId: master.userId,
     });
   });

@@ -14,8 +14,8 @@ import {
  * RLS de `empresas` e `profiles` — cadeia da V10: vendedor de franquia › franquia
  * (master) › matriz.
  *
- * Rede A: master A (empresa própria) + franquia filha F1 (parent_id = empresa do
- * master A), com dois vendedores em F1 (colegas de empresa).
+ * Rede A: master A (empresa própria) + franquia filha F1, com dois vendedores em F1
+ * (colegas de empresa).
  * Rede B: franqueado B com empresa própria, independente da rede A — usada nos
  * casos negativos.
  *
@@ -52,7 +52,7 @@ describe("RLS empresas/profiles — visibilidade por rede", () => {
     masterAId = master.userId;
     empresaMasterA = master.empresaId;
 
-    const filha = await criarEmpresa({ nome: "Filha F1", parent_id: empresaMasterA });
+    const filha = await criarEmpresa({ nome: "Filha F1" });
     empresaFilhaA = filha.id;
 
     const v1 = await criarPersonaComEmpresa("vendedor", {
