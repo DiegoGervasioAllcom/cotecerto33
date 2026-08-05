@@ -286,7 +286,7 @@ ser marcada como concluída antes de revisitar as quatro linhas acima.
 | V11.9.1 | infra | **WhatsApp Business API** (item 4): convite com PDF anexado automaticamente, sem passo manual. Exige conta e aprovação de template — aguardando o usuário abrir a conta; paliativo (`wa.me` + PDF manual) segue no ar | V11.1.3    |
 | V11.9.2 | —     | ✅ **Resolvido pela Lis em 03/08/2026:** Carteira de Recuperação fica pra V12, fora da V11                     | —          |
 | V11.9.3 | —     | ✅ **Resolvido em 04/08/2026:** documento "Regras Decididas" chegou (`CoteCerto_Regras_Decididas.html`, 27/07) | —          |
-| V11.9.4 | infra | **Persistência geral** (item 10): filas, cadastros, solicitações e motivos em banco — varredura final de que nada ficou só no navegador                               | todas      |
+| V11.9.4 | —     | ✅ **Concluída em 05/08/2026:** varredura extensa (motivo de perda, desconto, desligamento, fila de aprovação da Full, avaliação de perda, classificação de acesso) — todo fluxo de negócio já grava via RPC/update real, sem `catch` silencioso. Único `localStorage` fora de preferência de UI seria bug; não achou nenhum. Nota (não bug): "Notificar supervisor" em `performance-resumo-modal.tsx` não persiste de propósito, decisão já registrada em `PLANO_REGUA_V11.md` | todas      |
 
 ## Sequência recomendada
 
