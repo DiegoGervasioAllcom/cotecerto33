@@ -36,7 +36,12 @@ function Page() {
   // V11 · C4 — coordenador também aciona "Cadastro manual · exceção"
   // (fn_pode_criar_pendente_manual) e edita cargos (RLS de cargos/cargo_areas,
   // H2/H3); sem isto a rota inteira ficava fechada para ele.
-  const denied = useRequireRole("matriz", "coordenador");
+  // V11 · H2 — o cargo Supervisor Operacional (perfil `supervisor`) tem
+  // `macessos` no preset (H2, sup_operacional), mas sem "supervisor" aqui o
+  // item aparecia no menu e o guard mandava de volta pra Visão geral — o RLS
+  // por baixo já escopa o que cada um pode ver/fazer, igual ao padrão de
+  // `useRequireMatrizOuFranquiaFull` (require-role.tsx).
+  const denied = useRequireRole("matriz", "coordenador", "supervisor");
   const {
     tab,
     setTab,
