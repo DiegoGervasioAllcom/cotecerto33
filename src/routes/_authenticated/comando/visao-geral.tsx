@@ -193,8 +193,7 @@ function Page() {
     [profiles, matrizId],
   );
 
-  const groupLabel =
-    group === "MASTER" ? "Master" : group === "SUPERVISOR" ? "Supervisor" : "Franqueado";
+  const groupLabel = group === "MASTER" ? "Master" : "Franqueado";
 
   const periodLabel = periodWindow.label;
   const leadsMes = useMemo(() => leads.filter((x) => !x.arquivado), [leads]);

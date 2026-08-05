@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth";
  * Não é usado para segurança — o RLS (`empresas_visiveis` multinível)
  * já garante o escopo de dados. Aqui só derivamos rótulo + % de exibição.
  */
-export type ActiveGroup = "MASTER" | "SUPERVISOR" | "FRANQUEADO" | null;
+export type ActiveGroup = "MASTER" | "FRANQUEADO" | null;
 
 export interface GroupScope {
   /** true enquanto ainda resolvemos o modelo de franquia (perfil franquia). */
@@ -16,7 +16,7 @@ export interface GroupScope {
   group: ActiveGroup;
   /** % de exibição sobre a equipe (não é o cálculo de comissão real — isso é o G4). */
   groupPct: number;
-  /** true para master, supervisor e franquia Full (as 12 telas de grupo). */
+  /** true para master e franquia Full (as 12 telas de grupo). */
   isGroupView: boolean;
   /** true quando o perfil é `franquia` e o modelo contratado é Individual (não Full). */
   isFranqIndividual: boolean;
@@ -34,7 +34,7 @@ export interface GroupScope {
  * CLT, tratado como 'individual' — não Full).
  */
 export function useGroupScope(): GroupScope {
-  const { role, profile, empresa } = useAuth();
+  const { role, empresa } = useAuth();
   const [isFranqFull, setIsFranqFull] = useState(false);
   const [loading, setLoading] = useState(role === "franqueado");
 
@@ -71,17 +71,21 @@ export function useGroupScope(): GroupScope {
   }, [role, empresa?.modelo_id]);
 
   const isFranqIndividual = role === "franqueado" && !isFranqFull;
-  const isGroupView =
-    role === "master" || role === "supervisor" || (role === "franqueado" && isFranqFull);
+  // `supervisor` hoje é sempre um dos 3 cargos internos da Matriz (H1-H8:
+  // Vendas/Operacional/Backoffice) — nenhum tem franquia supervisionada nem
+  // comissão de grupo. O conceito antigo de "Supervisor de rede" (protótipo)
+  // não existe mais em nenhuma policy RLS (ver docs/ANALISE_LACUNAS_V11.md).
+  // Excluído aqui para bater com `nav-experience.ts` (`grpLike` já exclui
+  // `role === "supervisor"`) — sem essa exclusão, a Visão geral e a página
+  // de equipe mostravam "Franquias supervisionadas"/"Comissão do grupo" para
+  // quem não supervisiona franquia nenhuma.
+  const isGroupView = role === "master" || (role === "franqueado" && isFranqFull);
 
   let group: ActiveGroup = null;
   let groupPct = 0;
   if (role === "master") {
     group = "MASTER";
     groupPct = 20;
-  } else if (role === "supervisor") {
-    group = "SUPERVISOR";
-    groupPct = profile?.comissao_modelo ?? 0;
   } else if (role === "franqueado" && isFranqFull) {
     group = "FRANQUEADO";
     groupPct = 0;
