@@ -8,11 +8,17 @@ import { TIPO_CHIP_CLASS } from "./constants";
 import { ModalShell } from "./modal-shell";
 import type { SistemaRole, UsuarioSistema } from "./types";
 
-export function UsuariosSistemaModal({ onClose }: { onClose: () => void }) {
+export function UsuariosSistemaModal({
+  onClose,
+  initialFiltroTipo,
+}: {
+  onClose: () => void;
+  initialFiltroTipo?: string;
+}) {
   const [rows, setRows] = useState<UsuarioSistema[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [filtroTipo, setFiltroTipo] = useState<string>("");
+  const [filtroTipo, setFiltroTipo] = useState<string>(initialFiltroTipo ?? "");
   const [filtroStatus, setFiltroStatus] = useState<string>("");
 
   useEffect(() => {
@@ -22,7 +28,15 @@ export function UsuariosSistemaModal({ onClose }: { onClose: () => void }) {
       const ur = await supabase
         .from("user_roles")
         .select("user_id,role")
-        .in("role", ["matriz", "master", "vendedor", "franqueado", "supervisor"])
+        .in("role", [
+          "matriz",
+          "coordenador",
+          "master",
+          "vendedor",
+          "franqueado",
+          "supervisor",
+          "interno",
+        ])
         // ordem explícita: torna determinístico o role escolhido no raro caso de
         // múltiplos vínculos para o mesmo usuário (hoje é 1:1 na prática).
         .order("user_id", { ascending: true })
@@ -84,6 +98,7 @@ export function UsuariosSistemaModal({ onClose }: { onClose: () => void }) {
         if (role === "matriz") return "Matriz";
         if (role === "coordenador") return "Coordenador Comercial";
         if (role === "supervisor") return "Supervisor (Matriz)";
+        if (role === "interno") return "Interno (Matriz)";
         if (role === "master") return "Master franqueado";
         if (role === "franqueado") {
           const emp = p.empresa_id ? empresaById[p.empresa_id] : undefined;

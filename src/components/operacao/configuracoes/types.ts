@@ -40,7 +40,8 @@ export type SistemaRole =
   | "master"
   | "vendedor"
   | "franqueado"
-  | "supervisor";
+  | "supervisor"
+  | "interno";
 
 export type UsuarioSistema = {
   id: string;

@@ -85,12 +85,14 @@ function Page() {
   const [fOrigem, setFOrigem] = useState<string>("todas");
   const [fEtapa, setFEtapa] = useState<string>("todas");
   const [fMotivo, setFMotivo] = useState<string>("todos");
+  const [fStatus, setFStatus] = useState<"todos" | "ativos" | "perdidos">("todos");
 
   function clearFilters() {
     setFPeriod("todos");
     setFOrigem("todas");
     setFEtapa("todas");
     setFMotivo("todos");
+    setFStatus("todos");
   }
 
   async function openLead(l: Lead) {
@@ -172,9 +174,11 @@ function Page() {
       if (fOrigem !== "todas" && l.origem !== fOrigem) return false;
       if (fEtapa !== "todas" && l.status_pipeline !== fEtapa) return false;
       if (fMotivo !== "todos" && l.motivo_perda !== fMotivo) return false;
+      if (fStatus === "ativos" && l.status_pipeline === "perdido") return false;
+      if (fStatus === "perdidos" && l.status_pipeline !== "perdido") return false;
       return true;
     });
-  }, [leads, fPeriod, fOrigem, fEtapa, fMotivo]);
+  }, [leads, fPeriod, fOrigem, fEtapa, fMotivo, fStatus]);
 
   const grouped = useMemo(() => {
     const m: Record<string, Lead[]> = {};
@@ -184,6 +188,8 @@ function Page() {
     }
     return m;
   }, [stages, filtered]);
+
+  const perdidos = grouped.perdido ?? [];
 
   const headerStats = useMemo(() => {
     const ativos = leads.filter(
@@ -347,6 +353,15 @@ function Page() {
         </select>
         <select
           className="select-mini"
+          value={fStatus}
+          onChange={(e) => setFStatus(e.target.value as typeof fStatus)}
+        >
+          <option value="todos">Status · todos</option>
+          <option value="ativos">Ativos</option>
+          <option value="perdidos">Perdidos</option>
+        </select>
+        <select
+          className="select-mini"
           value={fMotivo}
           onChange={(e) => setFMotivo(e.target.value)}
         >
@@ -394,6 +409,28 @@ function Page() {
               </div>
             );
           })}
+          {fStatus !== "ativos" && (
+            <div
+              className="kcol"
+              data-stage="Perdido"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                const id = e.dataTransfer.getData("text/lead");
+                const lead = leads.find((l) => l.id === id);
+                if (lead && lead.status_pipeline !== "perdido") move(lead, "perdido");
+              }}
+            >
+              <div className="kcol-h" style={{ borderTop: "3px solid var(--alert, #dc2626)" }}>
+                <span className="name">Perdido</span>
+                <span className="count">{perdidos.length}</span>
+                <span className="value">
+                  {money(perdidos.reduce((a, b) => a + Number(b.valor ?? 0), 0))}
+                </span>
+              </div>
+              {perdidos.length === 0 && <div className="small muted">Vazio</div>}
+              {perdidos.map((l) => renderCard(l, "Perdido"))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>

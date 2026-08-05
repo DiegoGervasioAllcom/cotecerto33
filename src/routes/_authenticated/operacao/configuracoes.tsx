@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { useConfiguracoesGerais } from "@/components/operacao/configuracoes/hooks/useConfiguracoesGerais";
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/operacao/configuracoes")({
 function Page() {
   const denied = useRequireRole("matriz");
   const nav = useNavigate();
+  const [tipoFiltroInicial, setTipoFiltroInicial] = useState<string | undefined>(undefined);
   const {
     cfg,
     setCfg,
@@ -193,10 +195,49 @@ function Page() {
                   onClick={() => setModal("vendedor")}
                 />
                 <PerfilRow
+                  title="Master"
+                  desc="Opera a própria franquia e a rede supervisionada"
+                  count={roleCount("master")}
+                  onClick={() => {
+                    setTipoFiltroInicial("Master franqueado");
+                    setModal("todos");
+                  }}
+                />
+                <PerfilRow
+                  title="Coordenador"
+                  desc="Mesmo alcance da Matriz, sem trava de diretor"
+                  count={roleCount("coordenador")}
+                  onClick={() => {
+                    setTipoFiltroInicial("Coordenador Comercial");
+                    setModal("todos");
+                  }}
+                />
+                <PerfilRow
+                  title="Supervisor"
+                  desc="Cargo interno · Vendas, Operacional ou Backoffice"
+                  count={roleCount("supervisor")}
+                  onClick={() => {
+                    setTipoFiltroInicial("Supervisor (Matriz)");
+                    setModal("todos");
+                  }}
+                />
+                <PerfilRow
+                  title="Interno"
+                  desc="Cargo interno · Marketing ou Assistente Comercial"
+                  count={roleCount("interno")}
+                  onClick={() => {
+                    setTipoFiltroInicial("Interno (Matriz)");
+                    setModal("todos");
+                  }}
+                />
+                <PerfilRow
                   title="Todos os usuários"
                   desc="Lista central: usuário, tipo, supervisão e status"
                   count={rolesTotal}
-                  onClick={() => setModal("todos")}
+                  onClick={() => {
+                    setTipoFiltroInicial(undefined);
+                    setModal("todos");
+                  }}
                 />
               </div>
             </div>
@@ -311,7 +352,12 @@ function Page() {
           onClose={() => setModal(null)}
         />
       )}
-      {modal === "todos" && <UsuariosSistemaModal onClose={() => setModal(null)} />}
+      {modal === "todos" && (
+        <UsuariosSistemaModal
+          onClose={() => setModal(null)}
+          initialFiltroTipo={tipoFiltroInicial}
+        />
+      )}
     </AppShell>
   );
 }

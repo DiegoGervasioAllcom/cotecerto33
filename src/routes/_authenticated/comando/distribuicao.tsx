@@ -49,7 +49,13 @@ type LeadFila = {
   uf: string | null;
   distribuido_em: string | null;
 };
-type Vendedor = { id: string; nome: string; empresa_id: string | null; online: boolean };
+type Vendedor = {
+  id: string;
+  nome: string;
+  empresa_id: string | null;
+  online: boolean;
+  performance_status: string | null;
+};
 type Franquia = { id: string; nome: string; cidade: string | null; uf: string | null };
 
 const DEFAULT_CRIT: Criterios = {
@@ -84,6 +90,7 @@ function Page() {
   const [fila, setFila] = useState<LeadFila[]>([]);
   const [franquias, setFranquias] = useState<Franquia[]>([]);
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [pausaLeadsRede, setPausaLeadsRede] = useState(false);
   const [matrizId, setMatrizId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -109,7 +116,7 @@ function Page() {
       setMatrizId(mId);
     }
 
-    const [c, d, f, fr, vd, pr] = await Promise.all([
+    const [c, d, f, fr, vd, pr, rp] = await Promise.all([
       supabase.from("distribuicao_config").select("*").eq("id", "default").maybeSingle(),
       supabase
         .from("leads")
@@ -129,9 +136,15 @@ function Page() {
         .eq("bloqueado", false)
         .limit(500),
       supabase.from("empresas").select("id,nome,cidade,uf,tipo,status").limit(500),
-      supabase.from("profiles").select("id,nome,empresa_id,status").limit(2000),
+      supabase.from("profiles").select("id,nome,empresa_id,status,performance_status").limit(2000),
       supabase.from("v_user_presence").select("user_id,status_efetivo"),
+      supabase
+        .from("regua_performance_config")
+        .select("pausa_leads_ativa")
+        .eq("bloco", "rede")
+        .maybeSingle(),
     ]);
+    setPausaLeadsRede(!!rp.data?.pausa_leads_ativa);
 
     if (c.data) {
       setCfg({
@@ -198,6 +211,7 @@ function Page() {
           nome: p.nome,
           empresa_id: p.empresa_id,
           online: presMap.get(p.id) === "online",
+          performance_status: p.performance_status ?? null,
         })),
     );
     setLoading(false);
@@ -208,6 +222,11 @@ function Page() {
     if (denied || isFull) return;
     load();
   }, [denied, isFull]);
+
+  const travados = useMemo(
+    () => vendedores.filter((v) => v.performance_status === "travado"),
+    [vendedores],
+  );
 
   const tempoMedioManual = useMemo(() => {
     const distribuidosRecentes = fila.filter((l) => l.distribuido_em);
@@ -421,6 +440,17 @@ function Page() {
       {role === "interno" && (
         <div className="audit-note" style={{ marginBottom: 12 }}>
           Acesso de leitura — a configuração de distribuição é exclusiva da Matriz.
+        </div>
+      )}
+      {pausaLeadsRede && travados.length > 0 && (
+        <div
+          className="audit-note"
+          style={{ background: "var(--alert-soft)", color: "var(--alert)", marginBottom: 12 }}
+        >
+          Régua de performance ativa: vendedores com sinal <strong>Travado</strong> não recebem
+          leads da distribuição automática até revisão do supervisor — pausado(s) agora:{" "}
+          <strong>{travados.map((v) => v.nome).join(", ")}</strong>. Métricas em{" "}
+          <strong>Acessos e permissões › Personalização geral › Performance</strong>.
         </div>
       )}
       {err && (

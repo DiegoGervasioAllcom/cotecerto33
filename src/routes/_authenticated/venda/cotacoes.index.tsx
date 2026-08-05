@@ -41,10 +41,14 @@ function statusChip(s: string) {
   const cls = s === "calculada" ? "chip-info" : s === "proposta" ? "chip-yellow" : "chip-outline";
   return <span className={`chip chip-status ${cls}`}>{label}</span>;
 }
-function expiraChip(criadoEm: string) {
+function diasParaExpirar(criadoEm: string) {
   const created = new Date(criadoEm).getTime();
   const exp = created + 5 * 24 * 60 * 60 * 1000;
-  const d = Math.ceil((exp - Date.now()) / (24 * 60 * 60 * 1000));
+  return Math.ceil((exp - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
+function expiraChip(criadoEm: string) {
+  const d = diasParaExpirar(criadoEm);
   if (d <= 0)
     return (
       <span className="chip chip-alert" style={{ minWidth: 72 }}>
@@ -70,12 +74,25 @@ function expiraChip(criadoEm: string) {
   );
 }
 
+const FAIXAS = [
+  { label: "Até R$ 2.500", min: 0, max: 2500 },
+  { label: "R$ 2.501 – R$ 5.000", min: 2501, max: 5000 },
+  { label: "Acima de R$ 5.000", min: 5001, max: Infinity },
+];
+
+function melhorPreco(r: Row): number | null {
+  if (!r.premios?.length) return null;
+  return Math.min(...r.premios.map((p) => Number(p.premio) || 0));
+}
+
 function Page() {
   const nav = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [fSeguradora, setFSeguradora] = useState("");
+  const [fFaixa, setFFaixa] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -96,20 +113,74 @@ function Page() {
     })();
   }, []);
 
+  const seguradoras = useMemo(
+    () =>
+      Array.from(new Set(rows.flatMap((r) => r.premios?.map((p) => p.seguradora) ?? []))).sort(),
+    [rows],
+  );
+
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
         const t =
           `${cotNum(r.numero)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
-        return !q || t.includes(q.toLowerCase());
+        if (q && !t.includes(q.toLowerCase())) return false;
+        if (fSeguradora && !r.premios?.some((p) => p.seguradora === fSeguradora)) return false;
+        if (fFaixa) {
+          const faixa = FAIXAS.find((f) => f.label === fFaixa);
+          const preco = melhorPreco(r);
+          if (!faixa || preco == null || preco < faixa.min || preco > faixa.max) return false;
+        }
+        return true;
       }),
-    [rows, q],
+    [rows, q, fSeguradora, fFaixa],
   );
 
-  const totVal = filtered.reduce((a, r) => {
-    const best = r.premios?.length ? Math.min(...r.premios.map((p) => Number(p.premio) || 0)) : 0;
-    return a + best;
-  }, 0);
+  const totVal = filtered.reduce((a, r) => a + (melhorPreco(r) ?? 0), 0);
+
+  function exportar() {
+    const head = [
+      "Nº cotação",
+      "Segurado",
+      "Veículo",
+      "Seguradoras cotadas",
+      "Melhor preço",
+      "Status",
+      "Criada",
+      "Expira em",
+    ];
+    const lines = filtered.map((r) => {
+      const best = r.premios?.length
+        ? r.premios.reduce((m, p) => (Number(p.premio) < Number(m.premio) ? p : m))
+        : null;
+      const veic = r.veiculo
+        ? `${r.veiculo.marca_nome ?? ""} ${r.veiculo.modelo_nome ?? ""} ${r.veiculo.ano_modelo ?? ""}`.trim()
+        : "";
+      return [
+        cotNum(r.numero),
+        r.segurado?.nome ?? "",
+        veic,
+        r.premios?.length ?? 0,
+        best ? `${money(Number(best.premio))} (${best.seguradora})` : "",
+        r.status === "calculada" ? "Aberta" : r.status === "proposta" ? "Em ajuste" : r.status,
+        new Date(r.criado_em).toLocaleDateString("pt-BR"),
+        (() => {
+          const d = diasParaExpirar(r.criado_em);
+          return d <= 0 ? "Hoje" : `${d}d`;
+        })(),
+      ]
+        .map((v) => `"${String(v).replaceAll('"', '""')}"`)
+        .join(",");
+    });
+    const csv = [head.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cotacoes.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <AppShell title="Cotações">
@@ -123,6 +194,12 @@ function Page() {
           </div>
         </div>
         <div className="tools">
+          <button className="btn btn-ghost" onClick={exportar}>
+            <svg width="14" height="14">
+              <use href="#i-download"></use>
+            </svg>{" "}
+            Exportar
+          </button>
           <Link to="/venda/novo-lead" className="btn btn-yellow">
             <svg width={14} height={14}>
               <use href="#i-plus" />
@@ -143,6 +220,26 @@ function Page() {
           <option>Aberta</option>
           <option>Em ajuste</option>
         </select>
+        <select
+          className="select-mini"
+          value={fSeguradora}
+          onChange={(e) => setFSeguradora(e.target.value)}
+        >
+          <option value="">Seguradora · todas</option>
+          {seguradoras.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select className="select-mini" value={fFaixa} onChange={(e) => setFFaixa(e.target.value)}>
+          <option value="">Faixa · todas</option>
+          {FAIXAS.map((f) => (
+            <option key={f.label} value={f.label}>
+              {f.label}
+            </option>
+          ))}
+        </select>
         <input
           className="select-mini"
           placeholder="Buscar segurado, placa, nº cotação…"
@@ -150,7 +247,14 @@ function Page() {
           onChange={(e) => setQ(e.target.value)}
           style={{ flex: 1, minWidth: 220 }}
         />
-        <button className="btn-link btn-sm" onClick={() => setQ("")}>
+        <button
+          className="btn-link btn-sm"
+          onClick={() => {
+            setQ("");
+            setFSeguradora("");
+            setFFaixa("");
+          }}
+        >
           Limpar
         </button>
       </div>

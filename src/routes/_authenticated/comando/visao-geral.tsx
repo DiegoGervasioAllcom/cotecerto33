@@ -537,6 +537,51 @@ function Page() {
 
       <DashboardPeriodPicker value={periodWindow} onChange={setPeriodWindow} />
 
+      {!isGroupView &&
+        dashboardAlertsQuery.data &&
+        (() => {
+          const a = dashboardAlertsQuery.data;
+          const itens: { n: number; label: string; to: string }[] = [
+            {
+              n: a.leadsBloqueados,
+              label: "travado(s) fora da distribuição",
+              to: "/comando/leads",
+            },
+            { n: a.slaEstourado, label: "lead(s) com SLA estourado", to: "/comando/leads" },
+            {
+              n: a.cadastrosPendentes,
+              label: "pedido(s) de acesso na fila",
+              to: "/operacao/acessos",
+            },
+            {
+              n: a.desligamentosPendentes,
+              label: "solicitação(ões) de desligamento",
+              to: "/operacao/acessos",
+            },
+            {
+              n: a.vendedoresAtencao,
+              label: "vendedor(es) em atenção",
+              to: "/operacao/acessos",
+            },
+          ].filter((i) => i.n > 0);
+          if (!itens.length) return null;
+          return (
+            <div className="filters-bar" style={{ marginBottom: 12 }}>
+              <span className="label">ALERTAS</span>
+              {itens.map((i) => (
+                <button
+                  key={i.label}
+                  className="chip chip-alert"
+                  style={{ border: "none", cursor: "pointer" }}
+                  onClick={() => navigate({ to: i.to })}
+                >
+                  {i.n} {i.label}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+
       {(normalizedPeriodQuery.error ||
         dashboardQuery.error ||
         saldoGrupoQuery.error ||

@@ -25,6 +25,9 @@ export function useDashboardAlertCounts(
         franquiasAbaixoMeta,
         vendedoresAtencao,
         pendentesSeguradora,
+        leadsBloqueados,
+        cadastrosPendentes,
+        desligamentosPendentes,
       ] = await Promise.all([
         supabase
           .from("leads")
@@ -83,6 +86,24 @@ export function useDashboardAlertCounts(
           p_inicio: period.inicio,
           p_fim: period.fim,
         }),
+        // Barra "ALERTAS" do topo (mesmos 5 badges do protótipo) — leads que a
+        // Matriz travou manualmente (bloquear_lead), fora da fila normal.
+        supabase
+          .from("leads")
+          .select("id", { count: "exact", head: true })
+          .eq("bloqueado", true)
+          .eq("arquivado", false),
+        // Cadastros (Matriz + Rede) aguardando classificação — mesmo critério
+        // de `fetchPendentes` (Acessos e permissões).
+        supabase
+          .from("empresas")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pendente"),
+        // Solicitações de desligamento (C7) ainda não resolvidas pela Matriz.
+        supabase
+          .from("desligamento_solicitacoes")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pendente"),
       ]);
       const queryError =
         semAtendimento.error ??
@@ -92,7 +113,10 @@ export function useDashboardAlertCounts(
         renovacoes.error ??
         franquiasAbaixoMeta.error ??
         vendedoresAtencao.error ??
-        pendentesSeguradora.error;
+        pendentesSeguradora.error ??
+        leadsBloqueados.error ??
+        cadastrosPendentes.error ??
+        desligamentosPendentes.error;
       if (queryError) throw queryError;
       return {
         semAtendimento: semAtendimento.count ?? 0,
@@ -103,6 +127,9 @@ export function useDashboardAlertCounts(
         franquiasAbaixoMeta: franquiasAbaixoMeta.data ?? 0,
         vendedoresAtencao: vendedoresAtencao.count ?? 0,
         pendentesSeguradora: pendentesSeguradora.data ?? 0,
+        leadsBloqueados: leadsBloqueados.count ?? 0,
+        cadastrosPendentes: cadastrosPendentes.count ?? 0,
+        desligamentosPendentes: desligamentosPendentes.count ?? 0,
       };
     },
   });

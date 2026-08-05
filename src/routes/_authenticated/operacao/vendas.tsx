@@ -74,6 +74,13 @@ function classify(p: Proposta): Tab {
   return "transmissao";
 }
 
+// Mesma fórmula de public.esta_pendente_seguradora() (V11.7.5): transmitida,
+// ainda não emitida, não cancelada — recorte por cima de "transmissao" (que
+// hoje mistura "acabou de transmitir" com "está preso esperando a seguradora").
+function pendenteSeguradora(p: Proposta): boolean {
+  return !!p.transmitida_em && !p.emitida_em && !p.cancelada_em;
+}
+
 function Page() {
   const search = Route.useSearch();
   const { isGroupView } = useGroupScope();
@@ -147,6 +154,7 @@ function Page() {
       naopagas: { n: 0, total: 0 },
       canceladas: { n: 0, total: 0 },
     };
+    let pendencia = { n: 0, total: 0 };
     for (const p of rows) {
       const v = Number(p.premio ?? p.valor ?? 0);
       const t = classify(p);
@@ -157,8 +165,11 @@ function Page() {
         acc.emitidas.n += 1;
         acc.emitidas.total += v;
       }
+      if (pendenteSeguradora(p)) {
+        pendencia = { n: pendencia.n + 1, total: pendencia.total + v };
+      }
     }
-    return acc;
+    return { ...acc, pendencia };
   }, [rows]);
 
   const filtered = useMemo(() => {
@@ -286,6 +297,10 @@ function Page() {
         <div className="sum-chip">
           <span className="sc-val">{counts.transmissao.n}</span>
           <span className="sc-lbl">Em transmissão</span>
+        </div>
+        <div className="sum-chip alert">
+          <span className="sc-val">{counts.pendencia.n}</span>
+          <span className="sc-lbl">Com pendência</span>
         </div>
         <div className="sum-chip info">
           <span className="sc-val">{counts.emitidas.n}</span>

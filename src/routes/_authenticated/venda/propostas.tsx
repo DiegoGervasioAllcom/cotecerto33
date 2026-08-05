@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +40,11 @@ function statusChip(s: string) {
   return <span className="chip chip-yellow">Gerada</span>;
 }
 
+function prazoDias(prazo: string | null): number | null {
+  if (!prazo) return null;
+  return Math.ceil((new Date(prazo).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
 function Page() {
   const { selected } = Route.useSearch();
   const navigate = useNavigate({ from: "/venda/propostas" });
@@ -47,6 +52,10 @@ function Page() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+  const [fStatus, setFStatus] = useState("");
+  const [fNegociacao, setFNegociacao] = useState("");
+  const [fSeguradora, setFSeguradora] = useState("");
+  const [fPrazo, setFPrazo] = useState("");
 
   async function loadRows() {
     const { data, error } = await supabase
@@ -72,8 +81,68 @@ function Page() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [selected, loading, rows.length]);
 
-  const totalValor = rows.reduce((a, r) => a + (r.premio ?? r.valor ?? 0), 0);
+  const seguradoras = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.seguradora).filter(Boolean) as string[])).sort(),
+    [rows],
+  );
+
+  const filtered = useMemo(
+    () =>
+      rows.filter((r) => {
+        if (fStatus && r.status !== fStatus) return false;
+        if (fNegociacao && r.negociacao_status !== fNegociacao) return false;
+        if (fSeguradora && r.seguradora !== fSeguradora) return false;
+        if (fPrazo) {
+          const d = prazoDias(r.prazo_resposta);
+          if (fPrazo === "hoje" && (d == null || d > 0)) return false;
+          if (fPrazo === "3dias" && (d == null || d < 0 || d > 3)) return false;
+          if (fPrazo === "vencidas" && (d == null || d >= 0)) return false;
+        }
+        return true;
+      }),
+    [rows, fStatus, fNegociacao, fSeguradora, fPrazo],
+  );
+
+  const totalValor = filtered.reduce((a, r) => a + (r.premio ?? r.valor ?? 0), 0);
+  const ticketMedio = filtered.length ? totalValor / filtered.length : 0;
   const selectedRow = rows.find((r) => r.id === selected) ?? null;
+
+  function exportar() {
+    const head = [
+      "Nº",
+      "Segurado",
+      "Seguradora",
+      "Prêmio",
+      "Status",
+      "Negociação",
+      "Gerada em",
+      "Transmitida",
+      "Prazo resposta",
+    ];
+    const lines = filtered.map((r) =>
+      [
+        r.numero ?? "",
+        r.cotacoes?.segurado?.[0]?.nome ?? "",
+        r.seguradora ?? "",
+        fmtBRL(r.premio ?? r.valor),
+        r.status,
+        r.negociacao_status,
+        new Date(r.criado_em).toLocaleDateString("pt-BR"),
+        r.transmitida_em ? new Date(r.transmitida_em).toLocaleString("pt-BR") : "",
+        r.prazo_resposta ? new Date(r.prazo_resposta).toLocaleDateString("pt-BR") : "",
+      ]
+        .map((v) => `"${String(v).replaceAll('"', '""')}"`)
+        .join(","),
+    );
+    const csv = [head.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "propostas.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <AppShell title="Propostas">
@@ -82,26 +151,89 @@ function Page() {
         <div>
           <h1>Propostas</h1>
           <div className="sub">
-            {rows.length} proposta{rows.length !== 1 ? "s" : ""} · valor total {fmtBRL(totalValor)}
+            {filtered.length} proposta{filtered.length !== 1 ? "s" : ""} · valor total{" "}
+            {fmtBRL(totalValor)} · ticket médio {fmtBRL(ticketMedio)}
           </div>
         </div>
+        <button className="btn btn-ghost" onClick={exportar}>
+          <svg width="14" height="14">
+            <use href="#i-download"></use>
+          </svg>{" "}
+          Exportar
+        </button>
+      </div>
+
+      <div className="filters-bar">
+        <span className="label">FILTROS</span>
+        <select
+          className="select-mini"
+          value={fStatus}
+          onChange={(e) => setFStatus(e.target.value)}
+        >
+          <option value="">Status · todos</option>
+          <option value="gerada">Gerada</option>
+          <option value="transmitida">Transmitida</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+        <select
+          className="select-mini"
+          value={fNegociacao}
+          onChange={(e) => setFNegociacao(e.target.value)}
+        >
+          <option value="">Negociação · todas</option>
+          <option value="aguardando">Aguardando</option>
+          <option value="em_negociacao">Em negociação</option>
+          <option value="aceita">Aceita</option>
+          <option value="recusada">Recusada</option>
+        </select>
+        <select
+          className="select-mini"
+          value={fSeguradora}
+          onChange={(e) => setFSeguradora(e.target.value)}
+        >
+          <option value="">Seguradora · todas</option>
+          {seguradoras.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select className="select-mini" value={fPrazo} onChange={(e) => setFPrazo(e.target.value)}>
+          <option value="">Prazo · todos</option>
+          <option value="hoje">Vencendo hoje</option>
+          <option value="3dias">Vence em 3 dias</option>
+          <option value="vencidas">Vencidas</option>
+        </select>
+        <button
+          className="btn-link btn-sm"
+          onClick={() => {
+            setFStatus("");
+            setFNegociacao("");
+            setFSeguradora("");
+            setFPrazo("");
+          }}
+        >
+          Limpar
+        </button>
       </div>
 
       {err && <div className="alert alert-err">{err}</div>}
       {loading && <div className="muted">Carregando…</div>}
 
-      {!loading && rows.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div className="card" data-tour="propostas-lista">
           <div
             className="card-b"
             style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
           >
-            Nenhuma proposta ainda. Selecione um prêmio em uma cotação para gerar a primeira.
+            {rows.length === 0
+              ? "Nenhuma proposta ainda. Selecione um prêmio em uma cotação para gerar a primeira."
+              : "Nenhuma proposta encontrada com os filtros atuais."}
           </div>
         </div>
       )}
 
-      {rows.length > 0 && (
+      {filtered.length > 0 && (
         <div data-tour="propostas-lista" style={{ overflowX: "auto" }}>
           <table className="table-pipe mtable" style={{ minWidth: 900 }}>
             <thead>
@@ -118,7 +250,7 @@ function Page() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {filtered.map((r) => (
                 <tr
                   key={r.id}
                   ref={(el) => {

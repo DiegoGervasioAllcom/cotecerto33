@@ -57,6 +57,8 @@ function metaBar(vendas: number, meta: number | null) {
   );
 }
 
+const fmtBRLFull = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 function Page() {
   const denied = useRequireRole("matriz");
   const navigate = useNavigate();
@@ -97,6 +99,46 @@ function Page() {
 
   if (denied) return denied;
 
+  function exportar() {
+    const head = [
+      "Franquia",
+      "Responsável",
+      "Leads",
+      "Em aberto",
+      "Perdidos",
+      "Vendas",
+      "Faturamento",
+      "Comissão",
+      "Conv.",
+      "Meta",
+    ];
+    const lines = rows.map((r) => {
+      const conv = r.leads_mes > 0 ? Math.round((r.vendas_mes / r.leads_mes) * 100) : 0;
+      return [
+        r.nome,
+        resps[r.empresa_id] ?? "",
+        r.leads_mes,
+        r.em_aberto,
+        r.perdidos_mes,
+        r.vendas_mes,
+        fmtBRLFull(Number(r.faturamento_mes) || 0),
+        fmtBRLFull(Number(r.comissao_mes) || 0),
+        `${conv}%`,
+        r.meta_vendas ? `${r.vendas_mes}/${r.meta_vendas}` : "—",
+      ]
+        .map((v) => `"${String(v).replaceAll('"', '""')}"`)
+        .join(",");
+    });
+    const csv = [head.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "franquias.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <AppShell title="Franquias">
       <ProtoIcons />
@@ -105,6 +147,12 @@ function Page() {
           <h1>Franquias</h1>
           <div className="sub">Esta visão substitui a planilha de comparativo de franquias</div>
         </div>
+        <button className="btn btn-ghost" onClick={exportar}>
+          <svg width="14" height="14">
+            <use href="#i-download"></use>
+          </svg>{" "}
+          Exportar
+        </button>
       </div>
 
       {err && <div className="alert alert-err">{err}</div>}
