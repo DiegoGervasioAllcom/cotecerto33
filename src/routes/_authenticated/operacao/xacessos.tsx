@@ -197,7 +197,7 @@ function Page() {
       );
       setLoading(false);
     })();
-  }, []);
+  }, [profile?.id]);
 
   const tipos = Array.from(new Set(rows.map((r) => r.tipoLabel))).sort();
   const filtradas = rows.filter((r) => {
