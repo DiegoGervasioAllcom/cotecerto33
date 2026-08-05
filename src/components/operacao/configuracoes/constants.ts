@@ -25,7 +25,9 @@ export const DEFAULT_CFG: Cfg = {
 // Read-only: edição/desativação seguem pelos modais por perfil (UsuariosModal).
 export const TIPO_CHIP_CLASS: Record<string, string> = {
   Matriz: "chip-outline",
+  "Coordenador Comercial": "chip-outline",
   "Supervisor (Matriz)": "chip-slate",
+  "Interno (Matriz)": "chip-slate",
   "Master franqueado": "chip-yellow",
   "Franquia (Full)": "chip-info",
   "Franquia (Individual)": "chip-info",
