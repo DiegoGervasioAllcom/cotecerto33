@@ -436,7 +436,7 @@ function Page() {
   }
 
   return (
-    <AppShell title="Aprovações" crumbs="Grupo">
+    <AppShell title="Aprovações">
       <ProtoIcons />
       <div className="page-head">
         <div>
