@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { TutorialControllerProvider } from "@/components/tutorial/tutorial-controller";
-import { useAuth } from "@/lib/auth";
+import { getProfileAccessState, useAuth } from "@/lib/auth";
 import { useRequireAreaAtual } from "@/lib/require-area";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -21,11 +21,12 @@ function AuthenticatedLayout() {
       navigate({ to: "/auth", replace: true });
       return;
     }
-    if (profile?.status === "pendente") {
+    const profileAccess = getProfileAccessState(profile);
+    if (profileAccess === "pending") {
       navigate({ to: "/auth/pendente", replace: true });
       return;
     }
-    if (profile && profile.status !== "aprovada") {
+    if (profileAccess !== "active") {
       navigate({ to: "/auth", replace: true });
     }
   }, [loading, session, profile, navigate]);
@@ -39,7 +40,7 @@ function AuthenticatedLayout() {
     );
   }
 
-  if (profile && profile.status !== "aprovada") {
+  if (getProfileAccessState(profile) !== "active") {
     return null;
   }
 
