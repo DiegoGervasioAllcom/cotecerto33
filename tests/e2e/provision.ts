@@ -267,7 +267,13 @@ export async function limparVendedorComTutorial(v: VendedorComTutorial): Promise
   await limparVendedorComLead(v);
 }
 
-export type PersonaRole = "master" | "supervisor" | "franqueado" | "vendedor" | "interno";
+export type PersonaRole =
+  | "master"
+  | "coordenador"
+  | "supervisor"
+  | "franqueado"
+  | "vendedor"
+  | "interno";
 export type PersonaModalidade = "individual" | "full";
 
 export type Persona = {
@@ -402,9 +408,25 @@ export async function criarPersona(opts: {
 
 /** Remove os dados criados por `criarPersona` (best-effort; `db reset` também resolve). */
 export async function limparPersona(p: Persona): Promise<void> {
+  await admin.from("profile_areas").delete().eq("profile_id", p.userId);
   await admin.from("user_roles").delete().eq("user_id", p.userId);
   await admin.auth.admin.deleteUser(p.userId);
   await admin.from("empresas").delete().eq("id", p.empresaId);
+}
+
+/** Define o override completo de áreas de uma persona para regressões de navegação. */
+export async function definirAreasPersona(userId: string, areas: string[]): Promise<void> {
+  const { error: limparError } = await admin
+    .from("profile_areas")
+    .delete()
+    .eq("profile_id", userId);
+  if (limparError) throw new Error(`limpar áreas da persona: ${limparError.message}`);
+  if (areas.length === 0) return;
+
+  const { error } = await admin
+    .from("profile_areas")
+    .insert(areas.map((area_chave) => ({ profile_id: userId, area_chave })));
+  if (error) throw new Error(`definir áreas da persona: ${error.message}`);
 }
 
 /**
