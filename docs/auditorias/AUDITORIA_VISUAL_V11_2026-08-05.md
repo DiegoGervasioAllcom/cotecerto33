@@ -131,7 +131,63 @@ os casos negativos de autorização; a suíte direcionada passou depois do ajust
 o resultado da suíte DB completa em verde, devido às duas falhas de estado compartilhado acima.
 
 O status aprovado limita-se aos achados funcionais, personas e rotas descritos nesta auditoria. A
-suíte DB/RLS completa permanece **não verde** pelas duas falhas de estado compartilhado acima e
-precisa de estabilização independente. Esta conclusão também não substitui os itens de go-live fora
-do escopo registrados na seção “Limitações”, nem antecipa o resultado de CI ou validação em
-produção.
+suíte DB/RLS completa dessa execução local permaneceu **não verde** pelas duas falhas de estado
+compartilhado acima. Esta conclusão também não substitui os itens de go-live fora do escopo
+registrados na seção “Limitações” nem antecipa validação em produção. O resultado posterior do CI
+da PR está registrado na seção seguinte.
+
+---
+
+## Revalidação completa após correção do CI — 06/08/2026
+
+A PR [#134](https://github.com/DiegoGervasioAllcom/cotecerto33/pull/134) falhou inicialmente apenas
+no E2E `Supervisor recebe apresentação e roteiro de grupo`: a fixture criava um `supervisor` sem
+cargo, portanto sem o preset de áreas exigido pela V11. O commit `fd8db4b` passou a criar essa
+persona com `cargo: "sup_vendas"`, sem alterar guard ou código de produção.
+
+### Resultado da repetição local
+
+- Bateria focal dos achados, personas, cargos, rotas e tutoriais: **23/23 aprovada** no Chromium,
+  com um worker.
+- Suíte E2E integral: **52/52 aprovada** no Chromium, com quatro workers, incluindo o cenário de
+  Supervisor que havia falhado no CI.
+- Testes direcionados de `route-access`, landing, redirects, áreas internas, hierarquia/RLS e RPC
+  de paginação: **6 arquivos e 103/103 testes aprovados**, com um worker.
+- Inspeção direta no navegador: login da Matriz abriu `/comando/visao-geral`; Pipeline geral abriu
+  sem `Objects are not valid as a React child`; Franquias exibiu a tabela e o controle `Próxima`.
+- Comparação direta com o protótipo V11 build 28/07 r40: a navegação da Matriz manteve Franquias,
+  Pipeline geral e Configurações e não exibiu `Lead Manual`, coerente com a referência.
+- Checkout validado no commit `fd8db4b`; nenhum arquivo do produto foi modificado durante a
+  repetição.
+
+### Resultado remoto da PR #134
+
+Após o push de `fd8db4b`, todos os checks finalizaram com sucesso:
+
+| Check        | Resultado | Duração |
+| ------------ | --------- | ------: |
+| `ci`         | aprovado  |   1m00s |
+| `db-tests`   | aprovado  |   4m53s |
+| `e2e`        | aprovado  |   4m58s |
+| `build-push` | aprovado  |     53s |
+
+O CI remoto verde substitui o estado pendente registrado durante a abertura da PR. A ocorrência
+local anterior de 559/561 na suíte DB permanece documentada como evidência de isolamento imperfeito
+naquela execução; não reapareceu no job remoto limpo de `db-tests`.
+
+### Observações não bloqueantes
+
+- Trocas rápidas de sessão ainda podem registrar `TypeError: Failed to fetch` em consultas de
+  badges/Visão geral. Nenhum teste das duas execuções (23 focais e 52 integrais, com sobreposição de
+  cenários) falhou por essa mensagem, mas ela deve permanecer monitorada como dívida de robustez.
+- Na tela de login, os textos visuais `E-mail` e `Senha` não estão associados semanticamente aos
+  campos; o acesso por `getByLabel` não os encontrou. É uma lacuna de acessibilidade, separada dos
+  achados funcionais corrigidos.
+
+### Conclusão desta rodada
+
+Status dos achados funcionais desta auditoria: **CORRIGIDOS, REVALIDADOS LOCALMENTE E COM CI VERDE**.
+
+A conclusão vale para as rotas, personas, cargos, overrides e telas cobertos acima. Produção,
+envio real de e-mails/WhatsApp, integrações externas e os demais critérios de go-live continuam fora
+do escopo desta revalidação.
