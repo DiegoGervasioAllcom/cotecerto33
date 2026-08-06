@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/database.types";
 import { useRequirePerfilInterno } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/franquias/")({
@@ -25,9 +26,42 @@ type Row = {
   comissao_mes: number;
   meta_vendas: number | null;
   meta_faturamento: number | null;
+  responsavel_nome: string | null;
 };
 
-type Resp = { empresa_id: string; nome: string };
+type RpcRow = Database["public"]["Functions"]["listar_franquias_paginada"]["Returns"][number];
+
+// Exportados para o teste unitário do contrato de paginação desta rota.
+export const FRANQUIAS_PAGE_SIZE = 25;
+const EXPORT_PAGE_SIZE = 200;
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function normalizarPaginaFranquias(data: RpcRow[] | null): {
+  rows: Row[];
+  total: number;
+} {
+  return {
+    rows: (data ?? []).map(({ total_count: _totalCount, ...row }) => ({
+      ...row,
+      leads_mes: Number(row.leads_mes) || 0,
+      em_aberto: Number(row.em_aberto) || 0,
+      perdidos_mes: Number(row.perdidos_mes) || 0,
+      vendas_mes: Number(row.vendas_mes) || 0,
+      faturamento_mes: Number(row.faturamento_mes) || 0,
+      comissao_mes: Number(row.comissao_mes) || 0,
+      meta_vendas: row.meta_vendas == null ? null : Number(row.meta_vendas),
+      meta_faturamento: row.meta_faturamento == null ? null : Number(row.meta_faturamento),
+      perc_comissao_efetiva:
+        row.perc_comissao_efetiva == null ? null : Number(row.perc_comissao_efetiva),
+    })),
+    total: Number(data?.[0]?.total_count) || 0,
+  };
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function paginaAnteriorSeVazia(page: number, quantidade: number): number | null {
+  return page > 1 && quantidade === 0 ? page - 1 : null;
+}
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -63,43 +97,86 @@ function Page() {
   const denied = useRequirePerfilInterno();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
-  const [resps, setResps] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportErr, setExportErr] = useState<string | null>(null);
+  const exportRun = useRef(0);
+
+  useEffect(
+    () => () => {
+      exportRun.current += 1;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (denied) return;
+    let active = true;
+    setLoading(true);
+    setErr(null);
     (async () => {
-      const { data, error } = await supabase
-        .from("v_franquia_kpis")
-        .select("*")
-        .neq("status", "pendente")
-        .order("nome");
-      if (error) setErr(error.message);
-      else {
-        const list = (data ?? []) as Row[];
-        setRows(list);
-        if (list.length) {
-          const ids = list.map((r) => r.empresa_id);
-          const { data: profs } = await supabase
-            .from("profiles")
-            .select("empresa_id,nome")
-            .in("empresa_id", ids)
-            .eq("status", "aprovada");
-          const map: Record<string, string> = {};
-          (profs as Resp[] | null)?.forEach((p) => {
-            if (!map[p.empresa_id]) map[p.empresa_id] = p.nome;
-          });
-          setResps(map);
+      const { data, error } = await supabase.rpc("listar_franquias_paginada", {
+        p_limite: FRANQUIAS_PAGE_SIZE,
+        p_offset: (page - 1) * FRANQUIAS_PAGE_SIZE,
+      });
+      if (!active) return;
+      if (error) {
+        setRows([]);
+        setTotal(0);
+        setErr(error.message);
+      } else {
+        const pagina = normalizarPaginaFranquias(data);
+        const previousPage = paginaAnteriorSeVazia(page, pagina.rows.length);
+        if (previousPage !== null) {
+          setRows([]);
+          setPage(previousPage);
+          return;
         }
+        setRows(pagina.rows);
+        setTotal(pagina.total);
       }
       setLoading(false);
     })();
-  }, [denied]);
+    return () => {
+      active = false;
+    };
+  }, [denied, page]);
 
   if (denied) return denied;
 
-  function exportar() {
+  async function exportar() {
+    if (exporting) return;
+    const run = exportRun.current + 1;
+    exportRun.current = run;
+    setExporting(true);
+    setExportErr(null);
+
+    const allRows: Row[] = [];
+    let offset = 0;
+    let expectedTotal: number | null = null;
+
+    while (expectedTotal === null || offset < expectedTotal) {
+      const { data, error } = await supabase.rpc("listar_franquias_paginada", {
+        p_limite: EXPORT_PAGE_SIZE,
+        p_offset: offset,
+      });
+      if (exportRun.current !== run) return;
+      if (error) {
+        setExportErr(`Não foi possível exportar as franquias: ${error.message}`);
+        setExporting(false);
+        return;
+      }
+
+      const lote = normalizarPaginaFranquias(data);
+      if (expectedTotal === null) expectedTotal = lote.total;
+      allRows.push(...lote.rows);
+      if (lote.rows.length < EXPORT_PAGE_SIZE) break;
+      offset += lote.rows.length;
+    }
+
     const head = [
       "Franquia",
       "Responsável",
@@ -112,11 +189,11 @@ function Page() {
       "Conv.",
       "Meta",
     ];
-    const lines = rows.map((r) => {
+    const lines = allRows.map((r) => {
       const conv = r.leads_mes > 0 ? Math.round((r.vendas_mes / r.leads_mes) * 100) : 0;
       return [
         r.nome,
-        resps[r.empresa_id] ?? "",
+        r.responsavel_nome ?? "",
         r.leads_mes,
         r.em_aberto,
         r.perdidos_mes,
@@ -137,6 +214,7 @@ function Page() {
     a.download = "franquias.csv";
     a.click();
     URL.revokeObjectURL(url);
+    if (exportRun.current === run) setExporting(false);
   }
 
   return (
@@ -147,17 +225,32 @@ function Page() {
           <h1>Franquias</h1>
           <div className="sub">Esta visão substitui a planilha de comparativo de franquias</div>
         </div>
-        <button className="btn btn-ghost" onClick={exportar}>
-          <svg width="14" height="14">
-            <use href="#i-download"></use>
-          </svg>{" "}
-          Exportar
-        </button>
+        <div className="tools">
+          <button
+            className="btn btn-ghost"
+            onClick={() => void exportar()}
+            disabled={loading || exporting || total === 0}
+          >
+            <svg width="14" height="14">
+              <use href="#i-download"></use>
+            </svg>{" "}
+            {exporting ? "Exportando…" : "Exportar"}
+          </button>
+        </div>
       </div>
 
       {err && <div className="alert alert-err">{err}</div>}
+      {exportErr && <div className="alert alert-err">{exportErr}</div>}
 
-      {!loading && rows.length === 0 && (
+      {loading && rows.length === 0 && (
+        <div className="card" data-tour="franquias-lista">
+          <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
+            Carregando franquias…
+          </div>
+        </div>
+      )}
+
+      {!loading && !err && rows.length === 0 && (
         <div className="card" data-tour="franquias-lista">
           <div
             className="card-b"
@@ -206,7 +299,7 @@ function Page() {
                         <small>{r.cidade ? `${r.cidade}${r.uf ? "/" + r.uf : ""}` : "—"}</small>
                       </div>
                     </td>
-                    <td>{resps[r.empresa_id] ?? "—"}</td>
+                    <td>{r.responsavel_nome ?? "—"}</td>
                     <td>{r.leads_mes}</td>
                     <td>
                       {r.em_aberto} <small className="muted">/ {r.perdidos_mes} perd.</small>
@@ -224,6 +317,41 @@ function Page() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {total > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 12,
+          }}
+        >
+          <div className="muted small">
+            Mostrando {(page - 1) * FRANQUIAS_PAGE_SIZE + 1}–
+            {(page - 1) * FRANQUIAS_PAGE_SIZE + rows.length} de {total}
+          </div>
+          <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={loading || page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              ← Anterior
+            </button>
+            <span className="small muted">
+              Página {page} de {Math.max(1, Math.ceil(total / FRANQUIAS_PAGE_SIZE))}
+            </span>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={loading || page * FRANQUIAS_PAGE_SIZE >= total}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Próxima →
+            </button>
+          </div>
         </div>
       )}
     </AppShell>
