@@ -29,7 +29,7 @@ export function StepVeiculo({ f, up, erros, marcas, modelos, fipeValor }: Props)
             value={f.placa}
             maxLength={8}
             onChange={(e) => up("placa", maskPlaca(e.target.value))}
-            placeholder="AAA-0A00"
+            placeholder="AAA0A00"
           />
           {erros.placa && (
             <span className="hint" style={{ color: "var(--alert)", display: "block" }}>

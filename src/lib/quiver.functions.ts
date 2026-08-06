@@ -8,6 +8,7 @@
 // (a RLS de `cotacoes` não se aplica aqui porque o client é service_role).
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import { normalizePlaca } from "@/lib/masks";
 
 function getAdmin() {
   const url =
@@ -122,7 +123,7 @@ function proprietarioPodeSerJuridica(relacao: string): boolean {
 // ainda não tem coluna própria no schema — ver Fase 4 do plano "novo-lead:
 // fechar com o protótipo v10"; fica com o default mais seguro/comum
 // documentado no guia até existir.
-type CotacaoRow = {
+export type CotacaoRow = {
   id: string;
   segurado: Record<string, unknown> | null;
   seguro: Record<string, unknown> | null;
@@ -131,7 +132,7 @@ type CotacaoRow = {
   coberturas: Record<string, unknown> | null;
 };
 
-function montarPayloadQuiver(cot: CotacaoRow) {
+export function montarPayloadQuiver(cot: CotacaoRow) {
   const s = cot.segurado ?? {};
   const sg = cot.seguro ?? {};
   const v = cot.veiculo ?? {};
@@ -159,7 +160,7 @@ function montarPayloadQuiver(cot: CotacaoRow) {
       seguradorasDisponiveis: seguradorasQuiver.length ? seguradorasQuiver : undefined,
     },
     veiculo: {
-      placa: v.placa ?? "",
+      placa: normalizePlaca(v.placa as string | null | undefined),
       chassiRemarcado: simNao(v.chassi_remarcado as boolean),
       financiado: simNao(alienado),
       ...(alienado && v.banco ? { alienacaoFiduciaria: v.banco as string } : {}),

@@ -234,7 +234,7 @@ test.describe("roteiro de vendas", () => {
       dialog = await esperarPasso(page, title, progress);
     }
     await expect(page.getByRole("heading", { name: "Dados do Veículo" })).toBeVisible();
-    await expectSpotlightAround(page, page.locator('.wizard-grid input[placeholder="AAA-0A00"]'));
+    await expectSpotlightAround(page, page.locator('.wizard-grid input[placeholder="AAA0A00"]'));
     await page.waitForTimeout(1_700);
     expect(mutations, "preview não pode persistir rascunho nem chamar RPC").toEqual([]);
     await dialog.getByRole("button", { name: "Sair", exact: true }).click();

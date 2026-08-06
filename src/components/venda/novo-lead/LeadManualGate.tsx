@@ -96,7 +96,7 @@ export function LeadManualGate({
               value={placa}
               maxLength={8}
               onChange={(e) => setPlaca(maskPlaca(e.target.value))}
-              placeholder="AAA-0A00"
+              placeholder="AAA0A00"
             />
           </div>
           <div className="field-group">

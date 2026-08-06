@@ -2,6 +2,7 @@
 // onlyDigits/maskCpfCnpj/maskTelefone/maskCep genéricos vêm de "@/lib/masks".
 import {
   onlyDigits,
+  normalizePlaca,
   maskTelefone as maskTelefoneCentral,
   maskCep as maskCepCentral,
 } from "@/lib/masks";
@@ -20,13 +21,8 @@ export function maskCep(raw: string) {
 }
 
 export function maskPlaca(raw: string) {
-  // Mercosul: AAA0A00 | Antigo: AAA0000
-  const v = (raw || "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 7);
-  if (v.length <= 3) return v;
-  return v.slice(0, 3) + "-" + v.slice(3);
+  // Mercosul: AAA0A00 | Antigo: AAA0000 (sem pontuação para a Quiver).
+  return normalizePlaca(raw);
 }
 
 export function maskAno(raw: string) {
