@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
-import { useRequireMatrizOuCoordenador } from "@/lib/require-role";
+import { useRequirePerfilInterno } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/franquias/$id")({
   head: () => ({ meta: [{ title: "Franquia · CoteCerto" }] }),
@@ -47,7 +47,7 @@ function statusChip(vendas: number, meta: number | null) {
 }
 
 function Page() {
-  const denied = useRequireMatrizOuCoordenador();
+  const denied = useRequirePerfilInterno();
   const { id } = Route.useParams();
   const [k, setK] = useState<Kpi | null>(null);
   const [resp, setResp] = useState<string>("—");

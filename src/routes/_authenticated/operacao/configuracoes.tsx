@@ -9,7 +9,7 @@ import { SeguradorasModal } from "@/components/operacao/configuracoes/seguradora
 import { UsuariosModal } from "@/components/operacao/configuracoes/usuarios-modal";
 import { UsuariosSistemaModal } from "@/components/operacao/configuracoes/usuarios-sistema-modal";
 import { useAuth } from "@/lib/auth";
-import { useRequireMatrizOuCoordenador } from "@/lib/require-role";
+import { useRequirePerfilInterno } from "@/lib/require-role";
 import { podeEditarConfiguracoes } from "@/lib/route-access";
 
 export const Route = createFileRoute("/_authenticated/operacao/configuracoes")({
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/operacao/configuracoes")({
 });
 
 function Page() {
-  const denied = useRequireMatrizOuCoordenador();
+  const denied = useRequirePerfilInterno();
   const { role } = useAuth();
   const canEdit = podeEditarConfiguracoes(role);
   const nav = useNavigate();

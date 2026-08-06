@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { TutorialControllerProvider } from "@/components/tutorial/tutorial-controller";
 import { useAuth } from "@/lib/auth";
+import { useRequireAreaAtual } from "@/lib/require-area";
 
 export const Route = createFileRoute("/_authenticated")({
   // O Supabase guarda a sessão no localStorage; SSR não tem acesso.
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
   const { loading, session, profile } = useAuth();
+  const areaGuard = useRequireAreaAtual();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,6 +42,8 @@ function AuthenticatedLayout() {
   if (profile && profile.status !== "aprovada") {
     return null;
   }
+
+  if (areaGuard) return areaGuard;
 
   return (
     <TutorialControllerProvider>

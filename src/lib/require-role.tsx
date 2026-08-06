@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { useGroupScope } from "@/lib/group-scope";
 import type { Perfil } from "@/integrations/supabase/client";
-import { podeAcessarCentral, podeAcessarGestaoGeral } from "@/lib/route-access";
+import { podeAcessarAreaInterna, podeAcessarCentral } from "@/lib/route-access";
 
 /**
  * Guard client-side de defesa em profundidade para telas exclusivas de uma
@@ -60,15 +60,15 @@ export function useRequireMatrizOuFranquiaFull(): ReactNode | null {
 }
 
 /**
- * Telas das 17 areas que o Coordenador Comercial enxerga junto da Matriz.
- * As operacoes continuam submetidas as policies existentes; este guard nao
- * concede permissao de escrita.
+ * Barreira de família para telas internas. A autorização visual específica é
+ * decidida por AreaChave no layout autenticado; este guard só impede que a
+ * rede externa entre em uma rota interna por URL direta.
  */
-export function useRequireMatrizOuCoordenador(): ReactNode | null {
+export function useRequirePerfilInterno(): ReactNode | null {
   const { loading, role } = useAuth();
 
   if (loading) return null;
-  if (podeAcessarGestaoGeral(role)) return null;
+  if (podeAcessarAreaInterna(role)) return null;
 
   return <Navigate to="/inicio" replace />;
 }
