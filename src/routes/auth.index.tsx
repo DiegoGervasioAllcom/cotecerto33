@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   isSupabaseConfigured,
   supabase,
@@ -8,6 +8,10 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useGroupScope } from "@/lib/group-scope";
 import { resolverLanding } from "@/lib/landing";
+import {
+  limparChaveRedirecionamentoFalho,
+  proximaChaveRedirecionamento,
+} from "@/lib/redirect-once";
 import logoUrl from "@/assets/cotecerto-logo.png";
 
 export const Route = createFileRoute("/auth/")({
@@ -25,16 +29,55 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ultimoRedirecionamento = useRef<string | null>(null);
+  const [erroNavegacao, setErroNavegacao] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
-    if (loading) return;
-    if (!session) return;
-    if (profile?.status === "pendente") navigate({ to: "/auth/pendente", replace: true });
-    else {
-      const destino = resolverLanding({ role, isGroupView, groupLoading });
-      if (destino) navigate({ to: destino, replace: true });
+    if (loading || !session) {
+      ultimoRedirecionamento.current = null;
+      setErroNavegacao(null);
+      return;
     }
-  }, [session, profile, role, loading, groupLoading, isGroupView, navigate]);
+
+    const destino =
+      profile?.status === "pendente"
+        ? "/auth/pendente"
+        : resolverLanding({ role, isGroupView, groupLoading });
+    if (!destino) return;
+
+    // A rota de login permanece montada enquanto o TanStack carrega o destino.
+    // Não reiniciar a mesma transição quando o estado interno do router renderiza
+    // este efeito novamente (especialmente ao trocar de persona na mesma page).
+    const chaveDesejada = [session.user.id, destino].join("->");
+    if (erroNavegacao === chaveDesejada) return;
+    if (erroNavegacao) setErroNavegacao(null);
+
+    const chave = proximaChaveRedirecionamento(
+      [session.user.id, destino],
+      ultimoRedirecionamento.current,
+    );
+    if (!chave) return;
+    ultimoRedirecionamento.current = chave;
+    void navigate({ to: destino, replace: true }).catch(() => {
+      if (ultimoRedirecionamento.current !== chave) return;
+      ultimoRedirecionamento.current = limparChaveRedirecionamentoFalho(
+        ultimoRedirecionamento.current,
+        chave,
+      );
+      setErroNavegacao(chave);
+    });
+  }, [
+    session,
+    profile,
+    role,
+    loading,
+    groupLoading,
+    isGroupView,
+    navigate,
+    erroNavegacao,
+    retryNonce,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +117,21 @@ function AuthPage() {
       <div className="auth-card">
         <h3>Entrar na sua franquia</h3>
         <p className="lead">Use seu e-mail corporativo e senha.</p>
+        {erroNavegacao && (
+          <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
+            Não foi possível abrir sua área.
+            <button
+              type="button"
+              className="link"
+              onClick={() => {
+                setErroNavegacao(null);
+                setRetryNonce((atual) => atual + 1);
+              }}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        )}
         {!isSupabaseConfigured && (
           <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
             {supabaseConfigError} Configure as variáveis do Supabase para entrar.

@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { resolverLanding } from "@/lib/landing";
 
 describe("resolverLanding", () => {
+  it("aguarda o perfil ser resolvido depois que a sessão chega", () => {
+    expect(resolverLanding({ role: null, isGroupView: false, groupLoading: false })).toBeNull();
+  });
+
   it.each(["matriz", "coordenador", "supervisor", "interno", "master"] as const)(
     "envia %s para a visão de comando",
     (role) => {
