@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_CFG } from "../constants";
 import type { Cfg, Integracao, ModalKind, RoleCount } from "../types";
 
-export function useConfiguracoesGerais(enabled = true) {
+export function useConfiguracoesGerais(enabled = true, canEdit = true) {
   const [cfg, setCfg] = useState<Cfg>(DEFAULT_CFG);
   const [dist, setDist] = useState<{
     modo: string;
@@ -79,6 +79,10 @@ export function useConfiguracoesGerais(enabled = true) {
   }, [enabled]);
 
   async function update(patch: Partial<Cfg>, key: string) {
+    if (!canEdit) {
+      setErr("Configurações disponíveis somente para consulta neste acesso.");
+      return;
+    }
     setSavingKey(key);
     const next = { ...cfg, ...patch };
     setCfg(next);

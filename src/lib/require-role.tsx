@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { useGroupScope } from "@/lib/group-scope";
 import type { Perfil } from "@/integrations/supabase/client";
+import { podeAcessarCentral, podeAcessarGestaoGeral } from "@/lib/route-access";
 
 /**
  * Guard client-side de defesa em profundidade para telas exclusivas de uma
@@ -53,8 +54,21 @@ export function useRequireMatrizOuFranquiaFull(): ReactNode | null {
   const { loading: scopeLoading, isFranqFull } = useGroupScope();
 
   if (authLoading || scopeLoading) return null;
-  if (role === "matriz" || role === "interno") return null;
-  if (role === "franqueado" && isFranqFull) return null;
+  if (podeAcessarCentral(role, isFranqFull)) return null;
+
+  return <Navigate to="/inicio" replace />;
+}
+
+/**
+ * Telas das 17 areas que o Coordenador Comercial enxerga junto da Matriz.
+ * As operacoes continuam submetidas as policies existentes; este guard nao
+ * concede permissao de escrita.
+ */
+export function useRequireMatrizOuCoordenador(): ReactNode | null {
+  const { loading, role } = useAuth();
+
+  if (loading) return null;
+  if (podeAcessarGestaoGeral(role)) return null;
 
   return <Navigate to="/inicio" replace />;
 }

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
-import { useRequireRole } from "@/lib/require-role";
+import { useRequireMatrizOuCoordenador } from "@/lib/require-role";
 
 export const Route = createFileRoute("/_authenticated/operacao/mensagens")({
   head: () => ({ meta: [{ title: "Mensagens prontas · CoteCerto" }] }),
@@ -34,7 +34,7 @@ const CATEGORIAS = [
 ];
 
 function Page() {
-  const denied = useRequireRole("matriz");
+  const denied = useRequireMatrizOuCoordenador();
   const [rows, setRows] = useState<Msg[]>([]);
   const [me, setMe] = useState<string | null>(null);
   const [isMatriz, setIsMatriz] = useState(false);

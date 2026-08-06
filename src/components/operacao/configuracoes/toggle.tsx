@@ -4,11 +4,13 @@ export function Toggle({
   desc,
   on,
   onChange,
+  disabled = false,
 }: {
   title: string;
   desc: string;
   on: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="crit-row">
@@ -18,9 +20,11 @@ export function Toggle({
       </div>
       <div
         className={`switch ${on ? "on" : ""}`}
-        onClick={() => onChange(!on)}
+        onClick={disabled ? undefined : () => onChange(!on)}
         role="switch"
         aria-checked={on}
+        aria-disabled={disabled}
+        tabIndex={disabled ? -1 : 0}
       >
         <span className="track" />
       </div>
