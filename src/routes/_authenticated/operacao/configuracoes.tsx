@@ -8,7 +8,9 @@ import { PerfilRow } from "@/components/operacao/configuracoes/perfil-row";
 import { SeguradorasModal } from "@/components/operacao/configuracoes/seguradoras-modal";
 import { UsuariosModal } from "@/components/operacao/configuracoes/usuarios-modal";
 import { UsuariosSistemaModal } from "@/components/operacao/configuracoes/usuarios-sistema-modal";
-import { useRequireRole } from "@/lib/require-role";
+import { useAuth } from "@/lib/auth";
+import { useRequirePerfilInterno } from "@/lib/require-role";
+import { podeEditarConfiguracoes } from "@/lib/route-access";
 
 export const Route = createFileRoute("/_authenticated/operacao/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações · CoteCerto" }] }),
@@ -16,7 +18,9 @@ export const Route = createFileRoute("/_authenticated/operacao/configuracoes")({
 });
 
 function Page() {
-  const denied = useRequireRole("matriz");
+  const denied = useRequirePerfilInterno();
+  const { role } = useAuth();
+  const canEdit = podeEditarConfiguracoes(role);
   const nav = useNavigate();
   const [tipoFiltroInicial, setTipoFiltroInicial] = useState<string | undefined>(undefined);
   const {
@@ -36,7 +40,7 @@ function Page() {
     roleCount,
     modoLabel,
     rolesTotal,
-  } = useConfiguracoesGerais(!denied);
+  } = useConfiguracoesGerais(!denied, canEdit);
 
   if (denied) return denied;
 
@@ -49,6 +53,16 @@ function Page() {
           <div className="sub">Regras, metas, perfis e integrações da operação Supper Certo</div>
         </div>
       </div>
+
+      {!canEdit && (
+        <div className="audit-note" style={{ marginBottom: 18 }}>
+          <svg width="16" height="16">
+            <use href="#i-eye" />
+          </svg>{" "}
+          <strong style={{ marginRight: 4 }}>Somente leitura.</strong> O Coordenador Comercial
+          visualiza as configurações, mas alterações permanecem exclusivas da Matriz.
+        </div>
+      )}
 
       {err && (
         <div
@@ -77,15 +91,17 @@ function Page() {
                 Modo ativo: <strong>{modoLabel}</strong> · SLA de reação{" "}
                 <strong>{Math.round((dist?.sla_segundos ?? 180) / 60)} min</strong>.
               </p>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => nav({ to: "/comando/distribuicao" })}
-              >
-                <svg width="13" height="13">
-                  <use href="#i-settings" />
-                </svg>{" "}
-                Abrir regras de distribuição
-              </button>
+              {canEdit && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => nav({ to: "/comando/distribuicao" })}
+                >
+                  <svg width="13" height="13">
+                    <use href="#i-settings" />
+                  </svg>{" "}
+                  Abrir regras de distribuição
+                </button>
+              )}
             </div>
           </div>
 
@@ -108,7 +124,7 @@ function Page() {
                   value={cfg.meta_vendedor}
                   onChange={(e) => setCfg({ ...cfg, meta_vendedor: Number(e.target.value || 0) })}
                   onBlur={() => update({ meta_vendedor: cfg.meta_vendedor }, "meta_vendedor")}
-                  disabled={loading}
+                  disabled={loading || !canEdit}
                 />
               </div>
               <div className="field-group">
@@ -120,7 +136,7 @@ function Page() {
                   value={cfg.meta_franquia}
                   onChange={(e) => setCfg({ ...cfg, meta_franquia: Number(e.target.value || 0) })}
                   onBlur={() => update({ meta_franquia: cfg.meta_franquia }, "meta_franquia")}
-                  disabled={loading}
+                  disabled={loading || !canEdit}
                 />
               </div>
               {savingKey?.startsWith("meta_") && <div className="small muted">Salvando…</div>}
@@ -143,12 +159,14 @@ function Page() {
                   desc="Registrar autor, data e valor anterior em toda alteração"
                   on={cfg.auditoria_comissoes}
                   onChange={(v) => update({ auditoria_comissoes: v }, "auditoria_comissoes")}
+                  disabled={!canEdit}
                 />
                 <Toggle
                   title="Exigir motivo em estornos"
                   desc="Cancelamento só conclui com motivo preenchido"
                   on={cfg.exigir_motivo_estorno}
                   onChange={(v) => update({ exigir_motivo_estorno: v }, "exigir_motivo_estorno")}
+                  disabled={!canEdit}
                 />
                 <Toggle
                   title="Aprovação dupla para ajuste de comissão"
@@ -157,6 +175,7 @@ function Page() {
                   onChange={(v) =>
                     update({ aprovacao_dupla_comissao: v }, "aprovacao_dupla_comissao")
                   }
+                  disabled={!canEdit}
                 />
               </div>
             </div>
@@ -180,64 +199,84 @@ function Page() {
                   desc="Acesso total · distribui, audita e remunera"
                   count={roleCount("matriz")}
                   solid
-                  onClick={() => setModal("matriz")}
+                  onClick={canEdit ? () => setModal("matriz") : undefined}
                 />
                 <PerfilRow
                   title="Franqueado"
                   desc="Vê a própria unidade e equipe"
                   count={roleCount("franqueado")}
-                  onClick={() => setModal("franqueado")}
+                  onClick={canEdit ? () => setModal("franqueado") : undefined}
                 />
                 <PerfilRow
                   title="Vendedor"
                   desc="Pipeline, cotação, proposta e extrato próprios"
                   count={roleCount("vendedor")}
-                  onClick={() => setModal("vendedor")}
+                  onClick={canEdit ? () => setModal("vendedor") : undefined}
                 />
                 <PerfilRow
                   title="Master"
                   desc="Opera a própria franquia e a rede supervisionada"
                   count={roleCount("master")}
-                  onClick={() => {
-                    setTipoFiltroInicial("Master franqueado");
-                    setModal("todos");
-                  }}
+                  onClick={
+                    canEdit
+                      ? () => {
+                          setTipoFiltroInicial("Master franqueado");
+                          setModal("todos");
+                        }
+                      : undefined
+                  }
                 />
                 <PerfilRow
                   title="Coordenador"
                   desc="Mesmo alcance da Matriz, sem trava de diretor"
                   count={roleCount("coordenador")}
-                  onClick={() => {
-                    setTipoFiltroInicial("Coordenador Comercial");
-                    setModal("todos");
-                  }}
+                  onClick={
+                    canEdit
+                      ? () => {
+                          setTipoFiltroInicial("Coordenador Comercial");
+                          setModal("todos");
+                        }
+                      : undefined
+                  }
                 />
                 <PerfilRow
                   title="Supervisor"
                   desc="Cargo interno · Vendas, Operacional ou Backoffice"
                   count={roleCount("supervisor")}
-                  onClick={() => {
-                    setTipoFiltroInicial("Supervisor (Matriz)");
-                    setModal("todos");
-                  }}
+                  onClick={
+                    canEdit
+                      ? () => {
+                          setTipoFiltroInicial("Supervisor (Matriz)");
+                          setModal("todos");
+                        }
+                      : undefined
+                  }
                 />
                 <PerfilRow
                   title="Interno"
                   desc="Cargo interno · Marketing ou Assistente Comercial"
                   count={roleCount("interno")}
-                  onClick={() => {
-                    setTipoFiltroInicial("Interno (Matriz)");
-                    setModal("todos");
-                  }}
+                  onClick={
+                    canEdit
+                      ? () => {
+                          setTipoFiltroInicial("Interno (Matriz)");
+                          setModal("todos");
+                        }
+                      : undefined
+                  }
                 />
                 <PerfilRow
                   title="Todos os usuários"
                   desc="Lista central: usuário, tipo, supervisão e status"
                   count={rolesTotal}
-                  onClick={() => {
-                    setTipoFiltroInicial(undefined);
-                    setModal("todos");
-                  }}
+                  onClick={
+                    canEdit
+                      ? () => {
+                          setTipoFiltroInicial(undefined);
+                          setModal("todos");
+                        }
+                      : undefined
+                  }
                 />
               </div>
             </div>
@@ -273,14 +312,16 @@ function Page() {
                 ))}
                 <div
                   className="crit-row"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setModal("seguradoras")}
+                  style={canEdit ? { cursor: "pointer" } : undefined}
+                  onClick={canEdit ? () => setModal("seguradoras") : undefined}
                 >
                   <div className="cr-body">
                     <div className="cr-t">Seguradoras ({segCount})</div>
                     <div className="cr-d">{segPreview || "Nenhuma cadastrada"}</div>
                   </div>
-                  <span className="chip chip-ok">Gerenciar</span>
+                  <span className={`chip ${canEdit ? "chip-ok" : "chip-outline"}`}>
+                    {canEdit ? "Gerenciar" : "Somente leitura"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -302,24 +343,28 @@ function Page() {
                   desc="Avisar a Matriz quando um lead voltar para a fila"
                   on={cfg.notif_sla_estourado}
                   onChange={(v) => update({ notif_sla_estourado: v }, "notif_sla_estourado")}
+                  disabled={!canEdit}
                 />
                 <Toggle
                   title="Venda não paga"
                   desc="Alertar após 7 dias sem baixa financeira"
                   on={cfg.notif_venda_nao_paga}
                   onChange={(v) => update({ notif_venda_nao_paga: v }, "notif_venda_nao_paga")}
+                  disabled={!canEdit}
                 />
                 <Toggle
                   title="Renovação a vencer"
                   desc="Lembrete 60 dias antes do vencimento"
                   on={cfg.notif_renovacao_vencer}
                   onChange={(v) => update({ notif_renovacao_vencer: v }, "notif_renovacao_vencer")}
+                  disabled={!canEdit}
                 />
                 <Toggle
                   title="Resumo diário por e-mail"
                   desc="Enviar consolidado às 8h"
                   on={cfg.notif_resumo_diario}
                   onChange={(v) => update({ notif_resumo_diario: v }, "notif_resumo_diario")}
+                  disabled={!canEdit}
                 />
               </div>
             </div>
@@ -327,7 +372,7 @@ function Page() {
         </div>
       </div>
 
-      {modal === "seguradoras" && (
+      {canEdit && modal === "seguradoras" && (
         <SeguradorasModal
           onClose={() => {
             setModal(null);
@@ -335,24 +380,24 @@ function Page() {
           }}
         />
       )}
-      {modal === "matriz" && (
+      {canEdit && modal === "matriz" && (
         <UsuariosModal role="matriz" title="Usuários · Matriz" onClose={() => setModal(null)} />
       )}
-      {modal === "franqueado" && (
+      {canEdit && modal === "franqueado" && (
         <UsuariosModal
           role="franqueado"
           title="Usuários · Franqueados"
           onClose={() => setModal(null)}
         />
       )}
-      {modal === "vendedor" && (
+      {canEdit && modal === "vendedor" && (
         <UsuariosModal
           role="vendedor"
           title="Usuários · Vendedores"
           onClose={() => setModal(null)}
         />
       )}
-      {modal === "todos" && (
+      {canEdit && modal === "todos" && (
         <UsuariosSistemaModal
           onClose={() => setModal(null)}
           initialFiltroTipo={tipoFiltroInicial}

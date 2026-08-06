@@ -1,4 +1,4 @@
-// Máscaras específicas do fluxo Novo lead.
+// Máscaras específicas do fluxo Lead Manual.
 // onlyDigits/maskCpfCnpj/maskTelefone/maskCep genéricos vêm de "@/lib/masks".
 import {
   onlyDigits,

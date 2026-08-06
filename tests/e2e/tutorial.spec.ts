@@ -598,7 +598,7 @@ test.describe("abertura das demais experiências", () => {
 
   test.beforeAll(async () => {
     [supervisor, individual, full] = await Promise.all([
-      criarPersona({ role: "supervisor" }),
+      criarPersona({ role: "supervisor", cargo: "sup_vendas" }),
       criarPersona({ role: "franqueado", modalidade: "individual" }),
       criarPersona({ role: "franqueado", modalidade: "full" }),
     ]);

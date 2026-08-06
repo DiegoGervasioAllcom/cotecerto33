@@ -24,7 +24,9 @@ import { PersoGeral } from "@/components/operacao/acessos/perso-geral";
 import { CadastrosMatrizTab } from "@/components/operacao/acessos/cadastros-matriz-tab";
 import { CadastrosRedeTab } from "@/components/operacao/acessos/cadastros-rede-tab";
 import { CadMatrizModal } from "@/components/acessos/cad-matriz-modal";
-import { useRequireRole } from "@/lib/require-role";
+import { useAuth } from "@/lib/auth";
+import { deveCarregarDadosAcessos, podeAdministrarAcessos } from "@/lib/route-access";
+import { useRequirePerfilInterno } from "@/lib/require-role";
 import type { Tab } from "@/components/operacao/acessos/types";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
@@ -33,15 +35,12 @@ export const Route = createFileRoute("/_authenticated/operacao/acessos")({
 });
 
 function Page() {
-  // V11 · C4 — coordenador também aciona "Cadastro manual · exceção"
-  // (fn_pode_criar_pendente_manual) e edita cargos (RLS de cargos/cargo_areas,
-  // H2/H3); sem isto a rota inteira ficava fechada para ele.
-  // V11 · H2 — o cargo Supervisor Operacional (perfil `supervisor`) tem
-  // `macessos` no preset (H2, sup_operacional), mas sem "supervisor" aqui o
-  // item aparecia no menu e o guard mandava de volta pra Visão geral — o RLS
-  // por baixo já escopa o que cada um pode ver/fazer, igual ao padrão de
-  // `useRequireMatrizOuFranquiaFull` (require-role.tsx).
-  const denied = useRequireRole("matriz", "coordenador", "supervisor");
+  // AreaChave decide quais pessoas do time interno entram. As ações continuam
+  // limitadas à família administrativa que já existia antes deste recorte.
+  const denied = useRequirePerfilInterno();
+  const { role } = useAuth();
+  const canAdmin = podeAdministrarAcessos(role);
+  const carregarDadosAdmin = deveCarregarDadosAcessos(role, !!denied);
   const {
     tab,
     setTab,
@@ -69,7 +68,7 @@ function Page() {
     solicitarPendencia,
     recusar,
     liberar,
-  } = useAcessosData(!denied);
+  } = useAcessosData(carregarDadosAdmin);
   const { visibleTab, setVisibleTab, visiblePersoSub, setVisiblePersoSub } =
     useAcessosTutorialPreview({
       tab,
@@ -135,6 +134,27 @@ function Page() {
   }
 
   if (denied) return denied;
+
+  if (!canAdmin) {
+    return (
+      <AppShell title="Acessos e permissões">
+        <ProtoIcons />
+        <div className="page-head">
+          <div>
+            <h1>Acessos e permissões</h1>
+            <div className="sub">Consulta do escopo de acessos da operação</div>
+          </div>
+        </div>
+        <div className="audit-note" style={{ marginBottom: 18 }}>
+          <svg width="16" height="16">
+            <use href="#i-eye" />
+          </svg>{" "}
+          <strong style={{ marginRight: 4 }}>Somente leitura.</strong> Convites, cadastros,
+          aprovações, desligamentos e personalizações permanecem com os perfis administrativos.
+        </div>
+      </AppShell>
+    );
+  }
 
   // V11 · F6 — mesmo painel nos dois blocos: Modelo Franquia é o único das 5
   // sub-abas específico de rede externa (Modelo CLT, Performance, Diretores e

@@ -71,7 +71,7 @@ const VENDA_GROUP: Group = {
     { to: "/inicio", label: "Início", icon: Home },
     { to: "/venda/atender", label: "Atender agora", icon: PlayCircle },
     { to: "/venda/pipeline", label: "Pipeline", icon: GitBranch },
-    { to: "/venda/novo-lead", label: "Novo lead", icon: UserPlus },
+    { to: "/venda/novo-lead", label: "Lead Manual", icon: UserPlus },
     { to: "/venda/cotacoes", label: "Cotações", icon: FileText },
     { to: "/venda/propostas", label: "Propostas", icon: Send },
     { to: "/venda/aceite", label: "Aceite & transmissão", icon: CheckSquare },

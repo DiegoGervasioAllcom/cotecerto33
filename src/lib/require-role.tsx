@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
 import { useGroupScope } from "@/lib/group-scope";
 import type { Perfil } from "@/integrations/supabase/client";
+import { podeAcessarAreaInterna, podeAcessarCentral } from "@/lib/route-access";
 
 /**
  * Guard client-side de defesa em profundidade para telas exclusivas de uma
@@ -53,8 +54,21 @@ export function useRequireMatrizOuFranquiaFull(): ReactNode | null {
   const { loading: scopeLoading, isFranqFull } = useGroupScope();
 
   if (authLoading || scopeLoading) return null;
-  if (role === "matriz" || role === "interno") return null;
-  if (role === "franqueado" && isFranqFull) return null;
+  if (podeAcessarCentral(role, isFranqFull)) return null;
+
+  return <Navigate to="/inicio" replace />;
+}
+
+/**
+ * Barreira de família para telas internas. A autorização visual específica é
+ * decidida por AreaChave no layout autenticado; este guard só impede que a
+ * rede externa entre em uma rota interna por URL direta.
+ */
+export function useRequirePerfilInterno(): ReactNode | null {
+  const { loading, role } = useAuth();
+
+  if (loading) return null;
+  if (podeAcessarAreaInterna(role)) return null;
 
   return <Navigate to="/inicio" replace />;
 }

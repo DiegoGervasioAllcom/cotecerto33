@@ -3910,6 +3910,27 @@ export type Database = {
         };
         Returns: string;
       };
+      listar_franquias_paginada: {
+        Args: { p_limite?: number; p_offset?: number };
+        Returns: {
+          cidade: string;
+          comissao_mes: number;
+          em_aberto: number;
+          empresa_id: string;
+          faturamento_mes: number;
+          leads_mes: number;
+          meta_faturamento: number;
+          meta_vendas: number;
+          nome: string;
+          perc_comissao_efetiva: number;
+          perdidos_mes: number;
+          responsavel_nome: string;
+          status: Database["public"]["Enums"]["empresa_status"];
+          total_count: number;
+          uf: string;
+          vendas_mes: number;
+        }[];
+      };
       marcar_apolice_emitida: {
         Args: {
           p_apolice: string;

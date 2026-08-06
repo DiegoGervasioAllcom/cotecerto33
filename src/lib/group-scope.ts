@@ -28,6 +28,38 @@ export interface GroupScope {
   isFranqFull: boolean;
 }
 
+interface ResolvedFranchiseModel {
+  modeloId: string;
+  isFull: boolean;
+}
+
+export function deriveFranchiseScope(input: {
+  role: ReturnType<typeof useAuth>["role"];
+  modeloId: string | null | undefined;
+  resolvedModel: ResolvedFranchiseModel | null;
+}): Pick<GroupScope, "loading" | "isFranqFull" | "isFranqIndividual"> {
+  if (input.role !== "franqueado") {
+    return { loading: false, isFranqFull: false, isFranqIndividual: false };
+  }
+
+  // Franquias sem modelo contratado são Individual por definição. Quando há
+  // modelo, o resultado só é válido se pertencer exatamente ao modelo atual.
+  // Isso torna a pendência síncrona também nas trocas de perfil/empresa.
+  if (!input.modeloId) {
+    return { loading: false, isFranqFull: false, isFranqIndividual: true };
+  }
+
+  if (input.resolvedModel?.modeloId !== input.modeloId) {
+    return { loading: true, isFranqFull: false, isFranqIndividual: false };
+  }
+
+  return {
+    loading: false,
+    isFranqFull: input.resolvedModel.isFull,
+    isFranqIndividual: !input.resolvedModel.isFull,
+  };
+}
+
 /**
  * Detecta se a franquia do usuário é do modelo "Full" pela coluna
  * `modelos_franquia.modalidade` ('individual' | 'full'; NULL para modelos
@@ -35,42 +67,40 @@ export interface GroupScope {
  */
 export function useGroupScope(): GroupScope {
   const { role, empresa } = useAuth();
-  const [isFranqFull, setIsFranqFull] = useState(false);
-  const [loading, setLoading] = useState(role === "franqueado");
+  const [resolvedModel, setResolvedModel] = useState<ResolvedFranchiseModel | null>(null);
+  const modeloId = empresa?.modelo_id;
 
   useEffect(() => {
     let active = true;
 
     if (role !== "franqueado") {
-      setIsFranqFull(false);
-      setLoading(false);
       return;
     }
 
-    if (!empresa?.modelo_id) {
-      setIsFranqFull(false);
-      setLoading(false);
+    if (!modeloId) {
       return;
     }
 
-    setLoading(true);
     supabase
       .from("modelos_franquia")
       .select("modalidade")
-      .eq("id", empresa.modelo_id)
+      .eq("id", modeloId)
       .maybeSingle()
       .then(({ data }) => {
         if (!active) return;
-        setIsFranqFull(data?.modalidade === "full");
-        setLoading(false);
+        setResolvedModel({ modeloId, isFull: data?.modalidade === "full" });
       });
 
     return () => {
       active = false;
     };
-  }, [role, empresa?.modelo_id]);
+  }, [role, modeloId]);
 
-  const isFranqIndividual = role === "franqueado" && !isFranqFull;
+  const { loading, isFranqFull, isFranqIndividual } = deriveFranchiseScope({
+    role,
+    modeloId,
+    resolvedModel,
+  });
   // `supervisor` hoje é sempre um dos 3 cargos internos da Matriz (H1-H8:
   // Vendas/Operacional/Backoffice) — nenhum tem franquia supervisionada nem
   // comissão de grupo. O conceito antigo de "Supervisor de rede" (protótipo)
