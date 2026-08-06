@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { maskCpfCnpj } from "@/lib/masks";
+import { maskCpfCnpj, normalizePlaca } from "@/lib/masks";
 import { maskCel, maskFixo, maskCep } from "../masks";
 import type { Form } from "../types";
 
@@ -88,7 +88,7 @@ export function useCotacaoRascunho(params: {
         observacoes: f.observacoesCot,
       },
       veiculo: {
-        placa: f.placa,
+        placa: normalizePlaca(f.placa),
         chassi: f.chassi,
         renavam: f.renavam,
         marca_codigo: f.marca,
@@ -297,7 +297,7 @@ export function useCotacaoRascunho(params: {
         grupoProducao: sg.grupo_producao ?? prev.grupoProducao,
         campanha: sg.campanha ?? prev.campanha,
         observacoesCot: sg.observacoes ?? prev.observacoesCot,
-        placa: v.placa ?? "",
+        placa: normalizePlaca(v.placa),
         chassi: v.chassi ?? "",
         renavam: v.renavam ?? "",
         marca: v.marca_codigo ?? "",

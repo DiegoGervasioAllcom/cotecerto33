@@ -60,6 +60,17 @@ export function onlyDigits(v: string | null | undefined): string {
   return String(v ?? "").replace(/\D+/g, "");
 }
 
+/**
+ * Formato canônico de placa usado no formulário, banco e integrações.
+ * Aceita também valores legados mascarados (ex.: ABC-1D23).
+ */
+export function normalizePlaca(v: string | null | undefined): string {
+  return String(v ?? "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 7);
+}
+
 export function maskCpfCnpj(v: string | null | undefined): string {
   const d = onlyDigits(v);
   if (!d) return "";

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { onlyDigits, maskCpfCnpj, maskTelefone, maskCep } from "@/lib/masks";
+import { onlyDigits, maskCpfCnpj, maskTelefone, maskCep, normalizePlaca } from "@/lib/masks";
+import { maskPlaca } from "@/components/venda/novo-lead/masks";
 
 // Format-agnósticas: strip-and-remask. Devem ser idempotentes (aplicar 2x = 1x)
 // e funcionar tanto com valor já mascarado (hoje) quanto só-dígitos (pós D3.1).
@@ -11,6 +12,22 @@ describe("onlyDigits", () => {
     expect(onlyDigits(null)).toBe("");
     expect(onlyDigits(undefined)).toBe("");
     expect(onlyDigits("")).toBe("");
+  });
+});
+
+describe("normalizePlaca", () => {
+  it("remove a máscara legada, converte para maiúsculas e preserva placa Mercosul", () => {
+    expect(normalizePlaca("abc-1d23")).toBe("ABC1D23");
+  });
+
+  it("remove símbolos, limita a sete caracteres e é idempotente", () => {
+    expect(normalizePlaca(" ab.c-12345 ")).toBe("ABC1234");
+    expect(normalizePlaca(normalizePlaca("ABC-1234"))).toBe("ABC1234");
+    expect(normalizePlaca(null)).toBe("");
+  });
+
+  it("mantém a máscara do formulário no mesmo formato canônico sem hífen", () => {
+    expect(maskPlaca("abc-1d23")).toBe("ABC1D23");
   });
 });
 
