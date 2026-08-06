@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
+import { veiculoLabel } from "@/lib/veiculo";
 
 export const Route = createFileRoute("/_authenticated/operacao/pipeline-geral")({
   head: () => ({ meta: [{ title: "Pipeline geral · CoteCerto" }] }),
@@ -287,12 +288,7 @@ function Page() {
                 const e = l.empresa_id ? empresas[l.empresa_id] : null;
                 const v = l.responsavel_id ? profiles[l.responsavel_id] : null;
                 const fr = e?.nome || "—";
-                const car =
-                  [l.dados?.veiculo_marca, l.dados?.veiculo_modelo, l.dados?.veiculo_ano]
-                    .filter(Boolean)
-                    .join(" ") ||
-                  (l.dados?.veiculo as string | undefined) ||
-                  "";
+                const car = veiculoLabel(l.dados);
                 const segs: string[] = (l.dados?.seguradoras_sel as string[] | undefined) ?? [];
                 return (
                   <div
@@ -315,7 +311,7 @@ function Page() {
                     <div className="top">
                       <span className="name">{l.nome || "Sem nome"}</span>
                     </div>
-                    {car && <div className="car">{car}</div>}
+                    {car !== "—" && <div className="car">{car}</div>}
                     {segs.length > 0 && (
                       <div className="kcard-sub" style={{ marginTop: 6 }}>
                         {segs.slice(0, 3).map((sg) => (
