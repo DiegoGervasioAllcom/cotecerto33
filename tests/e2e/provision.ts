@@ -75,6 +75,19 @@ export async function limparUsuarioAuth(userId: string) {
   await admin.auth.admin.deleteUser(userId);
 }
 
+/** Desliga uma persona durante o E2E, simulando a ação administrativa real. */
+export async function desligarUsuarioE2E(userId: string) {
+  const { error } = await admin
+    .from("profiles")
+    .update({
+      status: "suspensa",
+      desligado_em: new Date().toISOString(),
+      desligado_motivo: "Teste E2E de acesso desativado",
+    })
+    .eq("id", userId);
+  if (error) throw new Error(`desligar usuário E2E: ${error.message}`);
+}
+
 function uniq(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e5)}`;
 }

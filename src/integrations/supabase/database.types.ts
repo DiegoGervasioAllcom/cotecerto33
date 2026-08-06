@@ -3495,6 +3495,7 @@ export type Database = {
         Args: { p_lead: string; p_motivo: string };
         Returns: undefined;
       };
+      bloquear_request_usuario_inativo: { Args: never; Returns: undefined };
       cadastrar_franquia_admin: {
         Args: { p: Json; p_user: string };
         Returns: string;
@@ -4051,6 +4052,11 @@ export type Database = {
       transmitir_proposta: {
         Args: { p_obs?: string; p_proposta_id: string };
         Returns: undefined;
+      };
+      usuario_ativo: { Args: { _user_id: string }; Returns: boolean };
+      usuario_explicitamente_desligado: {
+        Args: { _user_id: string };
+        Returns: boolean;
       };
     };
     Enums: {
