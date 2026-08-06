@@ -43,7 +43,7 @@ test.describe("navegação por perfil — venLike (vendedor)", () => {
     await loginAs(page, vendedor.email, vendedor.senha);
     await navPronta(page);
 
-    await expect(page.getByRole("link", { name: "Novo lead" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Lead Manual" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Vendedores" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Distribuição" })).toHaveCount(0);
@@ -57,7 +57,7 @@ test.describe("navegação por perfil — matriz", () => {
 
     await expect(page.getByRole("link", { name: "Distribuição" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Configurações" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Novo lead" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Lead Manual" })).toHaveCount(0);
   });
 });
 
@@ -85,7 +85,7 @@ test.describe("navegação por perfil — grpLike (master/supervisor)", () => {
 
     await expect(page.getByRole("link", { name: "Visão geral" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Vendedores" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Novo lead" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Lead Manual" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Distribuição" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByText("MASTER", { exact: true }).first()).toBeVisible();
@@ -109,7 +109,7 @@ test.describe("navegação por perfil — grpLike (master/supervisor)", () => {
     await expect(page.getByRole("link", { name: "Vendedores" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Supervisão" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Aprovações" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Novo lead" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Lead Manual" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Distribuição" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByText("SUPERVISOR DE VENDAS", { exact: true }).first()).toBeVisible();
@@ -153,7 +153,7 @@ test.describe("navegação por perfil — fullLike (franquia Full)", () => {
     await expect(menu.getByRole("link", { name: "Mensagens" })).toHaveCount(0);
     await expect(menu.getByRole("link", { name: "Franquias" })).toHaveCount(0);
     await expect(menu.getByRole("link", { name: "Configurações" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Novo lead" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Lead Manual" })).toHaveCount(0);
     // franquia Full não é "· individual" no avatar (esse selo só sai na Individual).
     await expect(page.getByText("· individual")).toHaveCount(0);
   });
@@ -176,7 +176,7 @@ test.describe("navegação por perfil — franquia Individual (venLike)", () => 
     await loginAs(page, franquiaIndividual.email, franquiaIndividual.senha);
     await navPronta(page);
 
-    await expect(page.getByRole("link", { name: "Novo lead" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Lead Manual" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Vendedores" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByText("· individual")).toBeVisible();

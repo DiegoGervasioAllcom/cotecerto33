@@ -25,7 +25,7 @@ export const salesTutorialChapters = [
         target: ".sidebar",
         pos: "right",
         title: "Essa é a sua navegação",
-        body: "<p>Tudo no CoteCerto fica no menu da esquerda, seguindo o ciclo da venda: <strong>Início</strong>, <strong>Atender agora</strong>, <strong>Pipeline</strong>, <strong>Novo lead</strong>, <strong>Cotações</strong>, <strong>Propostas</strong>, <strong>Aceite & transmissão</strong>, <strong>Extrato</strong> e <strong>Mensagens prontas</strong>.</p><p>O número amarelo mostra o que precisa da sua atenção em cada área. No Pipeline tem <strong>17</strong> leads ativos hoje.</p>",
+        body: "<p>Tudo no CoteCerto fica no menu da esquerda, seguindo o ciclo da venda: <strong>Início</strong>, <strong>Atender agora</strong>, <strong>Pipeline</strong>, <strong>Lead Manual</strong>, <strong>Cotações</strong>, <strong>Propostas</strong>, <strong>Aceite & transmissão</strong>, <strong>Extrato</strong> e <strong>Mensagens prontas</strong>.</p><p>O número amarelo mostra o que precisa da sua atenção em cada área. No Pipeline tem <strong>17</strong> leads ativos hoje.</p>",
       },
       {
         page: "home",
@@ -65,7 +65,7 @@ export const salesTutorialChapters = [
         target: "#btnNovoLead",
         pos: "bottom",
         title: "Lead novo? Comece por aqui",
-        body: "<p>Esse botão amarelo abre direto a aba <strong>Novo lead</strong> com o formulário em branco — pra você cadastrar quem veio por fora da matriz (indicação, WhatsApp direto, evento). Leads que caem da matriz aparecem sozinhos no Pipeline na coluna Novo.</p>",
+        body: "<p>Esse botão amarelo abre direto a aba <strong>Lead Manual</strong> com o formulário em branco — pra você cadastrar quem veio por fora da matriz (indicação, WhatsApp direto, evento). Leads que caem da matriz aparecem sozinhos no Pipeline na coluna Novo.</p>",
       },
       {
         page: "home",

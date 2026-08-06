@@ -6,6 +6,8 @@ import {
   supabaseConfigError,
 } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useGroupScope } from "@/lib/group-scope";
+import { resolverLanding } from "@/lib/landing";
 import logoUrl from "@/assets/cotecerto-logo.png";
 
 export const Route = createFileRoute("/auth/")({
@@ -17,7 +19,8 @@ export const Route = createFileRoute("/auth/")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { session, profile, loading, refresh } = useAuth();
+  const { session, profile, role, loading, refresh } = useAuth();
+  const { loading: groupLoading, isGroupView } = useGroupScope();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -27,8 +30,11 @@ function AuthPage() {
     if (loading) return;
     if (!session) return;
     if (profile?.status === "pendente") navigate({ to: "/auth/pendente", replace: true });
-    else navigate({ to: "/inicio", replace: true });
-  }, [session, profile, loading, navigate]);
+    else {
+      const destino = resolverLanding({ role, isGroupView, groupLoading });
+      if (destino) navigate({ to: destino, replace: true });
+    }
+  }, [session, profile, role, loading, groupLoading, isGroupView, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

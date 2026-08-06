@@ -313,7 +313,7 @@ function Page() {
             <svg width={14} height={14}>
               <use href="#i-plus" />
             </svg>{" "}
-            Novo lead
+            Lead Manual
           </Link>
         </div>
       </div>

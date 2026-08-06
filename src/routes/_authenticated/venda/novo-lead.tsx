@@ -26,7 +26,7 @@ import { LeadManualGate } from "@/components/venda/novo-lead/LeadManualGate";
 import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
-  head: () => ({ meta: [{ title: "Novo lead · CoteCerto" }] }),
+  head: () => ({ meta: [{ title: "Lead Manual · CoteCerto" }] }),
   validateSearch: (s: Record<string, unknown>): { id?: string; step?: number } => ({
     id: typeof s.id === "string" ? s.id : undefined,
     step:
@@ -270,7 +270,7 @@ function Page() {
 
   if (leadManualGateAtivo) {
     return (
-      <AppShell title="Novo lead">
+      <AppShell title="Lead Manual">
         <ProtoIcons />
         <LeadManualGate
           onIniciar={(dados) => {
@@ -289,7 +289,7 @@ function Page() {
   }
 
   return (
-    <AppShell title="Novo lead">
+    <AppShell title="Lead Manual">
       <ProtoIcons />
       <NovoLeadHeader onClassificarPerda={() => void abrirPerda()} />
       {loading && (

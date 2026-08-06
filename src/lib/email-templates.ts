@@ -190,9 +190,9 @@ export function renderEmailTemplate(template: EmailTemplate): RenderedEmail {
         "Boas-vindas Supper! Seu acesso de vendedor",
         template.nome,
         link,
-        `<p>Seu acesso de <strong>vendedor</strong> está liberado em ${template.origem}. Você enxerga a sua carteira e as suas cotações — nunca dados de outros vendedores.</p>${detail("Seu dia a dia no sistema", "Início · Atender agora · Pipeline · Novo lead · Cotações · Propostas · Aceite & transmissão · Extrato de vendas · Mensagens prontas")}<p>Atenção ao SLA: o primeiro contato com um lead novo deve sair em <strong>até 3 minutos</strong>. Passou disso, o lead volta para a fila.</p>`,
+        `<p>Seu acesso de <strong>vendedor</strong> está liberado em ${template.origem}. Você enxerga a sua carteira e as suas cotações — nunca dados de outros vendedores.</p>${detail("Seu dia a dia no sistema", "Início · Atender agora · Pipeline · Lead Manual · Cotações · Propostas · Aceite & transmissão · Extrato de vendas · Mensagens prontas")}<p>Atenção ao SLA: o primeiro contato com um lead novo deve sair em <strong>até 3 minutos</strong>. Passou disso, o lead volta para a fila.</p>`,
         `O link vale por 48 horas. Você se reporta a ${escapeHtml(template.responsavel)} — vínculo definido pelo seu convite.`,
-        `Seu acesso de vendedor está liberado em ${template.origem}. Você enxerga a sua carteira e as suas cotações — nunca dados de outros vendedores.\n\nSeu dia a dia no sistema: Início · Atender agora · Pipeline · Novo lead · Cotações · Propostas · Aceite & transmissão · Extrato de vendas · Mensagens prontas\n\nAtenção ao SLA: o primeiro contato com um lead novo deve sair em até 3 minutos. Passou disso, o lead volta para a fila.`,
+        `Seu acesso de vendedor está liberado em ${template.origem}. Você enxerga a sua carteira e as suas cotações — nunca dados de outros vendedores.\n\nSeu dia a dia no sistema: Início · Atender agora · Pipeline · Lead Manual · Cotações · Propostas · Aceite & transmissão · Extrato de vendas · Mensagens prontas\n\nAtenção ao SLA: o primeiro contato com um lead novo deve sair em até 3 minutos. Passou disso, o lead volta para a fila.`,
         `O link vale por 48 horas. Você se reporta a ${template.responsavel} — vínculo definido pelo seu convite.`,
       );
   }
