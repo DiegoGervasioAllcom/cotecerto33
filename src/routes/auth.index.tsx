@@ -5,7 +5,7 @@ import {
   supabase,
   supabaseConfigError,
 } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { getProfileAccessState, useAuth } from "@/lib/auth";
 import { useGroupScope } from "@/lib/group-scope";
 import { resolverLanding } from "@/lib/landing";
 import {
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/auth/")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { session, profile, role, loading, refresh } = useAuth();
+  const { session, profile, role, loading, accessError, refresh } = useAuth();
   const { loading: groupLoading, isGroupView } = useGroupScope();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,8 +40,10 @@ function AuthPage() {
       return;
     }
 
+    const profileAccess = getProfileAccessState(profile);
+    if (profileAccess === "disabled" || profileAccess === "unknown") return;
     const destino =
-      profile?.status === "pendente"
+      profileAccess === "pending"
         ? "/auth/pendente"
         : resolverLanding({ role, isGroupView, groupLoading });
     if (!destino) return;
@@ -135,6 +137,11 @@ function AuthPage() {
         {!isSupabaseConfigured && (
           <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
             {supabaseConfigError} Configure as variáveis do Supabase para entrar.
+          </div>
+        )}
+        {accessError && (
+          <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
+            {accessError}
           </div>
         )}
         <form onSubmit={handleSubmit}>
