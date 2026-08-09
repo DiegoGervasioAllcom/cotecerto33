@@ -41,19 +41,21 @@ test.describe("Franquia Full — Personalização geral e Performance em /operac
     await limparPersona(full);
   });
 
-  test("Full vê o toggle de 3 seções e abre 'Personalização geral' (Modelo CLT informativo + Complementos editável)", async ({
+  test("Full vê as 5 abas e abre 'Personalização geral' (Modelo CLT informativo + Complementos editável)", async ({
     page,
   }) => {
     await loginAs(page, full.email, full.senha);
     await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
     await page.goto("/operacao/xacessos");
-    await expect(page.getByRole("heading", { name: "Acessos da equipe" }).first()).toBeVisible({
+    await expect(page.getByRole("heading", { name: "Acessos e permissões" }).first()).toBeVisible({
       timeout: 15_000,
     });
 
-    // Toggle das 3 seções — só a Full vê ("Meu time" continua sendo o
+    // Cinco abas do protótipo — só a Full vê ("Meu time" continua sendo o
     // default, sem quebrar a tela que Master também usa).
     await expect(page.getByRole("button", { name: "Meu time" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Pendentes de aprovação" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Desligamentos" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Personalização geral" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Performance" })).toBeVisible();
 
@@ -98,7 +100,7 @@ test.describe("Franquia Full — Personalização geral e Performance em /operac
     await loginAs(page, full.email, full.senha);
     await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
     await page.goto("/operacao/xacessos");
-    await expect(page.getByRole("heading", { name: "Acessos da equipe" }).first()).toBeVisible({
+    await expect(page.getByRole("heading", { name: "Acessos e permissões" }).first()).toBeVisible({
       timeout: 15_000,
     });
 
