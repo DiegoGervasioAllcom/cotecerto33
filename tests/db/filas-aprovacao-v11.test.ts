@@ -103,7 +103,12 @@ async function criarFull(prefix: string) {
   if (error) throw error;
   const emp = await criarEmpresa();
   await admin.from("empresas").update({ modelo_id: modelo.id }).eq("id", emp.id);
-  return criarPersonaComEmpresa("franqueado", { empresaId: emp.id, emailPrefix: prefix });
+  const master = await criarPersonaComEmpresa("master", { emailPrefix: `${prefix}-master` });
+  return criarPersonaComEmpresa("franqueado", {
+    empresaId: emp.id,
+    emailPrefix: prefix,
+    superiorId: master.userId,
+  });
 }
 
 let matrizId: string;
@@ -505,6 +510,6 @@ describe("F5 — a aprovação grava o escopo numa transação", () => {
       p_perfil: "vendedor",
     });
     expect(error).not.toBeNull();
-    expect(error?.message).toContain("fila da franquia");
+    expect(error?.message).toMatch(/fila da franquia|não permite aprovar/i);
   });
 });

@@ -20,6 +20,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   admin,
   anonClient,
+  criarPersonaComEmpresa,
   criarUsuario,
   loginMatriz,
   uniq,
@@ -59,9 +60,23 @@ async function criarEmpresaComModalidade(modalidade: "individual" | "full" | und
 
 async function criarFranqueado(empresaId: string) {
   const { userId, client } = await criarUsuario(`${uniq("franq-sla")}@teste.local`);
+  const { data: empresa } = await admin
+    .from("empresas")
+    .select("modelos_franquia(modalidade)")
+    .eq("id", empresaId)
+    .single();
+  const modalidade = (empresa?.modelos_franquia as { modalidade?: string } | null)?.modalidade;
+  const master =
+    modalidade === "full"
+      ? await criarPersonaComEmpresa("master", { emailPrefix: "master-sla-full" })
+      : null;
   await admin
     .from("profiles")
-    .update({ empresa_id: empresaId, status: "aprovada" })
+    .update({
+      empresa_id: empresaId,
+      status: "aprovada",
+      ...(master ? { superior_id: master.userId } : {}),
+    })
     .eq("id", userId);
   await admin.from("user_roles").insert({ user_id: userId, role: "franqueado" });
   return { userId, client: client as unknown as SlaRpcClient };

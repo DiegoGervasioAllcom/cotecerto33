@@ -1793,6 +1793,203 @@ export type Database = {
           },
         ];
       };
+      full_master_historico: {
+        Row: {
+          acao: string;
+          criado_em: string;
+          criado_por: string | null;
+          full_profile_id: string;
+          id: string;
+          master_anterior_id: string | null;
+          master_novo_id: string | null;
+          motivo: string;
+        };
+        Insert: {
+          acao: string;
+          criado_em?: string;
+          criado_por?: string | null;
+          full_profile_id: string;
+          id?: string;
+          master_anterior_id?: string | null;
+          master_novo_id?: string | null;
+          motivo: string;
+        };
+        Update: {
+          acao?: string;
+          criado_em?: string;
+          criado_por?: string | null;
+          full_profile_id?: string;
+          id?: string;
+          master_anterior_id?: string | null;
+          master_novo_id?: string | null;
+          motivo?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "full_master_historico_full_profile_id_fkey";
+            columns: ["full_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "full_master_historico_full_profile_id_fkey";
+            columns: ["full_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "full_master_historico_master_anterior_id_fkey";
+            columns: ["master_anterior_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "full_master_historico_master_anterior_id_fkey";
+            columns: ["master_anterior_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "full_master_historico_master_novo_id_fkey";
+            columns: ["master_novo_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "full_master_historico_master_novo_id_fkey";
+            columns: ["master_novo_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      full_vendedor_config: {
+        Row: {
+          atualizado_em: string;
+          atualizado_por: string | null;
+          comissao_renovacao_pct: number | null;
+          comissao_venda_pct: number | null;
+          empresa_id: string;
+          personalizado: boolean;
+          profile_id: string;
+        };
+        Insert: {
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          comissao_renovacao_pct?: number | null;
+          comissao_venda_pct?: number | null;
+          empresa_id: string;
+          personalizado?: boolean;
+          profile_id: string;
+        };
+        Update: {
+          atualizado_em?: string;
+          atualizado_por?: string | null;
+          comissao_renovacao_pct?: number | null;
+          comissao_venda_pct?: number | null;
+          empresa_id?: string;
+          personalizado?: boolean;
+          profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "full_vendedor_config_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "full_vendedor_config_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+          {
+            foreignKeyName: "full_vendedor_config_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "full_vendedor_config_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      full_vendedor_historico: {
+        Row: {
+          acao: string;
+          criado_em: string;
+          criado_por: string | null;
+          detalhes: Json;
+          empresa_id: string;
+          id: string;
+          motivo: string | null;
+          vendedor_id: string;
+        };
+        Insert: {
+          acao: string;
+          criado_em?: string;
+          criado_por?: string | null;
+          detalhes?: Json;
+          empresa_id: string;
+          id?: string;
+          motivo?: string | null;
+          vendedor_id: string;
+        };
+        Update: {
+          acao?: string;
+          criado_em?: string;
+          criado_por?: string | null;
+          detalhes?: Json;
+          empresa_id?: string;
+          id?: string;
+          motivo?: string | null;
+          vendedor_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "full_vendedor_historico_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "full_vendedor_historico_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+          {
+            foreignKeyName: "full_vendedor_historico_vendedor_id_fkey";
+            columns: ["vendedor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "full_vendedor_historico_vendedor_id_fkey";
+            columns: ["vendedor_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       historico_alteracoes: {
         Row: {
           area: string;
@@ -3632,6 +3829,23 @@ export type Database = {
         }[];
       };
       fn_bloco_performance: { Args: { p_empresa_id: string }; Returns: string };
+      fn_cadastrar_vendedor_full: {
+        Args: {
+          p_canais?: string[];
+          p_celular?: string;
+          p_comissao_renovacao_pct?: number;
+          p_comissao_venda_pct?: number;
+          p_cpf?: string;
+          p_criado_por: string;
+          p_email: string;
+          p_equipe?: string;
+          p_leads_dia?: number;
+          p_nome: string;
+          p_produtos?: string[];
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       fn_calcular_performance_pessoa: {
         Args: { p_bloco: string; p_profile_id: string };
         Returns: Json;
@@ -3659,11 +3873,41 @@ export type Database = {
         Args: { p_ano: number; p_trimestre: number };
         Returns: string[];
       };
+      fn_configurar_vendedor_full: {
+        Args: {
+          p_canais?: string[];
+          p_comissao_renovacao_pct?: number;
+          p_comissao_venda_pct?: number;
+          p_equipe?: string;
+          p_leads_dia?: number;
+          p_produtos?: string[];
+          p_vendedor_id: string;
+        };
+        Returns: {
+          atualizado_em: string;
+          atualizado_por: string | null;
+          comissao_renovacao_pct: number | null;
+          comissao_venda_pct: number | null;
+          empresa_id: string;
+          personalizado: boolean;
+          profile_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "full_vendedor_config";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       fn_confirmar_senha_diretor: { Args: { _senha: string }; Returns: boolean };
       fn_convite_codigo: { Args: never; Returns: string };
       fn_dentro_alcada_desconto: {
         Args: { p_aprovador: string; p_pct: number; p_seguradora: string };
         Returns: boolean;
+      };
+      fn_desligar_vendedor_full: {
+        Args: { p_motivo: string; p_vendedor_id: string };
+        Returns: undefined;
       };
       fn_destino_pedido: { Args: { _empresa_id: string }; Returns: string };
       fn_eh_diretor: { Args: { _user_id: string }; Returns: boolean };
@@ -3678,6 +3922,14 @@ export type Database = {
         Returns: undefined;
       };
       fn_fila_franquia_id: { Args: { _empresa_id: string }; Returns: string };
+      fn_full_dona_vendedor: {
+        Args: { p_full_id: string; p_vendedor_id: string };
+        Returns: boolean;
+      };
+      fn_master_valido_para_full: {
+        Args: { p_full_profile_id: string; p_master_profile_id: string };
+        Returns: boolean;
+      };
       fn_modelo_alcada_desconto: {
         Args: { p_profile_id: string };
         Returns: string;
@@ -3734,6 +3986,10 @@ export type Database = {
           p_o_que: string;
         };
         Returns: string;
+      };
+      fn_reincluir_vendedor_full: {
+        Args: { p_motivo: string; p_vendedor_id: string };
+        Returns: undefined;
       };
       fn_revisar_reativar_performance: {
         Args: { p_motivo?: string; p_profile_id: string };
@@ -3870,6 +4126,14 @@ export type Database = {
         Returns: string;
       };
       fn_trimestre: { Args: { p_competencia: string }; Returns: number };
+      fn_vincular_master_full: {
+        Args: {
+          p_full_profile_id: string;
+          p_master_profile_id: string;
+          p_motivo: string;
+        };
+        Returns: undefined;
+      };
       franquias_abaixo_meta_visao_geral: {
         Args: { p_fim: string; p_inicio: string };
         Returns: number;
