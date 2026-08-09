@@ -66,11 +66,18 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
     await expect(page.getByText(/sobre a equipe/i)).toHaveCount(0);
 
     for (const rota of ["/operacao/pipeline-geral", "/operacao/relatorios"] as const) {
-      await page.goto(rota);
-      await expect(page.locator("option", { hasText: vendedor.nome })).toHaveCount(1);
-      const opcoes = (await page.locator("select option").allTextContents()).join(" ");
-      expect(opcoes).not.toContain(full.nome);
-      expect(opcoes).toContain(vendedor.nome);
+      await test.step(`filtros em ${rota}`, async () => {
+        await page.goto(rota);
+        const rotuloFiltro =
+          rota === "/operacao/pipeline-geral" ? /^Vendedor$/ : /^Todos os vendedores$/;
+        const filtroVendedor = page
+          .locator("select")
+          .filter({ has: page.locator("option", { hasText: rotuloFiltro }) });
+        await expect(filtroVendedor.locator("option", { hasText: vendedor.nome })).toHaveCount(1);
+        const opcoes = (await filtroVendedor.locator("option").allTextContents()).join(" ");
+        expect(opcoes).not.toContain(full.nome);
+        expect(opcoes).toContain(vendedor.nome);
+      });
     }
   });
 

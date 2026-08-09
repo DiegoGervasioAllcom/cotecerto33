@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 type SistemaRole = "master" | "vendedor" | "franqueado" | "supervisor";
@@ -40,17 +40,23 @@ export function useTeamData(profile: { id: string; nome: string } | null, reload
   const [rows, setRows] = useState<MembroEquipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const requestGeneration = useRef(0);
 
   useEffect(() => {
+    const generation = ++requestGeneration.current;
+    const isCurrent = () => requestGeneration.current === generation;
     void (async () => {
-      setLoading(true);
-      setErr(null);
+      if (isCurrent()) {
+        setLoading(true);
+        setErr(null);
+      }
       const ur = await supabase
         .from("user_roles")
         .select("user_id,role")
         .in("role", ["master", "vendedor", "franqueado", "supervisor"])
         .order("user_id", { ascending: true })
         .order("role", { ascending: true });
+      if (!isCurrent()) return;
       if (ur.error) {
         setErr(ur.error.message);
         setLoading(false);
@@ -77,6 +83,7 @@ export function useTeamData(profile: { id: string; nome: string } | null, reload
         supabase.from("profile_produtos").select("profile_id"),
         supabase.from("full_vendedor_config").select("profile_id,comissao_venda_pct,personalizado"),
       ]);
+      if (!isCurrent()) return;
       if (pr.error) {
         setErr(pr.error.message);
         setLoading(false);
@@ -134,6 +141,9 @@ export function useTeamData(profile: { id: string; nome: string } | null, reload
       );
       setLoading(false);
     })();
+    return () => {
+      if (requestGeneration.current === generation) requestGeneration.current += 1;
+    };
   }, [profile?.id, profile?.nome, reloadKey]);
 
   return { rows, loading, err };
