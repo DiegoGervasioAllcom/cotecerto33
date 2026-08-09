@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,13 +89,16 @@ function Page() {
   const [vendedorId, setVendedorId] = useState("");
   const [franquias, setFranquias] = useState<{ id: string; nome: string }[]>([]);
   const [vendedores, setVendedores] = useState<{ id: string; nome: string }[]>([]);
+  const filtrosRequestGeneration = useRef(0);
 
   useEffect(() => {
+    const generation = ++filtrosRequestGeneration.current;
     void (async () => {
       const [em, pr] = await Promise.all([
         supabase.from("empresas").select("id,nome").order("nome"),
         supabase.from("profiles").select("id,nome").order("nome"),
       ]);
+      if (filtrosRequestGeneration.current !== generation) return;
       setFranquias((em.data ?? []) as { id: string; nome: string }[]);
       setVendedores(
         ((pr.data ?? []) as { id: string; nome: string }[]).filter(
@@ -103,6 +106,11 @@ function Page() {
         ),
       );
     })();
+    return () => {
+      if (filtrosRequestGeneration.current === generation) {
+        filtrosRequestGeneration.current += 1;
+      }
+    };
   }, [isFranqFull, profile?.id]);
 
   async function gerar(reportKey: string, formato: "pdf" | "csv") {

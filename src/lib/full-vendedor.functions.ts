@@ -165,6 +165,7 @@ export const cadastrarVendedorFullDireto = createServerFn({ method: "POST" })
       });
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
+        signal: AbortSignal.timeout(8_000),
         headers: {
           Authorization: `Bearer ${resendKey}`,
           "Content-Type": "application/json",

@@ -123,7 +123,7 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
 
   test("fluxo cadastro direto → configurar → desligar mantém o vendedor na própria Full", async ({
     page,
-  }) => {
+  }, testInfo) => {
     const email = `cadastro-full-e2e-${Date.now()}@teste.local`;
     const nomeCadastro = `Vendedora Fluxo Full ${Date.now()}`;
     await loginAs(page, full.email, full.senha);
@@ -143,10 +143,59 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
     await modal.locator('input[type="number"]').nth(0).fill("4");
     await modal.locator('input[type="number"]').nth(1).fill("30");
     await modal.locator('input[type="number"]').nth(2).fill("10");
+    const inicioCadastro = Date.now();
+    const respostasCadastro: Array<{ url: string; status: number; ms: number }> = [];
+    const capturarResposta = (response: import("@playwright/test").Response) => {
+      if (response.request().method() === "POST") {
+        respostasCadastro.push({
+          url: response.url(),
+          status: response.status(),
+          ms: Date.now() - inicioCadastro,
+        });
+      }
+    };
+    page.on("response", capturarResposta);
     await modal.getByRole("button", { name: "Concluir cadastro" }).click();
 
     const linha = page.getByRole("row").filter({ hasText: nomeCadastro });
-    await expect(linha).toBeVisible({ timeout: 15_000 });
+    try {
+      await expect(linha).toBeVisible({ timeout: 15_000 });
+    } catch (error) {
+      const criadoNoBanco = await profilePorEmail(email);
+      await testInfo.attach("diagnostico-cadastro-direto.json", {
+        contentType: "application/json",
+        body: Buffer.from(
+          JSON.stringify(
+            {
+              elapsed_ms: Date.now() - inicioCadastro,
+              modal_visivel: await modal.isVisible(),
+              botao: await modal
+                .getByRole("button", { name: /Cadastrando|Concluir cadastro/ })
+                .textContent()
+                .catch(() => null),
+              alerta: await modal
+                .locator(".banner.alert")
+                .textContent()
+                .catch(() => null),
+              aba_time_ativa: await page
+                .getByRole("button", { name: /^Meu time/ })
+                .getAttribute("class"),
+              busca: await page
+                .getByPlaceholder("Buscar vendedor…")
+                .inputValue()
+                .catch(() => null),
+              respostas_post: respostasCadastro,
+              criado_no_banco: criadoNoBanco,
+            },
+            null,
+            2,
+          ),
+        ),
+      });
+      throw error;
+    } finally {
+      page.off("response", capturarResposta);
+    }
     const criado = await profilePorEmail(email);
     expect(criado).toMatchObject({
       empresa_id: full.empresaId,
