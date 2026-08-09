@@ -67,8 +67,8 @@ Sem isso, toda tela da V11 nasce em cima de premissa errada.
 | V11.1.3 | front  | ✅ Saídas do convite: WhatsApp via wa.me, Copiar, **PDF com arte oficial e link clicável**, pré-visualização no modal                                                                                 | V11.1.2                   |
 | V11.1.4 | front  | ✅ Rota **`/convite/{token}`** (item 1): valida token, abre cadastro pré-preenchido com perfil e vínculo em texto fixo                                                                                | V11.1.1                   |
 | V11.1.5 | front  | ✅ Erro amigável para link expirado/reusado, com opção de pedir novo convite                                                                                                                          | V11.1.4                   |
-| V11.1.6 | front  | ✅ Botão **"Quero falar com a Cote Certo"** no login: nome, e-mail, tema, mensagem → e-mail à Matriz, sem persistir (`auth.index.tsx`, C13)                                                            | V11.2.1                   |
-| V11.1.7 | front  | ✅ Cadastro espontâneo removido (`auth.cadastro.tsx`, commit `0c09ba5`, C14); criação direta pela Matriz é exceção com log (`empresas.criado_por`, C1/C2)                                              | V11.1.4, V11.2.2, V11.2.3 |
+| V11.1.6 | front  | ✅ Botão **"Quero falar com a Cote Certo"** no login: nome, e-mail, tema, mensagem → e-mail à Matriz, sem persistir (`auth.index.tsx`, C13)                                                           | V11.2.1                   |
+| V11.1.7 | front  | ✅ Cadastro espontâneo removido (`auth.cadastro.tsx`, commit `0c09ba5`, C14); criação direta pela Matriz é exceção com log (`empresas.criado_por`, C1/C2)                                             | V11.1.4, V11.2.2, V11.2.3 |
 | V11.1.8 | testes | ✅ E2E do convite: emitir → abrir link → cadastrar → cair na fila certa; e os casos de expirado e reuso                                                                                               | V11.1.4                   |
 
 > **Frente 1 concluída** (detalhes em `PLANO_CONVITE_V11.md`) — inclusive as 2 tasks que
@@ -122,18 +122,18 @@ captura tudo. Provider só em staging e produção. Volume é de onboarding (dez
 Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side, no padrão
 `SELF_*` do `.env.example` (nunca `VITE_*`).
 
-| Task    | Tag    | Descrição                                                                                                                                                                                                           | Depende de       |
-| ------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| V11.2.1 | infra  | ✅ **em produção** · Pendência e recusa com outbox transacional, Resend e retry                                                                      | —                |
-| V11.2.2 | front  | ✅ **em produção** · Boas-vindas atômica com a aprovação, `generateLink`, link recovery 48h de uso único e tela Criar senha (8+, letras e números)                                                    | V11.2.1          |
-| V11.2.0 | infra  | ✅ Domínio `cote-certo.sandboxallcom.com` verificado no Resend; DKIM, SPF e DMARC publicados. Remetente `acesso@cote-certo.sandboxallcom.com`; Reply-To `diego.gervasio@allcomtelecom.com`                          | —                |
-| V11.2.3 | banco  | ✅ Roteamento da fila pelo vínculo estruturado do pedido (trilha/perfil/vincTipo/vincId) — vendedor de Full **nunca** chega à Matriz                                                                                | V11.1.1          |
-| V11.2.4 | front  | ✅ Pendentes em dois blocos: time interno no bloco Matriz, rede no bloco Externos                                                                                                                                   | V11.2.3          |
-| V11.2.5 | front  | ✅ Fila própria da Franquia Full, que aprova o vendedor dela sem a Matriz                                                                                                                                           | V11.2.3          |
-| V11.2.6 | front  | ✅ Modal de análise travado no que o convite definiu; "Reclassificar" só como exceção registrada                                                                                                                    | V11.2.3          |
-| V11.2.7 | front  | ✅ Na aprovação: seletor de Supervisor de Vendas (Master), cargo + áreas + janela (interno), produtos e canais com botão "Todos". Master franqueado **não** recebe produtos/canais                                  | V11.0.3, V11.0.4 |
-| V11.2.8 | banco  | ✅ Produtos padrão por bloco (interno: todos · externo: só Auto), herdados na aprovação                                                                                                                             | V11.0.4          |
-| V11.2.9 | testes | ✅ RLS por perfil nas duas filas: cada bloco vê só o seu; Full não vê pendente da Matriz e vice-versa                                                                                                               | V11.2.3          |
+| Task    | Tag    | Descrição                                                                                                                                                                                  | Depende de       |
+| ------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- |
+| V11.2.1 | infra  | ✅ **em produção** · Pendência e recusa com outbox transacional, Resend e retry                                                                                                            | —                |
+| V11.2.2 | front  | ✅ **em produção** · Boas-vindas atômica com a aprovação, `generateLink`, link recovery 48h de uso único e tela Criar senha (8+, letras e números)                                         | V11.2.1          |
+| V11.2.0 | infra  | ✅ Domínio `cote-certo.sandboxallcom.com` verificado no Resend; DKIM, SPF e DMARC publicados. Remetente `acesso@cote-certo.sandboxallcom.com`; Reply-To `diego.gervasio@allcomtelecom.com` | —                |
+| V11.2.3 | banco  | ✅ Roteamento da fila pelo vínculo estruturado do pedido (trilha/perfil/vincTipo/vincId) — vendedor de Full **nunca** chega à Matriz                                                       | V11.1.1          |
+| V11.2.4 | front  | ✅ Pendentes em dois blocos: time interno no bloco Matriz, rede no bloco Externos                                                                                                          | V11.2.3          |
+| V11.2.5 | front  | ✅ Fila própria da Franquia Full, que aprova o vendedor dela sem a Matriz                                                                                                                  | V11.2.3          |
+| V11.2.6 | front  | ✅ Modal de análise travado no que o convite definiu; "Reclassificar" só como exceção registrada                                                                                           | V11.2.3          |
+| V11.2.7 | front  | ✅ Na aprovação: seletor de Supervisor de Vendas (Master), cargo + áreas + janela (interno), produtos e canais com botão "Todos". Master franqueado **não** recebe produtos/canais         | V11.0.3, V11.0.4 |
+| V11.2.8 | banco  | ✅ Produtos padrão por bloco (interno: todos · externo: só Auto), herdados na aprovação                                                                                                    | V11.0.4          |
+| V11.2.9 | testes | ✅ RLS por perfil nas duas filas: cada bloco vê só o seu; Full não vê pendente da Matriz e vice-versa                                                                                      | V11.2.3          |
 
 > **Frente 2 concluída para o roteamento/aprovação** (V11.2.3-V11.2.9, PR #102, mergeado
 > 30/07/2026 — detalhes em `PLANO_FILAS_V11.md`). `fn_destino_pedido`/`fn_pode_aprovar_pedido`
@@ -172,8 +172,12 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 
 ## Frente 5 · Franquia Full como matrizinha
 
-> **✅ Frente 5 inteiramente concluída em 04/08/2026** (PR #120, incluindo a Frente 5b
-> que fechou o que faltava). Plano detalhado em `docs/PLANO_FRANQUIA_FULL_V11.md`.
+> **⚠️ Conclusão de 04/08/2026 corrigida em 09/08/2026.** O PR #120 entregou a Frente
+> 5b, mas uma auditoria posterior com persona Full real mostrou que ainda faltavam as
+> cinco abas do protótipo, cadastro/configuração individual e a obrigatoriedade
+> Full → Master. A correção complementar é a **Frente 5c** abaixo. A Frente 5 permanece
+> reaberta até concluir front, integração, E2E e validação visual. Plano detalhado em
+> `docs/PLANO_FRANQUIA_FULL_V11.md`.
 >
 > V11.5.4/5.5/5.6 chegaram a ficar bloqueadas (a régua trava por gate de diretor — Full
 > nunca pode ser diretora; "Modelo CLT" é singleton global sem relação com o time da
@@ -187,21 +191,41 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 > ✅ V11.5.2 → V11.5.2a (menu 14 áreas, não 15 nem 16 — ver nota no plano detalhado) + V11.5.2b (Central da Franquia)
 > ✅ V11.5.3 — SLA por empresa (`sla_empresa_config`, não mais singleton)
 > ✅ V11.5.4/5.5/5.6 → **Frente 5b** (V11.5b.1-6): histórico da franquia sem senha
->   (gate por identidade), régua própria sem senha, Complementos do time (4 campos,
->   não o Modelo CLT inteiro nem produtos/canais/comissão por pessoa), tudo dentro de
->   `/operacao/xacessos` (não uma tela "Acessos da Full com 5 abas" nova)
+> (gate por identidade), régua própria sem senha, Complementos do time (4 campos,
+> não o Modelo CLT inteiro nem produtos/canais/comissão por pessoa), tudo dentro de
+> `/operacao/xacessos` (não uma tela "Acessos da Full com 5 abas" nova)
 > ✅ V11.5.7 — SLA por lead + fronteira repassado/próprio
 > ✅ V11.5.8 (novo, fora da tabela original) — comissão por origem do lead
 
-| Task    | Tag   | Descrição                                                                                                                                      | Depende de       |
-| ------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| V11.5.1 | —     | **Decisão da Lis (item 11):** endereço único das configurações da Full — Central da Franquia × Acessos › Personalização. Bloqueia a tela final | —                |
-| V11.5.2 | front | **Central da Franquia**: leads próprios × repassados da Matriz, SLA e canais próprios                                                          | V11.0.4, V11.5.1 |
-| V11.5.3 | banco | SLA por origem do lead: repassado segue o SLA da Matriz, próprio segue o da Full                                                               | V11.5.2          |
-| V11.5.4 | front | ~~Acessos da Full com 5 abas espelhando a Matriz~~ — entregue como 2 seções novas (Personalização geral/Performance) dentro de `/operacao/xacessos` (V11.5b.4) | V11.2.5, V11.3.1 |
+| Task    | Tag   | Descrição                                                                                                                                                                                                              | Depende de       |
+| ------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| V11.5.1 | —     | **Decisão da Lis (item 11):** endereço único das configurações da Full — Central da Franquia × Acessos › Personalização. Bloqueia a tela final                                                                         | —                |
+| V11.5.2 | front | **Central da Franquia**: leads próprios × repassados da Matriz, SLA e canais próprios                                                                                                                                  | V11.0.4, V11.5.1 |
+| V11.5.3 | banco | SLA por origem do lead: repassado segue o SLA da Matriz, próprio segue o da Full                                                                                                                                       | V11.5.2          |
+| V11.5.4 | front | ~~Acessos da Full com 5 abas espelhando a Matriz~~ — entregue como 2 seções novas (Personalização geral/Performance) dentro de `/operacao/xacessos` (V11.5b.4)                                                         | V11.2.5, V11.3.1 |
 | V11.5.5 | front | ~~Modelo CLT + complementos; cadastro direto passando pela configuração (produtos/canais/comissão por pessoa, selo "personalizado")~~ — entregue como Modelo CLT (leitura) + Complementos do time, 4 campos (V11.5b.3) | V11.2.7          |
-| V11.5.6 | banco | ~~Régua e histórico próprios da Full~~ — entregue via RPCs novas com gate de identidade, sem senha (V11.5b.1/2)                                | V11.4.1, V11.0.6 |
-| V11.5.7 | banco | Lead repassado que dá perda ou estoura SLA **cruza a fronteira** e volta como Devolvido/Perda da Matriz                                        | V11.5.3          |
+| V11.5.6 | banco | ~~Régua e histórico próprios da Full~~ — entregue via RPCs novas com gate de identidade, sem senha (V11.5b.1/2)                                                                                                        | V11.4.1, V11.0.6 |
+| V11.5.7 | banco | Lead repassado que dá perda ou estoura SLA **cruza a fronteira** e volta como Devolvido/Perda da Matriz                                                                                                                | V11.5.3          |
+
+### Frente 5c · Correção da auditoria Full
+
+| Task     | Tag    | Descrição                                                                                                                                                     | Estado                                                                                                                            |
+| -------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| V11.5c.1 | banco  | Full ativa exige Master ativo/aprovado; triggers diferíveis fecham aprovação e escrita direta; órfãs legadas são suspensas e auditadas sem vínculo arbitrário | ✅ Implementado/testado localmente — `20260809212121_v11_5c_integridade_full_master.sql`                                          |
+| V11.5c.2 | banco  | Matriz vincula Master e reativa a Full regularizada; JWT antigo permanece bloqueado enquanto suspensa                                                         | ✅ Implementado/testado localmente                                                                                                |
+| V11.5c.3 | banco  | Cadastro direto, configuração individual, desligamento direto pela Full e reinclusão exclusiva da Matriz, com RLS/histórico                                   | ✅ Implementado/testado localmente — `20260809212122_v11_5c_gestao_direta_time_full.sql`                                          |
+| V11.5c.4 | front  | Cinco abas: Meu time, Pendentes, Desligamentos, Personalização geral e Performance                                                                            | ✅ Implementado e validado localmente                                                                                             |
+| V11.5c.5 | front  | Cadastro direto em duas etapas com CPF/celular e configuração de equipe, leads, produtos, canais e comissão; tabela/selo conforme protótipo                   | ✅ Implementado; servidor rejeita canal inativo/cross-tenant e persiste identidade/configuração                                   |
+| V11.5c.6 | front  | Corrigir Visão Geral da Full e filtros que listam o próprio franqueado como vendedor                                                                          | ✅ Implementado e coberto por E2E                                                                                                 |
+| V11.5c.7 | testes | DB/RLS, unitários, E2E das cinco abas e auditoria visual por persona                                                                                          | ✅ Local: DB focado 15/15, regressões DB 66/66, DB completo 579/579, unitários 346/346, E2E 14/14, typecheck/lint/Prettier verdes |
+
+O cadastro direto depende de server function com `service_role`: criar usuário no
+Auth, chamar `fn_cadastrar_vendedor_full` e remover o usuário Auth se a RPC falhar. A
+chave administrativa nunca pode ser exposta ao front.
+
+**Estado em 09/08/2026:** Frente 5c concluída localmente. Publicação em produção
+permanece condicionada a revisão final, PR, CI e deploy das duas migrations e da
+aplicação.
 
 ## Frente 6 · Governança e histórico
 
@@ -215,14 +239,14 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 
 ## Frente 7 · Visão geral com período único
 
-| Task    | Tag   | Descrição                                                                                                                                                                 | Depende de                              |
-| ------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| V11.7.1 | banco | ✅ **Período único** server-side (item 8): dia/semana/quinzena/mês/personalizado                                                                                             | —                                       |
-| V11.7.2 | front | Todos os widgets da Visão geral lendo a mesma janela — hoje são 4 opções mensais no cliente (`visao-geral.tsx`)                                                           | V11.7.1                                 |
-| V11.7.3 | front | ✅ **4 funis por canal** (Movida/Google/Facebook/Manual) escalando com o período                                                                                             | V11.7.1, V11.0.4                        |
-| V11.7.4 | front | ✅ **Alertas clicáveis** derivados do estado real — 8 alertas (5 originais + os 3 fechados abaixo)                                                                                                                            | V11.7.2                                 |
-| V11.7.5 | banco | ✅ Modelar o estado real de **pendência da seguradora** após a transmissão; não inferir pendência a partir de proposta apenas `gerada`                                       | regra operacional da pendência definida |
-| V11.7.6 | front | ✅ **Fechar os alertas adiados da Visão geral**: pendência da seguradora, franquia abaixo da meta e vendedor em atenção. "Destinos por perfil novo" (V11.8) ficou fora de escopo — os 3 alertas apontam pra destinos já válidos hoje | V11.7.5, V11.4.1                 |
+| Task    | Tag   | Descrição                                                                                                                                                                                                                            | Depende de                              |
+| ------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| V11.7.1 | banco | ✅ **Período único** server-side (item 8): dia/semana/quinzena/mês/personalizado                                                                                                                                                     | —                                       |
+| V11.7.2 | front | Todos os widgets da Visão geral lendo a mesma janela — hoje são 4 opções mensais no cliente (`visao-geral.tsx`)                                                                                                                      | V11.7.1                                 |
+| V11.7.3 | front | ✅ **4 funis por canal** (Movida/Google/Facebook/Manual) escalando com o período                                                                                                                                                     | V11.7.1, V11.0.4                        |
+| V11.7.4 | front | ✅ **Alertas clicáveis** derivados do estado real — 8 alertas (5 originais + os 3 fechados abaixo)                                                                                                                                   | V11.7.2                                 |
+| V11.7.5 | banco | ✅ Modelar o estado real de **pendência da seguradora** após a transmissão; não inferir pendência a partir de proposta apenas `gerada`                                                                                               | regra operacional da pendência definida |
+| V11.7.6 | front | ✅ **Fechar os alertas adiados da Visão geral**: pendência da seguradora, franquia abaixo da meta e vendedor em atenção. "Destinos por perfil novo" (V11.8) ficou fora de escopo — os 3 alertas apontam pra destinos já válidos hoje | V11.7.5, V11.4.1                        |
 
 > **V11.7.1 e V11.7.3 já tinham sido entregues em 29/07/2026** (commits `10e8bdd`,
 > `1d34317`), antes de a numeração de frentes virar prática — só não tinham sido marcadas
@@ -281,11 +305,11 @@ ser marcada como concluída antes de revisitar as quatro linhas acima.
 
 ## Frente 9 · Fora do caminho crítico
 
-| Task    | Tag   | Descrição                                                                                                                                                             | Depende de |
-| ------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| V11.9.1 | infra | **WhatsApp Business API** (item 4): convite com PDF anexado automaticamente, sem passo manual. Exige conta e aprovação de template — aguardando o usuário abrir a conta; paliativo (`wa.me` + PDF manual) segue no ar | V11.1.3    |
-| V11.9.2 | —     | ✅ **Resolvido pela Lis em 03/08/2026:** Carteira de Recuperação fica pra V12, fora da V11                     | —          |
-| V11.9.3 | —     | ✅ **Resolvido em 04/08/2026:** documento "Regras Decididas" chegou (`CoteCerto_Regras_Decididas.html`, 27/07) | —          |
+| Task    | Tag   | Descrição                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Depende de |
+| ------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| V11.9.1 | infra | **WhatsApp Business API** (item 4): convite com PDF anexado automaticamente, sem passo manual. Exige conta e aprovação de template — aguardando o usuário abrir a conta; paliativo (`wa.me` + PDF manual) segue no ar                                                                                                                                                                                                                                                           | V11.1.3    |
+| V11.9.2 | —     | ✅ **Resolvido pela Lis em 03/08/2026:** Carteira de Recuperação fica pra V12, fora da V11                                                                                                                                                                                                                                                                                                                                                                                      | —          |
+| V11.9.3 | —     | ✅ **Resolvido em 04/08/2026:** documento "Regras Decididas" chegou (`CoteCerto_Regras_Decididas.html`, 27/07)                                                                                                                                                                                                                                                                                                                                                                  | —          |
 | V11.9.4 | —     | ✅ **Concluída em 05/08/2026:** varredura extensa (motivo de perda, desconto, desligamento, fila de aprovação da Full, avaliação de perda, classificação de acesso) — todo fluxo de negócio já grava via RPC/update real, sem `catch` silencioso. Único `localStorage` fora de preferência de UI seria bug; não achou nenhum. Nota (não bug): "Notificar supervisor" em `performance-resumo-modal.tsx` não persiste de propósito, decisão já registrada em `PLANO_REGUA_V11.md` | todas      |
 
 ## Sequência recomendada
