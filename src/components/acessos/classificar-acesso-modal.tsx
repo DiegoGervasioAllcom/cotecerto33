@@ -181,6 +181,10 @@ export function ClassificarAcessoModal({
     () => franquiasAprovadas.filter((f) => f.modalidade === "full"),
     [franquiasAprovadas],
   );
+  const mastersAtivos = useMemo(
+    () => superiores.filter((superior) => superior.role === "master"),
+    [superiores],
+  );
 
   const tipoChip = isPF ? (
     <span className="chip chip-outline">Pessoa Física</span>
@@ -237,6 +241,14 @@ export function ClassificarAcessoModal({
           setLocalErr("Selecione o modelo de franquia.");
           return;
         }
+        const modeloSelecionado = modelosFranquia.find((modelo) => modelo.id === clFranquia);
+        if (
+          modeloSelecionado?.modalidade === "full" &&
+          !mastersAtivos.some((master) => master.id === clSuperior)
+        ) {
+          setLocalErr("Franquia Full precisa estar vinculada a um Master ativo.");
+          return;
+        }
         const leads = checkOptionalNumber(clLeads, Number, leadsDiaSchema);
         if (leads.error) return setLocalErr(leads.error);
         const bonus = checkOptionalNumber(clFrBonus, parseBRL, valorNaoNegativoSchema);
@@ -262,7 +274,7 @@ export function ClassificarAcessoModal({
             .eq("id", pendente.id);
           if (error) throw new Error(error.message);
         };
-        const m = modelosFranquia.find((x) => x.id === clFranquia);
+        const m = modeloSelecionado;
         await onLiberar(
           {
             perfil: "franqueado",
@@ -623,8 +635,17 @@ export function ClassificarAcessoModal({
                             value={clSuperior}
                             onChange={(e) => setClSuperior(e.target.value)}
                           >
-                            <option value="">— Matriz (topo) —</option>
-                            {superiores.map((s) => (
+                            <option value="">
+                              {modelosFranquia.find((m) => m.id === clFranquia)?.modalidade ===
+                              "full"
+                                ? "— Selecione o Master obrigatório —"
+                                : "— Matriz (topo) —"}
+                            </option>
+                            {(modelosFranquia.find((m) => m.id === clFranquia)?.modalidade ===
+                            "full"
+                              ? mastersAtivos
+                              : superiores
+                            ).map((s) => (
                               <option key={s.id} value={s.id}>
                                 {s.nome} · {s.role === "master" ? "Master" : "Supervisor"}
                               </option>

@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { exportCsv, exportPdf } from "@/lib/export-relatorio";
 import { monthPeriodo, periodoOptions, ultimosDiasPeriodo } from "@/lib/relatorios/periodo";
 import { RELATORIOS } from "@/lib/relatorios/registro";
+import { useAuth } from "@/lib/auth";
+import { useGroupScope } from "@/lib/group-scope";
 
 export const Route = createFileRoute("/_authenticated/operacao/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios · CoteCerto" }] }),
@@ -72,6 +74,8 @@ function RepCard({
 const PERIODO_90_DIAS = "90dias";
 
 function Page() {
+  const { profile } = useAuth();
+  const { isFranqFull } = useGroupScope();
   const [periodOffset, setPeriodOffset] = useState<number | typeof PERIODO_90_DIAS>(0);
   const periodo = useMemo(
     () => (periodOffset === PERIODO_90_DIAS ? ultimosDiasPeriodo(90) : monthPeriodo(periodOffset)),
@@ -93,9 +97,13 @@ function Page() {
         supabase.from("profiles").select("id,nome").order("nome"),
       ]);
       setFranquias((em.data ?? []) as { id: string; nome: string }[]);
-      setVendedores((pr.data ?? []) as { id: string; nome: string }[]);
+      setVendedores(
+        ((pr.data ?? []) as { id: string; nome: string }[]).filter(
+          (vendedor) => !isFranqFull || vendedor.id !== profile?.id,
+        ),
+      );
     })();
-  }, []);
+  }, [isFranqFull, profile?.id]);
 
   async function gerar(reportKey: string, formato: "pdf" | "csv") {
     const def = RELATORIOS.find((r) => r.key === reportKey);

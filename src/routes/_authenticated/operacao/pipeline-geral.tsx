@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
+import { useAuth } from "@/lib/auth";
 import { veiculoLabel } from "@/lib/veiculo";
 
 export const Route = createFileRoute("/_authenticated/operacao/pipeline-geral")({
@@ -53,7 +54,8 @@ function age(d: string) {
 
 function Page() {
   const navigate = useNavigate();
-  const { isGroupView } = useGroupScope();
+  const { isGroupView, isFranqFull } = useGroupScope();
+  const { profile } = useAuth();
   const [stages, setStages] = useState<Stage[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
@@ -114,7 +116,7 @@ function Page() {
       .filter((e) => e.nome)
       .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     const vd = Object.values(profiles)
-      .filter((p) => p.nome)
+      .filter((p) => p.nome && (!isFranqFull || p.id !== profile?.id))
       .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
     const og = new Set<string>();
     for (const l of leads) {
@@ -126,7 +128,7 @@ function Page() {
       origens: Array.from(og).sort(),
       seguradoras,
     };
-  }, [leads, empresas, profiles, seguradoras]);
+  }, [leads, empresas, profiles, seguradoras, isFranqFull, profile?.id]);
 
   const filtered = useMemo(() => {
     return leads.filter((l) => {

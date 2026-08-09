@@ -60,7 +60,7 @@ type Proposta = {
 function Page() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { isGroupView, group, groupPct } = useGroupScope();
+  const { isGroupView, isFranqFull, group, groupPct } = useGroupScope();
   const [now, setNow] = useState(Date.now());
   const [periodWindow, setPeriodWindow] = useState(() => selectCurrentDashboardPeriod("mes"));
   const customStart = periodWindow.preset === "personalizado" ? periodWindow.startDate : null;
@@ -501,9 +501,21 @@ function Page() {
       <ProtoIcons />
       <div className="page-head">
         <div>
-          <h1>{isGroupView ? "Visão geral do grupo" : "Operação CoteCerto"}</h1>
+          <h1>
+            {isFranqFull
+              ? "Visão geral da franquia"
+              : isGroupView
+                ? "Visão geral do grupo"
+                : "Operação CoteCerto"}
+          </h1>
           <div className="sub">
-            {isGroupView ? (
+            {isFranqFull ? (
+              <>
+                Unidade de <strong>{profile?.nome ?? "—"}</strong> ·{" "}
+                <strong>{vendedores.length} vendedores</strong> ativos · período:{" "}
+                <strong style={{ textTransform: "capitalize" }}>{periodLabel}</strong>
+              </>
+            ) : isGroupView ? (
               <>
                 Equipe de <strong>{profile?.nome ?? "—"}</strong> ({groupLabel}) ·{" "}
                 <strong>{franquias.length} franquias</strong> ·{" "}
@@ -803,7 +815,7 @@ function Page() {
           <div className="val">{BRL(comissaoMes)}</div>
           <div className="meta">somatório das transmitidas</div>
         </div>
-        {isGroupView && (
+        {isGroupView && !isFranqFull && (
           <div className="kpi">
             <div className="ic-wrap">
               <svg width="20" height="20">
@@ -935,43 +947,45 @@ function Page() {
         </div>
 
         <div className="col">
-          <div className="card">
-            <div className="card-h">
-              <h3>
-                <svg width="16" height="16">
-                  <use href="#i-award"></use>
-                </svg>{" "}
-                {isGroupView ? "Franquias supervisionadas" : "Ranking de franquias"}
-              </h3>
-              <button
-                className="btn-link btn-sm"
-                onClick={() => navigate({ to: "/operacao/franquias" })}
-              >
-                Ver todas
-              </button>
-            </div>
-            <div className="card-b" style={{ paddingTop: 6, paddingBottom: 6 }}>
-              {rankFranq.slice(0, 8).map((r, i) => (
-                <div key={r.id} className="rank-row">
-                  <div className={`rank-pos ${i === 0 ? "top" : ""}`}>{i + 1}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="rk-name">{r.nome}</div>
-                    <div className="rk-sub">
-                      {r.leads} leads · conv. {r.conv}%
+          {!isFranqFull && (
+            <div className="card">
+              <div className="card-h">
+                <h3>
+                  <svg width="16" height="16">
+                    <use href="#i-award"></use>
+                  </svg>{" "}
+                  {isGroupView ? "Franquias supervisionadas" : "Ranking de franquias"}
+                </h3>
+                <button
+                  className="btn-link btn-sm"
+                  onClick={() => navigate({ to: "/operacao/franquias" })}
+                >
+                  Ver todas
+                </button>
+              </div>
+              <div className="card-b" style={{ paddingTop: 6, paddingBottom: 6 }}>
+                {rankFranq.slice(0, 8).map((r, i) => (
+                  <div key={r.id} className="rank-row">
+                    <div className={`rank-pos ${i === 0 ? "top" : ""}`}>{i + 1}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="rk-name">{r.nome}</div>
+                      <div className="rk-sub">
+                        {r.leads} leads · conv. {r.conv}%
+                      </div>
+                    </div>
+                    <div className="rk-val">
+                      {r.vendas} <small>vendas</small>
                     </div>
                   </div>
-                  <div className="rk-val">
-                    {r.vendas} <small>vendas</small>
+                ))}
+                {rankFranq.length === 0 && (
+                  <div className="muted small" style={{ padding: 12 }}>
+                    Sem franquias cadastradas.
                   </div>
-                </div>
-              ))}
-              {rankFranq.length === 0 && (
-                <div className="muted small" style={{ padding: 12 }}>
-                  Sem franquias cadastradas.
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="card">
             <div className="card-h">

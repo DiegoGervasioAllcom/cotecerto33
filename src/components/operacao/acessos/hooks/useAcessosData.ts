@@ -126,6 +126,7 @@ export function useAcessosData(enabled = true) {
           "id",
           roleIds.map((r) => r.user_id),
         )
+        .eq("status", "aprovada")
         .is("desligado_em", null);
       const roleById = new Map(roleIds.map((r) => [r.user_id, r.role as "master" | "supervisor"]));
       setSuperiores(
