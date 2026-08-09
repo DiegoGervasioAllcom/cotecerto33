@@ -295,6 +295,8 @@ export type Persona = {
   userId: string;
   empresaId: string;
   nome: string;
+  /** Fixtures auxiliares criadas para satisfazer invariantes de hierarquia. */
+  dependencias?: Persona[];
 };
 
 /**
@@ -360,7 +362,17 @@ export async function criarPersona(opts: {
    */
   empresaId?: string;
 }): Promise<Persona> {
-  const { role, modalidade, cargo, superiorId, empresaId: empresaExistente } = opts;
+  const { role, modalidade, cargo, empresaId: empresaExistente } = opts;
+  let superiorId = opts.superiorId;
+  const dependencias: Persona[] = [];
+  // V11.5c: uma Full ativa nunca pode existir sem Master. Os specs antigos
+  // criavam a Full isoladamente; a fixture passa a montar a árvore mínima
+  // real sem enfraquecer a constraint do banco.
+  if (role === "franqueado" && modalidade === "full" && !superiorId) {
+    const master = await criarPersona({ role: "master" });
+    superiorId = master.userId;
+    dependencias.push(master);
+  }
   const senha = "Teste@123!";
   const email = `${uniq(`${role}-e2e`)}@teste.local`;
 
@@ -416,7 +428,7 @@ export async function criarPersona(opts: {
   const { error: eRole } = await admin.from("user_roles").insert({ user_id: userId, role });
   if (eRole) throw new Error(`inserir role (${role}): ${eRole.message}`);
 
-  return { email, senha, userId, empresaId, nome };
+  return { email, senha, userId, empresaId, nome, dependencias };
 }
 
 /** Remove os dados criados por `criarPersona` (best-effort; `db reset` também resolve). */
@@ -425,6 +437,9 @@ export async function limparPersona(p: Persona): Promise<void> {
   await admin.from("user_roles").delete().eq("user_id", p.userId);
   await admin.auth.admin.deleteUser(p.userId);
   await admin.from("empresas").delete().eq("id", p.empresaId);
+  for (const dependencia of p.dependencias ?? []) {
+    await limparPersona(dependencia);
+  }
 }
 
 /** Define o override completo de áreas de uma persona para regressões de navegação. */
@@ -563,6 +578,17 @@ export async function statusDesligamento(profileId: string) {
     .select("desligado_em,status")
     .eq("id", profileId)
     .single();
+  return data;
+}
+
+/** Localiza o vendedor criado pelo cadastro direto da Full. */
+export async function profilePorEmail(email: string) {
+  const { data, error } = await admin
+    .from("profiles")
+    .select("id,empresa_id,superior_id,status,equipe,leads_dia,cpf,telefone,desligado_em")
+    .eq("email", email.toLowerCase())
+    .maybeSingle();
+  if (error) throw new Error(`buscar profile por e-mail: ${error.message}`);
   return data;
 }
 

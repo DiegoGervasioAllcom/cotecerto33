@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { exportCsv, exportPdf } from "@/lib/export-relatorio";
 import { monthPeriodo, periodoOptions, ultimosDiasPeriodo } from "@/lib/relatorios/periodo";
 import { RELATORIOS } from "@/lib/relatorios/registro";
+import { useAuth } from "@/lib/auth";
+import { useGroupScope } from "@/lib/group-scope";
 
 export const Route = createFileRoute("/_authenticated/operacao/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios · CoteCerto" }] }),
@@ -72,6 +74,8 @@ function RepCard({
 const PERIODO_90_DIAS = "90dias";
 
 function Page() {
+  const { profile } = useAuth();
+  const { isFranqFull } = useGroupScope();
   const [periodOffset, setPeriodOffset] = useState<number | typeof PERIODO_90_DIAS>(0);
   const periodo = useMemo(
     () => (periodOffset === PERIODO_90_DIAS ? ultimosDiasPeriodo(90) : monthPeriodo(periodOffset)),
@@ -85,17 +89,29 @@ function Page() {
   const [vendedorId, setVendedorId] = useState("");
   const [franquias, setFranquias] = useState<{ id: string; nome: string }[]>([]);
   const [vendedores, setVendedores] = useState<{ id: string; nome: string }[]>([]);
+  const filtrosRequestGeneration = useRef(0);
 
   useEffect(() => {
+    const generation = ++filtrosRequestGeneration.current;
     void (async () => {
       const [em, pr] = await Promise.all([
         supabase.from("empresas").select("id,nome").order("nome"),
         supabase.from("profiles").select("id,nome").order("nome"),
       ]);
+      if (filtrosRequestGeneration.current !== generation) return;
       setFranquias((em.data ?? []) as { id: string; nome: string }[]);
-      setVendedores((pr.data ?? []) as { id: string; nome: string }[]);
+      setVendedores(
+        ((pr.data ?? []) as { id: string; nome: string }[]).filter(
+          (vendedor) => !isFranqFull || vendedor.id !== profile?.id,
+        ),
+      );
     })();
-  }, []);
+    return () => {
+      if (filtrosRequestGeneration.current === generation) {
+        filtrosRequestGeneration.current += 1;
+      }
+    };
+  }, [isFranqFull, profile?.id]);
 
   async function gerar(reportKey: string, formato: "pdf" | "csv") {
     const def = RELATORIOS.find((r) => r.key === reportKey);

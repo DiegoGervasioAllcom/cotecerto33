@@ -1,10 +1,12 @@
 # Plano — Frente 5 · Franquia Full como matrizinha (V11)
 
-**Status final:** ✅ Frente 5 inteiramente concluída (Frente 5b fechou o que faltava em
-04/08/2026 — ver a seção "Frente 5b — fechada em 04/08/2026" mais abaixo, que é a fonte
-da verdade sobre o que de fato foi entregue). As seções acima dela (tabela de tasks
-original, "Fechamento parcial", "BLOQUEADAS") registram o histórico de como o desenho
-mudou — mantidas por valor de decisão, não porque ainda descrevem o estado atual.
+**Status corrigido em 09/08/2026:** ⚠️ a conclusão registrada em 04/08/2026 era
+prematura. A auditoria com persona Franquia Full real confirmou que a tela não
+implementava as cinco abas do protótipo, o cadastro/configuração individual estava
+incompleto e uma Full podia permanecer ativa sem Master. A Frente 5b continua como
+histórico do PR #120; a correção complementar é a **Frente 5c**, descrita ao fim. Em
+09/08, banco, front e integração da 5c foram concluídos e validados localmente. A
+publicação em produção continua dependendo do fluxo normal de revisão, PR e deploy.
 
 **Aberto em:** 03/08/2026 · **Gatilho:** a Lis respondeu as 6 perguntas em aberto
 (`docs/PERGUNTAS_PARA_LIS.md`) e enviou `CoteCerto_Regras_Decididas.html` — as duas
@@ -57,18 +59,18 @@ listadas abaixo como o plano original, para registro.
 
 ## Tasks
 
-| Task     | Tag    | Descrição                                                                                                                                                 | Depende de       |
-| -------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| ~~V11.5.1~~ | —   | ✅ Resolvido — endereço: Acessos e permissões › Personalização geral/Performance                                                                          | —                |
-| V11.5.2a | banco  | Menu de 16 áreas pro franqueado Full (espelho da Matriz sem Franquias/Configurações globais) — nova função/regra de escopo em `app-shell.tsx`/RLS         | —                |
-| V11.5.2b | front  | **Central da Franquia**: só leads — Central de leads, Distribuição, SLA, Canais próprios (leads próprios × repassados da Matriz)                          | V11.5.2a          |
-| V11.5.3  | banco  | Tabela de SLA **por empresa** (não mais singleton); repassado segue o SLA da Matriz, próprio segue o da Full                                                | V11.5.2a          |
-| V11.5.4  | front  | ~~Acessos e permissões da Full: Personalização geral/Performance espelhando a Matriz (Modelo Franquia/CLT, Desconto, Respostas, **Performance**, sem Diretores/Histórico)~~ — **entregue diferente**: só Personalização geral (CLT leitura + Complementos) + Performance + **Histórico da própria franquia** (V11.5b.4/5) — Desconto/Respostas nunca entraram (Full não edita política de diretor), e Histórico entrou (o oposto do que esta linha previa) | V11.5.1, V11.5.2a |
-| V11.5.5  | front  | ~~Modelo CLT + complementos pra Full; cadastro direto passa pela configuração (produtos/canais/comissão por pessoa, selo "personalizado")~~ — **entregue diferente**: Modelo CLT ficou só leitura (é singleton global da Matriz); "complementos" virou 4 campos por empresa (comissão venda/renovação %, bônus, meta) — sem produtos/canais/comissão por pessoa nem selo "personalizado" (V11.5b.3) | V11.5.4           |
-| V11.5.6  | front  | ~~Régua própria **opcional** da Full na sub-aba Performance — banco já existe (bloco `'full'` do D1); só falta permitir a Full chamar `fn_salvar_regua_performance`/ver seu próprio bloco~~ — **subestimado**: não deu pra reusar `fn_salvar_regua_performance` (exige senha de diretor, Full nunca é diretora) — precisou de uma RPC irmã nova, `fn_salvar_regua_performance_full` (V11.5b.2) | V11.5.4           |
-| V11.5.7  | banco  | Lead repassado que dá perda ou estoura SLA **cruza a fronteira** e volta como Devolvido/Perda da Matriz                                                    | V11.5.3           |
-| V11.5.8  | banco  | Comissão por origem do lead: regra diferente pra canal próprio × repassado, **definida pela Matriz** nas configurações (não pela franquia)                 | V11.5.2a          |
-| V11.5.9  | testes | RLS + regras de negócio das tasks acima (escopo de 16 áreas, SLA por empresa, régua opcional, comissão por origem, cruzamento de fronteira)                | todas acima       |
+| Task        | Tag    | Descrição                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Depende de        |
+| ----------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| ~~V11.5.1~~ | —      | ✅ Resolvido — endereço: Acessos e permissões › Personalização geral/Performance                                                                                                                                                                                                                                                                                                                                                                           | —                 |
+| V11.5.2a    | banco  | Menu de 16 áreas pro franqueado Full (espelho da Matriz sem Franquias/Configurações globais) — nova função/regra de escopo em `app-shell.tsx`/RLS                                                                                                                                                                                                                                                                                                          | —                 |
+| V11.5.2b    | front  | **Central da Franquia**: só leads — Central de leads, Distribuição, SLA, Canais próprios (leads próprios × repassados da Matriz)                                                                                                                                                                                                                                                                                                                           | V11.5.2a          |
+| V11.5.3     | banco  | Tabela de SLA **por empresa** (não mais singleton); repassado segue o SLA da Matriz, próprio segue o da Full                                                                                                                                                                                                                                                                                                                                               | V11.5.2a          |
+| V11.5.4     | front  | ~~Acessos e permissões da Full: Personalização geral/Performance espelhando a Matriz (Modelo Franquia/CLT, Desconto, Respostas, **Performance**, sem Diretores/Histórico)~~ — **entregue diferente**: só Personalização geral (CLT leitura + Complementos) + Performance + **Histórico da própria franquia** (V11.5b.4/5) — Desconto/Respostas nunca entraram (Full não edita política de diretor), e Histórico entrou (o oposto do que esta linha previa) | V11.5.1, V11.5.2a |
+| V11.5.5     | front  | ~~Modelo CLT + complementos pra Full; cadastro direto passa pela configuração (produtos/canais/comissão por pessoa, selo "personalizado")~~ — **entregue diferente**: Modelo CLT ficou só leitura (é singleton global da Matriz); "complementos" virou 4 campos por empresa (comissão venda/renovação %, bônus, meta) — sem produtos/canais/comissão por pessoa nem selo "personalizado" (V11.5b.3)                                                        | V11.5.4           |
+| V11.5.6     | front  | ~~Régua própria **opcional** da Full na sub-aba Performance — banco já existe (bloco `'full'` do D1); só falta permitir a Full chamar `fn_salvar_regua_performance`/ver seu próprio bloco~~ — **subestimado**: não deu pra reusar `fn_salvar_regua_performance` (exige senha de diretor, Full nunca é diretora) — precisou de uma RPC irmã nova, `fn_salvar_regua_performance_full` (V11.5b.2)                                                             | V11.5.4           |
+| V11.5.7     | banco  | Lead repassado que dá perda ou estoura SLA **cruza a fronteira** e volta como Devolvido/Perda da Matriz                                                                                                                                                                                                                                                                                                                                                    | V11.5.3           |
+| V11.5.8     | banco  | Comissão por origem do lead: regra diferente pra canal próprio × repassado, **definida pela Matriz** nas configurações (não pela franquia)                                                                                                                                                                                                                                                                                                                 | V11.5.2a          |
+| V11.5.9     | testes | RLS + regras de negócio das tasks acima (escopo de 16 áreas, SLA por empresa, régua opcional, comissão por origem, cruzamento de fronteira)                                                                                                                                                                                                                                                                                                                | todas acima       |
 
 ## Riscos e decisões conscientes
 
@@ -86,9 +88,9 @@ listadas abaixo como o plano original, para registro.
 4. **Fora de escopo desta frente:** Carteira de Recuperação (Lis decidiu V12); override
    de aprovação da Matriz sobre vendedor Full (Lis decidiu manter como está); escopo de
    leitura do Marketing/Assistente Comercial (decidido, mas é mudança de ~22 policies
-   sem relação com a Full — task separada, fora desta frente). *(Atualização: a
+   sem relação com a Full — task separada, fora desta frente). _(Atualização: a
    implementação real, `docs/PLANO_ESCOPO_INTERNO_V11.md`, tocou 16 policies — a
-   estimativa aqui era um número solto, não a contagem final.)*
+   estimativa aqui era um número solto, não a contagem final.)_
 5. **Hierarquia Coordenador acima dos Supervisores (regra 5):** investigado — H6
    deriva a alçada de desconto por `has_role`/cargo direto, não por `superior_id`
    recursivo pros dois Supervisores. Apontar `superior_id` deles pro Coordenador não
@@ -141,7 +143,7 @@ em 04/08/2026, depois de eu investigar e achar 3 problemas no desenho original:
    plano — precisa reinterpretar à luz do r41, não assumir que é reaproveitar o painel
    global.
 3. **A régua de performance trava pra Full por completo hoje**: `fn_salvar_regua_
-   performance` exige gate de diretor pros 3 blocos (interno/rede/full), e Full nunca
+performance` exige gate de diretor pros 3 blocos (interno/rede/full), e Full nunca
    pode ser diretora — o comentário da própria migration D2 já admitia a divergência
    ("diverge do protótipo, que deixava o bloco full sem senha"). Além disso hoje existe
    **1 linha compartilhada** pro bloco `'full'` inteiro — se "régua própria" (regra 12)
@@ -193,6 +195,11 @@ verificação — não é bug de produto.
 Com isso, **a Frente 5 fecha por completo** — não fica mais nenhuma task V11.5.x
 bloqueada.
 
+> **Correção posterior (09/08/2026):** a frase acima registra a conclusão entendida em
+> 04/08, mas foi invalidada pela auditoria posterior. As três primeiras áreas não eram
+> abas reais, faltavam cadastro/configuração individual e a hierarquia Full → Master
+> não era obrigatória no servidor. Consulte a Frente 5c abaixo para o estado atual.
+
 ## Frente 5b — desbloqueada em 04/08/2026 (r41 + Regras Decididas + Handoff atualizado + Respostas)
 
 O r41 (`cotecerto_prototipo_v11.html`, função `fullAcessosPage()`/`fullPersoBody()`/
@@ -217,9 +224,9 @@ resolvem as 3 dúvidas do fechamento parcial:
    **porta de escrita**: `fn_registrar_alteracao` (a única hoje) exige
    `fn_confirmar_senha_diretor` sempre — incompatível com Full nunca ser diretora.
    Precisa de uma RPC irmã, `fn_registrar_alteracao_franquia(p_empresa_id, area,
-   o_que, de_para)`, com gate de identidade (`has_role('franqueado')`,
+o_que, de_para)`, com gate de identidade (`has_role('franqueado')`,
    `profiles.empresa_id = p_empresa_id`, `fn_bloco_performance(p_empresa_id) =
-   'full'`) em vez de senha — usada tanto pela régua quanto pelos complementos.
+'full'`) em vez de senha — usada tanto pela régua quanto pelos complementos.
 
 Estrutura confirmada da tela (`fullAcessosPage()`, 5 abas): Meu time / Pendentes de
 aprovação / Desligamentos (as 3 já implementadas, F1-F9) + **Personalização geral**
@@ -230,14 +237,14 @@ sem toggle) — as 2 novas entram como seções com toggle, no mesmo padrão de
 
 ### Tasks
 
-| Task     | Tag    | Descrição                                                                                                    | Depende de |
-| -------- | ------ | ------------------------------------------------------------------------------------------------------------- | ---------- |
-| V11.5b.1 | banco  | `fn_registrar_alteracao_franquia(p_empresa_id, area, o_que, de_para)` — porta de escrita do histórico da franquia, gate por identidade (não senha) | —          |
-| V11.5b.2 | banco  | `fn_salvar_regua_performance_full()` — só bloco `'full'`, sem senha, gate por identidade, grava via V11.5b.1  | V11.5b.1   |
-| V11.5b.3 | banco  | Tabela `full_comissao_complementos` (empresa_id PK) + `fn_salvar_complementos_full(...)`, sem senha, gate por identidade, grava via V11.5b.1 | V11.5b.1   |
-| V11.5b.4 | front  | `xacessos.tsx`: seções Personalização geral (CLT leitura + Complementos edição) e Performance, com toggle    | V11.5b.2, V11.5b.3 |
-| V11.5b.5 | front  | Sub-aba Histórico da franquia — reusa o padrão de `HistoricoPanel` (G6.5), filtrado por `empresa_id` própria | V11.5b.1   |
-| V11.5b.6 | testes | RLS das 3 RPCs novas (só a própria Full, nunca outra franquia, nunca sem ser Full); histórico da franquia aparece certo | todas acima |
+| Task     | Tag    | Descrição                                                                                                                                          | Depende de         |
+| -------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| V11.5b.1 | banco  | `fn_registrar_alteracao_franquia(p_empresa_id, area, o_que, de_para)` — porta de escrita do histórico da franquia, gate por identidade (não senha) | —                  |
+| V11.5b.2 | banco  | `fn_salvar_regua_performance_full()` — só bloco `'full'`, sem senha, gate por identidade, grava via V11.5b.1                                       | V11.5b.1           |
+| V11.5b.3 | banco  | Tabela `full_comissao_complementos` (empresa_id PK) + `fn_salvar_complementos_full(...)`, sem senha, gate por identidade, grava via V11.5b.1       | V11.5b.1           |
+| V11.5b.4 | front  | `xacessos.tsx`: seções Personalização geral (CLT leitura + Complementos edição) e Performance, com toggle                                          | V11.5b.2, V11.5b.3 |
+| V11.5b.5 | front  | Sub-aba Histórico da franquia — reusa o padrão de `HistoricoPanel` (G6.5), filtrado por `empresa_id` própria                                       | V11.5b.1           |
+| V11.5b.6 | testes | RLS das 3 RPCs novas (só a própria Full, nunca outra franquia, nunca sem ser Full); histórico da franquia aparece certo                            | todas acima        |
 
 ### Riscos
 
@@ -248,3 +255,32 @@ sem toggle) — as 2 novas entram como seções com toggle, no mesmo padrão de
    existe pra int/rede) — replicar essa omissão no front, não é esquecimento.
 3. **Não criar tabela de override por empresa pra régua** — é o erro que eu ia cometer
    antes do r41 chegar. Bloco `'full'` é uma linha só, compartilhada.
+
+## Frente 5c — correção da auditoria Full (09/08/2026)
+
+A auditoria com persona Full real corrigiu duas conclusões anteriores: a tela correta
+possui **cinco abas reais** (Meu time, Pendentes de aprovação, Desligamentos,
+Personalização geral e Performance), e toda Full ativa precisa reportar a um
+**Master ativo e aprovado**.
+
+| Task     | Tag    | Estado em 09/08/2026                                                                                                                                                                        |
+| -------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V11.5c.1 | banco  | ✅ Full ativa exige `superior_id` para Master ativo/aprovado; escrita direta protegida por triggers diferíveis. Legado órfão é suspenso e auditado, sem escolha automática nem exclusão.    |
+| V11.5c.2 | banco  | ✅ Porta exclusiva da Matriz para vincular Master e reativar; o status suspenso mantém JWT antigo bloqueado até regularização.                                                              |
+| V11.5c.3 | banco  | ✅ RPCs de cadastro direto, configuração individual, desligamento direto pela Full e reinclusão exclusiva da Matriz, com RLS e históricos imutáveis.                                        |
+| V11.5c.4 | front  | ✅ Cinco abas reais e tabela completa do time, incluindo documento, supervisão, comissão, performance, selo e ações.                                                                        |
+| V11.5c.5 | front  | ✅ Cadastro direto em duas etapas (identidade e configuração), com CPF/celular, equipe, leads, produtos, canais e comissão; canais inativos ou de outra empresa são rejeitados no servidor. |
+| V11.5c.6 | front  | ✅ Visão Geral específica da unidade e filtros de Pipeline/Relatórios sem listar a própria Full como vendedor.                                                                              |
+| V11.5c.7 | testes | ✅ Validação local verde: `db reset`; DB focado 15/15; regressões DB 66/66; suíte DB completa 579/579; unitários 346/346; E2E Full e regressões 14/14; typecheck, lint e Prettier sem erro. |
+
+Migrations: `20260809212121_v11_5c_integridade_full_master.sql` e
+`20260809212122_v11_5c_gestao_direta_time_full.sql`.
+
+O cadastro direto exige uma server function: criar a identidade no GoTrue com
+`service_role`, chamar `fn_cadastrar_vendedor_full` e remover a identidade caso a RPC
+falhe. A chave administrativa nunca pode chegar ao browser.
+
+**Conclusão local em 09/08/2026:** os critérios da Frente 5c foram atendidos. As cinco
+abas estão navegáveis; a gestão é restrita à própria Full; a hierarquia é obrigatória
+no formulário e servidor; a reinclusão é exclusiva da Matriz e limitada a vendedor
+de Full; e as suítes locais estão verdes. Isso não declara deploy em produção.

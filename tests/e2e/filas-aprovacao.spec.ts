@@ -78,6 +78,7 @@ test.describe("Frente 2 · F10 — roteamento das filas por trilha do convite", 
   test("interno cai no bloco da Matriz com o cargo certo; vendedor de Full some da Matriz e só existe na fila da própria Full", async ({
     page,
   }) => {
+    test.setTimeout(60_000);
     // ---- 1) Convite interno: a Matriz emite, o cadastro entra no bloco INTERNO ----
     await loginAs(page, MATRIZ_EMAIL, MATRIZ_SENHA);
     await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
@@ -125,11 +126,11 @@ test.describe("Frente 2 · F10 — roteamento das filas por trilha do convite", 
     await loginAs(fullPage, full.email, full.senha);
     await expect(fullPage).not.toHaveURL(/\/auth/, { timeout: 15_000 });
     await fullPage.goto("/operacao/xacessos");
-    await expect(fullPage.getByRole("heading", { name: "Acessos da equipe" }).first()).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(
+      fullPage.getByRole("heading", { name: "Acessos e permissões" }).first(),
+    ).toBeVisible({ timeout: 15_000 });
 
-    await fullPage.getByRole("button", { name: "Convidar vendedor" }).click();
+    await fullPage.getByRole("button", { name: "Convidar · Convite Supper" }).click();
     const modalFull = fullPage.getByRole("dialog", { name: /meu time/ });
     await expect(modalFull).toBeVisible();
 
@@ -149,6 +150,11 @@ test.describe("Frente 2 · F10 — roteamento das filas por trilha do convite", 
     ).toBeVisible({ timeout: 15_000 });
     await cadastrarPeloConvite(convidadoFull);
     await convidadoFull.context().close();
+    await expect
+      .poll(async () => (await pedidoDoConvitePorCodigo(codigoFull!))?.pedido?.status, {
+        timeout: 15_000,
+      })
+      .toBe("pendente");
 
     // Não aparece na fila da Matriz em NENHUM dos dois blocos — a RLS de F2
     // já exclui o pendente da Full antes mesmo de chegar à tela.
@@ -162,6 +168,7 @@ test.describe("Frente 2 · F10 — roteamento das filas por trilha do convite", 
 
     // Só existe na fila da própria Full — que também é quem aprova.
     await fullPage.goto("/operacao/xacessos");
+    await fullPage.getByRole("button", { name: /Pendentes de aprovação/ }).click();
     const linhaFull = fullPage.locator("tr", { hasText: nomeFull });
     await expect(linhaFull).toBeVisible({ timeout: 20_000 });
     await expect(linhaFull.getByText("Vendedor | Full")).toBeVisible();
@@ -189,6 +196,7 @@ test.describe("Frente 2 · F10 — roteamento das filas por trilha do convite", 
     }
     await fullPage.reload();
     await expect(fullPage.locator(".modal-host")).toHaveCount(0);
+    await fullPage.getByRole("button", { name: /Pendentes de aprovação/ }).click();
     await expect(fullPage.getByText("Nenhum cadastro pendente")).toBeVisible({ timeout: 15_000 });
 
     await fullPage.close();

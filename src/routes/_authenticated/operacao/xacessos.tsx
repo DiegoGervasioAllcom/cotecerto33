@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
-import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
 import { useAuth } from "@/lib/auth";
 import { ConvidarModal, type EscopoConvite } from "@/components/acessos/convidar-modal";
@@ -15,6 +14,15 @@ import { useFilaFranquiaData } from "@/components/operacao/acessos/hooks/useFila
 import type { FranquiaAprovada } from "@/components/operacao/acessos/types";
 import { FullPersonalizacaoPanel } from "@/components/operacao/acessos/full-personalizacao-panel";
 import { FullPerformancePanel } from "@/components/operacao/acessos/full-performance-panel";
+import { FullTeamTable, type FullTeamMember } from "@/components/operacao/acessos/full/full-team";
+import { fullTeamMemberMatches } from "@/components/operacao/acessos/full/full-team-utils";
+import { FullMemberModal } from "@/components/operacao/acessos/full/full-member-modal";
+import { FullDirectModal } from "@/components/operacao/acessos/full/full-direct-modal";
+import { useTeamData } from "@/components/operacao/acessos/full/use-team-data";
+import {
+  FullDisabledPanel,
+  GenericTeamTable,
+} from "@/components/operacao/acessos/full/team-panels";
 
 /**
  * Acessos da equipe (xacessos) — visão de grupo (master/supervisor/franquia Full).
@@ -32,27 +40,6 @@ import { FullPerformancePanel } from "@/components/operacao/acessos/full-perform
  * faltava ali.
  */
 
-type SistemaRole = "master" | "vendedor" | "franqueado" | "supervisor";
-
-const TIPO_CHIP_CLASS: Record<string, string> = {
-  "Supervisor (Matriz)": "chip-slate",
-  "Master franqueado": "chip-yellow",
-  "Franquia (Full)": "chip-info",
-  "Franquia (Individual)": "chip-info",
-  "Vendedor CLT": "chip-outline",
-  "Vendedor de franquia": "chip-outline",
-};
-
-type Membro = {
-  id: string;
-  nome: string;
-  email: string;
-  desligado_em: string | null;
-  role: SistemaRole;
-  tipoLabel: string;
-  supervisaoLabel: string;
-};
-
 /**
  * V11.5b.4 — a Full ganha 2 seções novas ("Personalização geral",
  * "Performance") além do que já existia (equipe/pendentes/desligamentos,
@@ -62,7 +49,7 @@ type Membro = {
  * `modelos_franquia` — não `empresa.tipo`, que é só pj/pf documental) é o
  * único gate.
  */
-type Secao = "equipe" | "perso" | "performance";
+type Secao = "time" | "pend" | "deslig" | "perso" | "performance";
 
 export const Route = createFileRoute("/_authenticated/operacao/xacessos")({
   head: () => ({ meta: [{ title: "Acessos da equipe · CoteCerto" }] }),
@@ -73,16 +60,22 @@ function Page() {
   const { group, groupPct, isFranqFull } = useGroupScope();
   const { role, profile, empresa } = useAuth();
   const [convidando, setConvidando] = useState<EscopoConvite | null>(null);
-  const [secao, setSecao] = useState<Secao>("equipe");
+  const [secao, setSecao] = useState<Secao>("time");
 
   // V11: o Master convida a rede dele; a Franquia Full, o time dela.
   const escopoConvite: EscopoConvite | null =
     role === "master" ? "master" : role === "franqueado" ? "full" : null;
-  const [rows, setRows] = useState<Membro[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-  const [filtroTipo, setFiltroTipo] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState("");
+  const [busca, setBusca] = useState("");
+  const [filtroEquipe, setFiltroEquipe] = useState("");
+  const [filtroAno, setFiltroAno] = useState("");
+  const [selecionado, setSelecionado] = useState<{
+    membro: FullTeamMember;
+    modo: "ver" | "configurar" | "excluir";
+  } | null>(null);
+  const [reloadEquipe, setReloadEquipe] = useState(0);
+  const { rows, loading, err } = useTeamData(profile, reloadEquipe);
+  const [cadastroDireto, setCadastroDireto] = useState(false);
+  const [avisoCadastro, setAvisoCadastro] = useState<string | null>(null);
   // V11 · C8 — "Solicitar desligamento" só faz sentido para vendedor/franquia
   // (o próprio solicitar_desligamento também barra o resto no banco); o
   // reloadTick força o card "Minhas solicitações" a buscar de novo após enviar.
@@ -92,7 +85,7 @@ function Page() {
   // V11 · F9 — a Franquia Full aprova o próprio vendedor (F1/F2: a RLS já
   // entrega só o pedido dela). Individual não tem equipe para aprovar — "o
   // franqueado opera como um vendedor", sem cadastro de vendedores.
-  const isFull = role === "franqueado" && empresa?.tipo === "pj";
+  const isFull = role === "franqueado" && isFranqFull;
   const fila = useFilaFranquiaData(isFull);
   const minhaFranquia: FranquiaAprovada[] =
     isFull && empresa && profile
@@ -107,120 +100,40 @@ function Page() {
         ]
       : [];
 
-  useEffect(() => {
-    void (async () => {
-      setLoading(true);
-      setErr(null);
-      const ur = await supabase
-        .from("user_roles")
-        .select("user_id,role")
-        .in("role", ["master", "vendedor", "franqueado", "supervisor"])
-        .order("user_id", { ascending: true })
-        .order("role", { ascending: true });
-      if (ur.error) {
-        setErr(ur.error.message);
-        setLoading(false);
-        return;
-      }
-      const roleByUser: Record<string, SistemaRole> = {};
-      (ur.data ?? []).forEach((x) => {
-        roleByUser[x.user_id] ??= x.role as SistemaRole;
-      });
-      // não lista o próprio gestor logado na tabela de equipe
-      const ids = Object.keys(roleByUser).filter((id) => id !== profile?.id);
-      if (ids.length === 0) {
-        setRows([]);
-        setLoading(false);
-        return;
-      }
-      const [pr, em] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id,nome,email,empresa_id,superior_id,desligado_em")
-          .in("id", ids),
-        supabase.from("empresas").select("id,tipo,modelo_id"),
-      ]);
-      if (pr.error) {
-        setErr(pr.error.message);
-        setLoading(false);
-        return;
-      }
-      type ProfileLite = {
-        id: string;
-        nome: string;
-        email: string;
-        empresa_id: string | null;
-        superior_id: string | null;
-        desligado_em: string | null;
-      };
-      const profiles = (pr.data ?? []) as ProfileLite[];
-      const profileById = Object.fromEntries(profiles.map((p) => [p.id, p]));
-      const empresaById = Object.fromEntries(
-        ((em.data ?? []) as { id: string; tipo: string; modelo_id: string | null }[]).map((e) => [
-          e.id,
-          e,
-        ]),
-      );
-
-      function tipoLabel(p: ProfileLite, role: SistemaRole): string {
-        if (role === "supervisor") return "Supervisor (Matriz)";
-        if (role === "master") return "Master franqueado";
-        if (role === "franqueado") {
-          const emp = p.empresa_id ? empresaById[p.empresa_id] : undefined;
-          return emp?.tipo === "pj" ? "Franquia (Full)" : "Franquia (Individual)";
-        }
-        const emp = p.empresa_id ? empresaById[p.empresa_id] : undefined;
-        return emp?.tipo === "pj" ? "Vendedor de franquia" : "Vendedor CLT";
-      }
-
-      function supervisaoLabel(p: ProfileLite): string {
-        if (!p.superior_id) return "—";
-        return profileById[p.superior_id]?.nome ?? "—";
-      }
-
-      setRows(
-        ids
-          .map((id) => {
-            const p = profileById[id];
-            const role = roleByUser[id];
-            return {
-              id,
-              nome: p?.nome ?? "—",
-              email: p?.email ?? "—",
-              desligado_em: p?.desligado_em ?? null,
-              role,
-              tipoLabel: p ? tipoLabel(p, role) : "—",
-              supervisaoLabel: p ? supervisaoLabel(p) : "—",
-            };
-          })
-          .sort((a, b) => a.nome.localeCompare(b.nome)),
-      );
-      setLoading(false);
-    })();
-  }, [profile?.id]);
-
-  const tipos = Array.from(new Set(rows.map((r) => r.tipoLabel))).sort();
-  const filtradas = rows.filter((r) => {
-    if (filtroTipo && r.tipoLabel !== filtroTipo) return false;
-    if (filtroStatus === "ativo" && r.desligado_em) return false;
-    if (filtroStatus === "desativado" && !r.desligado_em) return false;
-    return true;
-  });
+  const membrosFull: FullTeamMember[] = rows
+    .filter((row) => row.role === "vendedor")
+    .map((row) => ({ ...row, desligadoEm: row.desligado_em }));
+  const ativosFull = membrosFull.filter((membro) => !membro.desligadoEm);
+  const desligadosFull = membrosFull.filter((membro) => !!membro.desligadoEm);
+  const equipes = Array.from(new Set(ativosFull.map((m) => m.equipe || "—"))).sort();
+  const anos = Array.from(new Set(ativosFull.map((m) => m.desde)))
+    .sort()
+    .reverse();
+  const filtradasFull = ativosFull.filter((m) =>
+    fullTeamMemberMatches(m, busca, filtroEquipe, filtroAno),
+  );
+  const filtradas = rows.filter((r) => !r.desligado_em);
 
   return (
-    <AppShell title="Acessos da equipe">
+    <AppShell title="Acessos e permissões">
       <ProtoIcons />
       <div className="page-head">
         <div>
-          <h1>Acessos da equipe</h1>
+          <h1>{isFull ? "Acessos e permissões" : "Acessos da equipe"}</h1>
           <div className="sub">
-            Sua rede{group ? ` · ${groupPct}% sobre a equipe` : ""} —{" "}
-            {escopoConvite === "full"
-              ? "convide o vendedor da sua franquia; a aprovação é sua."
-              : "convide a sua rede; a Matriz aprova e classifica."}
+            {isFull ? (
+              "Sua equipe, sua gestão — convite, aprovação, desligamento e regras são da franquia"
+            ) : (
+              <>
+                Sua rede{group ? ` · ${groupPct}% sobre a equipe` : ""} —{" "}
+                {escopoConvite === "full"
+                  ? "convide o vendedor da sua franquia; a aprovação é sua."
+                  : "convide a sua rede; a Matriz aprova e classifica."}
+              </>
+            )}
           </div>
         </div>
-        {escopoConvite && (
+        {escopoConvite && !isFull && (
           <div style={{ marginLeft: "auto" }}>
             <button
               className="btn btn-yellow"
@@ -238,6 +151,11 @@ function Page() {
           {err}
         </div>
       )}
+      {avisoCadastro && (
+        <div className="banner warn" style={{ marginBottom: 14 }}>
+          {avisoCadastro}
+        </div>
+      )}
       {fila.emailRetryPending && !fila.analisando && (
         <div className="banner warn" style={{ marginBottom: 14 }}>
           Há um e-mail de acesso aguardando envio.
@@ -248,154 +166,152 @@ function Page() {
       )}
 
       {isFranqFull && (
-        <div className="toggle toggle-sub" style={{ marginBottom: 18 }}>
-          <button className={secao === "equipe" ? "on" : ""} onClick={() => setSecao("equipe")}>
-            Meu time
-          </button>
-          <button className={secao === "perso" ? "on" : ""} onClick={() => setSecao("perso")}>
-            Personalização geral
-          </button>
-          <button
-            className={secao === "performance" ? "on" : ""}
-            onClick={() => setSecao("performance")}
+        <div
+          className="acc-group"
+          style={{
+            marginBottom: 18,
+            padding: "12px 14px",
+            borderRadius: 14,
+            border: "1px solid var(--slate)",
+            background: "#f4f6f8",
+          }}
+        >
+          <div
+            className="small muted"
+            style={{
+              fontWeight: 800,
+              letterSpacing: ".08em",
+              marginBottom: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
           >
-            Performance
-          </button>
+            <Icon id="store" size={13} /> MINHA FRANQUIA
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ marginLeft: "auto" }}
+              type="button"
+              onClick={() => setCadastroDireto(true)}
+            >
+              <Icon id="edit" size={13} /> Cadastro direto
+            </button>
+            <button
+              className="btn btn-slate btn-sm"
+              type="button"
+              onClick={() => setConvidando("full")}
+            >
+              <Icon id="plus" size={13} /> Convidar · Convite Supper
+            </button>
+          </div>
+          <div className="toggle">
+            <button className={secao === "time" ? "on" : ""} onClick={() => setSecao("time")}>
+              Meu time <span>({ativosFull.length})</span>
+            </button>
+            <button className={secao === "pend" ? "on" : ""} onClick={() => setSecao("pend")}>
+              Pendentes de aprovação <span>({fila.pendentes.length})</span>
+            </button>
+            <button className={secao === "deslig" ? "on" : ""} onClick={() => setSecao("deslig")}>
+              Desligamentos <span>({desligadosFull.length})</span>
+            </button>
+            <button className={secao === "perso" ? "on" : ""} onClick={() => setSecao("perso")}>
+              Personalização geral
+            </button>
+            <button
+              className={secao === "performance" ? "on" : ""}
+              onClick={() => setSecao("performance")}
+            >
+              Performance
+            </button>
+          </div>
         </div>
       )}
 
-      {secao === "equipe" && (
+      {secao === "time" && (
         <>
-          {isFull && (
-            <div style={{ marginBottom: 18 }}>
-              <div
-                className="small muted"
-                style={{ fontWeight: 800, letterSpacing: ".08em", marginBottom: 8 }}
-              >
-                PENDENTES DE APROVAÇÃO ({fila.pendentes.length})
-              </div>
-              {fila.err && (
-                <div className="banner alert" style={{ marginBottom: 14 }}>
-                  {fila.err}
-                </div>
-              )}
-              <PendentesTab pendentes={fila.pendentes} onAnalisar={fila.openAnalisar} />
-            </div>
-          )}
-
           <div className="card">
             <div className="card-h">
               <h3>
-                <Icon id="users" size={16} /> Equipe
+                <Icon id="users" size={16} /> {isFull ? "Meu time" : "Equipe"}
               </h3>
               <span className="small muted">
-                {filtradas.length} de {rows.length} usuário(s)
+                {isFull
+                  ? `${filtradasFull.length} de ${ativosFull.length}`
+                  : `${filtradas.length} de ${rows.length}`}{" "}
+                usuário(s)
               </span>
             </div>
             <div className="card-b" style={{ display: "flex", gap: 10 }}>
-              <select
-                className="input"
-                style={{ maxWidth: 220 }}
-                value={filtroTipo}
-                onChange={(e) => setFiltroTipo(e.target.value)}
-              >
-                <option value="">Todos os tipos</option>
-                {tipos.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="input"
-                style={{ maxWidth: 180 }}
-                value={filtroStatus}
-                onChange={(e) => setFiltroStatus(e.target.value)}
-              >
-                <option value="">Todos os status</option>
-                <option value="ativo">Ativo</option>
-                <option value="desativado">Desativado</option>
-              </select>
+              {isFull && (
+                <input
+                  className="input"
+                  style={{ maxWidth: 260 }}
+                  placeholder="Buscar vendedor…"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                />
+              )}
+              {isFull && (
+                <select
+                  className="input"
+                  style={{ maxWidth: 180 }}
+                  value={filtroEquipe}
+                  onChange={(e) => setFiltroEquipe(e.target.value)}
+                >
+                  <option value="">Equipe · todas</option>
+                  {equipes.map((e) => (
+                    <option key={e}>{e}</option>
+                  ))}
+                </select>
+              )}
+              {isFull && (
+                <select
+                  className="input"
+                  style={{ maxWidth: 140 }}
+                  value={filtroAno}
+                  onChange={(e) => setFiltroAno(e.target.value)}
+                >
+                  <option value="">Ano · todos</option>
+                  {anos.map((a) => (
+                    <option key={a}>{a}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="card-b" style={{ padding: 0, overflowX: "auto" }}>
               {loading ? (
                 <div className="muted small" style={{ padding: 16 }}>
                   Carregando…
                 </div>
+              ) : isFull ? (
+                <FullTeamTable
+                  membros={filtradasFull}
+                  onVer={(membro) => setSelecionado({ membro, modo: "ver" })}
+                  onConfigurar={(membro) => setSelecionado({ membro, modo: "configurar" })}
+                  onExcluir={(membro) => setSelecionado({ membro, modo: "excluir" })}
+                />
               ) : (
-                <table className="table-pipe">
-                  <thead>
-                    <tr>
-                      <th>Usuário</th>
-                      <th>Tipo</th>
-                      <th>Supervisão</th>
-                      <th>Status</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtradas.map((u) => {
-                      const desligado = !!u.desligado_em;
-                      // V11 · C8 — só vendedor/franquia são alvo válido de
-                      // solicitar_desligamento (a RPC barra o resto de novo).
-                      const podeDesligar =
-                        !desligado && (u.role === "vendedor" || u.role === "franqueado");
-                      return (
-                        <tr key={u.id}>
-                          <td>
-                            <strong>{u.nome}</strong>
-                            <div className="muted small">{u.email}</div>
-                          </td>
-                          <td>
-                            <span
-                              className={`chip ${TIPO_CHIP_CLASS[u.tipoLabel] ?? "chip-outline"}`}
-                            >
-                              {u.tipoLabel}
-                            </span>
-                          </td>
-                          <td>
-                            <small className="muted">{u.supervisaoLabel}</small>
-                          </td>
-                          <td>
-                            <span className={`chip ${desligado ? "chip-outline" : "chip-ok"}`}>
-                              {desligado ? "Desativado" : "Ativo"}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                            {podeDesligar && (
-                              <button
-                                className="btn btn-ghost btn-sm"
-                                type="button"
-                                onClick={() => setDesligando({ id: u.id, nome: u.nome })}
-                              >
-                                <Icon id="trash" size={12} /> Solicitar desligamento
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {filtradas.length === 0 && (
-                      <tr>
-                        <td
-                          colSpan={5}
-                          style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}
-                        >
-                          Nenhum usuário encontrado.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                <GenericTeamTable
+                  membros={filtradas}
+                  onDesligar={(membro) => setDesligando({ id: membro.id, nome: membro.nome })}
+                />
               )}
             </div>
           </div>
 
-          <div style={{ marginTop: 18 }}>
-            <MinhasSolicitacoesDesligamento reloadKey={desligamentoReloadTick} />
-          </div>
+          {!isFull && (
+            <div style={{ marginTop: 18 }}>
+              <MinhasSolicitacoesDesligamento reloadKey={desligamentoReloadTick} />
+            </div>
+          )}
         </>
       )}
+
+      {secao === "pend" && isFull && (
+        <PendentesTab pendentes={fila.pendentes} onAnalisar={fila.openAnalisar} />
+      )}
+
+      {secao === "deslig" && isFull && <FullDisabledPanel membros={desligadosFull} />}
 
       {secao === "perso" && isFranqFull && empresa?.id && (
         <FullPersonalizacaoPanel empresaId={empresa.id} />
@@ -406,6 +322,28 @@ function Page() {
       )}
 
       {convidando && <ConvidarModal escopo={convidando} onClose={() => setConvidando(null)} />}
+      {cadastroDireto && (
+        <FullDirectModal
+          onClose={() => setCadastroDireto(false)}
+          onSaved={(aviso) => {
+            setCadastroDireto(false);
+            setAvisoCadastro(aviso);
+            setSecao("time");
+            setReloadEquipe((value) => value + 1);
+          }}
+        />
+      )}
+      {selecionado && (
+        <FullMemberModal
+          membro={selecionado.membro}
+          modo={selecionado.modo}
+          onClose={() => setSelecionado(null)}
+          onSaved={() => {
+            setSelecionado(null);
+            setReloadEquipe((value) => value + 1);
+          }}
+        />
+      )}
       {desligando && (
         <SolicitarDesligamentoModal
           alvoId={desligando.id}

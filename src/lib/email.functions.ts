@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { renderEmailTemplate, type EmailTemplate } from "./email-templates";
-
-const FROM = "CoteCerto <acesso@cote-certo.sandboxallcom.com>";
-const REPLY_TO = "diego.gervasio@allcomtelecom.com";
+import {
+  ACCESS_EMAIL_FROM as FROM,
+  ACCESS_EMAIL_REPLY_TO as REPLY_TO,
+} from "./email-delivery-config";
 
 type DispatchPayload = { outbox_id: string; caller_token: string };
 type WelcomePayload = { empresa_id: string; caller_token: string };

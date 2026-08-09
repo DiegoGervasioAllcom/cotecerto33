@@ -70,7 +70,7 @@ test.describe("login de usuário desligado", () => {
     page.on("framenavigated", (frame) => {
       if (frame === page.mainFrame()) rotas.push(new URL(frame.url()).pathname);
     });
-    await loginAs(page, vendedor.email, vendedor.senha);
+    await loginAs(page, vendedor.email, vendedor.senha, { expectStayOnAuth: true });
 
     await expect(page).toHaveURL(/\/auth\/?$/, { timeout: 15_000 });
     await expect(page.getByText(MENSAGEM_DESLIGADO, { exact: true })).toBeVisible();

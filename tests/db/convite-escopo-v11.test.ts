@@ -50,7 +50,12 @@ async function criarFull(prefix: string) {
   if (error) throw error;
   const emp = await criarEmpresa();
   await admin.from("empresas").update({ modelo_id: modelo.id }).eq("id", emp.id);
-  return criarPersonaComEmpresa("franqueado", { empresaId: emp.id, emailPrefix: prefix });
+  const master = await criarPersonaComEmpresa("master", { emailPrefix: `${prefix}-master` });
+  return criarPersonaComEmpresa("franqueado", {
+    empresaId: emp.id,
+    emailPrefix: prefix,
+    superiorId: master.userId,
+  });
 }
 
 describe("C2 — escopo interno (Matriz/Coordenador)", () => {

@@ -44,9 +44,11 @@ async function criarFullDona(prefix: string) {
   if (modeloError) throw modeloError;
   const empresa = await criarEmpresa();
   await admin.from("empresas").update({ modelo_id: modelo.id }).eq("id", empresa.id);
+  const master = await criarPersonaComEmpresa("master", { emailPrefix: `${prefix}-master` });
   return criarPersonaComEmpresa("franqueado", {
     empresaId: empresa.id,
     emailPrefix: prefix,
+    superiorId: master.userId,
   });
 }
 
@@ -582,10 +584,15 @@ describe("V11.2.2 — boas-vindas depois da aprovação", () => {
         expect(error).toBeNull();
       }
 
+      const master =
+        modalidade === "full"
+          ? await criarPersonaComEmpresa("master", { emailPrefix: "payload-full-master" })
+          : null;
       const aprovacao = await matriz.rpc("aprovar_acesso", {
         p_empresa_id: pedido.empresaId,
         p_perfil: perfil,
         p_cargo_id: cargoId,
+        p_superior_id: master?.userId,
       });
       expect(aprovacao.error).toBeNull();
       const enfileiramento = await matriz.rpc("enfileirar_boas_vindas", {
