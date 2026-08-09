@@ -45,7 +45,7 @@ export const cadastrarVendedorFullDireto = createServerFn({ method: "POST" })
     const serviceKey = process.env.SELF_SUPABASE_SERVICE_ROLE_KEY;
     const resendKey = process.env.SELF_RESEND_API_KEY;
     const appUrl = process.env.SELF_APP_URL?.trim().replace(/\/$/, "");
-    if (!url || !anonKey || !serviceKey || !resendKey || !appUrl) {
+    if (!url || !anonKey || !serviceKey) {
       throw new Error("Configuração do servidor ausente.");
     }
 
@@ -146,6 +146,15 @@ export const cadastrarVendedorFullDireto = createServerFn({ method: "POST" })
     if (rpcError) {
       await admin.auth.admin.deleteUser(userId);
       throw new Error(rpcError.message);
+    }
+
+    if (!resendKey || !appUrl) {
+      return {
+        user_id: userId,
+        email_enviado: false,
+        email_erro:
+          "Configuração de e-mail ausente no servidor (SELF_RESEND_API_KEY/SELF_APP_URL).",
+      };
     }
 
     try {

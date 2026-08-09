@@ -160,6 +160,11 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
     const linha = page.getByRole("row").filter({ hasText: nomeCadastro });
     try {
       await expect(linha).toBeVisible({ timeout: 15_000 });
+      if (process.env.E2E_EXPECT_EMAIL_CONFIG_MISSING === "1") {
+        await expect(page.locator(".banner.warn")).toContainText(
+          "Configuração de e-mail ausente no servidor",
+        );
+      }
     } catch (error) {
       const criadoNoBanco = await profilePorEmail(email);
       await testInfo.attach("diagnostico-cadastro-direto.json", {
