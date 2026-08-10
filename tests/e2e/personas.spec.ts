@@ -189,4 +189,22 @@ test.describe("navegação por perfil — franquia Individual (venLike)", () => 
     await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByText("· individual")).toBeVisible();
   });
+
+  /**
+   * QA 10/08/2026: `/operacao/xacessos` (Acessos da equipe — master/franquia
+   * Full) não tinha guard nenhum. A Individual (mesmo `role` da Full, sem
+   * menu para esta tela) conseguia abrir por URL direta e via "Convidar
+   * vendedor" plenamente funcional, apesar de ela operar como um vendedor,
+   * sem cadastro de vendedores — ver `useRequireGrupoAcessos`.
+   */
+  test("franquia Individual é redirecionada ao acessar /operacao/xacessos por URL direta", async ({
+    page,
+  }) => {
+    await loginAs(page, franquiaIndividual.email, franquiaIndividual.senha);
+    await navPronta(page);
+
+    await page.goto("/operacao/xacessos");
+    await expect(page).toHaveURL(/\/inicio$/);
+    await expect(page.getByRole("button", { name: "Convidar vendedor" })).toHaveCount(0);
+  });
 });

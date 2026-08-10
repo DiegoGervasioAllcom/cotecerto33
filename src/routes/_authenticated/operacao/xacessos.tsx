@@ -24,6 +24,7 @@ import {
   GenericTeamTable,
 } from "@/components/operacao/acessos/full/team-panels";
 import { MasterMemberModal } from "@/components/operacao/acessos/full/master-member-modal";
+import { useRequireGrupoAcessos } from "@/lib/require-role";
 
 /**
  * Acessos da equipe (xacessos) — visão de grupo (master/supervisor/franquia Full).
@@ -58,6 +59,7 @@ export const Route = createFileRoute("/_authenticated/operacao/xacessos")({
 });
 
 function Page() {
+  const denied = useRequireGrupoAcessos();
   const { group, groupPct, isFranqFull } = useGroupScope();
   const { role, profile, empresa } = useAuth();
   const [convidando, setConvidando] = useState<EscopoConvite | null>(null);
@@ -118,6 +120,8 @@ function Page() {
     fullTeamMemberMatches(m, busca, filtroEquipe, filtroAno),
   );
   const filtradas = rows.filter((r) => !r.desligado_em);
+
+  if (denied) return denied;
 
   return (
     <AppShell title="Acessos e permissões">

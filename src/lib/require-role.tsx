@@ -60,6 +60,27 @@ export function useRequireMatrizOuFranquiaFull(): ReactNode | null {
 }
 
 /**
+ * Guard de `/operacao/xacessos` (Acessos da equipe — visão de grupo).
+ *
+ * QA manual (10/08/2026): a rota não tinha guard nenhum, então uma Franquia
+ * Individual (mesmo `role` da Full, sem menu para esta tela) conseguia abrir
+ * por URL direta e via "Convidar vendedor" — plenamente funcional — apesar de
+ * o protótipo/docs deixarem claro que a Individual "opera como um vendedor,
+ * sem cadastro de vendedores". Master e Supervisor não passam por aqui: o
+ * Supervisor migrou para `/operacao/acessos` (somente leitura, via
+ * `podeAdministrarAcessos`/área `macessos`).
+ */
+export function useRequireGrupoAcessos(): ReactNode | null {
+  const { loading: authLoading, role } = useAuth();
+  const { loading: scopeLoading, isFranqFull } = useGroupScope();
+
+  if (authLoading || scopeLoading) return null;
+  if (role === "master" || (role === "franqueado" && isFranqFull)) return null;
+
+  return <Navigate to="/inicio" replace />;
+}
+
+/**
  * Barreira de família para telas internas. A autorização visual específica é
  * decidida por AreaChave no layout autenticado; este guard só impede que a
  * rede externa entre em uma rota interna por URL direta.
