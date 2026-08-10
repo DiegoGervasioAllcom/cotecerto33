@@ -34,8 +34,9 @@ describe("V11 — perfil 'interno'", () => {
     const { data, error } = await p.client.rpc("fn_areas_do_usuario", { _user_id: p.userId });
     if (error) throw error;
     const areas = (data ?? []).map((r) => r.area_chave).sort();
-    // Preset 'marketing' do protótipo: mdash, mleads, mdist, mrel, mkt.
-    expect(areas).toEqual(["mdash", "mdist", "mkt", "mleads", "mrel"]);
+    // Preset 'marketing' — documento "Acesso e visualização" (Lis): Visão
+    // geral, Leads, Distribuição, Relatórios, Mensagens.
+    expect(areas).toEqual(["mdash", "mdist", "mleads", "mmsgs", "mrel"]);
   });
 
   it("NÃO entra no laço de royalties do fechamento; 'supervisor' entra", async () => {

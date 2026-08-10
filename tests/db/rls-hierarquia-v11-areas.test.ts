@@ -52,17 +52,18 @@ describe("H2/H3 — catálogo de áreas e cargos preset", () => {
   });
 
   it("cada cargo preset tem o número de áreas do protótipo r41", async () => {
-    // Contagens conferidas contra const CARGOS de cotecerto_prototipo_v11.html.
-    // sup_vendas: 11 desde 03/08/2026 (Lis resolveu a divergência r40 x Fluxos
-    // a favor dos Fluxos — Estornos entra; r41 já traz o preset corrigido).
-    // 12 desde 10/08/2026: QA manual comparando com o protótipo mostrou que o
-    // Supervisor de Vendas é "time interno da Matriz" (H7) e deveria acompanhar
-    // a tela de Acessos (somente leitura — ver route-access.ts,
-    // podeAdministrarAcessos), mas a área macessos não estava no preset.
+    // Contagens conferidas contra const CARGOS de cotecerto_prototipo_v11.html
+    // e contra o documento "Acesso e visualização" enviado pela Lis.
+    // sup_vendas: 11 (Lis resolveu a divergência r40 x Fluxos a favor dos
+    // Fluxos — Estornos entra; r41 já traz o preset corrigido). QA 10/08/2026
+    // tinha subido para 12 (macessos) por engano — o documento "Acesso e
+    // visualização" mostra o menu do Supervisor de Vendas com 11 itens, sem
+    // Acessos e permissões; quem administra Acessos é o Supervisor
+    // Operacional (revertido).
     const esperado: Record<string, number> = {
       matriz_total: 17,
       coord_com: 17,
-      sup_vendas: 12,
+      sup_vendas: 11,
       sup_operacional: 4,
       sup_backoffice: 5,
       assist_com: 3,
@@ -98,19 +99,21 @@ describe("H4/H10 — resolução do escopo de áreas", () => {
     expect(areas).not.toContain("maprov");
   });
 
-  it("supervisor com cargo sup_vendas recebe 12 áreas, incluindo Aprovações, Estornos e Acessos", async () => {
+  it("supervisor com cargo sup_vendas recebe 11 áreas, incluindo Aprovações e Estornos, sem Acessos", async () => {
     const sup = await criarPersonaComEmpresa("supervisor", { emailPrefix: "sup-vend" });
     await admin.from("profiles").update({ cargo_id: "sup_vendas" }).eq("id", sup.userId);
 
     const areas = await areasDe(sup.client, sup.userId);
-    expect(areas).toHaveLength(12);
+    expect(areas).toHaveLength(11);
     expect(areas).toContain("maprov");
     // Divergência r40 x Fluxos resolvida pela Lis em 03/08/2026 a favor dos
     // Fluxos — ver docs/PERGUNTAS_PARA_LIS.md item 3.
     expect(areas).toContain("mestorno");
-    // QA 10/08/2026: macessos passou a fazer parte do preset — a tela abre
-    // somente-leitura (SupervisorAcessosView), não o admin completo.
-    expect(areas).toContain("macessos");
+    // Fluxo "Acesso e visualização" (documento da Lis): o menu do Supervisor
+    // de Vendas tem 11 itens, sem Acessos e permissões — quem administra
+    // Acessos é o Supervisor Operacional. QA 10/08/2026 tinha adicionado
+    // macessos aqui por engano; revertido.
+    expect(areas).not.toContain("macessos");
   });
 
   it("override em profile_areas SUBSTITUI o preset do cargo, não soma", async () => {
@@ -137,11 +140,11 @@ describe("H4/H10 — resolução do escopo de áreas", () => {
     await admin.from("profiles").update({ cargo_id: "sup_vendas" }).eq("id", alvo.userId);
     const curioso = await criarPersonaComEmpresa("vendedor", { emailPrefix: "vend-curioso" });
 
-    // A função é security definer: sem o guard, devolveria as 12 áreas do alvo.
+    // A função é security definer: sem o guard, devolveria as 11 áreas do alvo.
     expect(await areasDe(curioso.client, alvo.userId)).toEqual([]);
     // A Matriz pode, porque administra acesso (tela Cadastros Matriz).
     const matriz = await loginMatriz();
-    expect(await areasDe(matriz, alvo.userId)).toHaveLength(12);
+    expect(await areasDe(matriz, alvo.userId)).toHaveLength(11);
   });
 });
 
