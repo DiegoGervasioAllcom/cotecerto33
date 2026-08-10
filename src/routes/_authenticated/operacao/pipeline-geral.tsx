@@ -4,8 +4,13 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
-import { useAuth } from "@/lib/auth";
 import { veiculoLabel } from "@/lib/veiculo";
+import {
+  carregarPerfisVisiveis,
+  carregarRolesDosPerfis,
+  vendedoresAtivosDaRede,
+  type UserRole,
+} from "@/lib/vendedores-ativos";
 
 export const Route = createFileRoute("/_authenticated/operacao/pipeline-geral")({
   head: () => ({ meta: [{ title: "Pipeline geral · CoteCerto" }] }),
@@ -26,7 +31,7 @@ type Lead = {
   dados: Record<string, unknown> | null;
 };
 type Empresa = { id: string; nome: string | null };
-type Profile = { id: string; nome: string | null };
+type Profile = Awaited<ReturnType<typeof carregarPerfisVisiveis>>[number];
 type Seguradora = { id: string; nome: string };
 
 const STAGE_KEY: Record<string, string> = {
@@ -54,12 +59,12 @@ function age(d: string) {
 
 function Page() {
   const navigate = useNavigate();
-  const { isGroupView, isFranqFull } = useGroupScope();
-  const { profile } = useAuth();
+  const { isGroupView } = useGroupScope();
   const [stages, setStages] = useState<Stage[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [seguradoras, setSeguradoras] = useState<Seguradora[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -74,27 +79,22 @@ function Page() {
     (async () => {
       setLoading(true);
       try {
-        const [
-          { data: st },
-          { data: lds, error },
-          { data: emps },
-          { data: profs },
-          { data: segs },
-        ] = await Promise.all([
-          supabase.from("pipeline_stages").select("*").order("ordem"),
-          supabase
-            .from("leads")
-            .select(
-              "id,nome,contato,status_pipeline,valor,origem,empresa_id,responsavel_id,criado_em,dados",
-            )
-            .neq("status_pipeline", "perdido")
-            .or("arquivado.is.null,arquivado.eq.false")
-            .order("atualizado_em", { ascending: false })
-            .limit(1000),
-          supabase.from("empresas").select("id,nome").order("nome"),
-          supabase.from("profiles").select("id,nome").order("nome"),
-          supabase.from("seguradoras").select("id,nome").eq("ativo", true).order("ordem"),
-        ]);
+        const [{ data: st }, { data: lds, error }, { data: emps }, { data: segs }, profs] =
+          await Promise.all([
+            supabase.from("pipeline_stages").select("*").order("ordem"),
+            supabase
+              .from("leads")
+              .select(
+                "id,nome,contato,status_pipeline,valor,origem,empresa_id,responsavel_id,criado_em,dados",
+              )
+              .neq("status_pipeline", "perdido")
+              .or("arquivado.is.null,arquivado.eq.false")
+              .order("atualizado_em", { ascending: false })
+              .limit(1000),
+            supabase.from("empresas").select("id,nome").order("nome"),
+            supabase.from("seguradoras").select("id,nome").eq("ativo", true).order("ordem"),
+            carregarPerfisVisiveis(),
+          ]);
         if (error) setErr(error.message);
         setStages((st ?? []) as Stage[]);
         setLeads((lds ?? []) as Lead[]);
@@ -102,9 +102,17 @@ function Page() {
         for (const e of (emps ?? []) as Empresa[]) em[e.id] = e;
         setEmpresas(em);
         const pm: Record<string, Profile> = {};
-        for (const p of (profs ?? []) as Profile[]) pm[p.id] = p;
+        for (const p of profs) pm[p.id] = p;
         setProfiles(pm);
+        const loadedRoles = await carregarRolesDosPerfis(Object.keys(pm));
+        setUserRoles(loadedRoles);
+        const vendedores = vendedoresAtivosDaRede(Object.values(pm), loadedRoles);
+        setFVend((current) =>
+          current && !vendedores.some((vendedor) => vendedor.id === current) ? "" : current,
+        );
         setSeguradoras(((segs ?? []) as Seguradora[]).filter((s) => s.nome));
+      } catch (error) {
+        setErr(error instanceof Error ? error.message : "Falha ao carregar o pipeline.");
       } finally {
         setLoading(false);
       }
@@ -115,9 +123,9 @@ function Page() {
     const fr = Object.values(empresas)
       .filter((e) => e.nome)
       .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
-    const vd = Object.values(profiles)
-      .filter((p) => p.nome && (!isFranqFull || p.id !== profile?.id))
-      .sort((a, b) => (a.nome || "").localeCompare(b.nome || ""));
+    const vd = vendedoresAtivosDaRede(Object.values(profiles), userRoles).sort((a, b) =>
+      (a.nome || "").localeCompare(b.nome || ""),
+    );
     const og = new Set<string>();
     for (const l of leads) {
       if (l.origem) og.add(l.origem);
@@ -128,7 +136,7 @@ function Page() {
       origens: Array.from(og).sort(),
       seguradoras,
     };
-  }, [leads, empresas, profiles, seguradoras, isFranqFull, profile?.id]);
+  }, [leads, empresas, profiles, seguradoras, userRoles]);
 
   const filtered = useMemo(() => {
     return leads.filter((l) => {
@@ -145,7 +153,7 @@ function Page() {
       }
       return true;
     });
-  }, [leads, empresas, profiles, fFranq, fVend, fOrigem, fSeg]);
+  }, [leads, fFranq, fVend, fOrigem, fSeg]);
 
   const grouped = useMemo(() => {
     const m: Record<string, Lead[]> = {};

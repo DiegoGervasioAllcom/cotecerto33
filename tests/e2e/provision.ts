@@ -88,6 +88,16 @@ export async function desligarUsuarioE2E(userId: string) {
   if (error) throw new Error(`desligar usuário E2E: ${error.message}`);
 }
 
+/**
+ * Monta o caso defensivo de um perfil com mais de um cargo. Embora o fluxo de
+ * classificação mantenha uma única role, a UI dos filtros não pode tratar um
+ * gestor que também tenha `vendedor` como vendedor elegível.
+ */
+export async function adicionarRoleE2E(userId: string, role: PersonaRole) {
+  const { error } = await admin.from("user_roles").insert({ user_id: userId, role });
+  if (error) throw new Error(`adicionar role E2E (${role}): ${error.message}`);
+}
+
 function uniq(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e5)}`;
 }

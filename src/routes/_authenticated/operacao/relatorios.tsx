@@ -6,8 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { exportCsv, exportPdf } from "@/lib/export-relatorio";
 import { monthPeriodo, periodoOptions, ultimosDiasPeriodo } from "@/lib/relatorios/periodo";
 import { RELATORIOS } from "@/lib/relatorios/registro";
-import { useAuth } from "@/lib/auth";
-import { useGroupScope } from "@/lib/group-scope";
+import {
+  carregarPerfisVisiveis,
+  carregarRolesDosPerfis,
+  vendedoresAtivosDaRede,
+} from "@/lib/vendedores-ativos";
 
 export const Route = createFileRoute("/_authenticated/operacao/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios · CoteCerto" }] }),
@@ -73,9 +76,9 @@ function RepCard({
 
 const PERIODO_90_DIAS = "90dias";
 
+type Profile = Awaited<ReturnType<typeof carregarPerfisVisiveis>>[number];
+
 function Page() {
-  const { profile } = useAuth();
-  const { isFranqFull } = useGroupScope();
   const [periodOffset, setPeriodOffset] = useState<number | typeof PERIODO_90_DIAS>(0);
   const periodo = useMemo(
     () => (periodOffset === PERIODO_90_DIAS ? ultimosDiasPeriodo(90) : monthPeriodo(periodOffset)),
@@ -88,30 +91,42 @@ function Page() {
   const [franquiaId, setFranquiaId] = useState("");
   const [vendedorId, setVendedorId] = useState("");
   const [franquias, setFranquias] = useState<{ id: string; nome: string }[]>([]);
-  const [vendedores, setVendedores] = useState<{ id: string; nome: string }[]>([]);
+  const [vendedores, setVendedores] = useState<Profile[]>([]);
+  const [erroFiltros, setErroFiltros] = useState<string | null>(null);
   const filtrosRequestGeneration = useRef(0);
 
   useEffect(() => {
     const generation = ++filtrosRequestGeneration.current;
     void (async () => {
-      const [em, pr] = await Promise.all([
-        supabase.from("empresas").select("id,nome").order("nome"),
-        supabase.from("profiles").select("id,nome").order("nome"),
-      ]);
-      if (filtrosRequestGeneration.current !== generation) return;
-      setFranquias((em.data ?? []) as { id: string; nome: string }[]);
-      setVendedores(
-        ((pr.data ?? []) as { id: string; nome: string }[]).filter(
-          (vendedor) => !isFranqFull || vendedor.id !== profile?.id,
-        ),
-      );
+      try {
+        setErroFiltros(null);
+        const [em, profiles] = await Promise.all([
+          supabase.from("empresas").select("id,nome").order("nome"),
+          carregarPerfisVisiveis(),
+        ]);
+        if (em.error) throw new Error(`Falha ao carregar franquias: ${em.error.message}`);
+
+        const roles = await carregarRolesDosPerfis(profiles.map((profile) => profile.id));
+        if (filtrosRequestGeneration.current !== generation) return;
+        setFranquias((em.data ?? []) as { id: string; nome: string }[]);
+        const vendedoresAtivos = vendedoresAtivosDaRede(profiles, roles);
+        setVendedores(vendedoresAtivos);
+        setVendedorId((current) =>
+          current && !vendedoresAtivos.some((vendedor) => vendedor.id === current) ? "" : current,
+        );
+      } catch (error) {
+        if (filtrosRequestGeneration.current !== generation) return;
+        setErroFiltros(
+          error instanceof Error ? error.message : "Falha ao carregar os filtros de relatório.",
+        );
+      }
     })();
     return () => {
       if (filtrosRequestGeneration.current === generation) {
         filtrosRequestGeneration.current += 1;
       }
     };
-  }, [isFranqFull, profile?.id]);
+  }, []);
 
   async function gerar(reportKey: string, formato: "pdf" | "csv") {
     const def = RELATORIOS.find((r) => r.key === reportKey);
@@ -193,6 +208,11 @@ function Page() {
           ))}
         </select>
       </div>
+      {erroFiltros && (
+        <div className="small" style={{ color: "var(--alert)", marginBottom: 16 }}>
+          {erroFiltros}
+        </div>
+      )}
 
       <div className="rep-grid">
         {RELATORIOS.map((r) => (
