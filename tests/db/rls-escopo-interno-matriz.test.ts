@@ -417,8 +417,8 @@ describe("V11.I — escopo de leitura do interno (Marketing/Assistente) na Matri
     expect((areasMkt ?? []).map((r) => r.area_chave).sort()).toEqual([
       "mdash",
       "mdist",
-      "mkt",
       "mleads",
+      "mmsgs",
       "mrel",
     ]);
 

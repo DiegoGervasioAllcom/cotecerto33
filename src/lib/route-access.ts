@@ -30,24 +30,31 @@ export function podeEditarConfiguracoes(role: Perfil | null | undefined): boolea
 }
 
 /**
- * Mantém as ações administrativas de Acessos nos perfis que já as possuíam.
+ * Mantém as ações administrativas de Acessos nos perfis/cargos que já as
+ * possuíam.
  *
- * QA manual (10/08/2026): o Supervisor de Vendas NÃO administra — no
- * protótipo ele só acompanha ("você não cadastra nem desliga — acompanha o
- * desempenho e aciona a Matriz"). Ele tem a área `macessos` liberada (H7: é
- * time interno da Matriz), mas cai no ramo somente-leitura de
- * `/operacao/acessos`, não no admin completo.
+ * Fluxo "Acesso e visualização" (documento da Lis): o Supervisor Operacional
+ * "cuida da fila de entrada e da liberação dos cadastros" — administra
+ * Acessos e permissões igual à Matriz. Já o Supervisor de Vendas nem tem essa
+ * área no menu (11 áreas, sem Acessos) — ver H8 (20260803130000). Por isso o
+ * cargo decide aqui, não o `role` genérico (os três supervisores compartilham
+ * o mesmo `role`).
  */
-export function podeAdministrarAcessos(role: Perfil | null | undefined): boolean {
-  return role === "matriz" || role === "coordenador";
+export function podeAdministrarAcessos(
+  role: Perfil | null | undefined,
+  cargoId?: string | null,
+): boolean {
+  if (role === "matriz" || role === "coordenador") return true;
+  return role === "supervisor" && cargoId === "sup_operacional";
 }
 
 /** Evita até a consulta administrativa quando a tela é negada ou read-only. */
 export function deveCarregarDadosAcessos(
   role: Perfil | null | undefined,
+  cargoId: string | null | undefined,
   guardNegado: boolean,
 ): boolean {
-  return !guardNegado && podeAdministrarAcessos(role);
+  return !guardNegado && podeAdministrarAcessos(role, cargoId);
 }
 
 export const ROTAS_AREAS_INTERNAS = [

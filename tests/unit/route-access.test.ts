@@ -96,10 +96,20 @@ describe("podeAdministrarAcessos", () => {
     expect(podeAdministrarAcessos(role)).toBe(true),
   );
 
-  // V11 · QA 10/08/2026: Supervisor de Vendas só acompanha (protótipo:
-  // "você não cadastra nem desliga — acompanha o desempenho e aciona a
-  // Matriz") — não entra mais no admin completo de Acessos.
-  it.each(["supervisor", "interno", "master", "franqueado", "vendedor"] as const)(
+  // Fluxo "Acesso e visualização" (documento da Lis): "[Supervisor
+  // Operacional] cuida da fila de entrada e da liberação dos cadastros" —
+  // administra Acessos igual à Matriz. Supervisor de Vendas nem tem essa
+  // área no menu (11 áreas, sem Acessos) — não acompanha, não administra.
+  it("concede ações administrativas ao Supervisor Operacional (cuida da liberação dos cadastros)", () => {
+    expect(podeAdministrarAcessos("supervisor", "sup_operacional")).toBe(true);
+  });
+
+  it.each(["sup_vendas", "sup_backoffice", null, undefined] as const)(
+    "não concede ações administrativas a supervisor com cargo %s",
+    (cargoId) => expect(podeAdministrarAcessos("supervisor", cargoId)).toBe(false),
+  );
+
+  it.each(["interno", "master", "franqueado", "vendedor"] as const)(
     "não concede ações administrativas a %s",
     (role) => expect(podeAdministrarAcessos(role)).toBe(false),
   );
@@ -109,14 +119,19 @@ describe("deveCarregarDadosAcessos", () => {
   it.each(["matriz", "coordenador"] as const)(
     "carrega para %s somente quando o guard permitiu",
     (role) => {
-      expect(deveCarregarDadosAcessos(role, false)).toBe(true);
-      expect(deveCarregarDadosAcessos(role, true)).toBe(false);
+      expect(deveCarregarDadosAcessos(role, null, false)).toBe(true);
+      expect(deveCarregarDadosAcessos(role, null, true)).toBe(false);
     },
   );
 
+  it("carrega para o Supervisor Operacional quando o guard permitiu", () => {
+    expect(deveCarregarDadosAcessos("supervisor", "sup_operacional", false)).toBe(true);
+    expect(deveCarregarDadosAcessos("supervisor", "sup_operacional", true)).toBe(false);
+  });
+
   it("não consulta dados administrativos no modo interno read-only", () => {
-    expect(deveCarregarDadosAcessos("interno", false)).toBe(false);
-    expect(deveCarregarDadosAcessos("supervisor", false)).toBe(false);
+    expect(deveCarregarDadosAcessos("interno", null, false)).toBe(false);
+    expect(deveCarregarDadosAcessos("supervisor", "sup_vendas", false)).toBe(false);
   });
 });
 

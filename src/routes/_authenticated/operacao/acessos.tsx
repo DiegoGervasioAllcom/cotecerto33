@@ -28,7 +28,6 @@ import { useAuth } from "@/lib/auth";
 import { deveCarregarDadosAcessos, podeAdministrarAcessos } from "@/lib/route-access";
 import { useRequirePerfilInterno } from "@/lib/require-role";
 import type { Tab } from "@/components/operacao/acessos/types";
-import { SupervisorAcessosView } from "@/components/operacao/acessos/supervisor-acessos-view";
 
 export const Route = createFileRoute("/_authenticated/operacao/acessos")({
   head: () => ({ meta: [{ title: "Acessos e permissões · CoteCerto" }] }),
@@ -39,9 +38,9 @@ function Page() {
   // AreaChave decide quais pessoas do time interno entram. As ações continuam
   // limitadas à família administrativa que já existia antes deste recorte.
   const denied = useRequirePerfilInterno();
-  const { role } = useAuth();
-  const canAdmin = podeAdministrarAcessos(role);
-  const carregarDadosAdmin = deveCarregarDadosAcessos(role, !!denied);
+  const { role, profile } = useAuth();
+  const canAdmin = podeAdministrarAcessos(role, profile?.cargo_id);
+  const carregarDadosAdmin = deveCarregarDadosAcessos(role, profile?.cargo_id, !!denied);
   const {
     tab,
     setTab,
@@ -137,22 +136,6 @@ function Page() {
   if (denied) return denied;
 
   if (!canAdmin) {
-    if (role === "supervisor") {
-      return (
-        <AppShell title="Acessos e permissões">
-          <ProtoIcons />
-          <div className="page-head">
-            <div>
-              <h1>Acessos e permissões</h1>
-              <div className="sub">
-                Você acompanha a rede — cadastros e desligamentos são da Matriz
-              </div>
-            </div>
-          </div>
-          <SupervisorAcessosView />
-        </AppShell>
-      );
-    }
     return (
       <AppShell title="Acessos e permissões">
         <ProtoIcons />
