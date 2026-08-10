@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { loginAs } from "./helpers";
 import {
   criarPersona,
+  desligarUsuarioE2E,
   limparPersona,
   limparPersonaSemEmpresa,
   profilePorEmail,
@@ -62,6 +63,7 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
     await loginAs(page, full.email, full.senha);
     await page.goto("/comando/visao-geral");
     await expect(page.getByRole("heading", { name: "Visão geral da franquia" })).toBeVisible();
+    await expect(page.locator(".page-head .sub")).toContainText("1 vendedor ativo");
     await expect(page.getByText(/franquias supervisionadas/i)).toHaveCount(0);
     await expect(page.getByText(/sobre a equipe/i)).toHaveCount(0);
 
@@ -233,5 +235,16 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
     await expect(page.getByRole("row").filter({ hasText: nomeCadastro })).toBeVisible({
       timeout: 10_000,
     });
+  });
+
+  test("Visão geral deixa de contar vendedor desligado sem incluir a própria Full", async ({
+    page,
+  }) => {
+    await desligarUsuarioE2E(vendedor.userId);
+    await loginAs(page, full.email, full.senha);
+    await page.goto("/comando/visao-geral");
+
+    await expect(page.getByRole("heading", { name: "Visão geral da franquia" })).toBeVisible();
+    await expect(page.locator(".page-head .sub")).toContainText("0 vendedores ativos");
   });
 });
