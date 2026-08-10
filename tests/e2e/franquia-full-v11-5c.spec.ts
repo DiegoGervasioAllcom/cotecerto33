@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { loginAs } from "./helpers";
 import {
+  adicionarRoleE2E,
   criarPersona,
   desligarUsuarioE2E,
   limparPersona,
@@ -80,6 +81,52 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
         expect(opcoes).not.toContain(full.nome);
         expect(opcoes).toContain(vendedor.nome);
       });
+    }
+  });
+
+  test("Full vê nos filtros só vendedor ativo subordinado, nunca Full, desligado ou gestor com role vendedor", async ({
+    page,
+  }) => {
+    const vendedorDesligado = await criarPersona({
+      role: "vendedor",
+      empresaId: full.empresaId,
+      superiorId: full.userId,
+    });
+    const vendedorComRoleGestora = await criarPersona({
+      role: "vendedor",
+      empresaId: full.empresaId,
+      superiorId: full.userId,
+    });
+    await desligarUsuarioE2E(vendedorDesligado.userId);
+    await adicionarRoleE2E(vendedorComRoleGestora.userId, "supervisor");
+
+    try {
+      await loginAs(page, full.email, full.senha);
+
+      for (const rota of ["/operacao/pipeline-geral", "/operacao/relatorios"] as const) {
+        await test.step(`filtro em ${rota}`, async () => {
+          await page.goto(rota);
+          const rotuloFiltro =
+            rota === "/operacao/pipeline-geral" ? /^Vendedor$/ : /^Todos os vendedores$/;
+          const filtroVendedor = page
+            .locator(".filters-bar select")
+            .filter({ has: page.locator("option", { hasText: rotuloFiltro }) });
+
+          await expect(filtroVendedor).toHaveCount(1);
+          const opcoes = await filtroVendedor.locator("option").allTextContents();
+          expect(opcoes).toEqual(
+            rota === "/operacao/pipeline-geral"
+              ? ["Vendedor", vendedor.nome]
+              : ["Todos os vendedores", vendedor.nome],
+          );
+          expect(opcoes).not.toContain(full.nome);
+          expect(opcoes).not.toContain(vendedorDesligado.nome);
+          expect(opcoes).not.toContain(vendedorComRoleGestora.nome);
+        });
+      }
+    } finally {
+      await limparPersonaSemEmpresa(vendedorComRoleGestora);
+      await limparPersonaSemEmpresa(vendedorDesligado);
     }
   });
 
