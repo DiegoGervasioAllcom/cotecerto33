@@ -12,9 +12,11 @@ const CHIP: Record<string, string> = {
 
 export function GenericTeamTable({
   membros,
+  onVer,
   onDesligar,
 }: {
   membros: MembroEquipe[];
+  onVer?: (membro: MembroEquipe) => void;
   onDesligar: (membro: MembroEquipe) => void;
 }) {
   return (
@@ -47,6 +49,11 @@ export function GenericTeamTable({
               <span className="chip chip-ok">Ativo</span>
             </td>
             <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+              {onVer && (
+                <button className="btn btn-ghost btn-sm" onClick={() => onVer(membro)}>
+                  <Icon id="eye" size={12} /> Ver
+                </button>
+              )}{" "}
               {(membro.role === "vendedor" || membro.role === "franqueado") && (
                 <button className="btn btn-ghost btn-sm" onClick={() => onDesligar(membro)}>
                   <Icon id="trash" size={12} /> Solicitar desligamento

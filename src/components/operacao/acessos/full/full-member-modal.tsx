@@ -92,7 +92,7 @@ export function FullMemberModal({
   }
 
   return (
-    <div className="modal-overlay" onMouseDown={onClose}>
+    <div className="modal-host" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-h">
           <Icon id={modo === "excluir" ? "alert-triangle" : "user"} size={18} />

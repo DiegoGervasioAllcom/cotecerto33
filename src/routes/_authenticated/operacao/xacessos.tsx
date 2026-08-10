@@ -18,11 +18,12 @@ import { FullTeamTable, type FullTeamMember } from "@/components/operacao/acesso
 import { fullTeamMemberMatches } from "@/components/operacao/acessos/full/full-team-utils";
 import { FullMemberModal } from "@/components/operacao/acessos/full/full-member-modal";
 import { FullDirectModal } from "@/components/operacao/acessos/full/full-direct-modal";
-import { useTeamData } from "@/components/operacao/acessos/full/use-team-data";
+import { useTeamData, type MembroEquipe } from "@/components/operacao/acessos/full/use-team-data";
 import {
   FullDisabledPanel,
   GenericTeamTable,
 } from "@/components/operacao/acessos/full/team-panels";
+import { MasterMemberModal } from "@/components/operacao/acessos/full/master-member-modal";
 
 /**
  * Acessos da equipe (xacessos) — visão de grupo (master/supervisor/franquia Full).
@@ -81,12 +82,16 @@ function Page() {
   // reloadTick força o card "Minhas solicitações" a buscar de novo após enviar.
   const [desligando, setDesligando] = useState<{ id: string; nome: string } | null>(null);
   const [desligamentoReloadTick, setDesligamentoReloadTick] = useState(0);
+  const [masterVer, setMasterVer] = useState<MembroEquipe | null>(null);
 
   // V11 · F9 — a Franquia Full aprova o próprio vendedor (F1/F2: a RLS já
   // entrega só o pedido dela). Individual não tem equipe para aprovar — "o
   // franqueado opera como um vendedor", sem cadastro de vendedores.
   const isFull = role === "franqueado" && isFranqFull;
-  const fila = useFilaFranquiaData(isFull);
+  // Master só acompanha — ele convida (Convite Supper) e a fila é da Matriz
+  // classificar; por isso a lista abaixo não ganha "Analisar" (ver PendentesTab).
+  const isMaster = role === "master";
+  const fila = useFilaFranquiaData(isFull || isMaster);
   const minhaFranquia: FranquiaAprovada[] =
     isFull && empresa && profile
       ? [
@@ -123,6 +128,8 @@ function Page() {
           <div className="sub">
             {isFull ? (
               "Sua equipe, sua gestão — convite, aprovação, desligamento e regras são da franquia"
+            ) : role === "supervisor" ? (
+              "Você não cadastra nem desliga — acompanha o desempenho e aciona a Matriz."
             ) : (
               <>
                 Sua rede{group ? ` · ${groupPct}% sobre a equipe` : ""} —{" "}
@@ -229,6 +236,17 @@ function Page() {
 
       {secao === "time" && (
         <>
+          {isMaster && (
+            <div style={{ marginBottom: 18 }}>
+              <div
+                className="small muted"
+                style={{ fontWeight: 800, letterSpacing: ".04em", marginBottom: 8 }}
+              >
+                CADASTROS ENVIADOS, AGUARDANDO A MATRIZ ({fila.pendentes.length})
+              </div>
+              <PendentesTab pendentes={fila.pendentes} />
+            </div>
+          )}
           <div className="card">
             <div className="card-h">
               <h3>
@@ -293,6 +311,7 @@ function Page() {
               ) : (
                 <GenericTeamTable
                   membros={filtradas}
+                  onVer={isMaster ? (membro) => setMasterVer(membro) : undefined}
                   onDesligar={(membro) => setDesligando({ id: membro.id, nome: membro.nome })}
                 />
               )}
@@ -344,6 +363,7 @@ function Page() {
           }}
         />
       )}
+      {masterVer && <MasterMemberModal membro={masterVer} onClose={() => setMasterVer(null)} />}
       {desligando && (
         <SolicitarDesligamentoModal
           alvoId={desligando.id}
