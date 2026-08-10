@@ -60,11 +60,14 @@ export type AprovarAcessoParams = {
   motivo?: string;
 };
 
-async function buscarSupervisoresDeVendas(): Promise<Array<{ id: string; nome: string }>> {
+// H5 (hierarquia): "cada Master responde ao Coordenador Comercial, ficando no
+// mesmo nível dos dois supervisores. Quem faz essa associação é a Matriz, no
+// momento da aprovação do cadastro."
+async function buscarCoordenadores(): Promise<Array<{ id: string; nome: string }>> {
   const { data } = await supabase
     .from("profiles")
     .select("id,nome")
-    .in("cargo_id", CARGOS_SUPERVISAO)
+    .eq("cargo_id", "coord_com")
     .is("desligado_em", null);
   return (data as Array<{ id: string; nome: string }>) ?? [];
 }
@@ -136,11 +139,9 @@ export function ClassificarAcessoModal({
   const inicial = useMemo(() => estadoDoConvite(pendente), [pendente]);
 
   const cargosCatalogo = useCargos();
-  const [supervisoresVendas, setSupervisoresVendas] = useState<Array<{ id: string; nome: string }>>(
-    [],
-  );
+  const [coordenadores, setCoordenadores] = useState<Array<{ id: string; nome: string }>>([]);
   useEffect(() => {
-    void buscarSupervisoresDeVendas().then(setSupervisoresVendas);
+    void buscarCoordenadores().then(setCoordenadores);
   }, []);
 
   // ---- PJ: franquia | master --------------------------------------------
@@ -157,7 +158,7 @@ export function ClassificarAcessoModal({
   const [clFrFaixapct, setClFrFaixapct] = useState("");
   const [clMmCom, setClMmCom] = useState("20%");
   const [clMmRoy, setClMmRoy] = useState("");
-  const [clMasterSupervisor, setClMasterSupervisor] = useState("");
+  const [clMasterCoordenador, setClMasterCoordenador] = useState("");
   const [produtosFranquia, setProdutosFranquia] = useState<string[]>([]);
   const [canaisFranquia, setCanaisFranquia] = useState<string[]>([]);
 
@@ -305,7 +306,7 @@ export function ClassificarAcessoModal({
       await onLiberar(
         {
           perfil: "master",
-          superiorId: clMasterSupervisor || null,
+          superiorId: clMasterCoordenador || null,
           reclassificado,
           motivo,
         },
@@ -755,14 +756,14 @@ export function ClassificarAcessoModal({
                       <div className="acc-sec-t">Supervisão</div>
                       <div className="acc-grid">
                         <div className="field-group">
-                          <label>Supervisor de Vendas responsável</label>
+                          <label>Coordenador Comercial responsável</label>
                           <select
                             className="input"
-                            value={clMasterSupervisor}
-                            onChange={(e) => setClMasterSupervisor(e.target.value)}
+                            value={clMasterCoordenador}
+                            onChange={(e) => setClMasterCoordenador(e.target.value)}
                           >
                             <option value="">— nenhum cadastrado —</option>
-                            {supervisoresVendas.map((s) => (
+                            {coordenadores.map((s) => (
                               <option key={s.id} value={s.id}>
                                 {s.nome}
                               </option>
@@ -773,8 +774,9 @@ export function ClassificarAcessoModal({
                       <div className="clt-note">
                         <Icon id="info" size={15} />
                         <div>
-                          O Master se reporta a um <strong>Supervisor de Vendas</strong>. Havendo
-                          mais de um cadastrado, a Matriz escolhe aqui, na aprovação.
+                          O Master fica no mesmo nível dos dois supervisores e se reporta ao{" "}
+                          <strong>Coordenador Comercial</strong>. Havendo mais de um cadastrado, a
+                          Matriz escolhe aqui, na aprovação.
                         </div>
                       </div>
                       <div className="acc-sec-t">Comissão — Modelo Master</div>
