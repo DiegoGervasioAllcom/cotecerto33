@@ -144,7 +144,9 @@ function Page() {
           <div className="page-head">
             <div>
               <h1>Acessos e permissões</h1>
-              <div className="sub">Você acompanha a rede — cadastros e desligamentos são da Matriz</div>
+              <div className="sub">
+                Você acompanha a rede — cadastros e desligamentos são da Matriz
+              </div>
             </div>
           </div>
           <SupervisorAcessosView />

@@ -92,9 +92,8 @@ describe("podeEditarConfiguracoes", () => {
 });
 
 describe("podeAdministrarAcessos", () => {
-  it.each(["matriz", "coordenador"] as const)(
-    "preserva ações administrativas para %s",
-    (role) => expect(podeAdministrarAcessos(role)).toBe(true),
+  it.each(["matriz", "coordenador"] as const)("preserva ações administrativas para %s", (role) =>
+    expect(podeAdministrarAcessos(role)).toBe(true),
   );
 
   // V11 · QA 10/08/2026: Supervisor de Vendas só acompanha (protótipo:
