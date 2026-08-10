@@ -43,7 +43,17 @@ type Lead = {
   valor: number | null;
 };
 type Empresa = { id: string; nome: string; tipo: string };
-type Profile = { id: string; nome: string; empresa_id: string | null };
+type Profile = {
+  id: string;
+  nome: string;
+  empresa_id: string | null;
+  status: "pendente" | "aprovada" | "recusada" | "suspensa";
+  desligado_em: string | null;
+};
+type UserRole = {
+  user_id: string;
+  role: "vendedor" | "matriz" | "master" | "supervisor" | "franqueado";
+};
 type Proposta = {
   id: string;
   status: string;
@@ -137,7 +147,7 @@ function Page() {
         matrizId = me?.empresa_id ?? null;
       }
 
-      const [l, e, pr, pp] = await Promise.all([
+      const [l, e, pr, pp, ur] = await Promise.all([
         supabase
           .from("leads")
           .select(
@@ -147,7 +157,7 @@ function Page() {
           .lt("criado_em", normalizedPeriod.fim)
           .limit(5000),
         supabase.from("empresas").select("id,nome,tipo").limit(500),
-        supabase.from("profiles").select("id,nome,empresa_id").limit(2000),
+        supabase.from("profiles").select("id,nome,empresa_id,status,desligado_em").limit(2000),
         supabase
           .from("propostas")
           .select(
@@ -156,8 +166,9 @@ function Page() {
           .gte("criado_em", normalizedPeriod.inicio)
           .lt("criado_em", normalizedPeriod.fim)
           .limit(5000),
+        supabase.from("user_roles").select("user_id,role").limit(2000),
       ]);
-      const queryError = l.error ?? e.error ?? pr.error ?? pp.error;
+      const queryError = l.error ?? e.error ?? pr.error ?? pp.error ?? ur.error;
       if (queryError) throw queryError;
 
       return {
@@ -166,6 +177,7 @@ function Page() {
         empresas: (e.data ?? []) as Empresa[],
         profiles: (pr.data ?? []) as Profile[],
         propostas: (pp.data ?? []) as Proposta[],
+        userRoles: (ur.data ?? []) as UserRole[],
       };
     },
   });
@@ -176,6 +188,7 @@ function Page() {
     empresas = [],
     profiles = [],
     propostas = [],
+    userRoles = [],
   } = dashboardQuery.data ?? {};
 
   useEffect(() => {
@@ -187,11 +200,37 @@ function Page() {
   // ou, na visão de grupo, todas as empresas da rede já escopadas pelo RLS
   // (empresas_visiveis) exceto a própria operação do gestor logado.
   const franquias = useMemo(() => empresas.filter((x) => x.id !== matrizId), [empresas, matrizId]);
-  // Vendedores = profiles vinculados a uma franquia (não à matriz) e diferentes do usuário logado matriz
+  const rolesByUserId = useMemo(() => {
+    const roles = new Map<string, Set<UserRole["role"]>>();
+    for (const userRole of userRoles) {
+      const userRoles = roles.get(userRole.user_id) ?? new Set<UserRole["role"]>();
+      userRoles.add(userRole.role);
+      roles.set(userRole.user_id, userRoles);
+    }
+    return roles;
+  }, [userRoles]);
+
+  // Franquia Full só enxerga vendedores ativos da própria empresa. Matriz e
+  // Master preservam o escopo histórico, já limitado pela RLS.
   const vendedores = useMemo(
-    () => profiles.filter((x) => x.empresa_id && x.empresa_id !== matrizId),
-    [profiles, matrizId],
+    () =>
+      isFranqFull
+        ? profiles.filter(
+            (item) =>
+              item.empresa_id === matrizId &&
+              rolesByUserId.get(item.id)?.has("vendedor") &&
+              !(["franqueado", "master", "supervisor", "matriz"] as const).some((role) =>
+                rolesByUserId.get(item.id)?.has(role),
+              ) &&
+              item.status === "aprovada" &&
+              !item.desligado_em,
+          )
+        : profiles.filter((item) => item.empresa_id && item.empresa_id !== matrizId),
+    [isFranqFull, matrizId, profiles, rolesByUserId],
   );
+  const vendedoresAtivosLabel = `${vendedores.length} ${
+    vendedores.length === 1 ? "vendedor ativo" : "vendedores ativos"
+  }`;
 
   const groupLabel = group === "MASTER" ? "Master" : "Franqueado";
 
@@ -335,7 +374,9 @@ function Page() {
   }, [franquias, leadsMes]);
 
   const rankVend = useMemo(() => {
-    const fmap = new Map(franquias.map((f) => [f.id, f.nome]));
+    const fmap = new Map(
+      (isFranqFull ? empresas : franquias).map((empresa) => [empresa.id, empresa.nome]),
+    );
     const map = new Map<
       string,
       { id: string; nome: string; franq: string; vendas: number; conv: number; leads: number }
@@ -358,10 +399,10 @@ function Page() {
     }
     for (const r of map.values()) r.conv = r.leads ? Math.round((r.vendas / r.leads) * 100) : 0;
     return Array.from(map.values())
-      .filter((r) => r.leads > 0 || r.vendas > 0)
+      .filter((r) => isFranqFull || r.leads > 0 || r.vendas > 0)
       .sort((a, b) => b.vendas - a.vendas)
       .slice(0, 8);
-  }, [vendedores, franquias, leadsMes]);
+  }, [vendedores, empresas, franquias, isFranqFull, leadsMes]);
 
   const dashboardAlerts = useMemo(() => {
     if (!normalizedPeriod || !dashboardAlertsQuery.data) return [];
@@ -457,7 +498,7 @@ function Page() {
     }</tbody></table>`;
     const body = `
       <h1>Relatório operacional — Visão geral</h1>
-      <div class="sub">Período: <b>${periodLabel}</b> · ${franquias.length} franquias · ${vendedores.length} vendedores ativos</div>
+      <div class="sub">Período: <b>${periodLabel}</b> · ${franquias.length} franquias · ${vendedoresAtivosLabel}</div>
 
       <h2>Indicadores principais</h2>
       <div class="grid">
@@ -512,7 +553,7 @@ function Page() {
             {isFranqFull ? (
               <>
                 Unidade de <strong>{profile?.nome ?? "—"}</strong> ·{" "}
-                <strong>{vendedores.length} vendedores</strong> ativos · período:{" "}
+                <strong>{vendedoresAtivosLabel}</strong> · período:{" "}
                 <strong style={{ textTransform: "capitalize" }}>{periodLabel}</strong>
               </>
             ) : isGroupView ? (
