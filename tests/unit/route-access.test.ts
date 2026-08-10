@@ -92,19 +92,21 @@ describe("podeEditarConfiguracoes", () => {
 });
 
 describe("podeAdministrarAcessos", () => {
-  it.each(["matriz", "coordenador", "supervisor"] as const)(
-    "preserva ações administrativas para %s",
-    (role) => expect(podeAdministrarAcessos(role)).toBe(true),
+  it.each(["matriz", "coordenador"] as const)("preserva ações administrativas para %s", (role) =>
+    expect(podeAdministrarAcessos(role)).toBe(true),
   );
 
-  it.each(["interno", "master", "franqueado", "vendedor"] as const)(
+  // V11 · QA 10/08/2026: Supervisor de Vendas só acompanha (protótipo:
+  // "você não cadastra nem desliga — acompanha o desempenho e aciona a
+  // Matriz") — não entra mais no admin completo de Acessos.
+  it.each(["supervisor", "interno", "master", "franqueado", "vendedor"] as const)(
     "não concede ações administrativas a %s",
     (role) => expect(podeAdministrarAcessos(role)).toBe(false),
   );
 });
 
 describe("deveCarregarDadosAcessos", () => {
-  it.each(["matriz", "coordenador", "supervisor"] as const)(
+  it.each(["matriz", "coordenador"] as const)(
     "carrega para %s somente quando o guard permitiu",
     (role) => {
       expect(deveCarregarDadosAcessos(role, false)).toBe(true);
@@ -114,6 +116,7 @@ describe("deveCarregarDadosAcessos", () => {
 
   it("não consulta dados administrativos no modo interno read-only", () => {
     expect(deveCarregarDadosAcessos("interno", false)).toBe(false);
+    expect(deveCarregarDadosAcessos("supervisor", false)).toBe(false);
   });
 });
 

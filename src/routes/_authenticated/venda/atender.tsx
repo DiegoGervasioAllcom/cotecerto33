@@ -302,7 +302,7 @@ function VerLeadModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
     );
   }
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-host" onClick={onClose}>
       <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-h">
           <h3>

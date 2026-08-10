@@ -29,9 +29,17 @@ export function podeEditarConfiguracoes(role: Perfil | null | undefined): boolea
   return role === "matriz";
 }
 
-/** Mantém as ações administrativas de Acessos nos perfis que já as possuíam. */
+/**
+ * Mantém as ações administrativas de Acessos nos perfis que já as possuíam.
+ *
+ * QA manual (10/08/2026): o Supervisor de Vendas NÃO administra — no
+ * protótipo ele só acompanha ("você não cadastra nem desliga — acompanha o
+ * desempenho e aciona a Matriz"). Ele tem a área `macessos` liberada (H7: é
+ * time interno da Matriz), mas cai no ramo somente-leitura de
+ * `/operacao/acessos`, não no admin completo.
+ */
 export function podeAdministrarAcessos(role: Perfil | null | undefined): boolean {
-  return role === "matriz" || role === "coordenador" || role === "supervisor";
+  return role === "matriz" || role === "coordenador";
 }
 
 /** Evita até a consulta administrativa quando a tela é negada ou read-only. */

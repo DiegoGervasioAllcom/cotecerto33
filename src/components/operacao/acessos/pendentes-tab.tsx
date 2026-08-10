@@ -9,7 +9,7 @@ export function PendentesTab({
   onAnalisar,
 }: {
   pendentes: Pendente[];
-  onAnalisar: (p: Pendente) => void;
+  onAnalisar?: (p: Pendente) => void;
 }) {
   if (pendentes.length === 0) {
     return (
@@ -85,11 +85,17 @@ export function PendentesTab({
                   <div className="small muted">{maskTelefone(p.celular ?? p.telefone ?? "")}</div>
                 </td>
                 <td>{new Date(p.created_at).toLocaleDateString("pt-BR")}</td>
-                <td style={{ textAlign: "right" }}>
-                  <button className="btn btn-yellow btn-sm" onClick={() => onAnalisar(p)}>
-                    <Icon id="shield" size={13} /> Analisar
-                  </button>
-                </td>
+                {onAnalisar ? (
+                  <td style={{ textAlign: "right" }}>
+                    <button className="btn btn-yellow btn-sm" onClick={() => onAnalisar(p)}>
+                      <Icon id="shield" size={13} /> Analisar
+                    </button>
+                  </td>
+                ) : (
+                  <td style={{ textAlign: "right" }}>
+                    <span className="chip chip-yellow">Aguardando matriz</span>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

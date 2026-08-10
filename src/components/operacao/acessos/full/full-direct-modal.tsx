@@ -76,7 +76,7 @@ export function FullDirectModal({
   }
 
   return (
-    <div className="modal-overlay" onMouseDown={onClose}>
+    <div className="modal-host" onMouseDown={onClose}>
       <div className="modal" onMouseDown={(event) => event.stopPropagation()}>
         <div className="modal-h">
           <Icon id="edit" size={18} />
