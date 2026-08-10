@@ -210,7 +210,7 @@ const BRAND_LABEL: Record<Perfil, string> = {
   master: "MASTER",
   supervisor: "SUPERVISOR",
   franqueado: "FRANQUEADO",
-  vendedor: "CORRETOR",
+  vendedor: "VENDEDOR",
 };
 
 export function AppShell({
