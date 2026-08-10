@@ -390,7 +390,13 @@ function Page() {
           onRecusar={fila.recusar}
           onRetryEmail={fila.retryEmail}
           emailRetryPending={fila.emailRetryPending}
-          onLiberar={fila.liberar}
+          onLiberar={async (params, persist, tag) => {
+            await fila.liberar(params, persist, tag);
+            // A Full aprova o próprio vendedor por aqui — "Meu time" usa
+            // useTeamData, uma query separada da fila; sem isto, o vendedor
+            // recém-aprovado só aparecia depois de recarregar a página.
+            setReloadEquipe((value) => value + 1);
+          }}
           busy={fila.busy}
         />
       )}
