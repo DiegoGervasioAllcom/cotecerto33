@@ -2,11 +2,14 @@ import type { Tab } from "./types";
 
 export function AcessosNavigation({
   tab,
+  cadastros,
   pendentes,
   desligamentos,
   onChange,
 }: {
   tab: Tab;
+  /** Total de cadastros ativos — o "(N)" da aba, igual ao protótipo. null enquanto não carregou. */
+  cadastros?: number | null;
   pendentes: number;
   desligamentos: number;
   onChange: (tab: Tab) => void;
@@ -14,7 +17,7 @@ export function AcessosNavigation({
   return (
     <div className="toggle" style={{ marginBottom: 18 }}>
       <button className={tab === "cadastros" ? "on" : ""} onClick={() => onChange("cadastros")}>
-        Cadastros Rede
+        Cadastros Rede{cadastros != null && <span style={{ opacity: 0.7 }}> ({cadastros})</span>}
       </button>
       <button
         className={tab === "pend" ? "on" : ""}
