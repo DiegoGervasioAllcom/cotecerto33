@@ -9,15 +9,20 @@ const cnpjValido = {
   nome: "Empresa LTDA",
   documento: "12.345.678/0001-90",
   socio_nome: "Fulano de Tal",
+  socio_rg: "12.345.678-9",
+  data_nascimento: "1990-01-01",
+  celular: "11999998888",
   email: "fulano@email.com",
-  password: "123456",
 };
 
 const cpfValido = {
   nome: "Fulano de Tal",
   documento: "123.456.789-00",
+  rg: "12.345.678-9",
+  data_nascimento: "1990-01-01",
+  celular: "11999998888",
+  contato_emergencia: "Maria · (11) 98888-7777",
   email: "fulano@email.com",
-  password: "123456",
 };
 
 describe("cnpjCadastroSchema", () => {
@@ -74,8 +79,14 @@ describe("cnpjCadastroSchema", () => {
     expect(cnpjCadastroSchema.safeParse({ ...cnpjValido, email: longEmail }).success).toBe(false);
   });
 
-  it("rejeita senha menor que 6", () => {
-    expect(cnpjCadastroSchema.safeParse({ ...cnpjValido, password: "12345" }).success).toBe(false);
+  it("rejeita socio_rg vazio", () => {
+    expect(cnpjCadastroSchema.safeParse({ ...cnpjValido, socio_rg: "" }).success).toBe(false);
+  });
+
+  it("rejeita data_nascimento vazia", () => {
+    expect(cnpjCadastroSchema.safeParse({ ...cnpjValido, data_nascimento: "" }).success).toBe(
+      false,
+    );
   });
 
   it("rejeita socio_cpf com 10 dígitos", () => {
@@ -94,8 +105,8 @@ describe("cnpjCadastroSchema", () => {
     );
   });
 
-  it("aceita celular vazio (opcional)", () => {
-    expect(cnpjCadastroSchema.safeParse({ ...cnpjValido, celular: "" }).success).toBe(true);
+  it("rejeita celular vazio (agora obrigatório)", () => {
+    expect(cnpjCadastroSchema.safeParse({ ...cnpjValido, celular: "" }).success).toBe(false);
   });
 });
 
@@ -113,6 +124,24 @@ describe("cpfCadastroSchema", () => {
   it("aceita documento com 14 dígitos (CNPJ)", () => {
     expect(cpfCadastroSchema.safeParse({ ...cpfValido, documento: "12345678000190" }).success).toBe(
       true,
+    );
+  });
+
+  it("rejeita RG vazio", () => {
+    expect(cpfCadastroSchema.safeParse({ ...cpfValido, rg: "" }).success).toBe(false);
+  });
+
+  it("rejeita data_nascimento vazia", () => {
+    expect(cpfCadastroSchema.safeParse({ ...cpfValido, data_nascimento: "" }).success).toBe(false);
+  });
+
+  it("rejeita celular vazio (agora obrigatório)", () => {
+    expect(cpfCadastroSchema.safeParse({ ...cpfValido, celular: "" }).success).toBe(false);
+  });
+
+  it("rejeita contato_emergencia vazio", () => {
+    expect(cpfCadastroSchema.safeParse({ ...cpfValido, contato_emergencia: "" }).success).toBe(
+      false,
     );
   });
 });

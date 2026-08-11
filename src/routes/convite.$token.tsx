@@ -134,16 +134,34 @@ function ConvitePage() {
       return;
     }
 
-    const { password: _p, email: _e, nome: _n, documento: _d, tipo: _t, ...extras } = values;
+    const {
+      email: _e,
+      nome: _n,
+      documento: _d,
+      tipo: _t,
+      banco,
+      agencia,
+      conta,
+      ...extras
+    } = values;
+    // O banco guarda um único texto (`dados_bancarios`) — o form separa em 3
+    // campos por usabilidade, mas a combinação continua sendo o que
+    // `cadastrar_franquia_admin` e a leitura em "Formulário completo" esperam.
+    const dadosBancarios = [
+      banco?.trim() && `Banco ${banco.trim()}`,
+      agencia?.trim() && `Ag ${agencia.trim()}`,
+      conta?.trim() && `CC ${conta.trim()}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
     try {
       await enviar({
         data: {
           token,
           email: values.email?.trim() ?? "",
-          password: values.password ?? "",
           nome: values.nome,
           documento: values.documento,
-          extras,
+          extras: dadosBancarios ? { ...extras, dados_bancarios: dadosBancarios } : extras,
         },
       });
       setEnviado(true);

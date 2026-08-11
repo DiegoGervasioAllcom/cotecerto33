@@ -40,7 +40,12 @@ export const CNPJ_FIELDS: FieldDef[] = [
     required: true,
     maxLen: 18,
   },
-  { key: "data_nascimento", label: "Data de nascimento (sócio)", type: "date" },
+  {
+    key: "data_nascimento",
+    label: "Data de nascimento (sócio)",
+    type: "date",
+    required: true,
+  },
   {
     key: "endereco",
     label: "Endereço completo",
@@ -65,8 +70,22 @@ export const CNPJ_FIELDS: FieldDef[] = [
     ph: "000.000.000-00",
     maxLen: 14,
   },
-  { key: "socio_rg", label: "RG do sócio operador", type: "text", ph: "00.000.000-0", maxLen: 20 },
-  { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000", maxLen: 15 },
+  {
+    key: "socio_rg",
+    label: "RG do sócio operador",
+    type: "text",
+    ph: "00.000.000-0",
+    required: true,
+    maxLen: 20,
+  },
+  {
+    key: "celular",
+    label: "Celular",
+    type: "tel",
+    ph: "(11) 90000-0000",
+    required: true,
+    maxLen: 15,
+  },
   {
     key: "telefone_recado",
     label: "Outro telefone / recado",
@@ -76,7 +95,7 @@ export const CNPJ_FIELDS: FieldDef[] = [
   },
   {
     key: "email",
-    label: "E-mail",
+    label: "E-mail pessoal",
     type: "email",
     full: true,
     ph: "voce@email.com",
@@ -91,21 +110,9 @@ export const CNPJ_FIELDS: FieldDef[] = [
     ph: "CNPJ, e-mail, telefone ou chave aleatória",
     maxLen: 150,
   },
-  {
-    key: "dados_bancarios",
-    label: "Banco / Agência / Conta (PJ)",
-    type: "text",
-    full: true,
-    ph: "Banco 000 · Ag 0001 · CC 00000-0",
-    maxLen: 2000,
-  },
-  {
-    key: "password",
-    label: "Senha de acesso",
-    type: "password",
-    ph: "Mínimo 6 caracteres",
-    required: true,
-  },
+  { key: "banco", label: "Banco", type: "text", ph: "ex.: 260 · Nubank", maxLen: 80 },
+  { key: "agencia", label: "Agência", type: "text", ph: "0001", maxLen: 20 },
+  { key: "conta", label: "Conta", type: "text", ph: "00000-0", maxLen: 30 },
 ];
 
 export const CPF_FIELDS: FieldDef[] = [
@@ -126,9 +133,16 @@ export const CPF_FIELDS: FieldDef[] = [
     required: true,
     maxLen: 14,
   },
-  { key: "rg", label: "RG", type: "text", ph: "00.000.000-0", maxLen: 20 },
-  { key: "data_nascimento", label: "Data de nascimento", type: "date" },
-  { key: "celular", label: "Celular", type: "tel", ph: "(11) 90000-0000", maxLen: 15 },
+  { key: "rg", label: "RG", type: "text", ph: "00.000.000-0", required: true, maxLen: 20 },
+  { key: "data_nascimento", label: "Data de nascimento", type: "date", required: true },
+  {
+    key: "celular",
+    label: "Celular",
+    type: "tel",
+    ph: "(11) 90000-0000",
+    required: true,
+    maxLen: 15,
+  },
   {
     key: "endereco",
     label: "Endereço completo",
@@ -145,16 +159,8 @@ export const CPF_FIELDS: FieldDef[] = [
     maxLen: 15,
   },
   {
-    key: "contato_emergencia",
-    label: "Contato de emergência",
-    type: "text",
-    full: true,
-    ph: "Nome e telefone do contato",
-    maxLen: 2000,
-  },
-  {
     key: "email",
-    label: "E-mail",
+    label: "E-mail pessoal",
     type: "email",
     full: true,
     ph: "voce@email.com",
@@ -169,20 +175,19 @@ export const CPF_FIELDS: FieldDef[] = [
     ph: "CPF, e-mail, telefone ou chave aleatória",
     maxLen: 150,
   },
+  { key: "banco", label: "Banco", type: "text", ph: "ex.: 260 · Nubank", maxLen: 80 },
+  { key: "agencia", label: "Agência", type: "text", ph: "0001", maxLen: 20 },
+  { key: "conta", label: "Conta", type: "text", ph: "00000-0", maxLen: 30 },
   {
-    key: "dados_bancarios",
-    label: "Banco / Agência / Conta",
+    // Última pergunta do form (pedido do usuário) — o campo mais "extra" e o
+    // que menos combina com o fluxo de dados financeiros/bancários acima.
+    key: "contato_emergencia",
+    label: "Contato de emergência",
     type: "text",
     full: true,
-    ph: "Banco 000 · Ag 0001 · CC 00000-0",
-    maxLen: 2000,
-  },
-  {
-    key: "password",
-    label: "Senha de acesso",
-    type: "password",
-    ph: "Mínimo 6 caracteres",
+    ph: "Nome e telefone do contato",
     required: true,
+    maxLen: 2000,
   },
 ];
 

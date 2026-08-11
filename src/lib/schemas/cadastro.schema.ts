@@ -5,7 +5,7 @@
 
 import { z } from "zod";
 import { onlyDigits } from "@/lib/masks";
-import { email, password } from "@/lib/schemas/common";
+import { email } from "@/lib/schemas/common";
 
 function optionalDigits(min: number, max: number) {
   return z
@@ -17,6 +17,16 @@ function optionalDigits(min: number, max: number) {
         message: "Telefone inválido.",
       },
     );
+}
+
+function obrigatorioDigits(min: number, max: number, mensagemVazio: string) {
+  return z
+    .string()
+    .trim()
+    .min(1, mensagemVazio)
+    .refine((v) => onlyDigits(v).length >= min && onlyDigits(v).length <= max, {
+      message: "Telefone inválido.",
+    });
 }
 
 const nome = z.string().trim().min(1, "Informe o nome.").max(150, "Nome muito longo.");
@@ -36,41 +46,53 @@ const socioCpf = z
     message: "CPF do sócio inválido.",
   });
 
-const rgOpcional = z.string().max(20, "RG muito longo.").optional();
+const rgObrigatorio = z.string().trim().min(1, "Informe o RG.").max(20, "RG muito longo.");
+
+const dataNascimentoObrigatoria = z.string().trim().min(1, "Informe a data de nascimento.");
 
 const textoLongoOpcional = z.string().max(2000, "Texto muito longo.").optional();
 
+const contatoEmergenciaObrigatorio = z
+  .string()
+  .trim()
+  .min(1, "Informe um contato de emergência.")
+  .max(2000, "Texto muito longo.");
+
 const pixChave = z.string().max(150, "Chave Pix muito longa.").optional();
+
+const dadosBancariosOpcionais = {
+  banco: z.string().max(80, "Texto muito longo.").optional(),
+  agencia: z.string().max(20, "Texto muito longo.").optional(),
+  conta: z.string().max(30, "Texto muito longo.").optional(),
+};
 
 export const cnpjCadastroSchema = z.object({
   nome,
   documento,
-  data_nascimento: z.string().optional(),
+  data_nascimento: dataNascimentoObrigatoria,
   endereco: textoLongoOpcional,
   socio_nome: nome,
   socio_cpf: socioCpf,
-  socio_rg: rgOpcional,
-  celular: optionalDigits(10, 11),
+  socio_rg: rgObrigatorio,
+  celular: obrigatorioDigits(10, 11, "Informe o celular."),
   telefone_recado: optionalDigits(10, 11),
   email,
   pix_chave: pixChave,
-  dados_bancarios: textoLongoOpcional,
-  password,
+  ...dadosBancariosOpcionais,
 });
 
 export const cpfCadastroSchema = z.object({
   nome,
   documento,
-  rg: rgOpcional,
-  data_nascimento: z.string().optional(),
-  celular: optionalDigits(10, 11),
+  rg: rgObrigatorio,
+  data_nascimento: dataNascimentoObrigatoria,
+  celular: obrigatorioDigits(10, 11, "Informe o celular."),
   endereco: textoLongoOpcional,
   telefone_recado: optionalDigits(10, 11),
-  contato_emergencia: textoLongoOpcional,
+  contato_emergencia: contatoEmergenciaObrigatorio,
   email,
   pix_chave: pixChave,
-  dados_bancarios: textoLongoOpcional,
-  password,
+  ...dadosBancariosOpcionais,
 });
 
 export type CadastroFormValues =
