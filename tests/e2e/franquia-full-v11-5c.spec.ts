@@ -179,19 +179,11 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
     await page.goto("/operacao/xacessos");
     await page.getByRole("button", { name: "Cadastro direto" }).click();
     let modal = page.locator(".modal");
-    await expect(modal.getByRole("button", { name: "1 · Cadastro" })).toHaveClass(/on/);
-    await expect(modal.getByRole("button", { name: "2 · Configuração" })).toBeDisabled();
     await modal.locator("input:not([type])").nth(0).fill(nomeCadastro);
     await modal.getByPlaceholder("000.000.000-00").fill("12345678901");
     await modal.getByPlaceholder("(11) 90000-0000").fill("11999990000");
     await modal.locator('input[type="email"]').fill(email);
-    await modal.getByRole("button", { name: "Continuar para configuração" }).click();
-
-    await expect(modal.getByRole("button", { name: "2 · Configuração" })).toHaveClass(/on/);
     await modal.locator("select").selectOption("Remalho");
-    await modal.locator('input[type="number"]').nth(0).fill("4");
-    await modal.locator('input[type="number"]').nth(1).fill("30");
-    await modal.locator('input[type="number"]').nth(2).fill("10");
     const inicioCadastro = Date.now();
     const respostasCadastro: Array<{ url: string; status: number; ms: number }> = [];
     const capturarResposta = (response: import("@playwright/test").Response) => {
@@ -204,11 +196,15 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
       }
     };
     page.on("response", capturarResposta);
-    await modal.getByRole("button", { name: "Concluir cadastro" }).click();
+    await modal.getByRole("button", { name: "Continuar para configuração" }).click();
 
-    const linha = page.getByRole("row").filter({ hasText: nomeCadastro });
+    // Igual ao protótipo (cadDiretoNext → openFullApprove): a tela de
+    // Configurar abre sozinha, sem precisar achar a linha na tabela.
+    const modalConfigurar = page.locator(".modal");
     try {
-      await expect(linha).toBeVisible({ timeout: 15_000 });
+      await expect(
+        modalConfigurar.getByRole("button", { name: "Salvar configuração" }),
+      ).toBeVisible({ timeout: 15_000 });
       if (process.env.E2E_EXPECT_EMAIL_CONFIG_MISSING === "1") {
         await expect(page.locator(".banner.warn")).toContainText(
           "Configuração de e-mail ausente no servidor",
@@ -224,7 +220,7 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
               elapsed_ms: Date.now() - inicioCadastro,
               modal_visivel: await modal.isVisible(),
               botao: await modal
-                .getByRole("button", { name: /Cadastrando|Concluir cadastro/ })
+                .getByRole("button", { name: /Cadastrando|Continuar para configuração/ })
                 .textContent()
                 .catch(() => null),
               alerta: await modal
@@ -250,6 +246,29 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
     } finally {
       page.off("response", capturarResposta);
     }
+
+    const campoLeads = modalConfigurar.locator('input[type="number"]').nth(0);
+    const campoComissaoVenda = modalConfigurar.locator('input[type="number"]').nth(1);
+    const campoComissaoRenovacao = modalConfigurar.locator('input[type="number"]').nth(2);
+    // O modal de Configurar pode remontar uma vez (o fetch de produtos/canais
+    // dentro dele reseta comissão a partir do banco) — espera o campo estar
+    // estável em "0" antes de preencher, senão o remount pisa no fill.
+    await expect(campoLeads).toHaveValue("0");
+    await campoLeads.fill("4");
+    await campoComissaoVenda.fill("30");
+    await campoComissaoRenovacao.fill("10");
+    await expect(campoLeads).toHaveValue("4");
+    await expect(campoComissaoVenda).toHaveValue("30");
+    await expect(campoComissaoRenovacao).toHaveValue("10");
+    await modalConfigurar.getByRole("button", { name: "Salvar configuração" }).click();
+    // A linha já existe desde o cadastro (equipe vem preenchida ali) — só ficar
+    // visível não prova que "Salvar configuração" funcionou. O modal fechar é
+    // que confirma: `onSaved` só roda se a RPC não devolver erro.
+    await expect(modalConfigurar).not.toBeVisible({ timeout: 10_000 });
+
+    const linha = page.getByRole("row").filter({ hasText: nomeCadastro });
+    await expect(linha).toBeVisible({ timeout: 10_000 });
+
     const criado = await profilePorEmail(email);
     expect(criado).toMatchObject({
       empresa_id: full.empresaId,

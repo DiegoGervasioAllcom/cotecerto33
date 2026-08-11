@@ -10,9 +10,10 @@ export const cadastroDiretoIdentidadeSchema = z.object({
   celular: z.string().regex(/^\(\d{2}\) \d{4,5}-\d{4}$/, "Informe um celular válido."),
 });
 
+// Cadastro direto é 1 tela só, igual ao protótipo (`openCadDireto`): nome,
+// documento, contato e a equipe. Leads/comissão/produtos/canais ficam pra
+// "próxima tela" (aqui, o modal Configurar que abre em seguida) — o
+// protótipo já tratava assim, o app antes juntava tudo no mesmo cadastro.
 export const cadastroDiretoFullSchema = cadastroDiretoIdentidadeSchema.extend({
   equipe: z.enum(EQUIPES_FULL),
-  leadsDia: z.coerce.number().int().min(0).max(1000),
-  comissaoVenda: z.coerce.number().min(0).max(100),
-  comissaoRenovacao: z.coerce.number().min(0).max(100),
 });
