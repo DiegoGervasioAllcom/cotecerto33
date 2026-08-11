@@ -6,6 +6,7 @@ import { cadastrarPorConvite } from "@/lib/convite.functions";
 import { camposDoModelo, type ModeloCadastro } from "@/lib/cadastro-campos";
 import { CamposCadastro } from "@/components/auth/campos-cadastro";
 import { cnpjCadastroSchema, cpfCadastroSchema } from "@/lib/schemas/cadastro.schema";
+import { ProtoIcons } from "@/components/proto-icons";
 import logoUrl from "@/assets/cotecerto-logo.png";
 
 /**
@@ -235,6 +236,7 @@ function ConvitePage() {
 
   return (
     <div className="auth-stage">
+      <ProtoIcons />
       <div className="auth-bg" />
       <div className="auth-brand">
         <img src={logoUrl} alt="CoteCerto" className="auth-logo" />

@@ -16,6 +16,7 @@ export function SenhaDiretorModal({
   onClose: () => void;
 }) {
   const [senha, setSenha] = useState("");
+  const [visivel, setVisivel] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -58,17 +59,34 @@ export function SenhaDiretorModal({
           </p>
           <div className="field-group">
             <label>Senha de login</label>
-            <input
-              className="input"
-              type="password"
-              placeholder="••••••••"
-              autoFocus
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void confirmar();
-              }}
-            />
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <input
+                className="input"
+                type={visivel ? "text" : "password"}
+                placeholder="••••••••"
+                autoFocus
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void confirmar();
+                }}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="pw-toggle"
+                title="Mostrar/ocultar a senha"
+                onClick={() => setVisivel((v) => !v)}
+              >
+                {visivel ? (
+                  "OCULTAR"
+                ) : (
+                  <svg>
+                    <use href="#i-eye" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
           {err && (
             <div className="banner alert" style={{ marginTop: 10 }}>

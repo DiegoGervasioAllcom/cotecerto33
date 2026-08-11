@@ -25,6 +25,7 @@ export function CreateUserModal({
   }) => Promise<unknown>;
 }) {
   const [form, setForm] = useState({ nome: "", email: "", password: "", empresa_id: "" });
+  const [senhaVisivel, setSenhaVisivel] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -107,12 +108,29 @@ export function CreateUserModal({
       </div>
       <div className="field-group">
         <label>Senha (mín. 6)</label>
-        <input
-          className="input"
-          type="password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-        />
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input
+            className="input"
+            type={senhaVisivel ? "text" : "password"}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            style={{ flex: 1 }}
+          />
+          <button
+            type="button"
+            className="pw-toggle"
+            title="Mostrar/ocultar a senha"
+            onClick={() => setSenhaVisivel((v) => !v)}
+          >
+            {senhaVisivel ? (
+              "OCULTAR"
+            ) : (
+              <svg>
+                <use href="#i-eye" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
       {role !== "matriz" && (
         <div className="field-group">

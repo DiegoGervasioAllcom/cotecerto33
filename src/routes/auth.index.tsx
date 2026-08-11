@@ -12,6 +12,7 @@ import {
   limparChaveRedirecionamentoFalho,
   proximaChaveRedirecionamento,
 } from "@/lib/redirect-once";
+import { ProtoIcons } from "@/components/proto-icons";
 import logoUrl from "@/assets/cotecerto-logo.png";
 
 export const Route = createFileRoute("/auth/")({
@@ -27,6 +28,7 @@ function AuthPage() {
   const { loading: groupLoading, isGroupView } = useGroupScope();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ultimoRedirecionamento = useRef<string | null>(null);
@@ -112,6 +114,7 @@ function AuthPage() {
 
   return (
     <div className="auth-stage">
+      <ProtoIcons />
       <div className="auth-bg" />
       <div className="auth-brand">
         <img src={logoUrl} alt="CoteCerto" className="auth-logo" />
@@ -158,14 +161,31 @@ function AuthPage() {
           </div>
           <div className="field-group">
             <label>Senha</label>
-            <input
-              className="input"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <input
+                className="input"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="pw-toggle"
+                title="Mostrar/ocultar a senha"
+                onClick={() => setShowPassword((v) => !v)}
+              >
+                {showPassword ? (
+                  "OCULTAR"
+                ) : (
+                  <svg>
+                    <use href="#i-eye" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
           {error && (
             <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
