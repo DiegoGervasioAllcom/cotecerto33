@@ -1,46 +1,33 @@
 import { useState } from "react";
-import { ProdutosCanaisFields } from "@/components/acessos/produtos-canais-fields";
 import { Icon } from "@/components/operacao/acessos/icon";
 import { supabase } from "@/integrations/supabase/client";
 import { cadastrarVendedorFullDireto } from "@/lib/full-vendedor.functions";
 import { maskCpfCnpj, maskTelefone } from "@/lib/masks";
-import {
-  cadastroDiretoFullSchema as schema,
-  cadastroDiretoIdentidadeSchema,
-} from "./full-direct-schema";
+import { cadastroDiretoFullSchema as schema, EQUIPES_FULL } from "./full-direct-schema";
 
+/**
+ * Cadastro direto — 1 tela só, igual ao protótipo (`openCadDireto`): nome,
+ * documento, contato e equipe. Leads, comissão, produtos e canais ficam pra
+ * "próxima tela" — aqui, o modal Configurar que `xacessos.tsx` abre em
+ * seguida, assim que o vendedor aparece na lista recarregada.
+ */
 export function FullDirectModal({
   onClose,
   onSaved,
 }: {
   onClose: () => void;
-  onSaved: (aviso: string | null) => void;
+  onSaved: (resultado: { userId: string; aviso: string | null }) => void;
 }) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [celular, setCelular] = useState("");
-  const [equipe, setEquipe] = useState("");
-  const [leadsDia, setLeadsDia] = useState("0");
-  const [comissaoVenda, setComissaoVenda] = useState("0");
-  const [comissaoRenovacao, setComissaoRenovacao] = useState("0");
-  const [produtos, setProdutos] = useState<string[]>([]);
-  const [canais, setCanais] = useState<string[]>([]);
+  const [equipe, setEquipe] = useState<(typeof EQUIPES_FULL)[number]>(EQUIPES_FULL[0]);
   const [erro, setErro] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [etapa, setEtapa] = useState<"cadastro" | "configuracao">("cadastro");
 
   async function cadastrar() {
-    const parsed = schema.safeParse({
-      nome,
-      email,
-      cpf,
-      celular,
-      equipe,
-      leadsDia,
-      comissaoVenda,
-      comissaoRenovacao,
-    });
+    const parsed = schema.safeParse({ nome, email, cpf, celular, equipe });
     if (!parsed.success) return setErro(parsed.error.issues[0]?.message ?? "Revise os campos.");
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
@@ -55,19 +42,17 @@ export function FullDirectModal({
           email: parsed.data.email,
           cpf: parsed.data.cpf,
           celular: parsed.data.celular,
-          equipe: parsed.data.equipe || undefined,
-          leads_dia: parsed.data.leadsDia,
-          produtos,
-          canais,
-          comissao_venda_pct: parsed.data.comissaoVenda,
-          comissao_renovacao_pct: parsed.data.comissaoRenovacao,
+          equipe: parsed.data.equipe,
+          produtos: [],
+          canais: [],
         },
       });
-      onSaved(
-        result.email_enviado
+      onSaved({
+        userId: result.user_id,
+        aviso: result.email_enviado
           ? null
           : `Cadastro concluído, mas o e-mail não foi enviado: ${result.email_erro ?? "erro desconhecido"}`,
-      );
+      });
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Falha ao cadastrar vendedor.");
     } finally {
@@ -90,155 +75,77 @@ export function FullDirectModal({
           <div className="clt-note">
             <Icon id="info" size={15} />
             <div>
-              O vendedor será criado diretamente na sua franquia e receberá um link para criar a
-              própria senha.
+              Cadastro <strong>direto</strong> — autonomia da Full. Na próxima tela você configura
+              equipe, leads, produtos e canais; só ao concluir ele recebe o e-mail{" "}
+              <strong>Boas-vindas Supper</strong> para criar a senha. Prefira o{" "}
+              <strong>Convite Supper</strong>: quem preenche os dados é ele.
             </div>
           </div>
-          <div className="toggle toggle-sub" style={{ marginTop: 14, marginBottom: 14 }}>
-            <button
-              className={etapa === "cadastro" ? "on" : ""}
-              type="button"
-              onClick={() => setEtapa("cadastro")}
-            >
-              1 · Cadastro
-            </button>
-            <button
-              className={etapa === "configuracao" ? "on" : ""}
-              type="button"
-              disabled={etapa === "cadastro"}
-            >
-              2 · Configuração
-            </button>
-          </div>
-          {etapa === "cadastro" && (
-            <div className="acc-grid" style={{ marginTop: 14 }}>
-              <div className="field-group full">
-                <label>Nome completo</label>
-                <input
-                  className="input"
-                  maxLength={150}
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                />
-              </div>
-              <div className="field-group">
-                <label>CPF</label>
-                <input
-                  className="input"
-                  inputMode="numeric"
-                  maxLength={14}
-                  placeholder="000.000.000-00"
-                  value={cpf}
-                  onChange={(event) => setCpf(maskCpfCnpj(event.target.value))}
-                />
-              </div>
-              <div className="field-group">
-                <label>Celular</label>
-                <input
-                  className="input"
-                  inputMode="tel"
-                  maxLength={15}
-                  placeholder="(11) 90000-0000"
-                  value={celular}
-                  onChange={(event) => setCelular(maskTelefone(event.target.value))}
-                />
-              </div>
-              <div className="field-group full">
-                <label>E-mail</label>
-                <input
-                  className="input"
-                  type="email"
-                  maxLength={254}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-          {etapa === "configuracao" && (
-            <>
-              <div className="acc-grid" style={{ marginTop: 14 }}>
-                <div className="field-group">
-                  <label>Equipe</label>
-                  <input
-                    className="input"
-                    maxLength={120}
-                    value={equipe}
-                    onChange={(e) => setEquipe(e.target.value)}
-                  />
-                </div>
-                <div className="field-group">
-                  <label>Leads · média/dia útil</label>
-                  <input
-                    className="input"
-                    type="number"
-                    min={0}
-                    max={1000}
-                    value={leadsDia}
-                    onChange={(e) => setLeadsDia(e.target.value)}
-                  />
-                </div>
-                <div className="field-group">
-                  <label>Comissão de venda (%)</label>
-                  <input
-                    className="input"
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={comissaoVenda}
-                    onChange={(e) => setComissaoVenda(e.target.value)}
-                  />
-                </div>
-                <div className="field-group">
-                  <label>Comissão de renovação (%)</label>
-                  <input
-                    className="input"
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={comissaoRenovacao}
-                    onChange={(e) => setComissaoRenovacao(e.target.value)}
-                  />
-                </div>
-              </div>
-              <ProdutosCanaisFields
-                bloco="externo"
-                produtos={produtos}
-                setProdutos={setProdutos}
-                canais={canais}
-                setCanais={setCanais}
+          <div className="acc-grid" style={{ marginTop: 14 }}>
+            <div className="field-group full">
+              <label>Nome completo</label>
+              <input
+                className="input"
+                maxLength={150}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
               />
-            </>
-          )}
+            </div>
+            <div className="field-group">
+              <label>CPF</label>
+              <input
+                className="input"
+                inputMode="numeric"
+                maxLength={14}
+                placeholder="000.000.000-00"
+                value={cpf}
+                onChange={(event) => setCpf(maskCpfCnpj(event.target.value))}
+              />
+            </div>
+            <div className="field-group">
+              <label>Celular</label>
+              <input
+                className="input"
+                inputMode="tel"
+                maxLength={15}
+                placeholder="(11) 90000-0000"
+                value={celular}
+                onChange={(event) => setCelular(maskTelefone(event.target.value))}
+              />
+            </div>
+            <div className="field-group full">
+              <label>E-mail</label>
+              <input
+                className="input"
+                type="email"
+                maxLength={254}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="field-group">
+              <label>Equipe</label>
+              <select
+                className="input"
+                value={equipe}
+                onChange={(e) => setEquipe(e.target.value as (typeof EQUIPES_FULL)[number])}
+              >
+                {EQUIPES_FULL.map((opcao) => (
+                  <option key={opcao} value={opcao}>
+                    {opcao}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
         <div className="modal-f">
           <button className="btn btn-ghost" disabled={busy} onClick={onClose}>
             Cancelar
           </button>
-          {etapa === "cadastro" ? (
-            <button
-              className="btn btn-yellow"
-              type="button"
-              onClick={() => {
-                const identity = cadastroDiretoIdentidadeSchema.safeParse({
-                  nome,
-                  email,
-                  cpf,
-                  celular,
-                });
-                if (!identity.success)
-                  return setErro(identity.error.issues[0]?.message ?? "Revise os campos.");
-                setErro(null);
-                setEtapa("configuracao");
-              }}
-            >
-              Continuar para configuração
-            </button>
-          ) : (
-            <button className="btn btn-yellow" disabled={busy} onClick={cadastrar}>
-              {busy ? "Cadastrando…" : "Concluir cadastro"}
-            </button>
-          )}
+          <button className="btn btn-yellow" disabled={busy} onClick={cadastrar}>
+            {busy ? "Cadastrando…" : "Continuar para configuração"}
+          </button>
         </div>
       </div>
     </div>

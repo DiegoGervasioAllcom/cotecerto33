@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { useGroupScope } from "@/lib/group-scope";
@@ -79,6 +79,11 @@ function Page() {
   const { rows, loading, err } = useTeamData(profile, reloadEquipe);
   const [cadastroDireto, setCadastroDireto] = useState(false);
   const [avisoCadastro, setAvisoCadastro] = useState<string | null>(null);
+  // Igual ao protótipo (cadDiretoNext → openFullApprove): depois de cadastrar
+  // a identidade, a "próxima tela" (aqui, o modal Configurar) abre sozinha
+  // pra equipe/leads/produtos/canais — sem o usuário ter de procurar a linha
+  // na tabela. Guarda o id até a lista recarregada trazer esse membro.
+  const [pendingConfigureId, setPendingConfigureId] = useState<string | null>(null);
   // V11 · C8 — "Solicitar desligamento" só faz sentido para vendedor/franquia
   // (o próprio solicitar_desligamento também barra o resto no banco); o
   // reloadTick força o card "Minhas solicitações" a buscar de novo após enviar.
@@ -120,6 +125,15 @@ function Page() {
     fullTeamMemberMatches(m, busca, filtroEquipe, filtroAno),
   );
   const filtradas = rows.filter((r) => !r.desligado_em);
+
+  useEffect(() => {
+    if (!pendingConfigureId) return;
+    const membro = membrosFull.find((m) => m.id === pendingConfigureId);
+    if (!membro) return;
+    setPendingConfigureId(null);
+    setSecao("time");
+    setSelecionado({ membro, modo: "configurar" });
+  }, [pendingConfigureId, membrosFull]);
 
   if (denied) return denied;
 
@@ -348,10 +362,11 @@ function Page() {
       {cadastroDireto && (
         <FullDirectModal
           onClose={() => setCadastroDireto(false)}
-          onSaved={(aviso) => {
+          onSaved={({ userId, aviso }) => {
             setCadastroDireto(false);
             setAvisoCadastro(aviso);
             setSecao("time");
+            setPendingConfigureId(userId);
             setReloadEquipe((value) => value + 1);
           }}
         />
