@@ -106,8 +106,6 @@ export function ClassificarAcessoModal({
   onClose,
   onPendencia,
   onRecusar,
-  onRetryEmail,
-  emailRetryPending,
   onLiberar,
   busy,
 }: {
@@ -118,8 +116,6 @@ export function ClassificarAcessoModal({
   onClose: () => void;
   onPendencia: (motivo: string) => Promise<void>;
   onRecusar: (motivo: string) => Promise<void>;
-  onRetryEmail: () => Promise<void>;
-  emailRetryPending: boolean;
   onLiberar: (
     params: AprovarAcessoParams,
     persist: () => Promise<void>,
@@ -1031,31 +1027,25 @@ export function ClassificarAcessoModal({
                 </>
               ) : (
                 <>
-                  {emailRetryPending ? (
-                    <button className="btn btn-yellow" disabled={busy} onClick={onRetryEmail}>
-                      {busy ? "Reenviando…" : "Tentar enviar e-mail novamente"}
+                  <>
+                    <button
+                      className="btn btn-ghost"
+                      disabled={busy}
+                      onClick={() => setDecisao("pendencia")}
+                    >
+                      Pedir informação
                     </button>
-                  ) : (
-                    <>
-                      <button
-                        className="btn btn-ghost"
-                        disabled={busy}
-                        onClick={() => setDecisao("pendencia")}
-                      >
-                        Pedir informação
-                      </button>
-                      <button
-                        className="btn btn-ghost"
-                        disabled={busy}
-                        onClick={() => setDecisao("recusa")}
-                      >
-                        <Icon id="x" size={14} /> Recusar
-                      </button>
-                      <button className="btn btn-yellow" disabled={busy} onClick={handleLiberar}>
-                        <Icon id="check" size={14} /> {busy ? "Processando…" : "Liberar acesso"}
-                      </button>
-                    </>
-                  )}
+                    <button
+                      className="btn btn-ghost"
+                      disabled={busy}
+                      onClick={() => setDecisao("recusa")}
+                    >
+                      <Icon id="x" size={14} /> Recusar
+                    </button>
+                    <button className="btn btn-yellow" disabled={busy} onClick={handleLiberar}>
+                      <Icon id="check" size={14} /> {busy ? "Processando…" : "Liberar acesso"}
+                    </button>
+                  </>
                 </>
               )}
             </>

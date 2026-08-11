@@ -16,6 +16,7 @@ type ClaimedEmail = {
   lease_token: string;
 };
 type DispatchResult = "enviado" | "falha_explicita" | "incerto";
+type AccessLinkContract = { emissao_id: string; versao: number };
 
 function normalizeAppUrl(value: string | undefined) {
   const appUrl = value?.trim().replace(/\/$/, "");
@@ -88,10 +89,26 @@ export const dispatchAccessEmail = createServerFn({ method: "POST" })
     try {
       let template = { tipo: email.tipo, ...email.payload } as EmailTemplate;
       if (template.tipo === "boas_vindas") {
+        const { data: rawContract, error: contractError } = await admin.rpc(
+          "obter_contrato_link_acesso",
+          { p_outbox_id: email.id, p_lease_token: email.lease_token },
+        );
+        if (contractError || !rawContract) {
+          throw new Error(contractError?.message ?? "Emissão de acesso indisponível.");
+        }
+        const contract = rawContract as AccessLinkContract;
+        if (!contract.emissao_id || !Number.isInteger(contract.versao) || contract.versao <= 0) {
+          throw new Error("Contrato de emissão de acesso inválido.");
+        }
+        const redirectUrl = new URL(`${appUrl}/auth/criar-senha`);
+        redirectUrl.searchParams.set("emissao", contract.emissao_id);
+        redirectUrl.searchParams.set("versao", String(contract.versao));
         const { data: recovery, error: recoveryError } = await admin.auth.admin.generateLink({
           type: "recovery",
           email: email.destinatario,
-          options: { redirectTo: `${appUrl}/auth/criar-senha` },
+          // O GoTrue substitui o recovery anterior para este usuário. A versão
+          // abaixo também cerca a ativação no banco caso um callback antigo chegue.
+          options: { redirectTo: redirectUrl.toString() },
         });
         if (recoveryError) {
           throw new Error(`Falha ao gerar link de senha: ${recoveryError.message}`);

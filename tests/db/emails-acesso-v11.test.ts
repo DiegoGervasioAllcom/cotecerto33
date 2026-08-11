@@ -9,7 +9,7 @@ import {
   type Db,
 } from "../helpers/supabase";
 
-type Pedido = { empresaId: string; userId: string; email: string; nome: string };
+type Pedido = { empresaId: string; userId: string; email: string; nome: string; client: Db };
 
 async function criarPedidoPendente(prefix: string): Promise<Pedido> {
   const email = `${uniq(prefix)}@teste.local`;
@@ -21,7 +21,7 @@ async function criarPedidoPendente(prefix: string): Promise<Pedido> {
     .update({ empresa_id: empresa.id, nome, status: "pendente" })
     .eq("id", pessoa.userId);
   if (error) throw error;
-  return { empresaId: empresa.id, userId: pessoa.userId, email, nome };
+  return { empresaId: empresa.id, userId: pessoa.userId, email, nome, client: pessoa.client };
 }
 
 const CAMPOS_SECRETOS = /(^|_)(link|token|senha|password)($|_)/i;
@@ -707,5 +707,330 @@ describe("V11.2.2 — boas-vindas depois da aprovação", () => {
       p_empresa_id: pedido.empresaId,
     });
     expect(result.error?.message).toContain("não permite concluir");
+  });
+
+  test("emissão vira pendente só após envio confirmado e o titular a ativa sem senha/token na RPC", async () => {
+    const pedido = await criarPedidoPendente("ativacao-acesso");
+    expect(
+      (
+        await matriz.rpc("aprovar_acesso", {
+          p_empresa_id: pedido.empresaId,
+          p_perfil: "master",
+        })
+      ).error,
+    ).toBeNull();
+
+    const { data: outboxId, error: emitirError } = await matriz.rpc("reenviar_link_acesso", {
+      p_empresa_id: pedido.empresaId,
+    });
+    expect(emitirError).toBeNull();
+
+    const { data: nova } = await matriz
+      .from("acesso_emissoes")
+      .select("id, status, numero, outbox_id, envio_confirmado_em, ativado_em")
+      .eq("outbox_id", outboxId as string)
+      .single();
+    expect(nova).toMatchObject({ status: "novo", numero: 1, outbox_id: outboxId });
+    expect(nova?.envio_confirmado_em).toBeNull();
+    expect(nova?.ativado_em).toBeNull();
+
+    const claim = await matriz.rpc("marcar_email_outbox_enviando", {
+      p_outbox_id: outboxId as string,
+    });
+    expect(claim.error).toBeNull();
+    const { error: envioError } = await admin.rpc("finalizar_email_outbox", {
+      p_outbox_id: outboxId as string,
+      p_lease_token: (claim.data as { lease_token: string }).lease_token,
+      p_resultado: "enviado",
+      p_provider_id: "resend-ativacao-confirmada",
+    });
+    expect(envioError).toBeNull();
+
+    const { data: pendente } = await pedido.client
+      .from("acesso_emissoes")
+      .select("status, envio_confirmado_em, ativado_em")
+      .eq("id", nova!.id)
+      .single();
+    expect(pendente?.status).toBe("pendente");
+    expect(pendente?.envio_confirmado_em).not.toBeNull();
+    expect(pendente?.ativado_em).toBeNull();
+
+    const ativacao = await pedido.client.rpc("ativar_acesso_apos_criar_senha", {
+      p_emissao_id: nova!.id,
+      p_versao: nova!.numero,
+    });
+    expect(ativacao.error).toBeNull();
+    expect(ativacao.data).toBe(nova!.id);
+    const { data: ativa } = await pedido.client
+      .from("acesso_emissoes")
+      .select("status, ativado_em")
+      .eq("id", nova!.id)
+      .single();
+    expect(ativa?.status).toBe("ativo");
+    expect(ativa?.ativado_em).not.toBeNull();
+    expect(JSON.stringify(ativa)).not.toMatch(/senha|password|token|link/i);
+  });
+
+  test("Full reemite para vendedor próprio e Matriz não lê nem reenfileira a emissão dela", async () => {
+    const full = await criarFullDona("emissao-full");
+    const pedido = await criarPedidoDaFull(full.empresaId, full.userId);
+    expect(
+      (
+        await full.client.rpc("aprovar_acesso", {
+          p_empresa_id: pedido.empresaId,
+          p_perfil: "vendedor",
+        })
+      ).error,
+    ).toBeNull();
+    const primeira = await full.client.rpc("reenviar_link_acesso", {
+      p_empresa_id: pedido.empresaId,
+    });
+    expect(primeira.error).toBeNull();
+    const segunda = await full.client.rpc("reenviar_link_acesso", {
+      p_empresa_id: pedido.empresaId,
+    });
+    expect(segunda.error).toBeNull();
+    expect(segunda.data).not.toBe(primeira.data);
+
+    const { data: fullEmissoes } = await full.client
+      .from("acesso_emissoes")
+      .select("outbox_id, status, numero")
+      .eq("empresa_id", pedido.empresaId)
+      .order("numero");
+    expect(fullEmissoes).toEqual([
+      { outbox_id: primeira.data, status: "invalidada", numero: 1 },
+      { outbox_id: segunda.data, status: "novo", numero: 2 },
+    ]);
+
+    const { data: matrizOculta, error: matrizSelectError } = await matriz
+      .from("acesso_emissoes")
+      .select("id")
+      .eq("empresa_id", pedido.empresaId);
+    expect(matrizSelectError).toBeNull();
+    expect(matrizOculta).toEqual([]);
+    const matrizReenvio = await matriz.rpc("reenviar_link_acesso", {
+      p_empresa_id: pedido.empresaId,
+    });
+    expect(matrizReenvio.error?.message).toContain("não permite reenviar");
+  });
+
+  test("versão da emissão anterior não ativa o acesso depois do reenvio", async () => {
+    const pedido = await criarPedidoPendente("emissao-fencing");
+    await matriz.rpc("aprovar_acesso", { p_empresa_id: pedido.empresaId, p_perfil: "master" });
+    const primeira = await matriz.rpc("reenviar_link_acesso", { p_empresa_id: pedido.empresaId });
+    expect(primeira.error).toBeNull();
+    const { data: emissaoAntiga } = await admin
+      .from("acesso_emissoes")
+      .select("id,numero")
+      .eq("outbox_id", primeira.data as string)
+      .single();
+    await admin
+      .from("acesso_emissoes")
+      .update({ status: "pendente", envio_confirmado_em: new Date().toISOString() })
+      .eq("id", emissaoAntiga!.id);
+
+    const segunda = await matriz.rpc("reenviar_link_acesso", { p_empresa_id: pedido.empresaId });
+    expect(segunda.error).toBeNull();
+    const { data: emissaoAtual } = await admin
+      .from("acesso_emissoes")
+      .select("id,numero")
+      .eq("outbox_id", segunda.data as string)
+      .single();
+    await admin
+      .from("acesso_emissoes")
+      .update({ status: "pendente", envio_confirmado_em: new Date().toISOString() })
+      .eq("id", emissaoAtual!.id);
+
+    const antiga = await pedido.client.rpc("ativar_acesso_apos_criar_senha", {
+      p_emissao_id: emissaoAntiga!.id,
+      p_versao: emissaoAntiga!.numero,
+    });
+    expect(antiga.error?.message).toContain("link de acesso inválido, substituído");
+    const atual = await pedido.client.rpc("ativar_acesso_apos_criar_senha", {
+      p_emissao_id: emissaoAtual!.id,
+      p_versao: emissaoAtual!.numero,
+    });
+    expect(atual.error).toBeNull();
+    expect(atual.data).toBe(emissaoAtual!.id);
+  });
+
+  test("interleaving claim -> reenvio é serializado e o dispatcher antigo não alcança GoTrue", async () => {
+    const pedido = await criarPedidoPendente("emissao-toctou-reenvio");
+    await matriz.rpc("aprovar_acesso", { p_empresa_id: pedido.empresaId, p_perfil: "master" });
+    const primeira = await matriz.rpc("reenviar_link_acesso", { p_empresa_id: pedido.empresaId });
+    expect(primeira.error).toBeNull();
+
+    // Simula exatamente o estado persistente entre o claim do dispatcher e o
+    // generateLink: a emissão ainda é nova, mas a outbox já possui um lease.
+    const claim = await matriz.rpc("marcar_email_outbox_enviando", {
+      p_outbox_id: primeira.data as string,
+    });
+    expect(claim.error).toBeNull();
+    const leaseToken = (claim.data as { lease_token: string }).lease_token;
+
+    const duranteGeracao = await matriz.rpc("reenviar_link_acesso", {
+      p_empresa_id: pedido.empresaId,
+    });
+    expect(duranteGeracao.error?.message).toContain("geração do link de acesso está em andamento");
+
+    // O contrato antigo continua válido somente porque nenhuma nova emissão
+    // conseguiu cruzar o lease. Ao encerrar a tentativa, a reemissão volta a
+    // ser possível e a emissão anterior é fenced para a ativação.
+    const contrato = await admin.rpc("obter_contrato_link_acesso", {
+      p_outbox_id: primeira.data as string,
+      p_lease_token: leaseToken,
+    });
+    expect(contrato.error).toBeNull();
+
+    const finalizacao = await admin.rpc("finalizar_email_outbox", {
+      p_outbox_id: primeira.data as string,
+      p_lease_token: leaseToken,
+      p_resultado: "enviado",
+      p_provider_id: "resend-toctou-serializado",
+    });
+    expect(finalizacao.error).toBeNull();
+
+    const segunda = await matriz.rpc("reenviar_link_acesso", { p_empresa_id: pedido.empresaId });
+    expect(segunda.error).toBeNull();
+    expect(segunda.data).not.toBe(primeira.data);
+
+    // A segunda metade determinística da interleaving: um dispatcher antigo
+    // atrasado não consegue renovar o claim nem obter contrato para generateLink
+    // depois que a reemissão venceu e invalidou a emissão anterior.
+    const claimAntigo = await matriz.rpc("marcar_email_outbox_enviando", {
+      p_outbox_id: primeira.data as string,
+    });
+    expect(claimAntigo.error?.message).toContain("e-mail indisponível");
+    const contratoAntigo = await admin.rpc("obter_contrato_link_acesso", {
+      p_outbox_id: primeira.data as string,
+      p_lease_token: leaseToken,
+    });
+    expect(contratoAntigo.error?.message).toContain(
+      "emissão de acesso substituída ou indisponível",
+    );
+
+    const { data: emissaoAntiga } = await admin
+      .from("acesso_emissoes")
+      .select("id, numero, status")
+      .eq("outbox_id", primeira.data as string)
+      .single();
+    expect(emissaoAntiga?.status).toBe("invalidada");
+    const antiga = await pedido.client.rpc("ativar_acesso_apos_criar_senha", {
+      p_emissao_id: emissaoAntiga!.id,
+      p_versao: emissaoAntiga!.numero,
+    });
+    expect(antiga.error?.message).toContain("link de acesso inválido, substituído");
+  });
+
+  test("perfil legado já ativo não recebe reemissão", async () => {
+    const pedido = await criarPedidoPendente("emissao-legado-ativo");
+    await matriz.rpc("aprovar_acesso", { p_empresa_id: pedido.empresaId, p_perfil: "master" });
+    const { data: historico, error: historicoError } = await admin
+      .from("email_outbox")
+      .insert({
+        empresa_id: pedido.empresaId,
+        tipo: "boas_vindas_herdada",
+        destinatario: pedido.email,
+        payload: { origem: "teste_legado" },
+        status: "enviado",
+        criado_por: pedido.userId,
+        enviado_em: new Date().toISOString(),
+        provider_id: "historico-teste",
+      })
+      .select("id")
+      .single();
+    expect(historicoError).toBeNull();
+    const { error: emissaoError } = await admin.from("acesso_emissoes").insert({
+      empresa_id: pedido.empresaId,
+      profile_id: pedido.userId,
+      outbox_id: historico!.id,
+      numero: 1,
+      status: "ativo",
+      criado_por: pedido.userId,
+      envio_confirmado_em: new Date().toISOString(),
+      ativado_em: new Date().toISOString(),
+    });
+    expect(emissaoError).toBeNull();
+
+    const reenvio = await matriz.rpc("reenviar_link_acesso", { p_empresa_id: pedido.empresaId });
+    expect(reenvio.error?.message).toContain("acesso já está ativo");
+  });
+
+  test("falha explícita não libera acesso e reenvio invalida a emissão que falhou", async () => {
+    const pedido = await criarPedidoPendente("emissao-falha");
+    await matriz.rpc("aprovar_acesso", { p_empresa_id: pedido.empresaId, p_perfil: "master" });
+    const primeira = await matriz.rpc("reenviar_link_acesso", { p_empresa_id: pedido.empresaId });
+    expect(primeira.error).toBeNull();
+
+    const claim = await matriz.rpc("marcar_email_outbox_enviando", {
+      p_outbox_id: primeira.data as string,
+    });
+    const falha = await admin.rpc("finalizar_email_outbox", {
+      p_outbox_id: primeira.data as string,
+      p_lease_token: (claim.data as { lease_token: string }).lease_token,
+      p_resultado: "falha_explicita",
+      p_erro: "destinatário recusado",
+    });
+    expect(falha.error).toBeNull();
+
+    const { data: aindaNovo } = await pedido.client
+      .from("acesso_emissoes")
+      .select("status, envio_confirmado_em")
+      .eq("outbox_id", primeira.data as string)
+      .single();
+    expect(aindaNovo).toEqual({ status: "novo", envio_confirmado_em: null });
+    expect(
+      (
+        await pedido.client.rpc("ativar_acesso_apos_criar_senha", {
+          p_emissao_id: crypto.randomUUID(),
+          p_versao: 1,
+        })
+      ).error?.message,
+    ).toContain("link de acesso inválido, substituído ou já utilizado");
+
+    const segunda = await matriz.rpc("reenviar_link_acesso", { p_empresa_id: pedido.empresaId });
+    expect(segunda.error).toBeNull();
+    const { data: emissoes } = await matriz
+      .from("acesso_emissoes")
+      .select("outbox_id, status, numero")
+      .eq("empresa_id", pedido.empresaId)
+      .order("numero");
+    expect(emissoes).toEqual([
+      { outbox_id: primeira.data, status: "invalidada", numero: 1 },
+      { outbox_id: segunda.data, status: "novo", numero: 2 },
+    ]);
+  });
+
+  test("link confirmado há mais de 48 horas continua pendente, mas pode ser reemitido", async () => {
+    const pedido = await criarPedidoPendente("emissao-expirada");
+    await matriz.rpc("aprovar_acesso", { p_empresa_id: pedido.empresaId, p_perfil: "master" });
+    const primeira = await matriz.rpc("reenviar_link_acesso", { p_empresa_id: pedido.empresaId });
+    const claim = await matriz.rpc("marcar_email_outbox_enviando", {
+      p_outbox_id: primeira.data as string,
+    });
+    await admin.rpc("finalizar_email_outbox", {
+      p_outbox_id: primeira.data as string,
+      p_lease_token: (claim.data as { lease_token: string }).lease_token,
+      p_resultado: "enviado",
+      p_provider_id: "resend-expirado",
+    });
+    const expiradoEm = new Date(Date.now() - 48 * 60 * 60 * 1000 - 1_000).toISOString();
+    const { error: ajustarExpiracao } = await admin
+      .from("acesso_emissoes")
+      .update({ envio_confirmado_em: expiradoEm })
+      .eq("outbox_id", primeira.data as string);
+    expect(ajustarExpiracao).toBeNull();
+
+    const { data: pendenteExpirada } = await pedido.client
+      .from("acesso_emissoes")
+      .select("status, envio_confirmado_em")
+      .eq("outbox_id", primeira.data as string)
+      .single();
+    expect(pendenteExpirada?.status).toBe("pendente");
+    expect(new Date(pendenteExpirada?.envio_confirmado_em ?? 0).getTime()).toBe(
+      new Date(expiradoEm).getTime(),
+    );
+    const segunda = await matriz.rpc("reenviar_link_acesso", { p_empresa_id: pedido.empresaId });
+    expect(segunda.error).toBeNull();
   });
 });

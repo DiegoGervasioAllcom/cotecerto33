@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { criarLinkRecoveryE2E, limparUsuarioAuth } from "./provision";
+import { buscarEmissaoAcessoE2E, criarLinkRecoveryE2E, limparUsuarioAuth } from "./provision";
 
 test.describe("Boas-vindas — criação de senha", () => {
   test("link ausente mostra estado inválido sem formulário", async ({ page }) => {
@@ -12,18 +12,25 @@ test.describe("Boas-vindas — criação de senha", () => {
     const fixture = await criarLinkRecoveryE2E();
     try {
       await page.goto(fixture.actionLink);
+      await expect(page).toHaveURL(new RegExp(`emissao=${fixture.emissaoId}.*versao=1`));
       await expect(page.getByText(/Link válido.*48 horas/i)).toBeVisible({ timeout: 15_000 });
       await page.locator("#nova-senha").fill("NovaSenha456");
       await page.locator("#confirmar-senha").fill("NovaSenha456");
       await page.getByRole("button", { name: /Criar senha e entrar/i }).click();
       await expect(page.getByText(/Senha criada!/i)).toBeVisible({ timeout: 15_000 });
+      await expect
+        .poll(() => buscarEmissaoAcessoE2E(fixture.emissaoId))
+        .toMatchObject({
+          status: "ativo",
+          ativado_em: expect.any(String),
+        });
 
       await page.goto(fixture.actionLink);
       await expect(page.getByText(/link é inválido, já foi usado ou expirou/i)).toBeVisible({
         timeout: 15_000,
       });
     } finally {
-      await limparUsuarioAuth(fixture.userId);
+      await limparUsuarioAuth(fixture.userId, fixture.empresaId);
     }
   });
 });

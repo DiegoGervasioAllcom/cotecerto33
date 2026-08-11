@@ -8,12 +8,16 @@
 // confiável é `empresas.modelo_id`: só uma franquia tem modelo de franquia
 // atribuído — o placeholder pessoal de um Vendedor Matriz nunca tem.
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Icon } from "./icon";
 import { GerenciarCargosModal } from "@/components/acessos/gerenciar-cargos-modal";
 import { PerformanceResumoModal } from "@/components/acessos/performance-resumo-modal";
 import { PERFORMANCE_STATUS_LABEL, PERFORMANCE_STATUS_CHIP } from "@/lib/performance-status";
 import { selectInBatches } from "@/lib/supabase-in-batches";
+import { fetchAccessLinkEmissions } from "@/lib/email-outbox-client";
+import { AccessLinkStatus, activationStatus } from "./access-link-status";
+import { useReenviarLinkAcesso } from "./hooks/useReenviarLinkAcesso";
 
 type CargoOpcao = { id: string; nome: string };
 
@@ -21,6 +25,7 @@ type PerformanceStatus = "ativo" | "atencao" | "travado" | null;
 
 type LinhaBase = {
   id: string;
+  empresaId: string;
   nome: string;
   sobrenome: string | null;
   email: string;
@@ -68,6 +73,16 @@ export function CadastrosMatrizTab({
   const [reloadTick, setReloadTick] = useState(0);
   const [gerenciandoCargos, setGerenciandoCargos] = useState(false);
   const [resumoPerf, setResumoPerf] = useState<LinhaBase | null>(null);
+  const emissoesQuery = useQuery({
+    queryKey: ["acesso-emissoes", linhas.map((l) => l.id)],
+    queryFn: () => fetchAccessLinkEmissions(linhas.map((l) => l.id)),
+    enabled: linhas.length > 0,
+  });
+  const reenviarLink = useReenviarLinkAcesso();
+  const emissaoPorProfile = useMemo(
+    () => new Map((emissoesQuery.data ?? []).map((emissao) => [emissao.profile_id, emissao])),
+    [emissoesQuery.data],
+  );
 
   useEffect(() => {
     let ativo = true;
@@ -184,6 +199,7 @@ export function CadastrosMatrizTab({
           : (overrideCountByProfile.get(p.id) ?? presetCountByCargo.get(p.cargo_id!) ?? 0);
         return {
           id: p.id,
+          empresaId: p.empresa_id,
           nome: p.nome,
           sobrenome: p.sobrenome,
           email: p.email,
@@ -391,6 +407,19 @@ export function CadastrosMatrizTab({
                             {PERFORMANCE_STATUS_LABEL[l.performanceStatus]}
                           </button>
                         )}
+                        {!desligado &&
+                          (() => {
+                            const emissao = emissaoPorProfile.get(l.id);
+                            return (
+                              <AccessLinkStatus
+                                status={activationStatus(emissao?.status)}
+                                envioConfirmadoEm={emissao?.envio_confirmado_em ?? null}
+                                numeroEmissao={emissao?.numero ?? null}
+                                disabled={reenviarLink.isPending}
+                                onEnviarNovoLink={() => reenviarLink.mutateAsync(l.empresaId)}
+                              />
+                            );
+                          })()}
                       </td>
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         <button

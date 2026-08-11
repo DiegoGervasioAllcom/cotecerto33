@@ -62,17 +62,73 @@ export async function criarLinkRecoveryE2E() {
     email_confirm: true,
   });
   if (userError || !user.user) throw new Error(`criar usuário recovery: ${userError?.message}`);
+  const { data: empresa, error: empresaError } = await admin
+    .from("empresas")
+    .insert({
+      nome: uniq("Acesso recovery E2E"),
+      tipo: "pj",
+      documento: uniqDoc(),
+      status: "aprovada",
+    })
+    .select("id")
+    .single();
+  if (empresaError || !empresa) throw new Error(`criar empresa recovery: ${empresaError?.message}`);
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ empresa_id: empresa.id, status: "aprovada" })
+    .eq("id", user.user.id);
+  if (profileError) throw new Error(`aprovar profile recovery: ${profileError.message}`);
+  const { data: outbox, error: outboxError } = await admin
+    .from("email_outbox")
+    .insert({
+      empresa_id: empresa.id,
+      tipo: "boas_vindas",
+      destinatario: email,
+      payload: {},
+      criado_por: user.user.id,
+    })
+    .select("id")
+    .single();
+  if (outboxError || !outbox) throw new Error(`criar emissão recovery: ${outboxError?.message}`);
+  const { data: emissao, error: emissaoError } = await admin
+    .from("acesso_emissoes")
+    .update({ status: "pendente", envio_confirmado_em: new Date().toISOString() })
+    .eq("outbox_id", outbox.id)
+    .select("id, numero")
+    .single();
+  if (emissaoError || !emissao)
+    throw new Error(`confirmar emissão recovery: ${emissaoError?.message}`);
+  const redirect = new globalThis.URL("http://localhost:8080/auth/criar-senha");
+  redirect.searchParams.set("emissao", emissao.id);
+  redirect.searchParams.set("versao", String(emissao.numero));
   const { data: link, error: linkError } = await admin.auth.admin.generateLink({
     type: "recovery",
     email,
-    options: { redirectTo: "http://localhost:8080/auth/criar-senha" },
+    options: { redirectTo: redirect.toString() },
   });
   if (linkError) throw new Error(`gerar recovery: ${linkError.message}`);
-  return { email, userId: user.user.id, actionLink: link.properties.action_link };
+  return {
+    email,
+    userId: user.user.id,
+    empresaId: empresa.id,
+    emissaoId: emissao.id,
+    actionLink: link.properties.action_link,
+  };
 }
 
-export async function limparUsuarioAuth(userId: string) {
+export async function buscarEmissaoAcessoE2E(emissaoId: string) {
+  const { data, error } = await admin
+    .from("acesso_emissoes")
+    .select("status, ativado_em")
+    .eq("id", emissaoId)
+    .single();
+  if (error) throw new Error(`buscar emissão recovery: ${error.message}`);
+  return data;
+}
+
+export async function limparUsuarioAuth(userId: string, empresaId?: string) {
   await admin.auth.admin.deleteUser(userId);
+  if (empresaId) await admin.from("empresas").delete().eq("id", empresaId);
 }
 
 /** Desliga uma persona durante o E2E, simulando a ação administrativa real. */

@@ -181,14 +181,6 @@ function Page() {
           {avisoCadastro}
         </div>
       )}
-      {fila.emailRetryPending && !fila.analisando && (
-        <div className="banner warn" style={{ marginBottom: 14 }}>
-          Há um e-mail de acesso aguardando envio.
-          <button className="btn btn-yellow" disabled={fila.busy} onClick={fila.retryEmail}>
-            {fila.busy ? "Reenviando…" : "Tentar enviar novamente"}
-          </button>
-        </div>
-      )}
 
       {isFranqFull && (
         <div
@@ -403,8 +395,6 @@ function Page() {
           onClose={fila.closeModal}
           onPendencia={fila.solicitarPendencia}
           onRecusar={fila.recusar}
-          onRetryEmail={fila.retryEmail}
-          emailRetryPending={fila.emailRetryPending}
           onLiberar={async (params, persist, tag) => {
             await fila.liberar(params, persist, tag);
             // A Full aprova o próprio vendedor por aqui — "Meu time" usa
