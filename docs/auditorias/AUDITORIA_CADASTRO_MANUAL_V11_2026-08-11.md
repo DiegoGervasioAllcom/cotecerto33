@@ -41,27 +41,29 @@ schema do servidor, então o erro aparece na hora, sem esperar a resposta da RPC
 máscara ao digitar em documento (`maskCpfCnpj`) e celular (`maskTelefone`), que antes eram texto
 livre sem formatação — mesmo padrão dos outros formulários de cadastro do app.
 
-### 3) Campo "Equipe" — só existia no `FullDirectModal`, removido
+### 3) Campo "Equipe" — removido e depois trazido de volta como select, igual ao protótipo
 
-`CadastroManualModal` nunca teve campo Equipe — nada a remover ali.
+`CadastroManualModal` nunca teve campo Equipe — nada a mudar ali.
 
-`FullDirectModal` tinha "Equipe" (texto livre) na etapa 2 (Configuração), enviado para
-`fn_cadastrar_vendedor_full` via `p_equipe`. Removido: campo da UI, chave do schema
-(`full-direct-schema.ts`) e do payload enviado (`full-vendedor.functions.ts`). `p_equipe` na RPC
-já tinha `default null` — não precisou de migration. Quem quiser dar equipe ao vendedor continua
-podendo fazer isso depois, pela tela "Configurar" (`FullMemberModal`, que não foi tocada).
+`FullDirectModal` tinha "Equipe" como texto livre. Numa primeira rodada, removi o campo a pedido.
+Comparando com o protótipo (`openCadDireto`, linha 8550), ele tem "Equipe" como **select** com
+duas opções fixas — "Novas Vendas" / "Remalho" — não texto livre. Voltei o campo, mas como select
+com essas duas opções (`EQUIPES_FULL` em `full-direct-schema.ts`), igual ao protótipo — só que
+mantendo a posição na etapa 2 (Configuração), já que a divisão em 2 etapas (identidade → config)
+é uma decisão de arquitetura anterior a esta auditoria, e o protótipo já teria a ideia de mandar
+`equipe`/leads/comissão para "a próxima tela" mesmo sendo, no protótipo, apenas uma sugestão.
+`p_equipe` na RPC (`fn_cadastrar_vendedor_full`) já tinha `default null` — não precisou de
+migration.
 
 ## Verificação
 
 - `tsc --noEmit`: limpo.
 - `eslint .`: 0 erros.
-- `vitest run tests/unit`: 363/363 (ajustei `full-direct-schema.test.ts`, removendo a chave
-  `equipe` do fixture — o schema não usa mais).
-- `playwright test tests/e2e/`: ajustei `franquia-full-v11-5c.spec.ts` (removi o `.fill()` do
-  campo Equipe na etapa de cadastro e a asserção `equipe: "Equipe Inicial"` no banco, já que a
-  etapa de criação não manda mais esse campo); os 2 testes que tocam o cadastro direto passam
-  isolados. 2 falhas pré-existentes e não relacionadas (poluição de dados do Supabase local
-  compartilhado entre worktrees) continuam ocorrendo — confirmado que já falhavam em `main`.
+- `vitest run tests/unit`: 363/363 (`full-direct-schema.test.ts` cobre o enum de Equipe e rejeita
+  valor fora da lista).
+- `playwright test tests/e2e/franquia-full-v11-5c.spec.ts -g "fluxo cadastro direto"`: passa
+  isolado, selecionando "Remalho" no select e confirmando no banco. 2 falhas pré-existentes e não
+  relacionadas (poluição de dados do Supabase local compartilhado entre worktrees) continuam
+  ocorrendo quando a suíte inteira roda junto — confirmado que já falhavam em `main`.
 - Verificação visual manual: `CadastroManualModal` (Matriz, bloco Externo) rejeita e-mail e
-  celular inválidos com mensagem imediata; `FullDirectModal` (Full) não mostra mais "Equipe" na
-  etapa de configuração.
+  celular inválidos com mensagem imediata.

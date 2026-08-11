@@ -27,6 +27,7 @@ const cadastroDiretoFullSchema = z.object({
     }
     return digits;
   }),
+  equipe: z.string().trim().max(120).optional(),
   leads_dia: z.number().int().min(0).max(1000).optional(),
   produtos: z.array(z.string().min(1)).max(100),
   canais: z.array(z.string().uuid()).max(100),
@@ -135,6 +136,7 @@ export const cadastrarVendedorFullDireto = createServerFn({ method: "POST" })
       p_email: data.email,
       p_cpf: data.cpf,
       p_celular: data.celular,
+      p_equipe: data.equipe || undefined,
       p_leads_dia: data.leads_dia,
       p_produtos: data.produtos,
       p_canais: data.canais,

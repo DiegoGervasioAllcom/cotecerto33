@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// Mesmas opções do protótipo (`openCadDireto`, select #xv_equipe).
+export const EQUIPES_FULL = ["Novas Vendas", "Remalho"] as const;
+
 export const cadastroDiretoIdentidadeSchema = z.object({
   nome: z.string().trim().min(2, "Informe o nome completo.").max(150),
   email: z.string().trim().email("Informe um e-mail válido.").max(254),
@@ -8,6 +11,7 @@ export const cadastroDiretoIdentidadeSchema = z.object({
 });
 
 export const cadastroDiretoFullSchema = cadastroDiretoIdentidadeSchema.extend({
+  equipe: z.enum(EQUIPES_FULL),
   leadsDia: z.coerce.number().int().min(0).max(1000),
   comissaoVenda: z.coerce.number().min(0).max(100),
   comissaoRenovacao: z.coerce.number().min(0).max(100),

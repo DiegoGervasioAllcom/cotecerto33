@@ -7,6 +7,7 @@ import { maskCpfCnpj, maskTelefone } from "@/lib/masks";
 import {
   cadastroDiretoFullSchema as schema,
   cadastroDiretoIdentidadeSchema,
+  EQUIPES_FULL,
 } from "./full-direct-schema";
 
 export function FullDirectModal({
@@ -20,6 +21,7 @@ export function FullDirectModal({
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [celular, setCelular] = useState("");
+  const [equipe, setEquipe] = useState<(typeof EQUIPES_FULL)[number]>(EQUIPES_FULL[0]);
   const [leadsDia, setLeadsDia] = useState("0");
   const [comissaoVenda, setComissaoVenda] = useState("0");
   const [comissaoRenovacao, setComissaoRenovacao] = useState("0");
@@ -35,6 +37,7 @@ export function FullDirectModal({
       email,
       cpf,
       celular,
+      equipe,
       leadsDia,
       comissaoVenda,
       comissaoRenovacao,
@@ -53,6 +56,7 @@ export function FullDirectModal({
           email: parsed.data.email,
           cpf: parsed.data.cpf,
           celular: parsed.data.celular,
+          equipe: parsed.data.equipe,
           leads_dia: parsed.data.leadsDia,
           produtos,
           canais,
@@ -155,6 +159,20 @@ export function FullDirectModal({
           {etapa === "configuracao" && (
             <>
               <div className="acc-grid" style={{ marginTop: 14 }}>
+                <div className="field-group">
+                  <label>Equipe</label>
+                  <select
+                    className="input"
+                    value={equipe}
+                    onChange={(e) => setEquipe(e.target.value as (typeof EQUIPES_FULL)[number])}
+                  >
+                    {EQUIPES_FULL.map((opcao) => (
+                      <option key={opcao} value={opcao}>
+                        {opcao}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="field-group">
                   <label>Leads · média/dia útil</label>
                   <input
