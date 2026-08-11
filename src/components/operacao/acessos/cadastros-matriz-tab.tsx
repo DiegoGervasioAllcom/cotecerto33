@@ -52,8 +52,11 @@ function diasHorarioLabel(
 
 export function CadastrosMatrizTab({
   onConfigurar,
+  onTotalChange,
 }: {
   onConfigurar: (profileId: string, isVendedorClt: boolean) => void;
+  /** Total de cadastros ATIVOS (sem desligados) — vai no "(N)" da aba, igual ao protótipo. */
+  onTotalChange?: (total: number) => void;
 }) {
   const [linhas, setLinhas] = useState<LinhaBase[]>([]);
   const [cargos, setCargos] = useState<CargoOpcao[]>([]);
@@ -202,6 +205,10 @@ export function CadastrosMatrizTab({
       ativo = false;
     };
   }, [reloadTick]);
+
+  useEffect(() => {
+    onTotalChange?.(linhas.filter((l) => !l.desligadoEm).length);
+  }, [linhas, onTotalChange]);
 
   const anos = useMemo(
     () =>
