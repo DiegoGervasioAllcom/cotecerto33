@@ -63,8 +63,6 @@ function Page() {
     reload,
     openAnalisar,
     closeModal,
-    emailRetryPending,
-    retryEmail,
     solicitarPendencia,
     recusar,
     liberar,
@@ -199,14 +197,6 @@ function Page() {
       {err && (
         <div className="banner alert" style={{ marginBottom: 14 }}>
           {err}
-        </div>
-      )}
-      {emailRetryPending && !analisando && (
-        <div className="banner warn" style={{ marginBottom: 14 }}>
-          Há um e-mail de acesso aguardando envio.
-          <button className="btn btn-yellow" disabled={busy} onClick={retryEmail}>
-            {busy ? "Reenviando…" : "Tentar enviar novamente"}
-          </button>
         </div>
       )}
 
@@ -385,8 +375,6 @@ function Page() {
           onClose={closeModal}
           onPendencia={solicitarPendencia}
           onRecusar={recusar}
-          onRetryEmail={retryEmail}
-          emailRetryPending={emailRetryPending}
           onLiberar={liberar}
           busy={busy}
         />

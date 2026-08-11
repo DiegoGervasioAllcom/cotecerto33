@@ -10,17 +10,22 @@
 // exclusão de Master com franquia ativa vinculada, ou franquia com vendedor
 // ativo na base, antes de cair em `admin_set_usuario_status`.
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Icon } from "./icon";
 import { PerformanceResumoModal } from "@/components/acessos/performance-resumo-modal";
 import { PERFORMANCE_STATUS_LABEL, PERFORMANCE_STATUS_CHIP } from "@/lib/performance-status";
 import { selectInBatches } from "@/lib/supabase-in-batches";
+import { fetchAccessLinkEmissions } from "@/lib/email-outbox-client";
+import { AccessLinkStatus, activationStatus } from "./access-link-status";
+import { useReenviarLinkAcesso } from "./hooks/useReenviarLinkAcesso";
 
 type Kind = "master" | "franquia" | "vendedor";
 type PerformanceStatus = "ativo" | "atencao" | "travado" | null;
 
 type LinhaRede = {
   id: string; // profile id — alvo de Configurar/Excluir
+  empresaId: string | null;
   kind: Kind;
   nome: string;
   info: string;
@@ -56,6 +61,16 @@ export function CadastrosRedeTab({
   const [reloadTick, setReloadTick] = useState(0);
   const [configurando, setConfigurando] = useState<LinhaRede | null>(null);
   const [resumoPerf, setResumoPerf] = useState<LinhaRede | null>(null);
+  const emissoesQuery = useQuery({
+    queryKey: ["acesso-emissoes", linhas.map((l) => l.id)],
+    queryFn: () => fetchAccessLinkEmissions(linhas.map((l) => l.id)),
+    enabled: linhas.length > 0,
+  });
+  const reenviarLink = useReenviarLinkAcesso();
+  const emissaoPorProfile = useMemo(
+    () => new Map((emissoesQuery.data ?? []).map((emissao) => [emissao.profile_id, emissao])),
+    [emissoesQuery.data],
+  );
 
   useEffect(() => {
     let ativo = true;
@@ -167,6 +182,7 @@ export function CadastrosRedeTab({
         const ano = anoDe(p.aprovada_em, p.created_at);
         const base = {
           id: p.id,
+          empresaId: p.empresa_id,
           nome: p.nome,
           ano,
           desligadoEm: p.desligado_em,
@@ -397,6 +413,20 @@ export function CadastrosRedeTab({
                               {PERFORMANCE_STATUS_LABEL[l.performanceStatus]}
                             </button>
                           )}
+                        {!desligado &&
+                          l.empresaId &&
+                          (() => {
+                            const emissao = emissaoPorProfile.get(l.id);
+                            return (
+                              <AccessLinkStatus
+                                status={activationStatus(emissao?.status)}
+                                envioConfirmadoEm={emissao?.envio_confirmado_em ?? null}
+                                numeroEmissao={emissao?.numero ?? null}
+                                disabled={reenviarLink.isPending}
+                                onEnviarNovoLink={() => reenviarLink.mutateAsync(l.empresaId!)}
+                              />
+                            );
+                          })()}
                       </td>
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         <button

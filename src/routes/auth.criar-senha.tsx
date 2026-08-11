@@ -18,6 +18,10 @@ function CriarSenhaPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
+  const query = new URLSearchParams(window.location.search);
+  const emissaoId = query.get("emissao");
+  const versaoRaw = query.get("versao");
+  const versao = versaoRaw && /^\d+$/.test(versaoRaw) ? Number(versaoRaw) : null;
   const {
     register,
     handleSubmit,
@@ -74,9 +78,27 @@ function CriarSenhaPage() {
 
   async function submit(values: CriarSenhaForm) {
     setSubmitError(null);
+    if (!emissaoId || !versao || !Number.isSafeInteger(versao)) {
+      await supabase.auth.signOut();
+      setValidLink(false);
+      setSubmitError("Este link foi substituído. Solicite um novo e-mail de acesso.");
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password: values.senha });
     if (error) {
       setSubmitError(error.message);
+      return;
+    }
+    // O GoTrue confirma a senha; a emissão de acesso só pode ser marcada como
+    // ativa pelo próprio titular, já autenticado na sessão de recovery.
+    const { error: activationError } = await supabase.rpc("ativar_acesso_apos_criar_senha", {
+      p_emissao_id: emissaoId,
+      p_versao: versao,
+    });
+    if (activationError) {
+      setSubmitError(
+        "Senha criada, mas não foi possível confirmar a ativação. Tente entrar novamente ou contate o responsável pelos acessos.",
+      );
       return;
     }
     await supabase.auth.signOut();

@@ -13,7 +13,6 @@ import type { Pendente } from "../types";
 import type { AprovarAcessoParams } from "@/components/acessos/classificar-acesso-modal";
 import { fetchPendentes, mapPendentes } from "./pendentes-query";
 import { dispatchAccessEmail } from "@/lib/email.functions";
-import { findRetryableAccessEmail } from "@/lib/email-outbox-client";
 
 export function useFilaFranquiaData(enabled = true) {
   const [pendentes, setPendentes] = useState<Pendente[]>([]);
@@ -22,7 +21,6 @@ export function useFilaFranquiaData(enabled = true) {
   const [analisando, setAnalisando] = useState<Pendente | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ msg: string; kind: "ok" | "alert" } | null>(null);
-  const [emailRetryOutboxId, setEmailRetryOutboxId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setErr(null);
@@ -30,11 +28,6 @@ export function useFilaFranquiaData(enabled = true) {
     const { data, error } = await fetchPendentes();
     if (error) setErr(error.message);
     setPendentes(mapPendentes(data));
-    try {
-      setEmailRetryOutboxId(await findRetryableAccessEmail());
-    } catch (retryError) {
-      setErr(retryError instanceof Error ? retryError.message : "Falha ao consultar e-mails.");
-    }
     setLoading(false);
   }, []);
 
@@ -64,22 +57,6 @@ export function useFilaFranquiaData(enabled = true) {
     await dispatchAccessEmail({ data: { outbox_id: outboxId, caller_token: token } });
   }
 
-  async function retryEmail() {
-    if (!emailRetryOutboxId) return;
-    setBusy(true);
-    try {
-      await enviarOutbox(emailRetryOutboxId);
-      setEmailRetryOutboxId(null);
-      setToast({ msg: "E-mail enviado.", kind: "ok" });
-      closeModal();
-      await reload();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Falha ao reenviar o e-mail.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function solicitarPendencia(motivo: string) {
     if (!analisando) return;
     setBusy(true);
@@ -94,12 +71,10 @@ export function useFilaFranquiaData(enabled = true) {
     }
     try {
       await enviarOutbox(String(data));
-      setEmailRetryOutboxId(null);
       setToast({ msg: `Pendência enviada · ${analisando.nome}`, kind: "ok" });
       closeModal();
       await reload();
     } catch (e) {
-      setEmailRetryOutboxId(String(data));
       setErr(
         `Pendência registrada, mas o e-mail não foi enviado: ${e instanceof Error ? e.message : "erro desconhecido"}`,
       );
@@ -122,12 +97,10 @@ export function useFilaFranquiaData(enabled = true) {
     }
     try {
       await enviarOutbox(String(data));
-      setEmailRetryOutboxId(null);
       setToast({ msg: `Cadastro recusado e e-mail enviado · ${analisando.nome}`, kind: "alert" });
       closeModal();
       await reload();
     } catch (e) {
-      setEmailRetryOutboxId(String(data));
       setErr(
         `Cadastro recusado, mas o e-mail não foi enviado: ${e instanceof Error ? e.message : "erro desconhecido"}`,
       );
@@ -170,7 +143,6 @@ export function useFilaFranquiaData(enabled = true) {
     try {
       await enviarOutbox(String(outboxId));
     } catch (e) {
-      setEmailRetryOutboxId(String(outboxId));
       setBusy(false);
       setErr(
         `Acesso aprovado, mas o e-mail de boas-vindas não foi enviado: ${e instanceof Error ? e.message : "erro desconhecido"}`,
@@ -194,8 +166,6 @@ export function useFilaFranquiaData(enabled = true) {
     toast,
     openAnalisar,
     closeModal,
-    emailRetryPending: emailRetryOutboxId !== null,
-    retryEmail,
     solicitarPendencia,
     recusar,
     liberar,

@@ -3,6 +3,95 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      acesso_emissoes: {
+        Row: {
+          ativado_em: string | null;
+          criado_em: string;
+          criado_por: string;
+          empresa_id: string;
+          envio_confirmado_em: string | null;
+          id: string;
+          numero: number;
+          outbox_id: string;
+          profile_id: string;
+          status: string;
+        };
+        Insert: {
+          ativado_em?: string | null;
+          criado_em?: string;
+          criado_por: string;
+          empresa_id: string;
+          envio_confirmado_em?: string | null;
+          id?: string;
+          numero: number;
+          outbox_id: string;
+          profile_id: string;
+          status?: string;
+        };
+        Update: {
+          ativado_em?: string | null;
+          criado_em?: string;
+          criado_por?: string;
+          empresa_id?: string;
+          envio_confirmado_em?: string | null;
+          id?: string;
+          numero?: number;
+          outbox_id?: string;
+          profile_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "acesso_emissoes_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "acesso_emissoes_criado_por_fkey";
+            columns: ["criado_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "acesso_emissoes_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "acesso_emissoes_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+          {
+            foreignKeyName: "acesso_emissoes_outbox_id_fkey";
+            columns: ["outbox_id"];
+            isOneToOne: true;
+            referencedRelation: "email_outbox";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "acesso_emissoes_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "acesso_emissoes_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       areas: {
         Row: {
           chave: string;
@@ -3684,6 +3773,10 @@ export type Database = {
       aprovar_empresa: { Args: { p_empresa_id: string }; Returns: undefined };
       arquivar_lead: { Args: { p_lead: string }; Returns: undefined };
       assumir_lead: { Args: { p_lead_id: string }; Returns: string };
+      ativar_acesso_apos_criar_senha: {
+        Args: { p_emissao_id: string; p_versao: number };
+        Returns: string;
+      };
       avaliar_perda_lead: {
         Args: { p_decisao: string; p_lead_id: string; p_observacao?: string };
         Returns: undefined;
@@ -3962,6 +4055,10 @@ export type Database = {
         Returns: boolean;
       };
       fn_produtos_padrao: { Args: { _bloco: string }; Returns: string[] };
+      fn_profile_acesso_por_empresa: {
+        Args: { p_empresa_id: string };
+        Returns: string;
+      };
       fn_rede_subordinados: {
         Args: { p_user_id: string };
         Returns: {
@@ -4230,6 +4327,10 @@ export type Database = {
           inicio: string;
         }[];
       };
+      obter_contrato_link_acesso: {
+        Args: { p_lease_token: string; p_outbox_id: string };
+        Returns: Json;
+      };
       presence_set: {
         Args: { p_status: string; p_user_agent?: string };
         Returns: undefined;
@@ -4252,6 +4353,7 @@ export type Database = {
         Args: { p_empresa: string; p_lead: string; p_responsavel?: string };
         Returns: undefined;
       };
+      reenviar_link_acesso: { Args: { p_empresa_id: string }; Returns: string };
       registrar_premios_quiver: {
         Args: { p_cotacao_id: string; p_payload: Json };
         Returns: undefined;

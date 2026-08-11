@@ -44,4 +44,39 @@ describe("GoTrue local — link de criação de senha", () => {
     });
     expect(login.error).toBeNull();
   });
+
+  test("novo recovery revoga o recovery anterior para o mesmo usuário", async () => {
+    const pessoa = await criarUsuario(`${uniq("recovery-reemissao")}@teste.local`, "Inicial123");
+    await pessoa.client.auth.signOut();
+
+    const primeira = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email: pessoa.email,
+      options: { redirectTo: "http://localhost:8080/auth/criar-senha?emissao=a&versao=1" },
+    });
+    const segunda = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email: pessoa.email,
+      options: { redirectTo: "http://localhost:8080/auth/criar-senha?emissao=b&versao=2" },
+    });
+    expect(primeira.error).toBeNull();
+    expect(segunda.error).toBeNull();
+    if (!primeira.data.properties || !segunda.data.properties) {
+      throw new Error("GoTrue não retornou os recovery links");
+    }
+
+    const antigo = await anonClient().auth.verifyOtp({
+      type: "recovery",
+      token_hash: primeira.data.properties.hashed_token,
+    });
+    expect(antigo.error).not.toBeNull();
+
+    const recovery = anonClient();
+    const atual = await recovery.auth.verifyOtp({
+      type: "recovery",
+      token_hash: segunda.data.properties.hashed_token,
+    });
+    expect(atual.error).toBeNull();
+    await recovery.auth.signOut();
+  });
 });
