@@ -13,6 +13,7 @@ import { Icon } from "./icon";
 import { GerenciarCargosModal } from "@/components/acessos/gerenciar-cargos-modal";
 import { PerformanceResumoModal } from "@/components/acessos/performance-resumo-modal";
 import { PERFORMANCE_STATUS_LABEL, PERFORMANCE_STATUS_CHIP } from "@/lib/performance-status";
+import { selectInBatches } from "@/lib/supabase-in-batches";
 
 type CargoOpcao = { id: string; nome: string };
 
@@ -112,26 +113,23 @@ export function CadastrosMatrizTab({
       // cargo cuja empresa vinculada não tem modelo de franquia (Vendedor
       // Matriz — nunca é dono/vinculado de uma franquia).
       const empresaIds = profiles.map((p) => p.empresa_id);
-      const { data: empresasData } = await supabase
-        .from("empresas")
-        .select("id,modelo_id")
-        .in("id", empresaIds.length ? empresaIds : ["00000000-0000-0000-0000-000000000000"]);
+      const { data: empresasData, error: empresasError } = await selectInBatches(
+        empresaIds,
+        (lote) => supabase.from("empresas").select("id,modelo_id").in("id", lote),
+      );
       const modeloPorEmpresa = new Map(
-        ((empresasData ?? []) as { id: string; modelo_id: string | null }[]).map((e) => [
+        (empresasData as { id: string; modelo_id: string | null }[]).map((e) => [
           e.id,
           e.modelo_id,
         ]),
       );
 
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("user_id,role")
-        .in(
-          "user_id",
-          profiles.map((p) => p.id),
-        );
+      const { data: rolesData, error: rolesError } = await selectInBatches(
+        profiles.map((p) => p.id),
+        (lote) => supabase.from("user_roles").select("user_id,role").in("user_id", lote),
+      );
       const roleByUser = new Map(
-        ((rolesData ?? []) as { user_id: string; role: string }[]).map((r) => [r.user_id, r.role]),
+        (rolesData as { user_id: string; role: string }[]).map((r) => [r.user_id, r.role]),
       );
 
       const internos = profiles.filter((p) => {
@@ -142,15 +140,20 @@ export function CadastrosMatrizTab({
 
       // Áreas: override por pessoa (profile_areas) substitui o preset por
       // completo (fn_areas_do_usuario) — mesma regra aqui.
-      const { data: overridesData } = await supabase
-        .from("profile_areas")
-        .select("profile_id,area_chave")
-        .in(
-          "profile_id",
-          internos.map((p) => p.id),
+      const { data: overridesData, error: overridesError } = await selectInBatches(
+        internos.map((p) => p.id),
+        (lote) =>
+          supabase.from("profile_areas").select("profile_id,area_chave").in("profile_id", lote),
+      );
+      if (empresasError || rolesError || overridesError) {
+        setErr(
+          `Alguns cadastros podem não ter carregado (base grande demais para uma consulta só): ${
+            (empresasError ?? rolesError ?? overridesError)?.message
+          }`,
         );
+      }
       const overrideCountByProfile = new Map<string, number>();
-      for (const o of (overridesData ?? []) as { profile_id: string; area_chave: string }[]) {
+      for (const o of overridesData as { profile_id: string; area_chave: string }[]) {
         overrideCountByProfile.set(
           o.profile_id,
           (overrideCountByProfile.get(o.profile_id) ?? 0) + 1,

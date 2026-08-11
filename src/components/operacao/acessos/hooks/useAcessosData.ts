@@ -21,6 +21,7 @@ import type { AprovarAcessoParams } from "@/components/acessos/classificar-acess
 import { fetchPendentes, mapPendentes } from "./pendentes-query";
 import { dispatchAccessEmail } from "@/lib/email.functions";
 import { findRetryableAccessEmail } from "@/lib/email-outbox-client";
+import { selectInBatches } from "@/lib/supabase-in-batches";
 
 type DesligBruto = {
   id: string;
@@ -35,32 +36,36 @@ type DesligBruto = {
 // Mesmo critério de `CadastrosMatrizTab` para separar time interno de rede
 // externa: cargo_id definido, ou role='vendedor' numa empresa sem modelo de
 // franquia (Vendedor Matriz — nunca é dono/vinculado de uma franquia).
-async function classificarDeslig(perfis: DesligBruto[]): Promise<Deslig[]> {
+async function classificarDeslig(
+  perfis: DesligBruto[],
+  onError: (mensagem: string) => void,
+): Promise<Deslig[]> {
   if (perfis.length === 0) return [];
   const empresaIds = [
     ...new Set(perfis.map((p) => p.empresa_id).filter((id): id is string => !!id)),
   ];
   const [empresasRes, rolesRes] = await Promise.all([
-    supabase
-      .from("empresas")
-      .select("id,modelo_id")
-      .in("id", empresaIds.length ? empresaIds : ["00000000-0000-0000-0000-000000000000"]),
-    supabase
-      .from("user_roles")
-      .select("user_id,role")
-      .in(
-        "user_id",
-        perfis.map((p) => p.id),
-      ),
+    selectInBatches(empresaIds, (lote) =>
+      supabase.from("empresas").select("id,modelo_id").in("id", lote),
+    ),
+    selectInBatches(
+      perfis.map((p) => p.id),
+      (lote) => supabase.from("user_roles").select("user_id,role").in("user_id", lote),
+    ),
   ]);
+  if (empresasRes.error || rolesRes.error) {
+    onError(
+      `Não foi possível carregar todos os desligamentos: ${(empresasRes.error ?? rolesRes.error)?.message}`,
+    );
+  }
   const modeloPorEmpresa = new Map(
-    ((empresasRes.data ?? []) as { id: string; modelo_id: string | null }[]).map((e) => [
+    (empresasRes.data as { id: string; modelo_id: string | null }[]).map((e) => [
       e.id,
       e.modelo_id,
     ]),
   );
   const roleByUser = new Map(
-    ((rolesRes.data ?? []) as { user_id: string; role: string }[]).map((r) => [r.user_id, r.role]),
+    (rolesRes.data as { user_id: string; role: string }[]).map((r) => [r.user_id, r.role]),
   );
   return perfis.map((p) => {
     const interno =
@@ -107,7 +112,7 @@ export function useAcessosData(enabled = true) {
     ]);
     if (p.error) setErr(p.error.message);
     setPendentes(mapPendentes(p.data));
-    setDeslig(await classificarDeslig((d.data ?? []) as DesligBruto[]));
+    setDeslig(await classificarDeslig((d.data ?? []) as DesligBruto[], setErr));
     const modelosData = ((m.data ?? []) as Modelo[]).map((x) => ({
       ...x,
       params: (x.params ?? {}) as ModeloParams,
@@ -119,18 +124,22 @@ export function useAcessosData(enabled = true) {
       (r) => r.role === "master" || r.role === "supervisor",
     );
     if (roleIds.length > 0) {
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id,nome")
-        .in(
-          "id",
-          roleIds.map((r) => r.user_id),
-        )
-        .eq("status", "aprovada")
-        .is("desligado_em", null);
+      const { data: profs, error: profsError } = await selectInBatches(
+        roleIds.map((r) => r.user_id),
+        (lote) =>
+          supabase
+            .from("profiles")
+            .select("id,nome")
+            .in("id", lote)
+            .eq("status", "aprovada")
+            .is("desligado_em", null),
+      );
+      if (profsError) {
+        setErr(`Não foi possível carregar todos os superiores elegíveis: ${profsError.message}`);
+      }
       const roleById = new Map(roleIds.map((r) => [r.user_id, r.role as "master" | "supervisor"]));
       setSuperiores(
-        ((profs ?? []) as Array<{ id: string; nome: string }>).map((pr) => ({
+        (profs as Array<{ id: string; nome: string }>).map((pr) => ({
           id: pr.id,
           nome: pr.nome,
           role: roleById.get(pr.id) ?? "master",
@@ -154,15 +163,15 @@ export function useAcessosData(enabled = true) {
       modelo_id: string | null;
     }>;
     if (franquias.length > 0) {
-      const { data: donos } = await supabase
-        .from("profiles")
-        .select("id,empresa_id")
-        .in(
-          "empresa_id",
-          franquias.map((f) => f.id),
-        );
+      const { data: donos, error: donosError } = await selectInBatches(
+        franquias.map((f) => f.id),
+        (lote) => supabase.from("profiles").select("id,empresa_id").in("empresa_id", lote),
+      );
+      if (donosError) {
+        setErr(`Não foi possível carregar todos os donos de franquia: ${donosError.message}`);
+      }
       const donoByEmpresa = new Map(
-        ((donos ?? []) as Array<{ id: string; empresa_id: string | null }>).map((pr) => [
+        (donos as Array<{ id: string; empresa_id: string | null }>).map((pr) => [
           pr.empresa_id,
           pr.id,
         ]),

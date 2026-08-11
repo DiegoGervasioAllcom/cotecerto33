@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Icon } from "./icon";
 import { PerformanceResumoModal } from "@/components/acessos/performance-resumo-modal";
 import { PERFORMANCE_STATUS_LABEL, PERFORMANCE_STATUS_CHIP } from "@/lib/performance-status";
+import { selectInBatches } from "@/lib/supabase-in-batches";
 
 type Kind = "master" | "franquia" | "vendedor";
 type PerformanceStatus = "ativo" | "atencao" | "travado" | null;
@@ -88,13 +89,15 @@ export function CadastrosRedeTab() {
         return;
       }
 
-      const { data: profilesData, error: profilesErr } = await supabase
-        .from("profiles")
-        .select(
-          "id,nome,email,empresa_id,equipe,aprovada_em,created_at,desligado_em,status,performance_status,superior_id",
-        )
-        .in("id", profileIds)
-        .in("status", ["aprovada", "suspensa"]);
+      const { data: profilesData, error: profilesErr } = await selectInBatches(profileIds, (lote) =>
+        supabase
+          .from("profiles")
+          .select(
+            "id,nome,email,empresa_id,equipe,aprovada_em,created_at,desligado_em,status,performance_status,superior_id",
+          )
+          .in("id", lote)
+          .in("status", ["aprovada", "suspensa"]),
+      );
       if (!ativo) return;
       if (profilesErr) {
         setErr(profilesErr.message);
@@ -114,15 +117,11 @@ export function CadastrosRedeTab() {
         performance_status: PerformanceStatus;
         superior_id: string | null;
       };
-      const profiles = (profilesData ?? []) as ProfileBruto[];
+      const profiles = profilesData as ProfileBruto[];
       const empresaIds = Array.from(
         new Set(profiles.map((p) => p.empresa_id).filter((id): id is string => !!id)),
       );
 
-      const { data: empresasData } = await supabase
-        .from("empresas")
-        .select("id,nome,cidade,uf,modelo_id")
-        .in("id", empresaIds.length ? empresaIds : ["00000000-0000-0000-0000-000000000000"]);
       type EmpresaBruta = {
         id: string;
         nome: string;
@@ -130,7 +129,15 @@ export function CadastrosRedeTab() {
         uf: string | null;
         modelo_id: string | null;
       };
-      const empresas = (empresasData ?? []) as EmpresaBruta[];
+      const { data: empresasData, error: empresasErr } = await selectInBatches(empresaIds, (lote) =>
+        supabase.from("empresas").select("id,nome,cidade,uf,modelo_id").in("id", lote),
+      );
+      if (empresasErr) {
+        setErr(
+          `Alguns cadastros podem não ter carregado (base grande demais para uma consulta só): ${empresasErr.message}`,
+        );
+      }
+      const empresas = empresasData as EmpresaBruta[];
       const empresaById = new Map(empresas.map((e) => [e.id, e]));
 
       // Dono de cada franquia = quem esse franqueado reporta (profiles.superior_id)
