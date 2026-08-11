@@ -91,8 +91,10 @@ export function FullDirectModal({
           <div className="clt-note">
             <Icon id="info" size={15} />
             <div>
-              O vendedor será criado diretamente na sua franquia e receberá um link para criar a
-              própria senha.
+              Cadastro <strong>direto</strong> — autonomia da Full. Na próxima etapa você configura
+              equipe, leads, produtos e canais; só ao concluir ele recebe o e-mail{" "}
+              <strong>Boas-vindas Supper</strong> para criar a senha. Prefira o{" "}
+              <strong>Convite Supper</strong>: quem preenche os dados é ele.
             </div>
           </div>
           <div className="toggle toggle-sub" style={{ marginTop: 14, marginBottom: 14 }}>

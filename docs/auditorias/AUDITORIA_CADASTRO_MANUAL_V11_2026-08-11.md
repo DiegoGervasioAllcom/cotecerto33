@@ -55,6 +55,20 @@ mantendo a posição na etapa 2 (Configuração), já que a divisão em 2 etapas
 `p_equipe` na RPC (`fn_cadastrar_vendedor_full`) já tinha `default null` — não precisou de
 migration.
 
+### 4) Aviso do `FullDirectModal` — texto incompleto vs. protótipo
+
+O aviso do protótipo (`openCadDireto`) diz: *"Cadastro direto — autonomia da Full. Na próxima
+tela você configura equipe, leads, produtos e canais; só ao concluir ele recebe o e-mail
+Boas-vindas Supper para criar a senha. **Prefira o Convite Supper: quem preenche os dados é
+ele.**"* — o app só tinha uma frase genérica sobre o link de senha, sem o aviso de preferir o
+Convite Supper nem a menção a "próxima etapa". Corrigido para o mesmo texto (com "próxima etapa"
+em vez de "próxima tela", já que aqui é uma segunda etapa do mesmo modal, não uma tela nova).
+
+A divisão em 2 etapas (identidade → configuração) continua diferente do protótipo (1 tela só,
+que manda pra uma aprovação separada) — mantida de propósito: recriar o conceito de "aprovação"
+seria uma mudança de arquitetura bem maior, e a Full já aprova o próprio time direto no cadastro,
+sem fila.
+
 ## Verificação
 
 - `tsc --noEmit`: limpo.
