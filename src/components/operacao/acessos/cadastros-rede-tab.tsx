@@ -38,7 +38,12 @@ function anoDe(aprovadaEm: string | null, createdAt: string): string {
   return base ? base.slice(0, 4) : "—";
 }
 
-export function CadastrosRedeTab() {
+export function CadastrosRedeTab({
+  onTotalChange,
+}: {
+  /** Total de cadastros ATIVOS (sem desligados) — vai no "(N)" da aba, igual ao protótipo. */
+  onTotalChange?: (total: number) => void;
+} = {}) {
   const [linhas, setLinhas] = useState<LinhaRede[]>([]);
   const [modelos, setModelos] = useState<ModeloOpcao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,6 +198,10 @@ export function CadastrosRedeTab() {
       ativo = false;
     };
   }, [reloadTick]);
+
+  useEffect(() => {
+    onTotalChange?.(linhas.filter((l) => !l.desligadoEm).length);
+  }, [linhas, onTotalChange]);
 
   const anos = useMemo(
     () =>

@@ -111,6 +111,11 @@ function Page() {
     null,
   );
   const [cadastrosMatrizTick, setCadastrosMatrizTick] = useState(0);
+  // Total de cadastros ativos por bloco — o "(N)" da aba, igual ao protótipo
+  // (`tb('matriz','Cadastros Matriz', MATRIZ_USERS.length+CLT_VENDEDORES.length)`).
+  // null enquanto a aba nunca foi montada/carregada ainda.
+  const [totalCadastrosMatriz, setTotalCadastrosMatriz] = useState<number | null>(null);
+  const [totalCadastrosRede, setTotalCadastrosRede] = useState<number | null>(null);
   // O tour do módulo M5 (Acessos) força `visibleTab` via `prepare:
   // "acessos-pendentes"` etc., sem saber que agora existem dois blocos — todos
   // os `prepare` de acessos apontam para conteúdo do bloco EXTERNOS (pendentes,
@@ -253,6 +258,9 @@ function Page() {
             }}
           >
             Cadastros Matriz
+            {totalCadastrosMatriz != null && (
+              <span style={{ opacity: 0.7 }}> ({totalCadastrosMatriz})</span>
+            )}
           </button>
           <button
             className={tabInterno === "pend" ? "on" : ""}
@@ -326,6 +334,7 @@ function Page() {
         </div>
         <AcessosNavigation
           tab={visibleTab}
+          cadastros={totalCadastrosRede}
           pendentes={pendentesExterno.length}
           desligamentos={desligExterno.length}
           onChange={abrirExterno}
@@ -336,6 +345,7 @@ function Page() {
         <CadastrosMatrizTab
           key={cadastrosMatrizTick}
           onConfigurar={(id, isVendedorClt) => setConfigurando({ id, isVendedorClt })}
+          onTotalChange={setTotalCadastrosMatriz}
         />
       )}
 
@@ -349,7 +359,9 @@ function Page() {
 
       {blocoParaConteudo === "interno" && tabInterno === "modelos" && personalizacaoGeral}
 
-      {blocoParaConteudo === "externo" && visibleTab === "cadastros" && <CadastrosRedeTab />}
+      {blocoParaConteudo === "externo" && visibleTab === "cadastros" && (
+        <CadastrosRedeTab onTotalChange={setTotalCadastrosRede} />
+      )}
 
       {blocoParaConteudo === "externo" && visibleTab === "pend" && (
         <PendentesTab pendentes={pendentesExterno} onAnalisar={openAnalisar} />
