@@ -188,7 +188,6 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
     await modal.getByRole("button", { name: "Continuar para configuração" }).click();
 
     await expect(modal.getByRole("button", { name: "2 · Configuração" })).toHaveClass(/on/);
-    await modal.locator("input:not([type])").nth(0).fill("Equipe Inicial");
     await modal.locator('input[type="number"]').nth(0).fill("4");
     await modal.locator('input[type="number"]').nth(1).fill("30");
     await modal.locator('input[type="number"]').nth(2).fill("10");
@@ -255,7 +254,6 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
       empresa_id: full.empresaId,
       superior_id: full.userId,
       status: "aprovada",
-      equipe: "Equipe Inicial",
       leads_dia: 4,
       cpf: "12345678901",
       telefone: "11999990000",

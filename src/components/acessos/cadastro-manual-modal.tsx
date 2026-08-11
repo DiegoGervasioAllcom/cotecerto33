@@ -2,6 +2,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Icon } from "@/components/operacao/acessos/icon";
 import { criarPendenteManual } from "@/lib/cadastro.functions";
+import { maskCpfCnpj, maskTelefone } from "@/lib/masks";
+import { cadastroManualSchema } from "@/lib/schemas/cadastro.schema";
 
 /**
  * "Cadastro manual · exceção" (V11 · C2/C3) — `openManualCad(scope)` do protótipo.
@@ -35,16 +37,15 @@ export function CadastroManualModal({
 
   async function enviar() {
     setErro(null);
-    if (!nome.trim()) {
-      setErro("Nome é obrigatório.");
-      return;
-    }
-    if (!documento.trim()) {
-      setErro("Documento é obrigatório.");
-      return;
-    }
-    if (!email.trim()) {
-      setErro("E-mail é obrigatório — é ele que recebe a aprovação.");
+    const parsed = cadastroManualSchema.safeParse({
+      nome: nome.trim(),
+      tipo: isExterno ? tipo : "pf",
+      documento: documento.trim(),
+      email: email.trim(),
+      celular: celular.trim() || undefined,
+    });
+    if (!parsed.success) {
+      setErro(parsed.error.issues[0]?.message ?? "Revise os campos.");
       return;
     }
 
@@ -61,11 +62,11 @@ export function CadastroManualModal({
       const resultado = await criarPendenteManual({
         data: {
           caller_token: token,
-          nome: nome.trim(),
-          tipo: isExterno ? tipo : "pf",
-          documento: documento.trim(),
-          email: email.trim(),
-          celular: celular.trim() || undefined,
+          nome: parsed.data.nome,
+          tipo: parsed.data.tipo,
+          documento: parsed.data.documento,
+          email: parsed.data.email,
+          celular: parsed.data.celular,
         },
       });
       onCriado(resultado.empresaId);
@@ -123,8 +124,9 @@ export function CadastroManualModal({
                 id="mc-doc"
                 className="input"
                 value={documento}
-                onChange={(e) => setDocumento(e.target.value)}
+                onChange={(e) => setDocumento(maskCpfCnpj(e.target.value))}
                 placeholder={isExterno && tipo === "pj" ? "00.000.000/0001-00" : "000.000.000-00"}
+                maxLength={isExterno && tipo === "pj" ? 18 : 14}
               />
             </div>
             <div className="field-group">
@@ -133,8 +135,9 @@ export function CadastroManualModal({
                 id="mc-cel"
                 className="input"
                 value={celular}
-                onChange={(e) => setCelular(e.target.value)}
+                onChange={(e) => setCelular(maskTelefone(e.target.value))}
                 placeholder="(11) 90000-0000"
+                maxLength={15}
               />
             </div>
             <div className="field-group full">

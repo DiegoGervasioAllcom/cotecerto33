@@ -8,7 +8,6 @@ export const cadastroDiretoIdentidadeSchema = z.object({
 });
 
 export const cadastroDiretoFullSchema = cadastroDiretoIdentidadeSchema.extend({
-  equipe: z.string().trim().max(120),
   leadsDia: z.coerce.number().int().min(0).max(1000),
   comissaoVenda: z.coerce.number().min(0).max(100),
   comissaoRenovacao: z.coerce.number().min(0).max(100),

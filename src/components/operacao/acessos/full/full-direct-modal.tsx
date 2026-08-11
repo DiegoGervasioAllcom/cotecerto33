@@ -20,7 +20,6 @@ export function FullDirectModal({
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [celular, setCelular] = useState("");
-  const [equipe, setEquipe] = useState("");
   const [leadsDia, setLeadsDia] = useState("0");
   const [comissaoVenda, setComissaoVenda] = useState("0");
   const [comissaoRenovacao, setComissaoRenovacao] = useState("0");
@@ -36,7 +35,6 @@ export function FullDirectModal({
       email,
       cpf,
       celular,
-      equipe,
       leadsDia,
       comissaoVenda,
       comissaoRenovacao,
@@ -55,7 +53,6 @@ export function FullDirectModal({
           email: parsed.data.email,
           cpf: parsed.data.cpf,
           celular: parsed.data.celular,
-          equipe: parsed.data.equipe || undefined,
           leads_dia: parsed.data.leadsDia,
           produtos,
           canais,
@@ -158,15 +155,6 @@ export function FullDirectModal({
           {etapa === "configuracao" && (
             <>
               <div className="acc-grid" style={{ marginTop: 14 }}>
-                <div className="field-group">
-                  <label>Equipe</label>
-                  <input
-                    className="input"
-                    maxLength={120}
-                    value={equipe}
-                    onChange={(e) => setEquipe(e.target.value)}
-                  />
-                </div>
                 <div className="field-group">
                   <label>Leads · média/dia útil</label>
                   <input

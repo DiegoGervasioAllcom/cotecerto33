@@ -22,7 +22,6 @@ describe("cadastro direto da Franquia Full em duas etapas", () => {
       cpf: "123.456.789-01",
       celular: "(11) 99999-0000",
       email: "vendedora@teste.local",
-      equipe: "Equipe Norte",
       leadsDia: 10,
       comissaoVenda: 40,
       comissaoRenovacao: 20,
