@@ -36,10 +36,18 @@ async function abrirComoConvidado(page: Page, url: string): Promise<Page> {
 /** Preenche e envia o formulário de cadastro do convidado (mesmo shape do C11). */
 async function cadastrarPeloConvite(convidado: Page): Promise<void> {
   await convidado.locator('.auth-input input[placeholder="000.000.000-00"]').fill(documentoUnico());
+  await convidado.locator('.auth-input input[placeholder="00.000.000-0"]').fill("123456789");
+  await convidado.locator('.auth-input input[type="date"]').fill("1990-05-10");
+  await convidado
+    .locator('.auth-input input[placeholder="(11) 90000-0000"]')
+    .first()
+    .fill("11999998888");
   await convidado
     .locator('.auth-input input[type="email"]')
     .fill(`convidado.e2e.${Date.now()}.${Math.floor(Math.random() * 1e5)}@teste.local`);
-  await convidado.locator('.auth-input input[type="password"]').fill("Supper@123!");
+  await convidado
+    .locator('.auth-input input[placeholder="Nome e telefone do contato"]')
+    .fill("Contato Teste · (11) 98888-7777");
   await convidado.getByRole("button", { name: /Enviar cadastro/ }).click();
   await expect(convidado.getByRole("heading", { name: "Cadastro enviado" })).toBeVisible({
     timeout: 20_000,

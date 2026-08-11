@@ -12,7 +12,6 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 type PayloadConvite = {
   token: string;
   email: string;
-  password: string;
   nome: string;
   documento: string;
   extras: Record<string, string>;
@@ -42,8 +41,8 @@ const MOTIVO_MSG: Record<string, string> = {
 export const cadastrarPorConvite = createServerFn({ method: "POST" })
   .inputValidator((data: PayloadConvite) => {
     if (!data?.token) throw new Error("Convite ausente.");
-    if (!data?.email || !data?.password || data.password.length < 6) {
-      throw new Error("E-mail e senha (mín. 6) são obrigatórios.");
+    if (!data?.email) {
+      throw new Error("E-mail é obrigatório.");
     }
     if (!data.nome || !data.documento) {
       throw new Error("Nome e documento são obrigatórios.");
@@ -78,10 +77,14 @@ export const cadastrarPorConvite = createServerFn({ method: "POST" })
     const tipo: "pj" | "pf" =
       convite.trilha === "interno" || convite.perfil === "vendedor" ? "pf" : "pj";
 
-    // 3. Cria o usuário.
+    // 3. Cria o usuário. A senha é gerada aqui, aleatória e descartável — quem
+    //    se cadastra nunca a vê. Uma vez aprovado o pedido, o e-mail Boas-vindas
+    //    Supper (`enfileirar_boas_vindas`) manda um link de recovery de uso
+    //    único para criar a senha real (`/auth/criar-senha`); pedir senha já
+    //    neste formulário seria uma etapa a mais e redundante.
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email: data.email,
-      password: data.password,
+      password: crypto.randomUUID() + crypto.randomUUID(),
       email_confirm: true,
       user_metadata: {
         nome: data.extras.socio_nome || data.nome,

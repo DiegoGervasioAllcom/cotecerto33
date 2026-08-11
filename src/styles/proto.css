@@ -4235,7 +4235,7 @@ textarea.input:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-height: 96vh;
+  min-height: 100vh;
 }
 .auth-brand {
   display: flex;
