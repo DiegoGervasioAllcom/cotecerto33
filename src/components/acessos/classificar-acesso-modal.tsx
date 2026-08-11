@@ -552,24 +552,34 @@ export function ClassificarAcessoModal({
                     </div>
                   ) : (
                     <div className="acc-pills">
-                      <button
-                        className={`acc-pill ${tipoPF === "vendedor_clt" ? "on" : ""}`}
-                        onClick={() => setTipoPF("vendedor_clt")}
-                      >
-                        Vendedor Matriz
-                      </button>
-                      <button
-                        className={`acc-pill ${tipoPF === "vendedor_franquia" ? "on" : ""}`}
-                        onClick={() => setTipoPF("vendedor_franquia")}
-                      >
-                        Vendedor de franquia
-                      </button>
-                      <button
-                        className={`acc-pill ${tipoPF === "interno" ? "on" : ""}`}
-                        onClick={() => setTipoPF("interno")}
-                      >
-                        Time interno | cargo
-                      </button>
+                      {/* Pills por `bloco` (igual ao protótipo, que filtra
+                          `tipoOpts` por `p.escopo`): um pendente do bloco
+                          Interno não pode virar "Vendedor de franquia" (rede
+                          externa), e um pendente do bloco Externo não pode
+                          virar "Time interno | cargo" (Matriz). */}
+                      {pendente.bloco === "interno" ? (
+                        <>
+                          <button
+                            className={`acc-pill ${tipoPF === "vendedor_clt" ? "on" : ""}`}
+                            onClick={() => setTipoPF("vendedor_clt")}
+                          >
+                            Vendedor Matriz
+                          </button>
+                          <button
+                            className={`acc-pill ${tipoPF === "interno" ? "on" : ""}`}
+                            onClick={() => setTipoPF("interno")}
+                          >
+                            Time interno | cargo
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          className={`acc-pill ${tipoPF === "vendedor_franquia" ? "on" : ""}`}
+                          onClick={() => setTipoPF("vendedor_franquia")}
+                        >
+                          Vendedor de franquia
+                        </button>
+                      )}
                     </div>
                   )}
                 </>

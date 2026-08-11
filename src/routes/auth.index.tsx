@@ -187,7 +187,7 @@ function AuthPage() {
           className="auth-btn outline"
           style={{ display: "inline-block", textAlign: "center" }}
         >
-          Quero falar com a Cote Certo
+          Quero falar com a Supper Certo
         </Link>
       </div>
     </div>
