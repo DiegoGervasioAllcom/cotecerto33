@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useAreas } from "@/lib/use-areas";
 import { Icon } from "@/components/operacao/acessos/icon";
 import { baixarConvitePdf, type ConvitePdfDados } from "@/lib/convite-pdf";
+import logoUrl from "@/assets/cotecerto-logo.png";
 
 /**
  * Modal do Convite Supper (V11 · C4/C5).
@@ -77,6 +78,129 @@ function rotuloDeclarado(op: OpcaoPerfil, cargoNome?: string): string {
     default:
       return op.label;
   }
+}
+
+/**
+ * Pré-visualização inline da arte do PDF (V11 · C6b) — espelha o `cvArteHTML`
+ * compacto do protótipo r40 (mesmo card, mesma paleta), mas em JSX/CSS em vez
+ * de HTML injetado num iframe. Reaproveita as mesmas cores de `convite-pdf.ts`.
+ */
+function ConvitePreview({ d }: { d: ConvitePdfDados }) {
+  return (
+    <div
+      style={{
+        border: "1px solid var(--border-soft)",
+        borderRadius: 12,
+        overflow: "hidden",
+        background: "var(--white)",
+      }}
+    >
+      <div
+        style={{
+          background: "var(--slate)",
+          padding: "12px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <img src={logoUrl} alt="" style={{ height: 22 }} />
+        <div style={{ fontWeight: 700, fontSize: 13, color: "#fff" }}>
+          CONVITE <span style={{ color: "var(--yellow)" }}>SUPPER</span>
+        </div>
+      </div>
+
+      <div style={{ padding: 18, fontSize: 12.5, color: "var(--ink)", lineHeight: 1.5 }}>
+        <p style={{ margin: "0 0 10px" }}>
+          Olá, {d.nome}! Aqui é {d.quem}, {d.cargo} da Supper Certo.
+        </p>
+        <p style={{ margin: "0 0 10px" }}>
+          Quero te convidar para se cadastrar na nossa plataforma como
+        </p>
+        <span
+          style={{
+            display: "inline-block",
+            background: "var(--yellow)",
+            color: "var(--slate-dark)",
+            fontWeight: 700,
+            fontSize: 11.5,
+            borderRadius: 999,
+            padding: "5px 12px",
+            marginBottom: 14,
+          }}
+        >
+          {d.perfil}
+        </span>
+
+        <div
+          style={{
+            background: "#F7F8F8",
+            borderLeft: "3px solid var(--yellow)",
+            padding: "10px 12px",
+            marginBottom: 14,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: 9,
+              color: "var(--muted)",
+              letterSpacing: 0.5,
+              marginBottom: 6,
+            }}
+          >
+            COMO FUNCIONA
+          </div>
+          <div style={{ fontSize: 11 }}>
+            1. Toque no link — o cadastro abre já identificado com o seu convite.
+            <br />
+            2. Confira seus dados e confirme o vínculo (ele já vem preenchido).
+            <br />
+            3. Envie — seu pedido entra na fila de aprovação e a confirmação chega no seu e-mail.
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: "var(--cream)",
+            borderRadius: 6,
+            padding: "10px 12px",
+            marginBottom: 14,
+            fontFamily: "monospace",
+            fontSize: 10.5,
+            color: "#8A6400",
+            wordBreak: "break-all",
+          }}
+        >
+          {d.link}
+        </div>
+
+        <div
+          style={{
+            borderTop: "1px solid var(--border-soft)",
+            paddingTop: 10,
+            fontSize: 9.5,
+            color: "var(--muted)",
+          }}
+        >
+          Este convite é nominal e de uso único ({d.codigo}) — vale só para você, por 7 dias. Se
+          expirar, é só pedir um novo a quem te enviou.
+        </div>
+      </div>
+
+      <div
+        style={{
+          background: "var(--slate-dark)",
+          textAlign: "center",
+          padding: "7px 0",
+          fontSize: 9.5,
+          color: "#C7D0D6",
+        }}
+      >
+        SUPPER CERTO · PLATAFORMA COTE CERTO
+      </div>
+    </div>
+  );
 }
 
 export function ConvidarModal({ escopo, onClose }: { escopo: EscopoConvite; onClose: () => void }) {
@@ -390,6 +514,13 @@ export function ConvidarModal({ escopo, onClose }: { escopo: EscopoConvite; onCl
                 data-testid="convite-mensagem"
                 style={{ fontSize: 12.5, lineHeight: 1.5 }}
               />
+            </div>
+          )}
+
+          {dadosPdf && (
+            <div className="field-group full" style={{ marginTop: 12 }}>
+              <label>Pré-visualização do convite (PDF)</label>
+              <ConvitePreview d={dadosPdf} />
             </div>
           )}
 
