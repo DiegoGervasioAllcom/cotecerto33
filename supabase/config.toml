@@ -15,7 +15,9 @@ schemas = ["public"]
 site_url = "http://localhost:3000"
 additional_redirect_urls = [
   "http://localhost:3000/auth/criar-senha",
+  "http://localhost:3000/auth/redefinir-senha",
   "http://localhost:8080/auth/criar-senha",
+  "http://localhost:8080/auth/redefinir-senha",
 ]
 enable_signup = true
 
