@@ -110,3 +110,20 @@ export function useAreas(): AreasEscopo {
     temArea: (chave: AreaChave) => !loading && areas.has(chave),
   };
 }
+
+/**
+ * Regra de acesso às ações de distribuição de leads (redistribuir, puxar de
+ * volta, distribuir fila pendente, triagem de perda). Espelha a checagem que
+ * as RPCs fazem no banco (`has_role(...,'matriz') or has_role(...,'master')
+ * or fn_tem_area(...,'mdist')` — ver 20260813010000): matriz/master têm
+ * acesso total independente de área; o resto do time interno depende da
+ * área "Distribuição" (`mdist`) liberada, não do cargo específico.
+ *
+ * Usado em `/comando/leads` e `/comando/distribuicao` pra não duplicar a
+ * regra nos dois lugares.
+ */
+export function usePodeDistribuir(): boolean {
+  const { role } = useAuth();
+  const { temArea } = useAreas();
+  return role === "matriz" || role === "master" || temArea("mdist");
+}
