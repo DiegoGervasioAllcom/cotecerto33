@@ -6,6 +6,7 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useRequireMatrizOuFranquiaFull } from "@/lib/require-role";
 import { useAuth } from "@/lib/auth";
+import { usePodeDistribuir } from "@/lib/use-areas";
 import { useGroupScope } from "@/lib/group-scope";
 import { leadsAlertSearchSchema } from "@/lib/dashboard-alerts";
 
@@ -138,19 +139,20 @@ function Page() {
   const denied = useRequireMatrizOuFranquiaFull();
   const { role } = useAuth();
   const { isFranqFull } = useGroupScope();
+  const podeDistribuir = usePodeDistribuir();
   // V11.5.2b/V11.I: Central da Franquia — Full e interno (Marketing) só
   // vêem/monitoram os leads da Matriz (RLS já escopa a query, V11.I.2). As
   // ações abaixo (redistribuir/puxar de volta/bloquear/distribuir automático)
-  // chamam RPCs restritas a matriz/master no banco (`redistribuir_lead`,
-  // `puxar_lead_de_volta`, `bloquear_lead`, `desbloquear_lead`,
-  // `distribuir_fila_pendente` — ver 20240101000016/019/024) e sempre
-  // retornariam "forbidden" pra Full OU interno; escondidas pros dois em vez
-  // de oferecer um botão que 100% falha. Gap conhecido: sem RPC própria pra
-  // Full reatribuir lead dentro do time dela por aqui — hoje o vendedor pega
-  // o lead da fila da franquia direto pelo pipeline dele (`assumir_lead`,
-  // sem esse gate).
+  // chamam RPCs restritas a matriz/master OU a quem tem a área "Distribuição"
+  // (`mdist`) liberada (`redistribuir_lead`, `puxar_lead_de_volta`,
+  // `bloquear_lead`, `desbloquear_lead`, `distribuir_fila_pendente` — ver
+  // 20240101000016/019/024 e 20260813010000). Full sempre fica de fora
+  // (só monitora); pro time interno da Matriz o acesso depende da área, não
+  // do cargo. Gap conhecido: sem RPC própria pra Full reatribuir lead dentro
+  // do time dela por aqui — hoje o vendedor pega o lead da fila da franquia
+  // direto pelo pipeline dele (`assumir_lead`, sem esse gate).
   const isFull = role === "franqueado" && isFranqFull;
-  const semAcaoDeMatriz = isFull || role === "interno";
+  const semAcaoDeMatriz = isFull || !podeDistribuir;
   const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [empresas, setEmpresas] = useState<Record<string, Empresa>>({});

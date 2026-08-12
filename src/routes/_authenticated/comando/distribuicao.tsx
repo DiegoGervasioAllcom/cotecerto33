@@ -7,6 +7,7 @@ import { veiculoLabel } from "@/lib/veiculo";
 import { useRequireMatrizOuFranquiaFull } from "@/lib/require-role";
 import { useAuth } from "@/lib/auth";
 import { useGroupScope } from "@/lib/group-scope";
+import { usePodeDistribuir } from "@/lib/use-areas";
 import { FullDistribuicaoSlaCanais } from "@/components/comando/full-distribuicao-sla-canais";
 
 export const Route = createFileRoute("/_authenticated/comando/distribuicao")({
@@ -71,6 +72,7 @@ function Page() {
   const denied = useRequireMatrizOuFranquiaFull();
   const { role, empresa } = useAuth();
   const { isFranqFull } = useGroupScope();
+  const podeDistribuir = usePodeDistribuir();
   // V11.5.2b (risco 2 do plano): `distribuicao_config` é o SINGLETON global da
   // Matriz (id='default', sla_segundos da rede inteira) — nunca reusar essa
   // config pra Full. Ela tem a própria (`sla_empresa_config` +
@@ -255,13 +257,16 @@ function Page() {
   }
 
   async function patchCfg(partial: Partial<Config>) {
-    // V11.I: interno (Marketing) chegou nesta tela via V11.I.4, mas a decisão
-    // da Lis é só leitura — "sem escrita além do que os presets já dão". A
-    // RLS de distribuicao_config já bloqueia (só matriz escreve), mas
-    // travamos aqui também pra não depender de cada botão individual estar
-    // certo, e pra dar um erro claro em vez de deixar o RLS falhar silencioso.
-    if (role === "interno") {
-      setErr("Seu acesso é somente leitura — configuração de distribuição é exclusiva da Matriz.");
+    // V11.I/mdist: acesso de escrita segue a mesma checagem das RPCs de
+    // distribuição no banco — matriz/master sempre podem, o resto do time
+    // interno depende da área "Distribuição" (mdist) liberada, não do cargo.
+    // Travamos aqui também pra não depender de cada botão individual estar
+    // certo, e pra dar um erro claro em vez de deixar o RLS/RPC falhar
+    // silencioso.
+    if (!podeDistribuir) {
+      setErr(
+        "Seu acesso é somente leitura — configuração de distribuição exige a área Distribuição liberada.",
+      );
       return;
     }
     const next = { ...cfg, ...partial };
@@ -285,9 +290,9 @@ function Page() {
   }
 
   async function setDestinoPerda(leadId: string, decisao: "Remalho" | "Descarte" | "Reativar") {
-    // V11.I: mesma trava de patchCfg — triagem de perda é ação, não leitura.
-    if (role === "interno") {
-      setErr("Seu acesso é somente leitura — triagem de perda é exclusiva da Matriz.");
+    // V11.I/mdist: mesma trava de patchCfg — triagem de perda é ação, não leitura.
+    if (!podeDistribuir) {
+      setErr("Seu acesso é somente leitura — triagem de perda exige a área Distribuição liberada.");
       return;
     }
     setBusyId(leadId);
@@ -437,9 +442,9 @@ function Page() {
         </div>
       </div>
 
-      {role === "interno" && (
+      {!podeDistribuir && (
         <div className="audit-note" style={{ marginBottom: 12 }}>
-          Acesso de leitura — a configuração de distribuição é exclusiva da Matriz.
+          Acesso de leitura — configuração de distribuição exige a área Distribuição liberada.
         </div>
       )}
       {pausaLeadsRede && travados.length > 0 && (
