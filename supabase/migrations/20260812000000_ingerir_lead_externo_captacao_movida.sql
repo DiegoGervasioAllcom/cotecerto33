@@ -44,13 +44,32 @@ create unique index if not exists leads_captacao_movida_placa_uidx
   on public.leads ((dados->>'placa'))
   where origem = 'captacao_movida';
 
+-- assinatura antiga (etapa 1, parâmetros p_nome/p_telefone/p_placa/p_cpf/
+-- p_dados) fica obsoleta com o webhook nativo abaixo; remove antes de criar
+-- a nova pra não deixar duas overloads coexistindo.
+drop function if exists public.ingerir_lead_externo(text, text, text, text, jsonb);
+
 -- ---------- RPC de ingestão --------------------------------------------------
+-- Assinatura casada com o payload FIXO do Database Webhook nativo do
+-- Supabase (Dashboard > Database > Webhooks): o PostgREST casa os campos do
+-- corpo da requisição pelo nome dos parâmetros da função, e o webhook nativo
+-- sempre envia `{ type, table, schema, record, old_record }` — não é
+-- customizável. `type`/`table`/`schema`/`old_record` são recebidos só pra não
+-- dar erro de "parâmetro desconhecido" no PostgREST; a lógica usa apenas
+-- `record`. `table`/`schema` são nomes reservados/ambíguos em plpgsql, por
+-- isso usam aspas duplas na assinatura.
+--
+-- `type = 'UPDATE'` (gerado quando `registrar_captacao_vendedor` reivindica
+-- uma captação ViaNuvem pra um vendedor) não recebe tratamento especial: a
+-- dedup de lead já é por placa (não por type), então tanto um INSERT quanto
+-- um UPDATE em `captacoes` caem no mesmo caminho "já existe → atualiza" /
+-- "não existe → cria".
 create or replace function public.ingerir_lead_externo(
-  p_nome text,
-  p_telefone text,
-  p_placa text,
-  p_cpf text default null,
-  p_dados jsonb default '{}'::jsonb
+  record jsonb,
+  type text default null,
+  "table" text default null,
+  schema text default null,
+  old_record jsonb default null
 )
 returns table(lead_id uuid, criado boolean)
 language plpgsql
@@ -58,10 +77,11 @@ security definer
 set search_path = public
 as $$
 declare
-  v_nome text := trim(coalesce(p_nome, ''));
-  v_telefone text := regexp_replace(coalesce(p_telefone, ''), '\D', '', 'g');
-  v_placa text := upper(regexp_replace(coalesce(p_placa, ''), '\s', '', 'g'));
-  v_cpf text := nullif(regexp_replace(coalesce(p_cpf, ''), '\D', '', 'g'), '');
+  v_record jsonb := coalesce(record, '{}'::jsonb);
+  v_nome text := trim(coalesce(v_record->>'nome_cliente', ''));
+  v_telefone text := regexp_replace(coalesce(v_record->>'telefone', ''), '\D', '', 'g');
+  v_placa text := upper(regexp_replace(coalesce(v_record->>'placa', ''), '\s', '', 'g'));
+  v_cpf text := nullif(regexp_replace(coalesce(v_record->>'cpf', ''), '\D', '', 'g'), '');
   v_dados jsonb;
   v_cliente_id uuid;
   v_lead_id uuid;
@@ -103,7 +123,12 @@ begin
   end if;
 
   -- ---------- lead: dedup por placa (índice único cobre concorrência) ------
-  v_dados := coalesce(p_dados, '{}'::jsonb) || jsonb_build_object('placa', v_placa);
+  -- campos do webhook sem coluna própria em `leads` viram `dados` (canal,
+  -- vendedor_nome, vendedor_telefone, loja, vendedor_id, email, id da
+  -- captação, created_at etc.); nome/telefone/placa/cpf já viraram
+  -- nome/contato/placa/cpf normalizados e não entram duplicados aqui.
+  v_dados := (v_record - 'nome_cliente' - 'telefone' - 'placa' - 'cpf')
+    || jsonb_build_object('placa', v_placa);
   if v_cpf is not null then
     v_dados := v_dados || jsonb_build_object('cpf', v_cpf);
   end if;
@@ -136,11 +161,14 @@ begin
 end;
 $$;
 
-comment on function public.ingerir_lead_externo(text, text, text, text, jsonb) is
-  'Porta de entrada dos leads do app captacao-movida. Dedup de cliente por
-   telefone, de lead por placa (origem=captacao_movida). Insere sempre com
-   empresa_id = fn_empresa_matriz() e responsavel_id nulo — cai na fila de
-   distribuição manual da Matriz, sem passar por trg_distribuir_lead_auto.';
+comment on function public.ingerir_lead_externo(jsonb, text, text, text, jsonb) is
+  'Porta de entrada dos leads do app captacao-movida, chamada via Database
+   Webhook nativo do Supabase (payload fixo {type,table,schema,record,
+   old_record}). Extrai nome/telefone/placa/cpf de `record`; o resto vira
+   `dados`. Dedup de cliente por telefone, de lead por placa
+   (origem=captacao_movida). Insere sempre com empresa_id =
+   fn_empresa_matriz() e responsavel_id nulo — cai na fila de distribuição
+   manual da Matriz, sem passar por trg_distribuir_lead_auto.';
 
-revoke all on function public.ingerir_lead_externo(text, text, text, text, jsonb) from public, anon, authenticated;
-grant execute on function public.ingerir_lead_externo(text, text, text, text, jsonb) to service_role;
+revoke all on function public.ingerir_lead_externo(jsonb, text, text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.ingerir_lead_externo(jsonb, text, text, text, jsonb) to service_role;

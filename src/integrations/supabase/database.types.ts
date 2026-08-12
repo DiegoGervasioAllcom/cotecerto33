@@ -4262,11 +4262,11 @@ export type Database = {
       }
       ingerir_lead_externo: {
         Args: {
-          p_cpf?: string
-          p_dados?: Json
-          p_nome: string
-          p_placa: string
-          p_telefone: string
+          old_record?: Json
+          record: Json
+          schema?: string
+          table?: string
+          type?: string
         }
         Returns: {
           criado: boolean

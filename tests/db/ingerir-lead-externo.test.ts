@@ -52,9 +52,8 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     );
     await anon.auth.signInWithPassword({ email: user.user!.email!, password: "Teste@123!" });
     const { error } = await anon.rpc("ingerir_lead_externo", {
-      p_nome: "Forjado",
-      p_telefone: "11999990000",
-      p_placa: "ABC1234",
+      type: "INSERT",
+      record: { nome_cliente: "Forjado", telefone: "11999990000", placa: "ABC1234" },
     } as never);
     expect(error).not.toBeNull();
     expect(error?.message ?? "").toMatch(/permission denied/i);
@@ -65,10 +64,15 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     const placa = uniqPlaca("CAP");
 
     const { data, error } = await admin.rpc("ingerir_lead_externo", {
-      p_nome: "Cliente Um",
-      p_telefone: telefone,
-      p_placa: placa,
-      p_dados: { cidade: cidadeUnica, canal: "Indicação", loja: "Loja X" },
+      type: "INSERT",
+      record: {
+        nome_cliente: "Cliente Um",
+        telefone,
+        placa,
+        cidade: cidadeUnica,
+        canal: "Indicação",
+        loja: "Loja X",
+      },
     } as never);
     expect(error).toBeNull();
     const row = (data as { lead_id: string; criado: boolean }[])[0];
@@ -105,10 +109,8 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     const placa = uniqPlaca("DUP");
 
     const r1 = await admin.rpc("ingerir_lead_externo", {
-      p_nome: "Nome Original",
-      p_telefone: telefone,
-      p_placa: placa,
-      p_dados: { cidade: cidadeUnica },
+      type: "INSERT",
+      record: { nome_cliente: "Nome Original", telefone, placa, cidade: cidadeUnica },
     } as never);
     expect(r1.error).toBeNull();
     const row1 = (r1.data as { lead_id: string; criado: boolean }[])[0];
@@ -123,10 +125,8 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     expect(leadAntes?.responsavel_id).toBeNull();
 
     const r2 = await admin.rpc("ingerir_lead_externo", {
-      p_nome: "Nome Atualizado",
-      p_telefone: telefone,
-      p_placa: placa,
-      p_dados: { cidade: cidadeUnica, canal: "ViaNuvem" },
+      type: "UPDATE",
+      record: { nome_cliente: "Nome Atualizado", telefone, placa, cidade: cidadeUnica, canal: "ViaNuvem" },
     } as never);
     expect(r2.error).toBeNull();
     const row2 = (r2.data as { lead_id: string; criado: boolean }[])[0];
@@ -158,17 +158,15 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     const placa2 = `U${Math.floor(Math.random() * 1e6)}`.padEnd(7, "0").toUpperCase();
 
     const r1 = await admin.rpc("ingerir_lead_externo", {
-      p_nome: "Mesmo Cliente",
-      p_telefone: telefone,
-      p_placa: placa1,
+      type: "INSERT",
+      record: { nome_cliente: "Mesmo Cliente", telefone, placa: placa1 },
     } as never);
     expect(r1.error).toBeNull();
     const lead1 = (r1.data as { lead_id: string; criado: boolean }[])[0];
 
     const r2 = await admin.rpc("ingerir_lead_externo", {
-      p_nome: "Mesmo Cliente",
-      p_telefone: telefone,
-      p_placa: placa2,
+      type: "INSERT",
+      record: { nome_cliente: "Mesmo Cliente", telefone, placa: placa2 },
     } as never);
     expect(r2.error).toBeNull();
     const lead2 = (r2.data as { lead_id: string; criado: boolean }[])[0];
@@ -190,9 +188,8 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     const cpf = uniqDoc();
 
     const r1 = await admin.rpc("ingerir_lead_externo", {
-      p_nome: "Sem CPF Ainda",
-      p_telefone: telefone,
-      p_placa: placa1,
+      type: "INSERT",
+      record: { nome_cliente: "Sem CPF Ainda", telefone, placa: placa1 },
     } as never);
     expect(r1.error).toBeNull();
     const lead1 = (r1.data as { lead_id: string; criado: boolean }[])[0];
@@ -206,10 +203,8 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     expect(clienteAntes?.documento).toBeNull();
 
     const r2 = await admin.rpc("ingerir_lead_externo", {
-      p_nome: "Com CPF Agora",
-      p_telefone: telefone,
-      p_placa: placa2,
-      p_cpf: cpf,
+      type: "INSERT",
+      record: { nome_cliente: "Com CPF Agora", telefone, placa: placa2, cpf },
     } as never);
     expect(r2.error).toBeNull();
 
