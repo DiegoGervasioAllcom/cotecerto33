@@ -180,6 +180,8 @@ function CriarSenhaPage() {
                   className="pw-toggle"
                   type="button"
                   title="Mostrar/ocultar a senha"
+                  aria-label={showPassword ? "Ocultar nova senha" : "Mostrar nova senha"}
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword((value) => !value)}
                 >
                   {showPassword ? (
@@ -211,6 +213,8 @@ function CriarSenhaPage() {
                   className="pw-toggle"
                   type="button"
                   title="Mostrar/ocultar a senha"
+                  aria-label={showConfirmation ? "Ocultar confirmação" : "Mostrar confirmação"}
+                  aria-pressed={showConfirmation}
                   onClick={() => setShowConfirmation((value) => !value)}
                 >
                   {showConfirmation ? (
