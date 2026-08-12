@@ -4254,6 +4254,19 @@ export type Database = {
         Args: { _role: Database["public"]["Enums"]["perfil"]; _user_id: string };
         Returns: boolean;
       };
+      ingerir_lead_externo: {
+        Args: {
+          old_record?: Json;
+          record: Json;
+          schema?: string;
+          table?: string;
+          type?: string;
+        };
+        Returns: {
+          criado: boolean;
+          lead_id: string;
+        }[];
+      };
       iniciar_atendimento: { Args: { p_lead_id: string }; Returns: undefined };
       iniciar_renovacao: { Args: { p_proposta_id: string }; Returns: string };
       jsonb_clt_regras_ok: { Args: { j: Json }; Returns: boolean };
