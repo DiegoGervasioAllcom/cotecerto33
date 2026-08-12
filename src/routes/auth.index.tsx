@@ -123,7 +123,7 @@ function AuthPage() {
         <h3>Entrar na sua franquia</h3>
         <p className="lead">Use seu e-mail corporativo e senha.</p>
         {erroNavegacao && (
-          <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
+          <div className="banner alert" role="alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
             Não foi possível abrir sua área.
             <button
               type="button"
@@ -138,12 +138,12 @@ function AuthPage() {
           </div>
         )}
         {!isSupabaseConfigured && (
-          <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
+          <div className="banner alert" role="alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
             {supabaseConfigError} Configure as variáveis do Supabase para entrar.
           </div>
         )}
         {accessError && (
-          <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
+          <div className="banner alert" role="alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
             {accessError}
           </div>
         )}
@@ -175,6 +175,8 @@ function AuthPage() {
                 type="button"
                 className="pw-toggle"
                 title="Mostrar/ocultar a senha"
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                aria-pressed={showPassword}
                 onClick={() => setShowPassword((v) => !v)}
               >
                 {showPassword ? (
@@ -186,9 +188,14 @@ function AuthPage() {
                 )}
               </button>
             </div>
+            <div style={{ marginTop: 8, textAlign: "right" }}>
+              <Link to="/auth/esqueci-senha" className="auth-link">
+                Esqueci minha senha
+              </Link>
+            </div>
           </div>
           {error && (
-            <div className="banner alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
+            <div className="banner alert" role="alert" style={{ marginBottom: 14, fontSize: 12.5 }}>
               {error}
             </div>
           )}
