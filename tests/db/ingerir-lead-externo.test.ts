@@ -126,7 +126,13 @@ describe("ingerir_lead_externo — captacao-movida", () => {
 
     const r2 = await admin.rpc("ingerir_lead_externo", {
       type: "UPDATE",
-      record: { nome_cliente: "Nome Atualizado", telefone, placa, cidade: cidadeUnica, canal: "ViaNuvem" },
+      record: {
+        nome_cliente: "Nome Atualizado",
+        telefone,
+        placa,
+        cidade: cidadeUnica,
+        canal: "ViaNuvem",
+      },
     } as never);
     expect(r2.error).toBeNull();
     const row2 = (r2.data as { lead_id: string; criado: boolean }[])[0];
@@ -173,8 +179,16 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     expect(lead2.criado).toBe(true);
     expect(lead2.lead_id).not.toBe(lead1.lead_id);
 
-    const { data: leadA } = await admin.from("leads").select("cliente_id").eq("id", lead1.lead_id).single();
-    const { data: leadB } = await admin.from("leads").select("cliente_id").eq("id", lead2.lead_id).single();
+    const { data: leadA } = await admin
+      .from("leads")
+      .select("cliente_id")
+      .eq("id", lead1.lead_id)
+      .single();
+    const { data: leadB } = await admin
+      .from("leads")
+      .select("cliente_id")
+      .eq("id", lead2.lead_id)
+      .single();
     expect(leadA?.cliente_id).toBe(leadB?.cliente_id);
 
     const { data: clientes } = await admin.from("clientes").select("id").eq("telefone", telefone);
@@ -193,7 +207,11 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     } as never);
     expect(r1.error).toBeNull();
     const lead1 = (r1.data as { lead_id: string; criado: boolean }[])[0];
-    const { data: leadA } = await admin.from("leads").select("cliente_id").eq("id", lead1.lead_id).single();
+    const { data: leadA } = await admin
+      .from("leads")
+      .select("cliente_id")
+      .eq("id", lead1.lead_id)
+      .single();
 
     const { data: clienteAntes } = await admin
       .from("clientes")
@@ -208,7 +226,10 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     } as never);
     expect(r2.error).toBeNull();
 
-    const { data: clientes } = await admin.from("clientes").select("id,documento").eq("telefone", telefone);
+    const { data: clientes } = await admin
+      .from("clientes")
+      .select("id,documento")
+      .eq("telefone", telefone);
     expect(clientes ?? []).toHaveLength(1);
     expect(clientes?.[0].documento).toBe(cpf);
     expect(clientes?.[0].id).toBe(clienteAntes?.id);
