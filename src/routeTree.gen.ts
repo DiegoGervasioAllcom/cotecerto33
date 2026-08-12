@@ -13,7 +13,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth.index'
 import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
+import { Route as AuthRedefinirSenhaRouteImport } from './routes/auth.redefinir-senha'
 import { Route as AuthPendenteRouteImport } from './routes/auth.pendente'
+import { Route as AuthEsqueciSenhaRouteImport } from './routes/auth.esqueci-senha'
 import { Route as AuthCriarSenhaRouteImport } from './routes/auth.criar-senha'
 import { Route as AuthContatoRouteImport } from './routes/auth.contato'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
@@ -67,9 +69,19 @@ const ConviteTokenRoute = ConviteTokenRouteImport.update({
   path: '/convite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRedefinirSenhaRoute = AuthRedefinirSenhaRouteImport.update({
+  id: '/auth/redefinir-senha',
+  path: '/auth/redefinir-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthPendenteRoute = AuthPendenteRouteImport.update({
   id: '/auth/pendente',
   path: '/auth/pendente',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthEsqueciSenhaRoute = AuthEsqueciSenhaRouteImport.update({
+  id: '/auth/esqueci-senha',
+  path: '/auth/esqueci-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCriarSenhaRoute = AuthCriarSenhaRouteImport.update({
@@ -273,7 +285,9 @@ export interface FileRoutesByFullPath {
   '/inicio': typeof AuthenticatedInicioRoute
   '/auth/contato': typeof AuthContatoRoute
   '/auth/criar-senha': typeof AuthCriarSenhaRoute
+  '/auth/esqueci-senha': typeof AuthEsqueciSenhaRoute
   '/auth/pendente': typeof AuthPendenteRoute
+  '/auth/redefinir-senha': typeof AuthRedefinirSenhaRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/auth/': typeof AuthIndexRoute
   '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
@@ -312,7 +326,9 @@ export interface FileRoutesByTo {
   '/inicio': typeof AuthenticatedInicioRoute
   '/auth/contato': typeof AuthContatoRoute
   '/auth/criar-senha': typeof AuthCriarSenhaRoute
+  '/auth/esqueci-senha': typeof AuthEsqueciSenhaRoute
   '/auth/pendente': typeof AuthPendenteRoute
+  '/auth/redefinir-senha': typeof AuthRedefinirSenhaRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/auth': typeof AuthIndexRoute
   '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
@@ -353,7 +369,9 @@ export interface FileRoutesById {
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/auth/contato': typeof AuthContatoRoute
   '/auth/criar-senha': typeof AuthCriarSenhaRoute
+  '/auth/esqueci-senha': typeof AuthEsqueciSenhaRoute
   '/auth/pendente': typeof AuthPendenteRoute
+  '/auth/redefinir-senha': typeof AuthRedefinirSenhaRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/auth/': typeof AuthIndexRoute
   '/_authenticated/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
@@ -394,7 +412,9 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/auth/contato'
     | '/auth/criar-senha'
+    | '/auth/esqueci-senha'
     | '/auth/pendente'
+    | '/auth/redefinir-senha'
     | '/convite/$token'
     | '/auth/'
     | '/comando/distribuicao'
@@ -433,7 +453,9 @@ export interface FileRouteTypes {
     | '/inicio'
     | '/auth/contato'
     | '/auth/criar-senha'
+    | '/auth/esqueci-senha'
     | '/auth/pendente'
+    | '/auth/redefinir-senha'
     | '/convite/$token'
     | '/auth'
     | '/comando/distribuicao'
@@ -473,7 +495,9 @@ export interface FileRouteTypes {
     | '/_authenticated/inicio'
     | '/auth/contato'
     | '/auth/criar-senha'
+    | '/auth/esqueci-senha'
     | '/auth/pendente'
+    | '/auth/redefinir-senha'
     | '/convite/$token'
     | '/auth/'
     | '/_authenticated/comando/distribuicao'
@@ -513,7 +537,9 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthContatoRoute: typeof AuthContatoRoute
   AuthCriarSenhaRoute: typeof AuthCriarSenhaRoute
+  AuthEsqueciSenhaRoute: typeof AuthEsqueciSenhaRoute
   AuthPendenteRoute: typeof AuthPendenteRoute
+  AuthRedefinirSenhaRoute: typeof AuthRedefinirSenhaRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
@@ -548,11 +574,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/redefinir-senha': {
+      id: '/auth/redefinir-senha'
+      path: '/auth/redefinir-senha'
+      fullPath: '/auth/redefinir-senha'
+      preLoaderRoute: typeof AuthRedefinirSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/pendente': {
       id: '/auth/pendente'
       path: '/auth/pendente'
       fullPath: '/auth/pendente'
       preLoaderRoute: typeof AuthPendenteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/esqueci-senha': {
+      id: '/auth/esqueci-senha'
+      path: '/auth/esqueci-senha'
+      fullPath: '/auth/esqueci-senha'
+      preLoaderRoute: typeof AuthEsqueciSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/criar-senha': {
@@ -871,7 +911,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthContatoRoute: AuthContatoRoute,
   AuthCriarSenhaRoute: AuthCriarSenhaRoute,
+  AuthEsqueciSenhaRoute: AuthEsqueciSenhaRoute,
   AuthPendenteRoute: AuthPendenteRoute,
+  AuthRedefinirSenhaRoute: AuthRedefinirSenhaRoute,
   ConviteTokenRoute: ConviteTokenRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
