@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import { admin, uniq, uniqDoc } from "../helpers/supabase";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { admin, uniq, uniqDoc, criarUsuario } from "../helpers/supabase";
 
 function uniqTelefone(): string {
   return `11${Math.floor(900000000 + Math.random() * 99999999)}`.slice(0, 11);
@@ -9,34 +9,43 @@ function uniqPlaca(prefix: string): string {
 }
 
 /**
- * Ingestão de leads externos (app captacao-movida) — Etapa 1.
+ * Ingestão de leads externos (app captacao-movida) — Etapa 1 + correção.
  *
  * 20260812000000_ingerir_lead_externo_captacao_movida.sql entrega a RPC
  * `ingerir_lead_externo`, só executável por `service_role` (RPC de borda,
  * mesmo padrão de `registrar_premios_quiver`).
  *
- * Dedup: cliente por telefone, lead por placa (origem=captacao_movida).
+ * 20260813000000_corrigir_fila_lead_externo_captacao_movida.sql corrige a
+ * distribuição: o lead nasce com empresa_id/responsavel_id nulos, na MESMA
+ * fila global de qualquer lead sem vendedor — sujeito a
+ * `trg_distribuir_lead_auto`. Se o trigger resolver uma regra automática,
+ * distribui; senão fica pendente (visível/distribuível manualmente pela
+ * Matriz pra qualquer empresa da rede). O cliente é religado à empresa
+ * resolvida quando isso acontece; senão fica órfão (empresa_id null), estado
+ * equivalente ao do próprio lead pendente.
  *
- * Distribuição: o lead NÃO passa por `trg_distribuir_lead_auto` — nasce
- * direto com empresa_id = Matriz e responsavel_id nulo, na fila de
- * distribuição manual (mesmo lugar onde caem hoje leads sem vendedor de
- * qualquer empresa).
+ * Dedup: cliente por telefone, lead por placa (origem=captacao_movida).
  */
 describe("ingerir_lead_externo — captacao-movida", () => {
   let cidadeUnica: string;
-  let matrizId: string;
+  let cfgOriginal: Record<string, unknown> | null = null;
 
   beforeAll(async () => {
     cidadeUnica = uniq("cidade-captacao").toLowerCase();
 
-    const { data: matriz, error: eMatriz } = await admin
-      .from("empresas")
-      .select("id")
-      .eq("tipo", "matriz")
-      .limit(1)
-      .single();
-    if (eMatriz || !matriz) throw eMatriz ?? new Error("empresa matriz não encontrada no seed");
-    matrizId = matriz.id;
+    // garante que o automático fique desligado por padrão nestes testes —
+    // singleton global, outros arquivos de teste podem deixar ligado.
+    const { data: cfg } = await admin
+      .from("distribuicao_config")
+      .select("*")
+      .eq("id", "default")
+      .maybeSingle();
+    cfgOriginal = cfg;
+    await admin.from("distribuicao_config").update({ automatico_on: false }).eq("id", "default");
+  });
+
+  afterAll(async () => {
+    if (cfgOriginal) await admin.from("distribuicao_config").upsert(cfgOriginal as never);
   });
 
   it("NEGATIVO: authenticated não pode chamar a RPC (só service_role)", async () => {
@@ -59,7 +68,7 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     expect(error?.message ?? "").toMatch(/permission denied/i);
   });
 
-  it("cliente novo + lead novo criado direto na fila da Matriz (sem vendedor)", async () => {
+  it("cliente novo + lead novo caem na fila global sem vendedor (automático desligado)", async () => {
     const telefone = uniqTelefone();
     const placa = uniqPlaca("CAP");
 
@@ -85,9 +94,9 @@ describe("ingerir_lead_externo — captacao-movida", () => {
       .eq("id", row.lead_id)
       .single();
     expect(lead?.origem).toBe("captacao_movida");
-    // cai direto na fila da Matriz, sem vendedor — não passa pelo trigger
-    // de distribuição automática (empresa_id já vem preenchido).
-    expect(lead?.empresa_id).toBe(matrizId);
+    // automático desligado neste teste: fica pendente, mesma fila global de
+    // qualquer lead sem vendedor (empresa_id/responsavel_id nulos).
+    expect(lead?.empresa_id).toBeNull();
     expect(lead?.responsavel_id).toBeNull();
     expect((lead?.dados as Record<string, unknown>)?.placa).toBe(placa);
     expect(lead?.cliente_id).toBeTruthy();
@@ -100,11 +109,23 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     expect(cliente?.telefone).toBe(telefone);
     expect(cliente?.nome).toBe("Cliente Um");
     expect(cliente?.documento).toBeNull();
-    // cliente já nasce ligado à Matriz — nunca órfão (empresa_id null)
-    expect(cliente?.empresa_id).toBe(matrizId);
+    // cliente órfão enquanto a distribuição não resolve empresa — estado
+    // equivalente ao do próprio lead pendente.
+    expect(cliente?.empresa_id).toBeNull();
+
+    // aparece na fila pendente da Matriz, como qualquer outro lead sem
+    // vendedor (distribuir_fila_pendente / tela de Leads da Matriz).
+    const { data: pendente } = await admin
+      .from("leads")
+      .select("id")
+      .eq("id", row.lead_id)
+      .is("empresa_id", null)
+      .is("responsavel_id", null)
+      .maybeSingle();
+    expect(pendente?.id).toBe(row.lead_id);
   });
 
-  it("mesma placa: segunda chamada NÃO duplica lead, só atualiza (continua na fila da Matriz)", async () => {
+  it("mesma placa: segunda chamada NÃO duplica lead, só atualiza (continua pendente)", async () => {
     const telefone = uniqTelefone();
     const placa = uniqPlaca("DUP");
 
@@ -121,7 +142,7 @@ describe("ingerir_lead_externo — captacao-movida", () => {
       .select("empresa_id,responsavel_id")
       .eq("id", row1.lead_id)
       .single();
-    expect(leadAntes?.empresa_id).toBe(matrizId);
+    expect(leadAntes?.empresa_id).toBeNull();
     expect(leadAntes?.responsavel_id).toBeNull();
 
     const r2 = await admin.rpc("ingerir_lead_externo", {
@@ -152,8 +173,8 @@ describe("ingerir_lead_externo — captacao-movida", () => {
       .eq("id", row1.lead_id)
       .single();
     expect(leadDepois?.nome).toBe("Nome Atualizado");
-    // continua na fila da Matriz, sem vendedor
-    expect(leadDepois?.empresa_id).toBe(matrizId);
+    // continua pendente, sem vendedor
+    expect(leadDepois?.empresa_id).toBeNull();
     expect(leadDepois?.responsavel_id).toBeNull();
     expect((leadDepois?.dados as Record<string, unknown>)?.canal).toBe("ViaNuvem");
   });
@@ -233,5 +254,157 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     expect(clientes ?? []).toHaveLength(1);
     expect(clientes?.[0].documento).toBe(cpf);
     expect(clientes?.[0].id).toBe(clienteAntes?.id);
+  });
+
+  it("automático ligado + regra casa por cidade: lead distribuído e cliente religado à mesma empresa", async () => {
+    const UF = "AC";
+    const cidadeAuto = uniq("cidade-captacao-auto").toLowerCase();
+
+    await admin
+      .from("distribuicao_config")
+      .update({
+        automatico_on: true,
+        modo: "regiao",
+        criterios: { regiao: true },
+      })
+      .eq("id", "default");
+
+    const { data: emp, error: eEmp } = await admin
+      .from("empresas")
+      .insert({
+        nome: uniq("Franquia Captacao Auto"),
+        tipo: "pj",
+        documento: uniqDoc(),
+        status: "aprovada",
+        uf: UF,
+        cidade: cidadeAuto,
+      })
+      .select("id")
+      .single();
+    if (eEmp) throw eEmp;
+    const empresaId = emp.id;
+
+    const { userId: vendedorId } = await criarUsuario(`${uniq("vend-captacao")}@teste.local`);
+    await admin
+      .from("profiles")
+      .update({ empresa_id: empresaId, status: "aprovada" })
+      .eq("id", vendedorId);
+    await admin.from("user_roles").insert({ user_id: vendedorId, role: "vendedor" });
+
+    try {
+      const telefone = uniqTelefone();
+      const placa = uniqPlaca("AUT");
+
+      const { data, error } = await admin.rpc("ingerir_lead_externo", {
+        type: "INSERT",
+        record: { nome_cliente: "Cliente Auto", telefone, placa, cidade: cidadeAuto },
+      } as never);
+      expect(error).toBeNull();
+      const row = (data as { lead_id: string; criado: boolean }[])[0];
+
+      const { data: lead } = await admin
+        .from("leads")
+        .select("empresa_id,responsavel_id,cliente_id")
+        .eq("id", row.lead_id)
+        .single();
+      expect(lead?.empresa_id).toBe(empresaId);
+      expect(lead?.responsavel_id).toBe(vendedorId);
+
+      // cliente religado à mesma empresa que o trigger resolveu pro lead.
+      const { data: cliente } = await admin
+        .from("clientes")
+        .select("empresa_id")
+        .eq("id", lead!.cliente_id!)
+        .single();
+      expect(cliente?.empresa_id).toBe(empresaId);
+    } finally {
+      await admin.from("distribuicao_config").update({ automatico_on: false }).eq("id", "default");
+    }
+  });
+
+  it("religação do cliente é pulada se colidir com o índice único (empresa_id, documento), sem quebrar a RPC", async () => {
+    const UF = "AC";
+    const cidadeConflito = uniq("cidade-captacao-conflito").toLowerCase();
+    const cpfCompartilhado = uniqDoc();
+
+    await admin
+      .from("distribuicao_config")
+      .update({
+        automatico_on: true,
+        modo: "regiao",
+        criterios: { regiao: true },
+      })
+      .eq("id", "default");
+
+    const { data: emp, error: eEmp } = await admin
+      .from("empresas")
+      .insert({
+        nome: uniq("Franquia Captacao Conflito"),
+        tipo: "pj",
+        documento: uniqDoc(),
+        status: "aprovada",
+        uf: UF,
+        cidade: cidadeConflito,
+      })
+      .select("id")
+      .single();
+    if (eEmp) throw eEmp;
+    const empresaId = emp.id;
+
+    const { userId: vendedorId } = await criarUsuario(`${uniq("vend-conflito")}@teste.local`);
+    await admin
+      .from("profiles")
+      .update({ empresa_id: empresaId, status: "aprovada" })
+      .eq("id", vendedorId);
+    await admin.from("user_roles").insert({ user_id: vendedorId, role: "vendedor" });
+
+    // já existe outro cliente com o mesmo documento NESSA empresa — religar
+    // o cliente novo pra essa empresa colidiria com clientes_empresa_documento_uidx.
+    const { error: eOutroCliente } = await admin.from("clientes").insert({
+      empresa_id: empresaId,
+      nome: uniq("Outro Cliente"),
+      documento: cpfCompartilhado,
+      telefone: uniqTelefone(),
+    });
+    if (eOutroCliente) throw eOutroCliente;
+
+    try {
+      const telefone = uniqTelefone();
+      const placa = uniqPlaca("CFT");
+
+      const { data, error } = await admin.rpc("ingerir_lead_externo", {
+        type: "INSERT",
+        record: {
+          nome_cliente: "Cliente Conflitante",
+          telefone,
+          placa,
+          cidade: cidadeConflito,
+          cpf: cpfCompartilhado,
+        },
+      } as never);
+      // não estoura a transação/perde o lead por causa da colisão.
+      expect(error).toBeNull();
+      const row = (data as { lead_id: string; criado: boolean }[])[0];
+      expect(row.lead_id).toBeTruthy();
+
+      const { data: lead } = await admin
+        .from("leads")
+        .select("empresa_id,cliente_id")
+        .eq("id", row.lead_id)
+        .single();
+      expect(lead?.empresa_id).toBe(empresaId);
+
+      // cliente permanece órfão (empresa_id null): religação pulada por causa
+      // do conflito de documento na empresa resolvida.
+      const { data: cliente } = await admin
+        .from("clientes")
+        .select("empresa_id,documento")
+        .eq("id", lead!.cliente_id!)
+        .single();
+      expect(cliente?.documento).toBe(cpfCompartilhado);
+      expect(cliente?.empresa_id).toBeNull();
+    } finally {
+      await admin.from("distribuicao_config").update({ automatico_on: false }).eq("id", "default");
+    }
   });
 });

@@ -256,7 +256,7 @@ export type Database = {
           criado_em: string;
           documento: string | null;
           email: string | null;
-          empresa_id: string;
+          empresa_id: string | null;
           id: string;
           nome: string;
           telefone: string | null;
@@ -265,7 +265,7 @@ export type Database = {
           criado_em?: string;
           documento?: string | null;
           email?: string | null;
-          empresa_id: string;
+          empresa_id?: string | null;
           id?: string;
           nome: string;
           telefone?: string | null;
@@ -274,7 +274,7 @@ export type Database = {
           criado_em?: string;
           documento?: string | null;
           email?: string | null;
-          empresa_id?: string;
+          empresa_id?: string | null;
           id?: string;
           nome?: string;
           telefone?: string | null;
