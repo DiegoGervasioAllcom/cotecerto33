@@ -28,7 +28,7 @@ test.describe("Central da Franquia — interno (Marketing) em /comando/leads e /
     await expect(page.getByRole("heading", { name: "Central de Leads" })).toBeVisible();
   });
 
-  test("Marketing abre Distribuição em modo leitura (sem os controles de configuração)", async ({
+  test("Marketing abre Distribuição com controles de ação (área mdist liberada)", async ({
     page,
   }) => {
     await loginAs(page, marketing.email, marketing.senha);
@@ -37,7 +37,10 @@ test.describe("Central da Franquia — interno (Marketing) em /comando/leads e /
     await page.goto("/comando/distribuicao");
     await expect(page).not.toHaveURL(/\/inicio/, { timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Distribuição de leads" })).toBeVisible();
-    await expect(page.getByText("Acesso de leitura")).toBeVisible();
+    // Cargo Marketing tem a área "Distribuição" (mdist) liberada por preset —
+    // não fica mais em modo leitura, usa os controles normalmente.
+    await expect(page.getByText("Acesso de leitura")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Distribuição automática" })).toBeVisible();
     // Não é a visão reduzida da Full (essa é exclusiva de franqueado Full).
     await expect(page.getByRole("heading", { name: "SLA próprio" })).toHaveCount(0);
   });
