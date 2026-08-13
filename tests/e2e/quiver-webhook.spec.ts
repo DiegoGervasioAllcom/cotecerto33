@@ -27,7 +27,9 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     if (fixture) await limparCotacaoQuiverFixture(fixture);
   });
 
-  test("calculada: webhook com prêmios reais → Passo 6 mostra os cards", async ({ page }) => {
+  test("calculada: webhook mostra os cards e move o lead relacionado para Cotação", async ({
+    page,
+  }) => {
     fixture = await criarCotacaoQuiverFixture();
 
     const res = await page.request.post("/api/webhooks/quiver", {
@@ -50,6 +52,14 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText("Porto")).toBeVisible();
     await expect(page.getByText("Azul")).toBeVisible();
+
+    await page.goto("/venda/pipeline");
+    // O status canônico é `cotacao`; a coluna correspondente ainda é rotulada
+    // "Cotando" na UI atual.
+    const colunaCotacao = page.locator('.kcol[data-stage="Cotando"]');
+    await expect(colunaCotacao.getByText(fixture.leadNome, { exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test("erro_quiver: webhook sem prêmios → Passo 6 mostra a mensagem de erro", async ({ page }) => {
