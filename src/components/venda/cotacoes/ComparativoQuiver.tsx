@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SolicitarDescontoModal } from "@/components/venda/solicitar-desconto-modal";
 import { escapeHtml, fmtBRL, printHtml } from "@/lib/print";
 import {
@@ -73,6 +73,9 @@ const opcaoTexto = (opcao: ResultadoCalculo["opcoes"][number]) =>
     .filter(Boolean)
     .join(" · ");
 
+const DETAIL_COLUMN_WIDTH = 190;
+const OFFER_COLUMN_WIDTH = 280;
+
 export function ComparativoQuiver({
   cotacaoId,
   resultados,
@@ -86,7 +89,51 @@ export function ComparativoQuiver({
   printMeta,
 }: Props) {
   const [descontoModal, setDescontoModal] = useState<PremioComparativo | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [scrollState, setScrollState] = useState({
+    hasOverflow: false,
+    canScrollBack: false,
+    canScrollForward: false,
+  });
   const offers = useMemo(() => ordenarResultados(resultados), [resultados]);
+  const tableMinWidth = DETAIL_COLUMN_WIDTH + offers.length * OFFER_COLUMN_WIDTH;
+  const updateScrollState = useCallback(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+
+    const maxScrollLeft = element.scrollWidth - element.clientWidth;
+    const hasOverflow = maxScrollLeft > 1;
+    setScrollState({
+      hasOverflow,
+      canScrollBack: hasOverflow && element.scrollLeft > 1,
+      canScrollForward: hasOverflow && element.scrollLeft < maxScrollLeft - 1,
+    });
+  }, []);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+
+    updateScrollState();
+    const observer = new ResizeObserver(updateScrollState);
+    observer.observe(element);
+    const table = element.querySelector("table");
+    if (table) observer.observe(table);
+
+    return () => observer.disconnect();
+  }, [offers, updateScrollState]);
+
+  const scrollOffers = (direction: -1 | 1) => {
+    scrollRef.current?.scrollBy({
+      left: direction * OFFER_COLUMN_WIDTH,
+      behavior: "smooth",
+    });
+  };
+  const scrollNotice = scrollState.canScrollBack
+    ? scrollState.canScrollForward
+      ? "Há mais propostas à esquerda e à direita."
+      : "Há mais propostas à esquerda."
+    : "Há mais propostas à direita.";
   const coberturaLabels = useMemo(
     () => [
       ...new Set(
@@ -188,189 +235,285 @@ export function ComparativoQuiver({
           Imprimir comparativo
         </button>
       </div>
+      {scrollState.hasOverflow && (
+        <div
+          className="compare-bar"
+          role="group"
+          aria-label="Navegação entre propostas do comparativo"
+        >
+          <span className="muted small" role="status">
+            {scrollNotice}
+          </span>
+          <span className="spacer" style={{ flex: 1 }} />
+          <button
+            className="btn btn-ghost btn-sm"
+            type="button"
+            disabled={!scrollState.canScrollBack}
+            aria-label="Ver proposta anterior"
+            onClick={() => scrollOffers(-1)}
+          >
+            ‹ Anterior
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            type="button"
+            disabled={!scrollState.canScrollForward}
+            aria-label="Ver próxima proposta"
+            onClick={() => scrollOffers(1)}
+          >
+            Próxima ›
+          </button>
+        </div>
+      )}
       <div className="compare-table">
-        <table className="ctable">
-          <thead>
-            <tr>
-              <th style={{ width: "26%" }}>DETALHE</th>
-              {offers.map((resultado) => (
-                <th key={resultado.cardId} className="col-ins">
-                  {resultado.seguradora}
-                  <br />
-                  <span className="chip chip-outline">{tituloResultado(resultado)}</span>
+        <div
+          ref={scrollRef}
+          tabIndex={scrollState.hasOverflow ? 0 : undefined}
+          role="region"
+          aria-label={
+            scrollState.hasOverflow
+              ? "Comparativo de propostas com rolagem horizontal"
+              : "Comparativo de propostas"
+          }
+          onScroll={updateScrollState}
+          onKeyDown={(event) => {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+            event.preventDefault();
+            scrollOffers(event.key === "ArrowLeft" ? -1 : 1);
+          }}
+          style={{
+            maxWidth: "100%",
+            overflowX: "auto",
+            overscrollBehaviorX: "contain",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          <table className="ctable" style={{ minWidth: tableMinWidth }}>
+            <thead>
+              <tr>
+                <th
+                  style={{
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 3,
+                    width: DETAIL_COLUMN_WIDTH,
+                    minWidth: DETAIL_COLUMN_WIDTH,
+                    background: "var(--offwhite)",
+                  }}
+                >
+                  DETALHE
                 </th>
+                {offers.map((resultado) => (
+                  <th
+                    key={resultado.cardId}
+                    className="col-ins"
+                    style={{ minWidth: OFFER_COLUMN_WIDTH }}
+                  >
+                    {resultado.seguradora}
+                    <br />
+                    <span className="chip chip-outline">{tituloResultado(resultado)}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {coberturaLabels.map((label) => (
+                <tr key={label}>
+                  <td
+                    className="cov-name"
+                    style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--white)" }}
+                  >
+                    {label}
+                  </td>
+                  {offers.map((resultado) => (
+                    <td key={resultado.cardId} className="cell">
+                      <span className="v-lmi">
+                        {coberturaEntries(resultado).find(
+                          ([candidate]) => candidate === label,
+                        )?.[1] ?? "—"}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {coberturaLabels.map((label) => (
-              <tr key={label}>
-                <td className="cov-name">{label}</td>
+              <tr>
+                <td
+                  className="cov-name"
+                  style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--white)" }}
+                >
+                  OPÇÕES DE PRÊMIO
+                  <small>Plano · franquia · à vista · parcelado · desconto</small>
+                </td>
                 {offers.map((resultado) => (
                   <td key={resultado.cardId} className="cell">
-                    <span className="v-lmi">
-                      {coberturaEntries(resultado).find(
-                        ([candidate]) => candidate === label,
-                      )?.[1] ?? "—"}
-                    </span>
+                    {gruposOpcoesResultado(resultado).length === 0 ? (
+                      <span className="muted">Não informado</span>
+                    ) : (
+                      gruposOpcoesResultado(resultado).map((grupo, grupoIndex) => (
+                        <div
+                          key={`${grupo.formaPagamento}-${grupoIndex}`}
+                          style={{ marginBottom: 10 }}
+                        >
+                          <strong>{grupo.formaPagamento}</strong>
+                          {grupo.opcoes.map((opcao, opcaoIndex) => (
+                            <div key={opcaoIndex} style={{ marginTop: 6 }}>
+                              <span>{opcao.tipo || "Opção"}</span>
+                              <br />
+                              <span className="small">Franquia: {opcao.franquia || "—"}</span>
+                              <br />
+                              <span className="v-lmi">{opcao.avista || "—"}</span>
+                              <br />
+                              <span className="small muted">
+                                {opcao.parcelas || "Parcelamento não informado"}
+                              </span>
+                              {opcao.desconto && (
+                                <div className="chip chip-ok">{opcao.desconto}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ))
+                    )}
                   </td>
                 ))}
               </tr>
-            ))}
-            <tr>
-              <td className="cov-name">
-                OPÇÕES DE PRÊMIO
-                <small>Plano · franquia · à vista · parcelado · desconto</small>
-              </td>
-              {offers.map((resultado) => (
-                <td key={resultado.cardId} className="cell">
-                  {gruposOpcoesResultado(resultado).length === 0 ? (
-                    <span className="muted">Não informado</span>
-                  ) : (
-                    gruposOpcoesResultado(resultado).map((grupo, grupoIndex) => (
-                      <div
-                        key={`${grupo.formaPagamento}-${grupoIndex}`}
-                        style={{ marginBottom: 10 }}
-                      >
-                        <strong>{grupo.formaPagamento}</strong>
-                        {grupo.opcoes.map((opcao, opcaoIndex) => (
-                          <div key={opcaoIndex} style={{ marginTop: 6 }}>
-                            <span>{opcao.tipo || "Opção"}</span>
-                            <br />
-                            <span className="small">Franquia: {opcao.franquia || "—"}</span>
-                            <br />
-                            <span className="v-lmi">{opcao.avista || "—"}</span>
-                            <br />
-                            <span className="small muted">
-                              {opcao.parcelas || "Parcelamento não informado"}
-                            </span>
-                            {opcao.desconto && <div className="chip chip-ok">{opcao.desconto}</div>}
-                          </div>
-                        ))}
-                      </div>
-                    ))
-                  )}
+              <tr>
+                <td
+                  className="cov-name"
+                  style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--white)" }}
+                >
+                  FORMAS DE PAGAMENTO
+                  <small>Condições retornadas pela seguradora</small>
                 </td>
-              ))}
-            </tr>
-            <tr>
-              <td className="cov-name">
-                FORMAS DE PAGAMENTO
-                <small>Condições retornadas pela seguradora</small>
-              </td>
-              {offers.map((resultado) => (
-                <td key={resultado.cardId} className="cell">
-                  {formasPagamentoResultado(resultado).join(" · ") || "—"}
-                </td>
-              ))}
-            </tr>
-            <tr className="total-row">
-              <td className="cov-name">
-                PRÊMIO REGISTRADO
-                <small>Fonte financeira da cotação</small>
-              </td>
-              {offers.map((resultado) => {
-                const premio = vinculados.get(resultado.cardId);
-                return (
+                {offers.map((resultado) => (
                   <td key={resultado.cardId} className="cell">
-                    {premio ? fmtBRL(Number(premio.premio)) : "Vínculo ambíguo"}
+                    {formasPagamentoResultado(resultado).join(" · ") || "—"}
                   </td>
-                );
-              })}
-            </tr>
-            <tr className="actions-row">
-              <td />
-              {offers.map((resultado) => (
-                <td key={resultado.cardId}>
-                  <div className="ins-actions">
-                    <Link to="/venda/propostas" className="btn btn-yellow">
-                      Gerar proposta
-                    </Link>
-                    <button
-                      className="btn btn-ghost"
-                      type="button"
-                      onClick={() => doPrint(resultado.cardId)}
-                    >
-                      Imprimir
-                    </button>
-                  </div>
+                ))}
+              </tr>
+              <tr className="total-row">
+                <td
+                  className="cov-name"
+                  style={{
+                    position: "sticky",
+                    left: 0,
+                    zIndex: 2,
+                    background: "var(--cream-soft)",
+                  }}
+                >
+                  PRÊMIO REGISTRADO
+                  <small>Fonte financeira da cotação</small>
                 </td>
-              ))}
-            </tr>
-            <tr className="actions-row">
-              <td className="cov-name">
-                <small>Desconto adicional</small>
-              </td>
-              {offers.map((resultado) => {
-                const premio = vinculados.get(resultado.cardId);
-                const solicitacao = solicitacaoFor(resultado.seguradora);
-                const multiplosProdutos =
-                  (cardsPorSeguradora.get(normalizar(resultado.seguradora)) ?? 0) > 1;
-                const emAndamento =
-                  solicitacao && ["pendente", "aguardando_aceite"].includes(solicitacao.status);
-                return (
+                {offers.map((resultado) => {
+                  const premio = vinculados.get(resultado.cardId);
+                  return (
+                    <td key={resultado.cardId} className="cell">
+                      {premio ? fmtBRL(Number(premio.premio)) : "Vínculo ambíguo"}
+                    </td>
+                  );
+                })}
+              </tr>
+              <tr className="actions-row">
+                <td
+                  style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--white)" }}
+                />
+                {offers.map((resultado) => (
                   <td key={resultado.cardId}>
-                    {solicitacao && (
-                      <div style={{ marginBottom: 6 }}>
-                        <span
-                          className={`chip ${STATUS_CHIP[solicitacao.status] ?? "chip-outline"}`}
-                        >
-                          Seguradora ·{" "}
-                          {solicitacao.status === "aprovado"
-                            ? `Aprovado ${solicitacao.pct_concedido ?? solicitacao.pct_pedido}%`
-                            : (STATUS_LABEL[solicitacao.status] ?? solicitacao.status)}
+                    <div className="ins-actions">
+                      <Link to="/venda/propostas" className="btn btn-yellow">
+                        Gerar proposta
+                      </Link>
+                      <button
+                        className="btn btn-ghost"
+                        type="button"
+                        onClick={() => doPrint(resultado.cardId)}
+                      >
+                        Imprimir
+                      </button>
+                    </div>
+                  </td>
+                ))}
+              </tr>
+              <tr className="actions-row">
+                <td
+                  className="cov-name"
+                  style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--white)" }}
+                >
+                  <small>Desconto adicional</small>
+                </td>
+                {offers.map((resultado) => {
+                  const premio = vinculados.get(resultado.cardId);
+                  const solicitacao = solicitacaoFor(resultado.seguradora);
+                  const multiplosProdutos =
+                    (cardsPorSeguradora.get(normalizar(resultado.seguradora)) ?? 0) > 1;
+                  const emAndamento =
+                    solicitacao && ["pendente", "aguardando_aceite"].includes(solicitacao.status);
+                  return (
+                    <td key={resultado.cardId}>
+                      {solicitacao && (
+                        <div style={{ marginBottom: 6 }}>
+                          <span
+                            className={`chip ${STATUS_CHIP[solicitacao.status] ?? "chip-outline"}`}
+                          >
+                            Seguradora ·{" "}
+                            {solicitacao.status === "aprovado"
+                              ? `Aprovado ${solicitacao.pct_concedido ?? solicitacao.pct_pedido}%`
+                              : (STATUS_LABEL[solicitacao.status] ?? solicitacao.status)}
+                          </span>
+                        </div>
+                      )}
+                      {multiplosProdutos ? (
+                        <span className="muted small">
+                          Indisponível: o desconto é aplicado à seguradora inteira, que retornou
+                          mais de um produto nesta cotação.
                         </span>
-                      </div>
-                    )}
-                    {multiplosProdutos ? (
-                      <span className="muted small">
-                        Indisponível: o desconto é aplicado à seguradora inteira, que retornou mais
-                        de um produto nesta cotação.
-                      </span>
-                    ) : !premio ? (
-                      <span className="muted small">
-                        Indisponível: não foi possível vincular este produto a um único prêmio.
-                      </span>
-                    ) : (
-                      <>
-                        {emAndamento ? (
-                          <div className="ins-actions">
-                            {solicitacao.status === "aguardando_aceite" && (
+                      ) : !premio ? (
+                        <span className="muted small">
+                          Indisponível: não foi possível vincular este produto a um único prêmio.
+                        </span>
+                      ) : (
+                        <>
+                          {emAndamento ? (
+                            <div className="ins-actions">
+                              {solicitacao.status === "aguardando_aceite" && (
+                                <button
+                                  className="btn btn-yellow btn-sm"
+                                  type="button"
+                                  disabled={busySolId === solicitacao.id}
+                                  onClick={() => onAceitar(solicitacao.id)}
+                                >
+                                  Aceitar
+                                </button>
+                              )}
                               <button
-                                className="btn btn-yellow btn-sm"
+                                className="btn btn-ghost btn-sm"
                                 type="button"
                                 disabled={busySolId === solicitacao.id}
-                                onClick={() => onAceitar(solicitacao.id)}
+                                onClick={() => onCancelar(solicitacao.id)}
                               >
-                                Aceitar
+                                {solicitacao.status === "aguardando_aceite"
+                                  ? "Recusar"
+                                  : "Cancelar"}
                               </button>
-                            )}
+                            </div>
+                          ) : (
                             <button
                               className="btn btn-ghost btn-sm"
                               type="button"
-                              disabled={busySolId === solicitacao.id}
-                              onClick={() => onCancelar(solicitacao.id)}
+                              onClick={() => setDescontoModal(premio)}
                             >
-                              {solicitacao.status === "aguardando_aceite" ? "Recusar" : "Cancelar"}
+                              Solicitar desconto adicional
                             </button>
-                          </div>
-                        ) : (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            type="button"
-                            onClick={() => setDescontoModal(premio)}
-                          >
-                            Solicitar desconto adicional
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          </tbody>
-        </table>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <div className="compare-foot">
           <span>Dados detalhados preservados conforme o retorno de cada seguradora.</span>
           <span>Ações financeiras ficam indisponíveis quando o vínculo não é inequívoco.</span>
