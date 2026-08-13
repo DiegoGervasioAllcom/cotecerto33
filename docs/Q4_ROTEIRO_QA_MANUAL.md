@@ -1,4 +1,4 @@
-# Q4 — Roteiro de QA manual por perfil (V11, atualizado em 04/08/2026)
+# Q4 — Roteiro de QA manual por perfil (V11, atualizado em 12/08/2026)
 
 > **Histórico:** a versão original deste roteiro (6 experiências) foi executada e
 > aprovada em 28/07/2026, sem divergências reais (confirmação verbal do dono do
@@ -15,12 +15,11 @@ ordem em que alguém real usaria o sistema. Tudo que é automatizável já está
 por CI (`ci`, `db-tests`) e pelas suítes de teste do repositório (banco, unitário,
 E2E) — este roteiro cobre o que só se percebe usando a tela.
 
-> **Ambiente:** `https://cote-certo.sandboxallcom.com`
-> **Login inicial (Matriz):** `desenvolvimento@suppercerto.com.br` · senha
-> `Supper@123!` — **esta conta não é diretora** (o seed não marca `diretor=true` para
-> ela). Para testar Governança (Bloco 6), use uma das 2 contas que o seed já marca
-> como diretoras: `ana@suppercerto.com.br` ou `melo@suppercerto.com.br`, senha
-> `Supper@123!` em ambas.
+> **Ambiente:** `<URL_DO_AMBIENTE_DE_QA>`
+> **Login inicial (Matriz):** `<EMAIL_MATRIZ_QA>` · senha obtida pelo canal seguro
+> definido para o teste. Essa conta deve ser **não diretora**. Para Governança (Bloco
+> 6), use duas contas distintas com `diretor=true`, também provisionadas para QA e sem
+> credenciais registradas neste documento.
 > As outras personas **não existem no seed** (exceto quando indicado) — você as cria
 > pela própria aplicação, pelo fluxo de **convite** (Bloco 0). Isso é proposital: o
 > convite, o cadastro por link e a aprovação também são parte do teste.
@@ -33,31 +32,37 @@ aconteceu** (e print se der). Junte tudo e me manda que eu trato.
 
 ## As experiências (perfis e cargos)
 
-| Persona de teste                     | Perfil / cargo (RLS)              | Experiência              | Tela inicial              |
-| ------------------------------------- | ---------------------------------- | ------------------------ | -------------------------- |
-| Matriz                                | `matriz`                           | gestão total              | Visão geral da Matriz      |
-| Diretor (Ana/Melo, já no seed)         | `matriz`, `diretor=true`           | gestão total + governança | Visão geral da Matriz      |
-| Coordenador Comercial                 | `coordenador` (cargo `coord_com`)  | gestão total, não diretor | Visão geral da Matriz      |
-| Supervisor de Vendas                  | `supervisor` (cargo `sup_vendas`)  | comando comercial         | Visão geral (11 áreas)     |
-| Supervisor Operacional                | `supervisor` (cargo `sup_operacional`) | comando operacional  | Visão geral (4 áreas)      |
-| Supervisor Backoffice                 | `supervisor` (cargo `sup_backoffice`) | apoio operacional      | Visão geral (recorte)      |
-| Assistente Comercial                  | `interno` (cargo `assist_com`)     | apoio comercial, só leitura da Matriz | Vendas/Pipeline |
-| Marketing                             | `interno` (cargo `marketing`)      | apoio de captação, só leitura da Matriz | Leads/Distribuição |
-| Master franqueado                     | `master`                           | gestão de grupo           | Visão geral do grupo       |
-| Franquia **Full**                     | `franqueado` (modelo Full)         | gestão de grupo + matrizinha | Visão geral do grupo    |
-| Franquia **Individual**               | `franqueado` (modelo Smart/Light/…) | vendedor                | Cockpit do vendedor        |
-| Vendedor                              | `vendedor`                         | vendedor                  | Cockpit do vendedor        |
+| Persona de teste               | Perfil / cargo (RLS)                   | Experiência                             | Tela inicial           |
+| ------------------------------ | -------------------------------------- | --------------------------------------- | ---------------------- |
+| Matriz                         | `matriz`                               | gestão total                            | Visão geral da Matriz  |
+| Diretor (Ana/Melo, já no seed) | `matriz`, `diretor=true`               | gestão total + governança               | Visão geral da Matriz  |
+| Coordenador Comercial          | `coordenador` (cargo `coord_com`)      | gestão total, não diretor               | Visão geral da Matriz  |
+| Supervisor de Vendas           | `supervisor` (cargo `sup_vendas`)      | comando comercial                       | Visão geral (11 áreas) |
+| Supervisor Operacional         | `supervisor` (cargo `sup_operacional`) | comando operacional                     | Visão geral (4 áreas)  |
+| Supervisor Backoffice          | `supervisor` (cargo `sup_backoffice`)  | apoio operacional                       | Visão geral (recorte)  |
+| Assistente Comercial           | `interno` (cargo `assist_com`)         | apoio comercial, só leitura da Matriz   | Vendas/Pipeline        |
+| Marketing                      | `interno` (cargo `marketing`)          | apoio de captação, só leitura da Matriz | Leads/Distribuição     |
+| Master franqueado              | `master`                               | gestão de grupo                         | Visão geral do grupo   |
+| Franquia **Full**              | `franqueado` (modelo Full)             | gestão de grupo + matrizinha            | Visão geral do grupo   |
+| Franquia **Individual**        | `franqueado` (modelo Smart/Light/…)    | vendedor                                | Cockpit do vendedor    |
+| Vendedor                       | `vendedor`                             | vendedor                                | Cockpit do vendedor    |
 
 ---
 
 ## Bloco 0 — Matriz: convite, filas de aprovação e onboarding
 
-Logado como **Matriz** (`desenvolvimento@suppercerto.com.br`). Isso testa o convite, as
+Logado como **Matriz** (`<EMAIL_MATRIZ_QA>`). Isso testa o convite, as
 duas filas de aprovação, o e-mail real e a montagem da hierarquia inteira — nenhum
 passo deste bloco exige ser diretor.
 
 - [ ] **Login** entra e cai na **Visão geral da Matriz** (não vê "Novo lead"). O selo
       da marca mostra MATRIZ.
+- [ ] Todos os campos de senha do login, criação e redefinição têm controle para
+      **mostrar/ocultar** sem alterar o valor digitado.
+- [ ] **Esqueci minha senha:** solicite a recuperação para uma conta ativa. A tela
+      não deve revelar se um e-mail desconhecido existe; abra o e-mail recebido,
+      redefina a senha e confirme o login com a nova senha. Link usado/expirado deve
+      mostrar erro seguro e permitir iniciar uma nova solicitação.
 - [ ] A porta antiga de autocadastro **não existe mais** — não há link de "criar
       conta" na tela de login; a única entrada é convite ou o cadastro manual da
       Matriz (com log).
@@ -82,9 +87,13 @@ passo deste bloco exige ser diretor.
       próprio vendedor **sem passar pela Matriz** (fila própria, `xacessos.tsx`).
 - [ ] **Modal de análise:** confirme que ele vem travado no que o convite definiu
       (perfil/vínculo); "Reclassificar" só deve aparecer como exceção registrada.
-- [ ] **E-mail real** (produção): a pessoa aprovada recebe boas-vindas com o escopo
-      no corpo e um link de **criar senha** (recovery, validade 48h, uso único).
+- [ ] **E-mail real no ambiente configurado:** a pessoa aprovada recebe boas-vindas
+      com o escopo no corpo e um link de **criar senha** (recovery, validade 48h, uso único).
       Abra o link, defina senha (8+, letras e números) e confirme que loga.
+- [ ] **Reenvio do acesso:** enquanto o cadastro ainda não tiver ativado a conta,
+      use **Enviar novo link** em Acessos. Confirme a mensagem de sucesso, abra o link
+      mais recente e verifique que o anterior foi invalidado. Cliques repetidos ou
+      concorrentes não podem produzir links válidos concorrentes nem expor o link na UI.
 - [ ] Botão **"Quero falar com a Cote Certo"** na tela de login: preencha nome,
       e-mail, tema e mensagem — deve enviar sem persistir nada na base (é e-mail
       direto à Matriz).
@@ -92,8 +101,8 @@ passo deste bloco exige ser diretor.
       Integrações, Notificações, Perfis e usuários). Confira os modais por perfil.
 - [ ] **Acessos e permissões** → aba **Personalização geral**: confira os modelos de
       franquia (Full vs Individual) e o **Modelo CLT**.
-- [ ] Anote **e-mails e senhas** de cada persona criada — vai logar com elas nos
-      próximos blocos.
+- [ ] Registre apenas os **e-mails de QA** de cada persona criada. Guarde as senhas no
+      canal seguro da execução, nunca neste roteiro, em prints ou no relato do bug.
 
 > Se algum passo não estiver óbvio na UI, **pare e me avise** — pode ser gap de
 > onboarding a fechar antes do go-live.
@@ -104,7 +113,7 @@ passo deste bloco exige ser diretor.
 
 Logout → entre com o **vendedor** criado no Bloco 0.
 
-- [ ] Cai no **cockpit (Início)**: vê "Novo lead"; selo CORRETOR. KPIs do dia
+- [ ] Cai no **cockpit (Início)**: vê "Novo lead"; selo VENDEDOR. KPIs do dia
       carregam sem erro.
 - [ ] **Atender agora**: se houver lead distribuído, "Assumir e iniciar" funciona;
       sem lead, mostra o estado vazio.
@@ -167,19 +176,20 @@ Franquia Full, as seções extras do Bloco 4.
       **Supervisor Operacional não vê** (sem alçada, por design — confirme que a
       tela nem mostra a área).
 - [ ] **Menu por cargo** (confirme a lista exata, área por área):
-      - Coordenador Comercial: as mesmas **17 áreas** da Matriz (menu igual; a
-        diferença é não ser diretor, não é o menu).
-      - Supervisor de Vendas: **11 áreas** — Visão geral, Aprovações, Vendedores,
-        Supervisão, Pipeline geral, Vendas, Comissões, Premiações, **Estornos**,
-        Renovações, Relatórios.
-      - Supervisor Operacional: **4 áreas** — Visão geral, Leads, Distribuição,
-        Acessos e permissões.
-      - Master: menu de comando do grupo, sem Configurações globais.
-      - Franquia Full: **14 áreas** — quase o menu da Matriz, sem Franquias, sem
-        Configurações globais e sem Mensagens prontas. Não existe uma área "Canais"
-        nem "Central da Franquia" separadas no menu — "Central da Franquia" é o
-        comportamento das próprias áreas Leads/Distribuição pra Full (leads/SLA/canais
-        próprios, ver Bloco 4), não um item novo.
+  - Coordenador Comercial: as mesmas **17 áreas** da Matriz (menu igual; a
+    diferença é não ser diretor, não é o menu).
+  - Supervisor de Vendas: **11 áreas** — Visão geral, Aprovações, Vendedores,
+    Supervisão, Pipeline geral, Vendas, Comissões, Premiações, **Estornos**,
+    Renovações, Relatórios.
+  - Supervisor Operacional: **4 áreas** — Visão geral, Leads, Distribuição,
+    Acessos e permissões.
+  - Master: menu de comando do grupo, sem Configurações globais.
+  - Franquia Full: **14 áreas** — quase o menu da Matriz, sem Franquias, sem
+    Configurações globais e sem Mensagens prontas. Não existe uma área "Canais"
+    nem "Central da Franquia" separadas no menu — "Central da Franquia" é o
+    comportamento das próprias áreas Leads/Distribuição pra Full (leads/SLA/canais
+    próprios, ver Bloco 4), não um item novo.
+
 - [ ] **Escopo crítico:** cada persona de grupo **só vê a própria sub-rede** —
       Master não vê a rede de outro Master; Coordenador vê tudo da Matriz;
       Supervisor vê o que o cargo permite. Confirme trocando entre elas.
@@ -209,26 +219,29 @@ ao roteiro original — cobre a Full como "matrizinha" da própria rede.
 - [ ] Um lead **repassado** que estoure o SLA, ou seja classificado como perda, deve
       **voltar para a Matriz** como Devolvido/Perda (cruzamento de fronteira) —
       confirme do lado da Matriz que ele reaparece lá.
-- [ ] Vá em `/operacao/xacessos` ("Acessos da equipe") — confirme o toggle de
-      **3 seções**: "Meu time" (default), "Personalização geral" e "Performance".
+- [ ] Vá em `/operacao/xacessos` ("Acessos da equipe") — confirme as **5 abas**:
+      "Meu time" (default), "Pendentes de aprovação", "Desligamentos",
+      "Personalização geral" e "Performance".
       Franquia Individual **não** vê esse toggle (Bloco 2).
 - [ ] Aba **Personalização geral** → sub-aba **Modelo CLT · comissionamento**:
-      - [ ] Card "Modelo CLT" é **somente leitura** (singleton global da Matriz) —
-            não há botão de salvar ali.
-      - [ ] Card "Complementos do time" é **editável**: comissão de venda (%),
-            comissão na renovação (%), bônus de campanha, meta padrão da equipe.
-            Salve e confirme que persiste (recarregue a página).
-      - [ ] **Nenhum modal de senha de diretor aparece** ao salvar — a Full nunca é
-            diretora; o controle aqui é por identidade (dono da própria franquia +
-            modalidade Full), não por senha.
+  - [ ] Card "Modelo CLT" é **somente leitura** (singleton global da Matriz) —
+        não há botão de salvar ali.
+  - [ ] Card "Complementos do time" é **editável**: comissão de venda (%),
+        comissão na renovação (%), bônus de campanha, meta padrão da equipe.
+        Salve e confirme que persiste (recarregue a página).
+  - [ ] **Nenhum modal de senha de diretor aparece** ao salvar — a Full nunca é
+        diretora; o controle aqui é por identidade (dono da própria franquia +
+        modalidade Full), não por senha.
+
 - [ ] Aba **Performance**: régua de performance **do próprio time** (janela, limites
       de conversão para Atenção/Travado, cancelamentos, pausa de leads).
-      - [ ] Salvar a régua **não** pede senha de diretor e **não** tem o toggle
-            "Notificar o supervisor" (esse é exclusivo da régua interna/rede da
-            Matriz, Bloco 6).
-      - [ ] **Atenção:** essa régua (bloco `full`) é **compartilhada entre todas as
-            Franquias Full** — se houver mais de uma Full de teste, uma altera e a
-            outra vê o valor novo.
+  - [ ] Salvar a régua **não** pede senha de diretor e **não** tem o toggle
+        "Notificar o supervisor" (esse é exclusivo da régua interna/rede da
+        Matriz, Bloco 6).
+  - [ ] **Atenção:** essa régua (bloco `full`) é **compartilhada entre todas as
+        Franquias Full** — se houver mais de uma Full de teste, uma altera e a
+        outra vê o valor novo.
+
 - [ ] Aba **Histórico**: mostra as alterações feitas nesta franquia (inclusive a
       que você acabou de salvar), filtradas só para ela — não mistura com o
       histórico global da Matriz.
@@ -254,6 +267,10 @@ Volte para a **Matriz** e valide as telas de comando (a Matriz vê **tudo**).
       alerta deve abrir na tela e no filtro certos.
 - [ ] **Leads** e **Distribuição**: distribuir leads pendentes (manual e
       automático); regras e simulação.
+- [ ] **Lead externo — Captação Movida:** envie um evento válido pela integração e
+      confirme que o lead nasce na **fila global**, sem vendedor e sem atribuição à
+      empresa Matriz. Reenvie o mesmo evento e confirme idempotência (não duplica).
+      Evento inválido deve falhar sem criar lead parcial.
 - [ ] **Aprovações (desconto)**: aprove / negue / faça **contraproposta** / **escale**
       um pedido. Confira: aprovar **atualiza o prêmio** automaticamente;
       contraproposta volta ao solicitante; escalar sobe na cadeia
@@ -290,10 +307,9 @@ Volte para a **Matriz** e valide as telas de comando (a Matriz vê **tudo**).
 
 ## Bloco 6 — Governança e histórico (diretor)
 
-Logout → entre como **Ana** (`ana@suppercerto.com.br` · `Supper@123!`) ou **Melo**
-(`melo@suppercerto.com.br` · mesma senha) — o seed já marca as duas como diretoras
-(`diretor=true`), então **não precisa criar ninguém**: já há 2 diretoras prontas para
-testar o item de dupla aprovação (uma propõe, a outra confirma).
+Logout → entre com `<EMAIL_DIRETOR_1_QA>` e depois com `<EMAIL_DIRETOR_2_QA>`.
+As duas contas devem ter `diretor=true` e credenciais fornecidas pelo canal seguro,
+para testar a dupla aprovação (uma propõe, a outra confirma).
 
 - [ ] Nos botões **"Salvar política"** das telas de configuração (réguas
       interna/rede, e demais políticas sensíveis da Matriz — não confundir com os
@@ -323,8 +339,11 @@ apoio, perfil `interno`).
       nenhum lead/dado de Master, Franquia Individual ou Franquia Full.
 - [ ] **Assistente Comercial** vê no menu: Visão geral, Vendas, Pipeline geral.
       Mesma regra: só dados da Matriz, nenhuma franquia.
-- [ ] Em nenhum dos dois cargos há **escrita** liberada além do que o preset já dava
-      (não conseguem editar/distribuir leads de fora do que a área permite).
+- [ ] **Marketing com área `mdist`:** em Distribuição, consegue redistribuir, puxar
+      lead de volta e rodar a distribuição automática. Remova `mdist` por override e
+      confirme que as ações somem/falham também no servidor.
+- [ ] **Assistente Comercial sem `mdist`:** permanece sem as ações de distribuição.
+      A autorização acompanha a área concedida, não o nome do cargo.
 - [ ] **Supervisor Backoffice** (se testado): confira que o menu reflete o recorte
       do cargo (Distribuição de leads, vendas de todos os canais, pendências de
       emissão) e não sobra nem falta área.

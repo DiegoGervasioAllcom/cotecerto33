@@ -5,8 +5,12 @@ prematura. A auditoria com persona Franquia Full real confirmou que a tela não
 implementava as cinco abas do protótipo, o cadastro/configuração individual estava
 incompleto e uma Full podia permanecer ativa sem Master. A Frente 5b continua como
 histórico do PR #120; a correção complementar é a **Frente 5c**, descrita ao fim. Em
-09/08, banco, front e integração da 5c foram concluídos e validados localmente. A
-publicação em produção continua dependendo do fluxo normal de revisão, PR e deploy.
+09/08, banco, front e integração da 5c foram concluídos e validados localmente.
+
+> **Nota de supersessão (12/08/2026):** a Frente 5c foi mergeada na `main` pelos PRs
+> #138 e #139, com correções complementares nos PRs seguintes (incluindo #141). Portanto,
+> revisão e PR não são mais pendências. As validações locais registradas neste plano não
+> comprovam, por si só, o deploy das migrations e da aplicação em produção.
 
 **Aberto em:** 03/08/2026 · **Gatilho:** a Lis respondeu as 6 perguntas em aberto
 (`docs/PERGUNTAS_PARA_LIS.md`) e enviou `CoteCerto_Regras_Decididas.html` — as duas

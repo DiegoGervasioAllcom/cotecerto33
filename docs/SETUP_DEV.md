@@ -1,6 +1,7 @@
 # Guia de Instalação — Ambiente de Desenvolvimento CoteCerto
 
-**v1.1 · 23/07/2026** · Validado em macOS. Tempo estimado: ~15 min (primeira vez).
+**Atualizado em 12/08/2026** · Validado em macOS. Tempo estimado: ~15 min na
+primeira execução, sem contar o download das imagens Docker.
 
 ## Pré-requisitos
 
@@ -33,7 +34,7 @@ Preencher o `.env` com o mapeamento (a CLI atual chama as chaves de Publishable/
 | **Secret** key                         | `SELF_SUPABASE_SERVICE_ROLE_KEY`          |
 
 ```bash
-# 3. Aplicar as migrations atuais (131 em 04/08/2026) + seed num banco limpo
+# 3. Aplicar as migrations canônicas + seed num banco limpo
 supabase db reset
 
 # 4. Instalar dependências e subir o app
@@ -41,13 +42,15 @@ bun install
 bun run dev
 ```
 
-Abrir a URL que o vite imprimir (ex.: `http://localhost:3000`).
+Abrir a URL que o Vite imprimir. As portas `3000` e `8080` são aceitas pelo
+Supabase local para os callbacks de criação e recuperação de senha; use a porta
+que estiver livre e tiver sido anunciada pelo processo.
 
-## Login de desenvolvimento
+## Contas locais de teste
 
-- **E-mail:** `desenvolvimento@suppercerto.com.br`
-- **Senha:** `Supper@123!`
-- Perfil: Matriz (admin). ⚠️ Senha apenas do ambiente local — nunca usar em produção.
+O `supabase db reset` cria as personas definidas em `supabase/seed.sql`. Consulte
+o seed apenas no checkout local. Não replique e-mails ou senhas em documentação,
+issues, capturas de tela ou logs, e nunca reutilize essas credenciais em produção.
 
 ## Comandos do dia a dia
 
@@ -59,6 +62,7 @@ Abrir a URL que o vite imprimir (ex.: `http://localhost:3000`).
 | `bun run db:diff`              | compara o schema com a produção (`$PROD_DB_URL` no ambiente)             |
 | `bun run db:push`              | aplica migrations na produção (`$PROD_DB_URL`) — só após passar no local |
 | Studio local                   | `http://127.0.0.1:54323` (visualizar tabelas/dados no navegador)         |
+| Mailpit local                  | `http://127.0.0.1:54324` (captura e-mail; não usa Resend/SMTP real)      |
 | `bun run test:unit`            | testes unitários (rodam offline)                                         |
 | `bun run test:db`              | testes de integração (exigem o Supabase local rodando)                   |
 | `bun run test:e2e`             | testes Playwright das jornadas e personas                                |
@@ -73,6 +77,8 @@ Abrir a URL que o vite imprimir (ex.: `http://localhost:3000`).
 - **NOTICEs "does not exist, skipping" no `db reset`** → normais: são os `drop ... if exists` das migrations rodando em banco limpo.
 - **Aviso "shared defaults / do not use in production"** → esperado: as chaves locais são padrão da CLI, valem só na sua máquina.
 - As migrations históricas (`/migrations`, 000–039) são **read-only**; a fonte canônica é `supabase/migrations/`. O seed vive em `supabase/seed.sql`.
+- Em 12/08/2026 havia 149 migrations canônicas. A contagem é evidência datada;
+  confirme o valor atual com o comando abaixo antes de citá-lo.
 - Regras completas para desenvolvimento: `AGENTS.md` na raiz.
 - A contagem muda com o projeto; confirme com
   `find supabase/migrations -name '*.sql' | wc -l`.
