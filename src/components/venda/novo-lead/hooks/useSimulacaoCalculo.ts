@@ -2,36 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarCotacaoQuiver } from "@/lib/quiver.functions";
 import type { Form } from "../types";
+import {
+  parseQuiverResultado,
+  type ResultadoCalculo,
+} from "@/components/venda/cotacoes/quiver-resultado";
 
-export type OpcaoPremio = {
-  tipo?: string;
-  avista?: string;
-  desconto?: string;
-  franquia?: string;
-  parcelas?: string;
-};
-
-export type ResultadoCalculo = {
-  index: number;
-  seguradora: string;
-  nome: string;
-  produto?: string;
-  opcoes: OpcaoPremio[];
-  formaPagamento?: string;
-  formasPagamento?: { opcoes: string[]; selecionada?: string };
-  coberturasBasicas?: Record<string, string>;
-  coberturasAdicionais?: Record<string, string>;
-  premiosPorFormaPagamento?: { formaPagamento: string; opcoes: OpcaoPremio[] }[];
-};
-
-export function premioNumerico(opcao?: OpcaoPremio): number {
-  const texto = opcao?.avista;
-  if (!texto) return Infinity;
-  const match = texto.match(/R\$\s*([\d.,]+)/);
-  if (!match) return Infinity;
-  const numero = Number(match[1].replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(numero) ? numero : Infinity;
-}
+export {
+  premioNumerico,
+  type ResultadoCalculo,
+} from "@/components/venda/cotacoes/quiver-resultado";
 
 const POLL_MS = 4000;
 
@@ -97,26 +76,7 @@ export function useSimulacaoCalculo(
       .select("quiver_resultado_raw")
       .eq("id", id)
       .maybeSingle();
-    const cards = (data?.quiver_resultado_raw as { cards?: unknown[] } | null)?.cards ?? [];
-    setResultados(
-      cards.map((c, i) => {
-        const card = c as Record<string, unknown>;
-        return {
-          index: typeof card.index === "number" ? card.index : i,
-          seguradora: (card.seguradora as string) ?? "",
-          nome: (card.nome as string) ?? "",
-          produto: card.produto as string | undefined,
-          opcoes: (card.opcoes as OpcaoPremio[]) ?? [],
-          formaPagamento: card.formaPagamento as string | undefined,
-          formasPagamento: card.formasPagamento as ResultadoCalculo["formasPagamento"],
-          coberturasBasicas: card.coberturasBasicas as Record<string, string> | undefined,
-          coberturasAdicionais: card.coberturasAdicionais as Record<string, string> | undefined,
-          premiosPorFormaPagamento: card.premiosPorFormaPagamento as
-            | ResultadoCalculo["premiosPorFormaPagamento"]
-            | undefined,
-        };
-      }),
-    );
+    setResultados(parseQuiverResultado(data?.quiver_resultado_raw));
   }
 
   function iniciarPolling(id: string) {

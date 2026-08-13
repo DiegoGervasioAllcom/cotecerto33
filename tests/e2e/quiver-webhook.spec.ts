@@ -38,8 +38,85 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
         cotacaoId: fixture.cotacaoId,
         temPremios: true,
         cards: [
-          { seguradora: "Porto", opcoes: [{ tipo: "Compreensiva", avista: "1.850,00" }] },
-          { seguradora: "Azul", opcoes: [{ tipo: "Compreensiva", avista: "1.920,50" }] },
+          {
+            index: 10,
+            seguradora: "Seguradora Alfa",
+            produto: "Auto Completo",
+            nome: "Plano Premium",
+            opcoes: [
+              {
+                tipo: "Compreensiva",
+                franquia: "Reduzida · R$ 2.450,00",
+                avista: "R$ 2.345,67",
+                parcelas: "10x de R$ 251,90",
+                desconto: "5% no débito",
+              },
+              {
+                tipo: "Roubo e furto",
+                franquia: "Sem franquia",
+                avista: "R$ 1.234,50",
+                parcelas: "6x de R$ 220,10",
+              },
+            ],
+            formasPagamento: {
+              selecionada: "Cartão de crédito",
+              opcoes: ["Cartão de crédito", "Débito em conta"],
+            },
+            formaPagamento: "Boleto",
+            premiosPorFormaPagamento: [
+              {
+                formaPagamento: "PIX",
+                opcoes: [
+                  {
+                    tipo: "Compreensiva PIX",
+                    franquia: "Reduzida PIX · R$ 2.300,00",
+                    avista: "R$ 2.300,00",
+                    parcelas: "1x",
+                    desconto: "7% no PIX",
+                  },
+                ],
+              },
+            ],
+            coberturasBasicas: {
+              Casco: "100% FIPE",
+              "Danos materiais": "R$ 150.000,00",
+            },
+            coberturasAdicionais: { Vidros: "Completo", Reserva: "15 dias" },
+          },
+          {
+            index: 10,
+            seguradora: "Seguradora Alfa",
+            produto: "Auto Essencial",
+            nome: "Plano Econômico",
+            opcoes: [
+              {
+                tipo: "Compreensiva Econômica",
+                franquia: "Normal · R$ 3.100,00",
+                avista: "R$ 1.987,65",
+                parcelas: "8x de R$ 310,00",
+              },
+            ],
+            formasPagamento: { selecionada: "Boleto", opcoes: ["Boleto"] },
+            coberturasBasicas: { Casco: "90% FIPE" },
+            coberturasAdicionais: { Vidros: "Básico" },
+          },
+          {
+            index: 30,
+            seguradora: "Seguradora Beta",
+            produto: "Auto Flex",
+            nome: "Plano Flexível",
+            opcoes: [
+              {
+                tipo: "Compreensiva Plus",
+                franquia: "Majorada · R$ 4.000,00",
+                avista: "R$ 3.010,05",
+                parcelas: "12x de R$ 275,40",
+              },
+            ],
+            formaPagamento: "Cartão",
+            coberturasBasicas: { Casco: "110% FIPE" },
+            coberturasAdicionais: { "Carro reserva": "7 dias" },
+          },
         ],
       },
     });
@@ -50,8 +127,88 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
 
     await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
     await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Porto")).toBeVisible();
-    await expect(page.getByText("Azul")).toBeVisible();
+    for (const valor of [
+      "Auto Completo · Plano Premium",
+      "Auto Essencial · Plano Econômico",
+      "Auto Flex · Plano Flexível",
+      "Reduzida · R$ 2.450,00",
+      "Sem franquia",
+      "R$ 2.345,67",
+      "R$ 1.987,65",
+      "R$ 1.234,50",
+      "10x de R$ 251,90",
+      "6x de R$ 220,10",
+      "100% FIPE",
+      "90% FIPE",
+      "110% FIPE",
+      "Completo",
+      "Básico",
+      "Cartão de crédito",
+    ]) {
+      await expect(page.getByText(valor, { exact: true }).first()).toBeVisible();
+    }
+
+    await page.getByRole("link", { name: "Comparativo lado a lado" }).click();
+    await expect(page).toHaveURL(new RegExp(`/venda/cotacoes/${fixture.cotacaoId}$`));
+
+    // O comparativo deve renderizar o mesmo payload, inclusive múltiplos
+    // produtos da mesma seguradora, sem resumir para uma cobertura genérica.
+    for (const valor of [
+      "Auto Completo · Plano Premium",
+      "Auto Essencial · Plano Econômico",
+      "Auto Flex · Plano Flexível",
+      "Reduzida · R$ 2.450,00",
+      "Sem franquia",
+      "Normal · R$ 3.100,00",
+      "Majorada · R$ 4.000,00",
+      "R$ 2.345,67",
+      "R$ 1.234,50",
+      "R$ 3.010,05",
+      "10x de R$ 251,90",
+      "6x de R$ 220,10",
+      "8x de R$ 310,00",
+      "12x de R$ 275,40",
+      "100% FIPE",
+      "90% FIPE",
+      "110% FIPE",
+      "R$ 150.000,00",
+      "Completo",
+      "Básico",
+      "15 dias",
+      "7 dias",
+      "7% no PIX",
+    ]) {
+      await expect(page.getByText(valor, { exact: true }).first()).toBeVisible();
+    }
+    await expect(page.getByText(/Cartão de crédito.*Débito em conta.*Boleto.*PIX/)).toBeVisible();
+    await expect(page.getByText("Compreensiva PIX", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Reduzida PIX · R\$ 2\.300,00/)).toBeVisible();
+
+    // Os dois produtos Alfa têm pareamentos financeiros distintos e inequívocos,
+    // mas desconto é uma ação da seguradora inteira: ambos permanecem bloqueados.
+    await expect(page.getByText(/o desconto é aplicado à seguradora inteira/i)).toHaveCount(2);
+    await expect(page.getByText(/não foi possível vincular este produto/i)).toHaveCount(0);
+    await expect(page.getByText("R$ 1.987,65", { exact: true })).toHaveCount(2);
+    await expect(page.getByRole("button", { name: "Solicitar desconto adicional" })).toHaveCount(1);
+    await expect(page.getByText("12x de R$ 195,48", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Cobertura padrão", { exact: true })).toHaveCount(0);
+
+    const popupPromise = page.waitForEvent("popup");
+    await page.getByRole("button", { name: "Imprimir comparativo" }).click();
+    const popup = await popupPromise;
+    await expect(popup.locator("body")).toContainText("Auto Completo · Plano Premium");
+    await expect(popup.locator("body")).toContainText("Auto Essencial · Plano Econômico");
+    await expect(popup.locator("body")).toContainText("Reduzida · R$ 2.450,00");
+    await expect(popup.locator("body")).toContainText("10x de R$ 251,90");
+    await expect(popup.locator("body")).toContainText("5% no débito");
+    await expect(popup.locator("body")).toContainText("Compreensiva PIX");
+    await expect(popup.locator("body")).toContainText("Reduzida PIX · R$ 2.300,00");
+    await expect(popup.locator("body")).toContainText("7% no PIX");
+    await expect(popup.locator("body")).toContainText("R$ 150.000,00");
+    await expect(popup.locator("body")).toContainText("Prêmio registradoR$ 1.987,65R$ 2.345,67");
+    await expect(popup.locator("body")).not.toContainText("Vínculo indisponível");
+    await expect(popup.locator("body")).not.toContainText("12x de R$ 195,48");
+    await popup.close();
 
     await page.goto("/venda/pipeline");
     // O status canônico é `cotacao`; a coluna correspondente ainda é rotulada
@@ -118,5 +275,24 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
       data: { cotacaoId: fixture.cotacaoId, temPremios: true, cards: [] },
     });
     expect(res.status()).toBe(401);
+  });
+
+  test("NEGATIVO: vendedor de outra empresa não abre o comparativo por URL direta", async ({
+    page,
+  }) => {
+    fixture = await criarCotacaoQuiverFixture();
+    const intruso = await criarCotacaoQuiverFixture();
+    try {
+      await loginAs(page, intruso.email, intruso.senha);
+      await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
+
+      await page.goto(`/venda/cotacoes/${fixture.cotacaoId}`);
+      await expect(page.getByText("Cotação não encontrada.", { exact: true })).toBeVisible({
+        timeout: 10_000,
+      });
+      await expect(page.getByRole("heading", { name: /Comparativo ·/ })).toHaveCount(0);
+    } finally {
+      await limparCotacaoQuiverFixture(intruso);
+    }
   });
 });
