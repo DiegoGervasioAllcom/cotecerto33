@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { usePodeDistribuir } from "@/lib/use-areas";
 import { useGroupScope } from "@/lib/group-scope";
 import { leadsAlertSearchSchema } from "@/lib/dashboard-alerts";
+import { resolveExistingLeadDestination } from "@/lib/pipeline-lead-navigation";
 
 export const Route = createFileRoute("/_authenticated/comando/leads")({
   validateSearch: leadsAlertSearchSchema,
@@ -163,6 +164,8 @@ function Page() {
   const [canaisList, setCanaisList] = useState<Canal[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
+  const openingRef = useRef(false);
   const [now, setNow] = useState(() => Date.now());
 
   const [fStatus, setFStatus] = useState("");
@@ -361,28 +364,39 @@ function Page() {
     };
   }, [enriched]);
 
-  function openLead(l: Lead) {
-    const st = l.status_pipeline;
-    if (st === "novo" || st === "contato" || st === "qualificado" || st === "cotacao") {
-      supabase
-        .from("cotacoes")
-        .select("id,step_atual")
-        .eq("lead_id", l.id)
-        .order("atualizado_em", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data?.id)
-            navigate({
-              to: "/venda/novo-lead",
-              search: { id: data.id, step: Math.max(0, Number(data.step_atual ?? 0)) },
-            });
-          else navigate({ to: "/venda/novo-lead", search: {} });
+  async function openLead(l: Lead) {
+    if (openingRef.current) return;
+    openingRef.current = true;
+    setOpening(l.id);
+    try {
+      setErr(null);
+      const destination = await resolveExistingLeadDestination({
+        leadId: l.id,
+        status: l.status_pipeline,
+        canAssume: false,
+      });
+      if (destination.kind === "wizard")
+        navigate({
+          to: "/venda/novo-lead",
+          search: { id: destination.id, step: destination.step },
         });
-      return;
+      else if (destination.kind === "proposals")
+        navigate({
+          to: "/venda/propostas",
+          search: destination.selected ? { selected: destination.selected } : {},
+        });
+      else if (destination.kind === "acceptance")
+        navigate({
+          to: "/venda/aceite",
+          search: destination.selected ? { selected: destination.selected } : {},
+        });
+      else setErr(destination.message);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "Falha ao abrir o lead.");
+    } finally {
+      openingRef.current = false;
+      setOpening(null);
     }
-    if (st === "proposta" || st === "negociacao") navigate({ to: "/venda/propostas", search: {} });
-    if (st === "ganho") navigate({ to: "/venda/aceite", search: {} });
   }
 
   async function executarDistribuicaoAuto() {
@@ -914,7 +928,13 @@ function Page() {
                           </button>
                         )}
                         {!l.bloqueado && l.distribuido && (
-                          <button className="ic-mini" title="Abrir" onClick={() => openLead(l)}>
+                          <button
+                            className="ic-mini"
+                            title="Abrir"
+                            disabled={opening !== null}
+                            aria-busy={opening === l.id}
+                            onClick={() => void openLead(l)}
+                          >
                             <svg width="14" height="14">
                               <use href="#i-eye"></use>
                             </svg>

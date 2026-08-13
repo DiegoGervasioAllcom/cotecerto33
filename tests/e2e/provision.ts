@@ -183,7 +183,9 @@ export type VendedorComTutorial = VendedorComLead & {
  * "Atender agora" (mesmo shape usado por `atender.tsx`: sem `distribuido_em` nulo,
  * sem `arquivado`, sem `ultimo_atendimento_em`).
  */
-export async function criarVendedorComLead(): Promise<VendedorComLead> {
+export async function criarVendedorComLead(
+  opts: { statusPipeline?: "novo" | "qualificado" } = {},
+): Promise<VendedorComLead> {
   const senha = "Teste@123!";
   const email = `${uniq("vend-e2e")}@teste.local`;
 
@@ -226,7 +228,7 @@ export async function criarVendedorComLead(): Promise<VendedorComLead> {
       origem: "teste-e2e",
       empresa_id: emp.id,
       responsavel_id: userId,
-      status_pipeline: "novo",
+      status_pipeline: opts.statusPipeline ?? "novo",
       distribuido_em: new Date().toISOString(),
       dados: {
         cliente: { cpf_cnpj: "12345678901", email: "cliente.e2e@teste.local" },
