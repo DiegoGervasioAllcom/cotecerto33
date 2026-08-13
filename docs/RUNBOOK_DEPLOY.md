@@ -1,11 +1,12 @@
 # Runbook de Deploy — CoteCerto (produção)
 
-Procedimento **real** de deploy, validado em produção em 16/07/2026. Descreve como
-o app é publicado **integrado** à infraestrutura já existente no servidor
+Procedimento operacional atualizado em 12/08/2026. Descreve como o app é
+publicado **integrado** à infraestrutura já existente no servidor
 (Supabase self-hosted + nginx + certbot), sem subir stack paralela.
 
-> Este runbook substitui a antiga stack "greenfield" (K6-a), que partia da premissa
-> errada de servidor zerado. Aqui documentamos o que de fato roda.
+> Este runbook substitui a antiga stack "greenfield" (K6-a), que partia da
+> premissa de servidor zerado. Afirmações datadas de produção ficam na seção
+> **Evidência**, separadas do procedimento que deve ser reexecutado.
 
 ---
 
@@ -54,10 +55,10 @@ Domínios:
 > Necessário **só na primeira vez** ou quando quiser reconstruir o schema do zero.
 > Para mudanças incrementais depois, ver §6.
 
-O schema é definido pelas migrations atuais em `supabase/migrations/` (131 em
-04/08/2026, rebuild completo do fechamento da V11) + `supabase/seed.sql`. Confirme a
-contagem antes de cada rebuild (`ls supabase/migrations/*.sql | wc -l`); esse número
-cresce.
+O schema é definido pelas migrations atuais em `supabase/migrations/` +
+`supabase/seed.sql`. Havia 149 migrations em 12/08/2026; confirme a contagem
+antes de cada rebuild (`find supabase/migrations -maxdepth 1 -name '*.sql' |
+wc -l`), porque esse número cresce.
 O procedimento gera um **artefato único** (`bootstrap_prod.sql`) validado localmente e o
 aplica no Postgres de produção.
 
@@ -144,7 +145,7 @@ sudo docker exec -i supabase-db psql -U postgres -d postgres -tAc \
   (select count(*) from pg_tables  where schemaname='public') as tabelas,
   (select count(*) from pg_policies where schemaname='public') as policies,
   (select count(*) from supabase_migrations.schema_migrations) as hist,
-  (select count(*) from auth.users where email='desenvolvimento@suppercerto.com.br') as admin;"
+  (select count(*) from auth.users) as usuarios_auth;"
 ```
 
 ### 3.5 Gerador do bloco de histórico (PG15-safe)
@@ -160,7 +161,8 @@ sudo docker exec -i supabase-db psql -U postgres -d postgres -tAc \
 } | sudo docker exec -i supabase-db psql -U postgres -d postgres -v ON_ERROR_STOP=1
 ```
 
-Credenciais do admin semeado: `desenvolvimento@suppercerto.com.br` / `Supper@123!`.
+As personas e credenciais do ambiente descartável estão no `supabase/seed.sql`.
+Não copie esses valores para documentação, tickets, logs ou produção.
 
 ---
 
@@ -169,7 +171,7 @@ Credenciais do admin semeado: `desenvolvimento@suppercerto.com.br` / `Supper@123
 Crie uma vez o arquivo de runtime do app no servidor. Ele não é versionado e
 deve conter também os segredos de e-mail e da Quiver. Edite-o diretamente, sem
 colar valores no terminal, em logs ou em comandos do histórico:
->
+
 > ```bash
 > sudo install -m 600 /dev/null /home/alldev/.cotecerto-app.env
 > sudo nano /home/alldev/.cotecerto-app.env
@@ -181,7 +183,7 @@ Modelo (substitua os marcadores somente no servidor):
 SELF_SUPABASE_URL=https://supabase-cotecerto.sandboxallcom.com
 SELF_SUPABASE_ANON_KEY=<ANON_KEY do Supabase>
 SELF_SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY do Supabase>
-SELF_RESEND_API_KEY=<chave Resend de produção>
+SELF_RESEND_API_KEY=<chave da API Resend de produção>
 SELF_APP_URL=https://cote-certo.sandboxallcom.com
 SELF_QUIVER_API_URL=https://quiver-bot.sandboxallcom.com
 SELF_QUIVER_WEBHOOK_CLIENT_KEY=<segredo compartilhado com a Quiver>
@@ -271,14 +273,20 @@ sudo docker inspect -f '{{.Config.Image}} {{.Image}}' cotecerto-app
 
 Use a tag SHA no deploy; `latest` não é referência de rollback.
 
-### 6.2 Configurar GoTrue para o fluxo de criação de senha
+### 6.2 Configurar GoTrue para criação e recuperação de senha
 
 No `/home/alldev/supabase/docker/.env`, configure:
 
 ```dotenv
 SITE_URL=https://cote-certo.sandboxallcom.com
-ADDITIONAL_REDIRECT_URLS=https://cote-certo.sandboxallcom.com/auth/criar-senha
+ADDITIONAL_REDIRECT_URLS=https://cote-certo.sandboxallcom.com/auth/criar-senha,https://cote-certo.sandboxallcom.com/auth/redefinir-senha
 MAILER_OTP_EXP=172800
+SMTP_ADMIN_EMAIL=<remetente autenticado no provider>
+SMTP_HOST=<host SMTP do provider>
+SMTP_PORT=587
+SMTP_USER=<usuário SMTP>
+SMTP_PASS=<segredo SMTP>
+SMTP_SENDER_NAME=CoteCerto
 ```
 
 Confirme que o serviço `auth` no `docker-compose.yml` contém o mapeamento abaixo;
@@ -290,6 +298,12 @@ não tem efeito nenhum):
 GOTRUE_SITE_URL: ${SITE_URL}
 GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS}
 GOTRUE_MAILER_OTP_EXP: ${MAILER_OTP_EXP}
+GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
+GOTRUE_SMTP_HOST: ${SMTP_HOST}
+GOTRUE_SMTP_PORT: ${SMTP_PORT}
+GOTRUE_SMTP_USER: ${SMTP_USER}
+GOTRUE_SMTP_PASS: ${SMTP_PASS}
+GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME}
 ```
 
 Valide e recrie apenas o Auth, depois aguarde o health check:
@@ -300,6 +314,17 @@ sudo docker compose config --quiet
 sudo docker compose up -d --force-recreate auth
 sudo docker inspect -f '{{.State.Health.Status}}' supabase-auth
 ```
+
+Confirme a configuração efetiva sem imprimir valores secretos:
+
+```bash
+sudo docker exec supabase-auth sh -c 'for k in GOTRUE_SITE_URL GOTRUE_URI_ALLOW_LIST GOTRUE_MAILER_OTP_EXP GOTRUE_SMTP_HOST GOTRUE_SMTP_PORT GOTRUE_SMTP_USER; do test -n "$(printenv "$k")" || exit 1; done'
+```
+
+A allowlist precisa conter **as duas** rotas públicas: `/auth/criar-senha`
+(ativação/boas-vindas) e `/auth/redefinir-senha` ("Esqueci minha senha"). Não
+use wildcard de domínio. Credenciais SMTP ficam somente no `.env` protegido do
+Supabase; não entram no compose, na imagem, no GitHub Actions ou nos logs.
 
 ### 6.3 Ordem obrigatória: migrations antes do app
 
@@ -362,10 +387,26 @@ sudo docker inspect -f '{{.State.Health.Status}}' cotecerto-app
 - conferir inbox e spam, remetente, link público e expiração de 48 horas;
 - abrir `/auth/criar-senha`, definir a senha e autenticar;
 - confirmar que reutilizar o link não permite nova definição;
+- solicitar em `/auth/esqueci-senha`, receber o e-mail do GoTrue e concluir em
+  `/auth/redefinir-senha`;
+- confirmar resposta neutra para endereço inexistente e que um link de recovery
+  usado, expirado ou substituído não redefine a senha;
 - validar pendência, recusa e retry da outbox sem envio duplicado;
 - verificar logs apenas por status/ID, nunca imprimir payload, token ou chave.
 
-### 6.6 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
+### 6.6 Evidência de produção
+
+Registre para cada publicação: data/hora, tag `sha-*`, migrations aplicadas,
+status dos containers, códigos HTTP e resultado de cada caso do smoke test.
+Não registre endereço de destinatário, senha, token, URL de recovery completa,
+API key ou credencial SMTP.
+
+**Snapshot de 12/08/2026:** envio transacional via API Resend e recuperação via
+SMTP do Resend configurado no GoTrue, incluindo os callbacks públicos da allowlist, foram comprovados
+operacionalmente. Essa evidência é histórica: qualquer mudança de DNS, provider,
+SMTP, GoTrue, allowlist, domínio ou imagem exige uma nova rodada.
+
+### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
 (dev/local) cria Ana e Melo. Em produção, os diretores reais **já existem como
@@ -413,11 +454,11 @@ sudo docker exec -i supabase-db psql -U postgres -d postgres < ~/backup_prod_XXX
 
 ## 8. Gotchas conhecidos (aprendidos no deploy real)
 
-| Sintoma                                                                    | Causa                                                          | Correção                                                          |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `permission denied for table job` na migration 030                         | `postgres` sem acesso a `cron.*` no self-hosted                | GRANTs como `supabase_admin` (§3.3)                               |
-| `invalid command \restrict` / `unrecognized parameter transaction_timeout` | `pg_dump` (cliente PG17) gera SQL incompatível com Postgres 15 | não vendorizar a seção do `pg_dump`; gerar histórico à mão (§3.5) |
-| `unauthorized` no `docker pull`                                            | login no GHCR não feito / PAT sem `read:packages`              | `docker login ghcr.io` com PAT correto (§4)                       |
-| porta 3000 ocupada                                                         | Kong (Supabase) já usa a 3000 do host                          | publicar o app em **3001**                                        |
-| login não conecta                                                          | anon key embutida ≠ anon key do Supabase                       | conferir fingerprint (§4)                                         |
+| Sintoma                                                                    | Causa                                                                                                                                                          | Correção                                                                                                                                                                                      |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `permission denied for table job` na migration 030                         | `postgres` sem acesso a `cron.*` no self-hosted                                                                                                                | GRANTs como `supabase_admin` (§3.3)                                                                                                                                                           |
+| `invalid command \restrict` / `unrecognized parameter transaction_timeout` | `pg_dump` (cliente PG17) gera SQL incompatível com Postgres 15                                                                                                 | não vendorizar a seção do `pg_dump`; gerar histórico à mão (§3.5)                                                                                                                             |
+| `unauthorized` no `docker pull`                                            | login no GHCR não feito / PAT sem `read:packages`                                                                                                              | `docker login ghcr.io` com PAT correto (§4)                                                                                                                                                   |
+| porta 3000 ocupada                                                         | Kong (Supabase) já usa a 3000 do host                                                                                                                          | publicar o app em **3001**                                                                                                                                                                    |
+| login não conecta                                                          | anon key embutida ≠ anon key do Supabase                                                                                                                       | conferir fingerprint (§4)                                                                                                                                                                     |
 | `MAILER_OTP_EXP` no `.env` não muda a validade do link                     | a distribuição self-hosted não mapeia `GOTRUE_MAILER_OTP_EXP` no `docker-compose.yml` — só `GOTRUE_SITE_URL` e `GOTRUE_URI_ALLOW_LIST` vêm mapeados por padrão | adicionar `GOTRUE_MAILER_OTP_EXP: ${MAILER_OTP_EXP}` no serviço `auth` do `docker-compose.yml` (mesmo lugar do §6.2), antes de `--force-recreate auth` — confirmado em produção em 01/08/2026 |
