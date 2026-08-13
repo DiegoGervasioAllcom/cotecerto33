@@ -117,6 +117,38 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
             coberturasBasicas: { Casco: "110% FIPE" },
             coberturasAdicionais: { "Carro reserva": "7 dias" },
           },
+          {
+            index: 40,
+            seguradora: "Seguradora Gama",
+            produto: "Auto Protegido",
+            nome: "Plano Gama",
+            opcoes: [
+              {
+                tipo: "Compreensiva Gama",
+                franquia: "Normal · R$ 3.500,00",
+                avista: "R$ 2.800,00",
+                parcelas: "10x de R$ 300,00",
+              },
+            ],
+            formaPagamento: "Cartão",
+            coberturasBasicas: { Casco: "100% FIPE" },
+          },
+          {
+            index: 50,
+            seguradora: "Seguradora Ômega",
+            produto: "Auto Total",
+            nome: "Plano Ômega",
+            opcoes: [
+              {
+                tipo: "Compreensiva Ômega",
+                franquia: "Reduzida · R$ 2.900,00",
+                avista: "R$ 3.200,00",
+                parcelas: "12x de R$ 290,00",
+              },
+            ],
+            formaPagamento: "PIX",
+            coberturasBasicas: { Casco: "105% FIPE" },
+          },
         ],
       },
     });
@@ -151,6 +183,104 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await page.getByRole("link", { name: "Comparativo lado a lado" }).click();
     await expect(page).toHaveURL(new RegExp(`/venda/cotacoes/${fixture.cotacaoId}$`));
 
+    await page.setViewportSize({ width: 900, height: 800 });
+    const scrollRegion = page.getByRole("region", {
+      name: "Comparativo de propostas com rolagem horizontal",
+    });
+    const anterior = page.getByRole("button", { name: "Ver proposta anterior" });
+    const proxima = page.getByRole("button", { name: "Ver próxima proposta" });
+    await expect(scrollRegion).toBeVisible();
+    await expect(scrollRegion).toHaveAttribute("tabindex", "0");
+    await expect(page.getByText("Há mais propostas à direita.", { exact: true })).toBeVisible();
+    await expect(anterior).toBeDisabled();
+    await expect(proxima).toBeEnabled();
+    await expect
+      .poll(() => scrollRegion.evaluate((element) => element.scrollWidth > element.clientWidth))
+      .toBe(true);
+
+    const primeiraCelula = scrollRegion.locator("thead th").first();
+    const primeiraCelulaCorpo = scrollRegion.locator("tbody td.cov-name").first();
+    const stickyInicial = await primeiraCelula.evaluate((element) => ({
+      position: getComputedStyle(element).position,
+      left: element.getBoundingClientRect().left,
+    }));
+    const stickyCorpoInicial = await primeiraCelulaCorpo.evaluate((element) => ({
+      position: getComputedStyle(element).position,
+      left: element.getBoundingClientRect().left,
+      zIndex: getComputedStyle(element).zIndex,
+      backgroundColor: getComputedStyle(element).backgroundColor,
+    }));
+    expect(stickyInicial.position).toBe("sticky");
+    expect(stickyCorpoInicial.position).toBe("sticky");
+    expect(stickyCorpoInicial.zIndex).toBe("2");
+    expect(stickyCorpoInicial.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+
+    const scrollInicial = await scrollRegion.evaluate((element) => element.scrollLeft);
+    await proxima.click();
+    await expect
+      .poll(() => scrollRegion.evaluate((element) => element.scrollLeft))
+      .toBeGreaterThan(scrollInicial);
+    await expect(anterior).toBeEnabled();
+    await expect(
+      page.getByText("Há mais propostas à esquerda e à direita.", { exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(() => primeiraCelula.evaluate((element) => element.getBoundingClientRect().left))
+      .toBeCloseTo(stickyInicial.left, 0);
+    await expect
+      .poll(() => primeiraCelulaCorpo.evaluate((element) => element.getBoundingClientRect().left))
+      .toBeCloseTo(stickyCorpoInicial.left, 0);
+
+    await scrollRegion.focus();
+    const scrollAntesTeclado = await scrollRegion.evaluate((element) => element.scrollLeft);
+    await scrollRegion.press("ArrowRight");
+    await expect
+      .poll(() => scrollRegion.evaluate((element) => element.scrollLeft))
+      .toBeGreaterThan(scrollAntesTeclado);
+
+    for (let tentativa = 0; tentativa < 10 && (await proxima.isEnabled()); tentativa += 1) {
+      const alvo = await scrollRegion.evaluate((element) =>
+        Math.min(element.scrollLeft + 280, element.scrollWidth - element.clientWidth),
+      );
+      await proxima.evaluate((element) => (element as HTMLButtonElement).click());
+      await expect
+        .poll(() => scrollRegion.evaluate((element) => element.scrollLeft))
+        .toBeGreaterThanOrEqual(alvo - 1);
+    }
+    await expect(proxima).toBeDisabled();
+    await expect(page.getByText("Há mais propostas à esquerda.", { exact: true })).toBeVisible();
+    const ultimaProposta = scrollRegion.getByText("Auto Total · Plano Ômega", { exact: true });
+    await expect(ultimaProposta).toBeVisible();
+    expect(
+      await ultimaProposta.evaluate((element) => {
+        const proposal = element.getBoundingClientRect();
+        const region = element.closest('[role="region"]')!.getBoundingClientRect();
+        return proposal.right <= region.right + 1 && proposal.left >= region.left - 1;
+      }),
+    ).toBe(true);
+
+    await anterior.click();
+    await expect(proxima).toBeEnabled();
+    await scrollRegion.evaluate((element) => element.scrollTo({ left: 0 }));
+    await expect(anterior).toBeDisabled();
+    await expect(page.getByText("Há mais propostas à direita.", { exact: true })).toBeVisible();
+
+    const larguraEstreita = await scrollRegion.evaluate((element) => element.clientWidth);
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await expect
+      .poll(() => scrollRegion.evaluate((element) => element.clientWidth))
+      .toBeGreaterThan(larguraEstreita);
+    await expect(anterior).toBeDisabled();
+    await expect(proxima).toBeEnabled();
+    expect(
+      await scrollRegion.evaluate(
+        (element) => element.scrollLeft < element.scrollWidth - element.clientWidth - 1,
+      ),
+    ).toBe(true);
+    await page.setViewportSize({ width: 900, height: 800 });
+    await expect(proxima).toBeVisible();
+    await expect(anterior).toBeDisabled();
+
     // O comparativo deve renderizar o mesmo payload, inclusive múltiplos
     // produtos da mesma seguradora, sem resumir para uma cobertura genérica.
     for (const valor of [
@@ -178,7 +308,7 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
       "7 dias",
       "7% no PIX",
     ]) {
-      await expect(page.getByText(valor, { exact: true }).first()).toBeVisible();
+      await expect(page.getByText(valor).first()).toBeVisible();
     }
     await expect(page.getByText(/Cartão de crédito.*Débito em conta.*Boleto.*PIX/)).toBeVisible();
     await expect(page.getByText("Compreensiva PIX", { exact: true })).toBeVisible();
@@ -189,7 +319,7 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await expect(page.getByText(/o desconto é aplicado à seguradora inteira/i)).toHaveCount(2);
     await expect(page.getByText(/não foi possível vincular este produto/i)).toHaveCount(0);
     await expect(page.getByText("R$ 1.987,65", { exact: true })).toHaveCount(2);
-    await expect(page.getByRole("button", { name: "Solicitar desconto adicional" })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Solicitar desconto adicional" })).toHaveCount(3);
     await expect(page.getByText("12x de R$ 195,48", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Cobertura padrão", { exact: true })).toHaveCount(0);
 
@@ -202,6 +332,8 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await expect(popup.locator("body")).toContainText("10x de R$ 251,90");
     await expect(popup.locator("body")).toContainText("5% no débito");
     await expect(popup.locator("body")).toContainText("Compreensiva PIX");
+    await expect(popup.locator("body")).toContainText("Auto Protegido · Plano Gama");
+    await expect(popup.locator("body")).toContainText("Auto Total · Plano Ômega");
     await expect(popup.locator("body")).toContainText("Reduzida PIX · R$ 2.300,00");
     await expect(popup.locator("body")).toContainText("7% no PIX");
     await expect(popup.locator("body")).toContainText("R$ 150.000,00");

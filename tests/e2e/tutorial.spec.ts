@@ -277,6 +277,19 @@ test.describe("roteiro de vendas", () => {
     let dialog = await esperarPasso(page, "O comparativo multi-seguradora", "1 / 7");
     await expect(page).toHaveURL(new RegExp(`/venda/cotacoes/${vendedor.cotacaoId}`));
     await expect(page).not.toHaveURL(new RegExp(`/venda/cotacoes/${vendedor.rascunhoId}`));
+    await page.setViewportSize({ width: 2000, height: 900 });
+    const comparativoSemOverflow = page.getByRole("region", {
+      name: "Comparativo de propostas",
+      exact: true,
+    });
+    await expect(comparativoSemOverflow).not.toHaveAttribute("tabindex");
+    await expect
+      .poll(() =>
+        comparativoSemOverflow.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth + 1,
+        ),
+      )
+      .toBe(true);
     const compareTargets = [
       [".compare-table thead", "Seguradoras e produtos", "2 / 7"],
       [".ctable tbody tr:nth-last-child(5)", "Opções de prêmio", "3 / 7"],
