@@ -1,10 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { printHtml, escapeHtml } from "@/lib/print";
 import type { Form } from "@/components/venda/novo-lead/types";
-import {
-  premioNumerico,
-  type ResultadoCalculo,
-} from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import { ordenarResultados } from "@/components/venda/cotacoes/quiver-resultado";
 
 type Props = {
   f: Form;
@@ -67,9 +65,7 @@ export function StepCalculo({
           className="btn btn-ghost btn-sm"
           disabled={resultados.length === 0}
           onClick={() => {
-            const sorted = [...resultados].sort(
-              (a, b) => premioNumerico(a.opcoes[0]) - premioNumerico(b.opcoes[0]),
-            );
+            const sorted = ordenarResultados(resultados);
             const head = `
               <div class="grid">
                 <div class="kv"><b>Cliente:</b> ${escapeHtml(f.nome || "—")}</div>
@@ -167,87 +163,85 @@ export function StepCalculo({
 
       {resultados.length > 0 && (
         <div className="calc-grid">
-          {resultados
-            .sort((a, b) => premioNumerico(a.opcoes[0]) - premioNumerico(b.opcoes[0]))
-            .map((r) => {
-              const basicas = Object.entries(r.coberturasBasicas ?? {});
-              const adicionais = Object.entries(r.coberturasAdicionais ?? {});
-              return (
-                <div className="calc-card" key={`${r.seguradora}-${r.index}`}>
-                  <div className="calc-head">
-                    <div className="calc-ins">
-                      <svg width="16" height="16">
-                        <use href="#i-shield" />
-                      </svg>{" "}
-                      {r.seguradora}
-                    </div>
-                    <span className="chip chip-slate">
-                      {r.produto ? `${r.produto} · ${r.nome}` : r.nome}
-                    </span>
-                    <span className="chip chip-slate" style={{ marginLeft: "auto" }}>
-                      {r.nome || "Compreensiva"}
-                    </span>
+          {ordenarResultados(resultados).map((r) => {
+            const basicas = Object.entries(r.coberturasBasicas ?? {});
+            const adicionais = Object.entries(r.coberturasAdicionais ?? {});
+            return (
+              <div className="calc-card" key={r.cardId}>
+                <div className="calc-head">
+                  <div className="calc-ins">
+                    <svg width="16" height="16">
+                      <use href="#i-shield" />
+                    </svg>{" "}
+                    {r.seguradora}
                   </div>
-                  <div className="calc-tiers">
-                    {r.opcoes.map((o, i) => (
-                      <div className="calc-tier" key={i}>
-                        <div className="t-lbl">{o.tipo || "—"}</div>
-                        <div className="t-fr">{o.franquia || "—"}</div>
-                        <div className="t-vista">{o.avista || "—"}</div>
-                        <div className="t-parc">{o.parcelas || "—"}</div>
-                        {o.desconto && <div className="chip chip-ok">{o.desconto}</div>}
+                  <span className="chip chip-slate">
+                    {r.produto ? `${r.produto} · ${r.nome}` : r.nome}
+                  </span>
+                  <span className="chip chip-slate" style={{ marginLeft: "auto" }}>
+                    {r.nome || "Compreensiva"}
+                  </span>
+                </div>
+                <div className="calc-tiers">
+                  {r.opcoes.map((o, i) => (
+                    <div className="calc-tier" key={i}>
+                      <div className="t-lbl">{o.tipo || "—"}</div>
+                      <div className="t-fr">{o.franquia || "—"}</div>
+                      <div className="t-vista">{o.avista || "—"}</div>
+                      <div className="t-parc">{o.parcelas || "—"}</div>
+                      {o.desconto && <div className="chip chip-ok">{o.desconto}</div>}
+                    </div>
+                  ))}
+                </div>
+                <div className="calc-cobs">
+                  <div className="cob-col">
+                    <div className="cob-h">Coberturas básicas</div>
+                    {basicas.length === 0 && (
+                      <div className="cob-row muted small">Não informado pela seguradora</div>
+                    )}
+                    {basicas.map(([label, valor]) => (
+                      <div className="cob-row" key={label}>
+                        <span>{label}</span>
+                        <b>{valor}</b>
                       </div>
                     ))}
                   </div>
-                  <div className="calc-cobs">
-                    <div className="cob-col">
-                      <div className="cob-h">Coberturas básicas</div>
-                      {basicas.length === 0 && (
-                        <div className="cob-row muted small">Não informado pela seguradora</div>
-                      )}
-                      {basicas.map(([label, valor]) => (
-                        <div className="cob-row" key={label}>
-                          <span>{label}</span>
-                          <b>{valor}</b>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="cob-col">
-                      <div className="cob-h">Adicionais</div>
-                      {adicionais.length === 0 && (
-                        <div className="cob-row muted small">Não informado pela seguradora</div>
-                      )}
-                      {adicionais.map(([label, valor]) => (
-                        <div className="cob-row" key={label}>
-                          <span>{label}</span>
-                          <b>{valor}</b>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="calc-foot">
-                    <span className="chip chip-slate" style={{ flex: 1 }}>
-                      {r.formasPagamento?.selecionada ?? r.formaPagamento ?? "—"}
-                    </span>
-                    <button className="ic-btn" title="Observações">
-                      <svg width="15" height="15">
-                        <use href="#i-message" />
-                      </svg>
-                    </button>
-                    <button className="ic-btn" title="Enviar">
-                      <svg width="15" height="15">
-                        <use href="#i-download" />
-                      </svg>
-                    </button>
-                    <button className="ic-btn ok" title="Gerar proposta">
-                      <svg width="15" height="15">
-                        <use href="#i-check" />
-                      </svg>
-                    </button>
+                  <div className="cob-col">
+                    <div className="cob-h">Adicionais</div>
+                    {adicionais.length === 0 && (
+                      <div className="cob-row muted small">Não informado pela seguradora</div>
+                    )}
+                    {adicionais.map(([label, valor]) => (
+                      <div className="cob-row" key={label}>
+                        <span>{label}</span>
+                        <b>{valor}</b>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              );
-            })}
+                <div className="calc-foot">
+                  <span className="chip chip-slate" style={{ flex: 1 }}>
+                    {r.formasPagamento?.selecionada ?? r.formaPagamento ?? "—"}
+                  </span>
+                  <button className="ic-btn" title="Observações">
+                    <svg width="15" height="15">
+                      <use href="#i-message" />
+                    </svg>
+                  </button>
+                  <button className="ic-btn" title="Enviar">
+                    <svg width="15" height="15">
+                      <use href="#i-download" />
+                    </svg>
+                  </button>
+                  <button className="ic-btn ok" title="Gerar proposta">
+                    <svg width="15" height="15">
+                      <use href="#i-check" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </>
