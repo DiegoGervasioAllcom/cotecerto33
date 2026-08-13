@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { parseQuiverResultado } from "@/components/venda/cotacoes/quiver-resultado";
 import { supabase } from "@/integrations/supabase/client";
 import type { TutorialStep } from "./tutorial-types";
 
@@ -21,14 +22,18 @@ async function firstVisibleId(
   if (destination === "cotacao-comparativo") {
     const { data, error } = await supabase
       .from("cotacoes")
-      .select("id,cotacao_premios!inner(id)")
+      .select("id,quiver_resultado_raw,cotacao_premios!inner(id)")
       .order("criado_em", { ascending: false })
-      .limit(1)
-      .limit(1, { referencedTable: "cotacao_premios" })
-      .abortSignal(signal)
-      .maybeSingle();
+      .limit(20)
+      .abortSignal(signal);
     if (error) throw error;
-    return data?.id ?? null;
+    return (
+      data?.find(
+        (cotacao) =>
+          cotacao.cotacao_premios.length > 0 &&
+          parseQuiverResultado(cotacao.quiver_resultado_raw).length > 0,
+      )?.id ?? null
+    );
   }
   if (destination === "proposta-selecionada") {
     const { data, error } = await supabase

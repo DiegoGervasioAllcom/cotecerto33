@@ -2,7 +2,8 @@ import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TutorialDestination, TutorialStep } from "@/components/tutorial/tutorial-types";
 
-type DestinationRow = Record<string, string> | null;
+type DestinationRow = Record<string, unknown>;
+type DestinationRows = DestinationRow | DestinationRow[] | null;
 type QueryBuilder = {
   select: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
@@ -12,7 +13,7 @@ type QueryBuilder = {
 };
 
 const mock = vi.hoisted(() => ({
-  rows: new Map<string, DestinationRow>(),
+  rows: new Map<string, DestinationRows>(),
   calls: [] as string[],
   from: vi.fn((table: string) => {
     mock.calls.push(`from:${table}`);
@@ -29,7 +30,14 @@ const mock = vi.hoisted(() => ({
       mock.calls.push(`limit:${limit}`);
       return builder;
     });
-    builder.abortSignal = vi.fn(() => builder);
+    builder.abortSignal = vi.fn(() => {
+      if (table !== "cotacoes") return builder;
+      const stored = mock.rows.get(table);
+      return Promise.resolve({
+        data: Array.isArray(stored) ? stored : stored ? [stored] : [],
+        error: null,
+      });
+    });
     builder.maybeSingle = vi.fn(async () => ({
       data: mock.rows.get(table) ?? null,
       error: null,
@@ -48,7 +56,11 @@ const CASES = [
   {
     destination: "cotacao-comparativo",
     table: "cotacoes",
-    row: { id: "cotacao-1" },
+    row: {
+      id: "cotacao-1",
+      quiver_resultado_raw: { cards: [{ seguradora: "Porto Seguro" }] },
+      cotacao_premios: [{ id: "premio-1" }],
+    },
     resolved: { kind: "cotacao", id: "cotacao-1", target: "[data-tour=alvo]" },
     fallback: {
       kind: "static",
@@ -149,7 +161,15 @@ describe("destinos dinâmicos somente leitura do tutorial", () => {
   });
 
   it("exige prêmio visível para escolher a cotação e isola o cache por usuário", async () => {
-    mock.rows.set("cotacoes", { id: "cotacao-1" });
+    const renderizavel = (id: string) => ({
+      id,
+      quiver_resultado_raw: { cards: [{ seguradora: "Porto Seguro" }] },
+      cotacao_premios: [{ id: `premio-${id}` }],
+    });
+    mock.rows.set("cotacoes", [
+      { id: "vazia", quiver_resultado_raw: { cards: [] }, cotacao_premios: [{ id: "p-0" }] },
+      renderizavel("cotacao-1"),
+    ]);
     const queryClient = new QueryClient();
     const controller = new AbortController();
 
@@ -160,7 +180,7 @@ describe("destinos dinâmicos somente leitura do tutorial", () => {
       }),
     ).resolves.toMatchObject({ kind: "cotacao", id: "cotacao-1" });
 
-    mock.rows.set("cotacoes", { id: "cotacao-2" });
+    mock.rows.set("cotacoes", renderizavel("cotacao-2"));
     await expect(
       resolveTutorialDestination(step("cotacao-comparativo"), queryClient, {
         userId: "user-2",
@@ -172,10 +192,10 @@ describe("destinos dinâmicos somente leitura do tutorial", () => {
     ).resolves.toMatchObject({ kind: "cotacao", id: "cotacao-1" });
 
     const builder = mock.from.mock.results[0]?.value;
-    expect(builder.select).toHaveBeenCalledWith("id,cotacao_premios!inner(id)");
-    expect(builder.limit).toHaveBeenCalledWith(1, {
-      referencedTable: "cotacao_premios",
-    });
+    expect(builder.select).toHaveBeenCalledWith(
+      "id,quiver_resultado_raw,cotacao_premios!inner(id)",
+    );
+    expect(builder.limit).toHaveBeenCalledWith(20);
     expect(builder.abortSignal).toHaveBeenCalledWith(controller.signal);
     expect(mock.from).toHaveBeenCalledTimes(2);
   });

@@ -278,12 +278,12 @@ test.describe("roteiro de vendas", () => {
     await expect(page).toHaveURL(new RegExp(`/venda/cotacoes/${vendedor.cotacaoId}`));
     await expect(page).not.toHaveURL(new RegExp(`/venda/cotacoes/${vendedor.rascunhoId}`));
     const compareTargets = [
-      [".compare-table thead", "Os selos no topo", "2 / 7"],
-      [".ctable tbody tr:nth-child(2)", "Coberturas, linha por linha", "3 / 7"],
-      [".compare-bar .switch", "Aplicar em todas ou só em uma", "4 / 7"],
-      [".ctable .total-row", "O preço final, com parcelamento", "5 / 7"],
-      ['[data-tour="comparar-mais"]', "Mais seguradoras?", "6 / 7"],
-      [".ctable .actions-row .ins-actions", "Pra cada seguradora, 3 ações", "7 / 7"],
+      [".compare-table thead", "Seguradoras e produtos", "2 / 7"],
+      [".ctable tbody tr:nth-last-child(5)", "Opções de prêmio", "3 / 7"],
+      [".ctable tbody tr:nth-last-child(4)", "Formas de pagamento", "4 / 7"],
+      [".ctable .total-row", "Prêmio registrado", "5 / 7"],
+      ['.compare-bar button[type="button"]', "Imprimir o comparativo", "6 / 7"],
+      [".ctable .actions-row .ins-actions", "Ações de cada produto", "7 / 7"],
     ] as const;
     for (const [selector, title, progress] of compareTargets) {
       await dialog.getByRole("button", { name: "Próximo" }).click();
@@ -448,7 +448,7 @@ test.describe("roteiro de vendas", () => {
     });
 
     await page.route("**/rest/v1/cotacoes*", async (route) => {
-      if (!decodeURIComponent(route.request().url()).includes("cotacao_premios!inner")) {
+      if (!decodeURIComponent(route.request().url()).includes("quiver_resultado_raw")) {
         await route.continue();
         return;
       }

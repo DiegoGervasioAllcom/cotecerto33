@@ -289,6 +289,55 @@ export async function criarVendedorComTutorial(): Promise<VendedorComTutorial> {
       responsavel_id: vendedor.userId,
       status: "calculada",
       step_atual: 5,
+      quiver_resultado_raw: {
+        cards: [
+          {
+            seguradora: "Porto Seguro",
+            nome: "Auto Completo",
+            produto: "Porto Seguro Auto",
+            opcoes: [
+              {
+                tipo: "Completa",
+                franquia: "R$ 3.250,00",
+                avista: "R$ 2.100,00",
+                parcelas: "10x de R$ 210,00",
+              },
+            ],
+            formasPagamento: { selecionada: "Cartão de crédito", opcoes: ["Débito"] },
+            coberturasBasicas: { Casco: "100% FIPE", "Danos materiais": "R$ 100.000" },
+          },
+          {
+            seguradora: "Azul",
+            nome: "Azul Auto",
+            produto: "Azul Seguro Auto",
+            opcoes: [
+              {
+                tipo: "Completa",
+                franquia: "R$ 3.480,00",
+                avista: "R$ 2.250,00",
+                parcelas: "10x de R$ 225,00",
+              },
+            ],
+            formaPagamento: "Cartão de crédito",
+            coberturasBasicas: { Casco: "100% FIPE", "Danos materiais": "R$ 100.000" },
+          },
+          {
+            seguradora: "HDI",
+            nome: "HDI Auto Perfil",
+            produto: "HDI Auto",
+            opcoes: [
+              {
+                tipo: "Completa",
+                franquia: "R$ 3.700,00",
+                avista: "R$ 2.400,00",
+                parcelas: "10x de R$ 240,00",
+              },
+            ],
+            formaPagamento: "Boleto",
+            coberturasBasicas: { Casco: "100% FIPE", "Danos materiais": "R$ 100.000" },
+          },
+        ],
+      },
       criado_em: criadoEmCalculada,
       atualizado_em: criadoEmCalculada,
     })
