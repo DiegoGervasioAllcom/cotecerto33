@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
@@ -36,6 +36,7 @@ export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
 });
 
 function Page() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const { visibleStep, setVisibleStep, showTutorialReady } = useTutorialWizardPreview(
     step,
@@ -283,6 +284,7 @@ function Page() {
             }));
             setLeadManualDone(true);
           }}
+          onCancelar={() => void navigate({ to: "/venda/pipeline" })}
         />
       </AppShell>
     );
