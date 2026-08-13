@@ -183,7 +183,9 @@ export type VendedorComTutorial = VendedorComLead & {
  * "Atender agora" (mesmo shape usado por `atender.tsx`: sem `distribuido_em` nulo,
  * sem `arquivado`, sem `ultimo_atendimento_em`).
  */
-export async function criarVendedorComLead(): Promise<VendedorComLead> {
+export async function criarVendedorComLead(
+  opts: { statusPipeline?: "novo" | "qualificado" } = {},
+): Promise<VendedorComLead> {
   const senha = "Teste@123!";
   const email = `${uniq("vend-e2e")}@teste.local`;
 
@@ -226,7 +228,7 @@ export async function criarVendedorComLead(): Promise<VendedorComLead> {
       origem: "teste-e2e",
       empresa_id: emp.id,
       responsavel_id: userId,
-      status_pipeline: "novo",
+      status_pipeline: opts.statusPipeline ?? "novo",
       distribuido_em: new Date().toISOString(),
       dados: {
         cliente: { cpf_cnpj: "12345678901", email: "cliente.e2e@teste.local" },
@@ -246,6 +248,30 @@ export async function limparVendedorComLead(v: VendedorComLead): Promise<void> {
   await admin.from("user_roles").delete().eq("user_id", v.userId);
   await admin.auth.admin.deleteUser(v.userId);
   await admin.from("empresas").delete().eq("id", v.empresaId);
+}
+
+/** Distribui outro lead para uma persona já autenticada, simulando chegada em tempo real. */
+export async function distribuirLeadE2E(userId: string, empresaId: string): Promise<string> {
+  const { data, error } = await admin
+    .from("leads")
+    .insert({
+      nome: uniq("Cliente distribuído E2E"),
+      contato: "(11) 98888-0000",
+      origem: "teste-e2e",
+      empresa_id: empresaId,
+      responsavel_id: userId,
+      status_pipeline: "novo",
+      distribuido_em: new Date().toISOString(),
+      dados: {},
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`distribuir lead E2E: ${error?.message}`);
+  return data.id;
+}
+
+export async function limparLeadE2E(leadId: string): Promise<void> {
+  await admin.from("leads").delete().eq("id", leadId);
 }
 
 /**

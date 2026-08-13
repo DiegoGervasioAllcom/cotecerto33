@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home,
@@ -213,6 +213,11 @@ const BRAND_LABEL: Record<Perfil, string> = {
   vendedor: "VENDEDOR",
 };
 
+function formatRemaining(milliseconds: number): string {
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+  return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
+}
+
 export function AppShell({
   title,
   crumbs,
@@ -254,11 +259,30 @@ export function AppShell({
 
   const { temArea, cargoNome, loading: areasLoading } = useAreas();
 
-  const { leadsPendentes, aprovacoesPendentes, leadMaisAntigoElapsed } = useNavBadges({
-    isMatriz,
-    verLeads: temArea("mleads"),
-    verAprovacoes: temArea("maprov") || grpLike || fullLike,
-  });
+  const { leadsPendentes, aprovacoesPendentes, leadMaisAntigoElapsed, atenderAgora } = useNavBadges(
+    {
+      isMatriz,
+      verLeads: temArea("mleads"),
+      verAprovacoes: temArea("maprov") || grpLike || fullLike,
+      verAtenderAgora: venLike,
+      userId: session?.user.id ?? null,
+    },
+  );
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!venLike || !atenderAgora?.length) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [atenderAgora?.length, venLike]);
+  const atenderMaisUrgente = atenderAgora?.reduce<number | null>((menor, lead) => {
+    const inicio = new Date(lead.distribuido_em ?? lead.criado_em).getTime();
+    const restante = Math.max(0, 3 * 60 * 1000 - (now - inicio));
+    return menor === null || restante < menor ? restante : menor;
+  }, null);
+  const atenderTempo =
+    atenderMaisUrgente === null || atenderMaisUrgente === undefined
+      ? null
+      : formatRemaining(atenderMaisUrgente);
   // Interno só entra depois das áreas carregarem — senão a nav pisca vazia (ou
   // completa) antes do recorte do cargo chegar.
   const visibleGroups: Group[] = [
@@ -300,14 +324,16 @@ export function AppShell({
                 const badgeCount =
                   item.to === "/comando/leads"
                     ? leadsPendentes
-                    : item.to === "/operacao/aprovacoes"
-                      ? aprovacoesPendentes
-                      : null;
+                    : item.to === "/venda/atender"
+                      ? atenderAgora?.length
+                      : item.to === "/operacao/aprovacoes"
+                        ? aprovacoesPendentes
+                        : null;
                 return (
                   <Link
                     key={item.to}
                     to={item.to}
-                    className={`nav-item${active ? " active" : ""}`}
+                    className={`nav-item${active ? " active" : ""}${item.to === "/venda/atender" && !!badgeCount ? " nav-urgent" : ""}`}
                     data-tour={
                       item.to === "/venda/atender"
                         ? "nav-atender"
@@ -319,7 +345,14 @@ export function AppShell({
                     <Icon className="ic" />
                     <span>{item.label}</span>
                     {item.soon && <span className="soon-tag">EM FORMULAÇÃO</span>}
-                    {!!badgeCount && badgeCount > 0 && <span className="badge">{badgeCount}</span>}
+                    {!!badgeCount && badgeCount > 0 && (
+                      <span
+                        className={item.to === "/venda/atender" ? "badge pulse" : "badge"}
+                        aria-label={`${badgeCount} ${badgeCount === 1 ? "lead aguardando atendimento" : "leads aguardando atendimento"}`}
+                      >
+                        {badgeCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -374,6 +407,20 @@ export function AppShell({
               <span>Distribuir agora</span>
               <span className="rp-count">{leadsPendentes}</span>
               {leadMaisAntigoElapsed && <span className="rp-time">{leadMaisAntigoElapsed}</span>}
+            </button>
+          )}
+          {venLike && !!atenderAgora?.length && (
+            <button
+              type="button"
+              className={`react-pill${(atenderMaisUrgente ?? 0) >= 60_000 ? " warn" : ""}`}
+              data-tour="shell-react-pill"
+              aria-label={`${atenderAgora.length} ${atenderAgora.length === 1 ? "lead aguardando" : "leads aguardando"}; menor tempo restante ${atenderTempo}`}
+              onClick={() => navigate({ to: "/venda/atender" })}
+            >
+              <AlertTriangle style={{ width: 15, height: 15 }} />
+              <span className="rp-count">{atenderAgora.length}</span>
+              <span>Atender agora</span>
+              {atenderTempo && <span className="rp-time">· {atenderTempo}</span>}
             </button>
           )}
           {tutorialPersona && (

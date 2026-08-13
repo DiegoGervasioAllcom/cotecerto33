@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
 import { veiculoLabel } from "@/lib/veiculo";
+import { pipelineColumnKey, resolveExistingLeadDestination } from "@/lib/pipeline-lead-navigation";
 import {
   carregarPerfisVisiveis,
   carregarRolesDosPerfis,
@@ -69,6 +70,7 @@ function Page() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
+  const openingRef = useRef(false);
 
   const [fFranq, setFFranq] = useState("");
   const [fVend, setFVend] = useState("");
@@ -158,44 +160,41 @@ function Page() {
   const grouped = useMemo(() => {
     const m: Record<string, Lead[]> = {};
     for (const s of stages) m[STAGE_KEY[s.nome] ?? s.nome.toLowerCase()] = [];
-    for (const l of filtered) (m[l.status_pipeline] ??= []).push(l);
+    for (const l of filtered) (m[pipelineColumnKey(l.status_pipeline)] ??= []).push(l);
     return m;
   }, [stages, filtered]);
 
   async function openLead(l: Lead) {
+    if (openingRef.current) return;
+    openingRef.current = true;
     setOpening(l.id);
     try {
-      const st = l.status_pipeline;
-      if (st === "novo" || st === "contato" || st === "cotacao") {
-        const { data: cot } = await supabase
-          .from("cotacoes")
-          .select("id,step_atual")
-          .eq("lead_id", l.id)
-          .order("atualizado_em", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (cot?.id) {
-          navigate({
-            to: "/venda/novo-lead",
-            search: { id: cot.id, step: Math.max(0, Number(cot.step_atual ?? 0)) },
-          });
-        } else {
-          navigate({ to: "/venda/novo-lead", search: {} });
-        }
-        return;
-      }
-      if (st === "proposta" || st === "negociacao" || st === "ganho") {
-        const { data: prop } = await supabase
-          .from("propostas")
-          .select("id")
-          .eq("lead_id", l.id)
-          .order("criado_em", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        const target = st === "ganho" ? "/venda/aceite" : "/venda/propostas";
-        navigate({ to: target, search: prop?.id ? { selected: prop.id } : {} });
-      }
+      setErr(null);
+      const destination = await resolveExistingLeadDestination({
+        leadId: l.id,
+        status: l.status_pipeline,
+        canAssume: false,
+      });
+      if (destination.kind === "wizard")
+        navigate({
+          to: "/venda/novo-lead",
+          search: { id: destination.id, step: destination.step },
+        });
+      else if (destination.kind === "proposals")
+        navigate({
+          to: "/venda/propostas",
+          search: destination.selected ? { selected: destination.selected } : {},
+        });
+      else if (destination.kind === "acceptance")
+        navigate({
+          to: "/venda/aceite",
+          search: destination.selected ? { selected: destination.selected } : {},
+        });
+      else setErr(destination.message);
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "Falha ao abrir o lead.");
     } finally {
+      openingRef.current = false;
       setOpening(null);
     }
   }
@@ -305,17 +304,18 @@ function Page() {
                     key={l.id}
                     className="kcard"
                     role="button"
-                    tabIndex={0}
-                    onClick={() => openLead(l)}
+                    tabIndex={opening ? -1 : 0}
+                    aria-disabled={opening !== null}
+                    onClick={() => void openLead(l)}
                     onKeyDown={(ev) => {
                       if (ev.key === "Enter" || ev.key === " ") {
                         ev.preventDefault();
-                        openLead(l);
+                        void openLead(l);
                       }
                     }}
                     style={{
-                      cursor: opening === l.id ? "wait" : "pointer",
-                      opacity: opening === l.id ? 0.6 : 1,
+                      cursor: opening ? "wait" : "pointer",
+                      opacity: opening ? 0.6 : 1,
                     }}
                   >
                     <div className="top">
