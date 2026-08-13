@@ -564,6 +564,8 @@ export type CotacaoQuiverFixture = {
   senha: string;
   userId: string;
   empresaId: string;
+  leadId: string;
+  leadNome: string;
   cotacaoId: string;
 };
 
@@ -609,19 +611,46 @@ export async function criarCotacaoQuiverFixture(): Promise<CotacaoQuiverFixture>
     .insert({ user_id: userId, role: "vendedor" });
   if (eRole) throw new Error(`inserir role: ${eRole.message}`);
 
+  const leadNome = uniq("Lead Quiver E2E");
+  const { data: lead, error: eLead } = await admin
+    .from("leads")
+    .insert({
+      empresa_id: emp.id,
+      responsavel_id: userId,
+      nome: leadNome,
+      status_pipeline: "qualificando",
+    })
+    .select("id")
+    .single();
+  if (eLead || !lead) throw new Error(`criar lead: ${eLead?.message}`);
+
   const { data: cot, error: eCot } = await admin
     .from("cotacoes")
-    .insert({ empresa_id: emp.id, responsavel_id: userId, status: "enviada_quiver" })
+    .insert({
+      empresa_id: emp.id,
+      responsavel_id: userId,
+      lead_id: lead.id,
+      status: "enviada_quiver",
+    })
     .select("id")
     .single();
   if (eCot || !cot) throw new Error(`criar cotação: ${eCot?.message}`);
 
-  return { email, senha, userId, empresaId: emp.id, cotacaoId: cot.id };
+  return {
+    email,
+    senha,
+    userId,
+    empresaId: emp.id,
+    leadId: lead.id,
+    leadNome,
+    cotacaoId: cot.id,
+  };
 }
 
 /** Remove os dados criados por `criarCotacaoQuiverFixture` (best-effort; `db reset` também resolve). */
 export async function limparCotacaoQuiverFixture(f: CotacaoQuiverFixture): Promise<void> {
   await admin.from("cotacoes").delete().eq("id", f.cotacaoId);
+  await admin.from("leads").delete().eq("id", f.leadId);
   await admin.from("user_roles").delete().eq("user_id", f.userId);
   await admin.auth.admin.deleteUser(f.userId);
   await admin.from("empresas").delete().eq("id", f.empresaId);
