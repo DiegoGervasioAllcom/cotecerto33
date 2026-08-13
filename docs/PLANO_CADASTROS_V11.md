@@ -4,7 +4,8 @@
 inteiramente fechada em 03/08/2026 — ver "Fechamento" abaixo)
 
 **Escopo:** V11.3.1 a V11.3.7 do `PLANO_TASKS_V11.md`, **mais V11.1.6 e V11.1.7** (adiadas
-por dependerem de e-mail/criar-senha — resolvido no PR #104, em produção).
+por dependerem de e-mail/criar-senha — resolvido no PR #104; o deploy citado no registro
+histórico não foi revalidado nesta auditoria documental).
 
 **Fontes:** `docs/v11/FLUXOS_OPERACIONAIS.html` · protótipo r40 (`accMatriz`, `accRede`,
 `openManualCad`, `deslSolicitCard`, `pedirMotivo`) · levantamento de código atual (abaixo).
@@ -57,23 +58,23 @@ por dependerem de e-mail/criar-senha — resolvido no PR #104, em produção).
 
 ## Tasks
 
-| Task | Tag | Descrição | Depende de |
-| --- | --- | --- | --- |
-| C1 | banco | **Log da criação manual**: coluna `empresas.criado_por` (quem acionou o "manual · exceção" — nulo quando vem de convite, onde o log já é o `criado_por` do convite) | — |
-| C2 | banco | **RPC `criar_pendente_manual`**: cria `empresas`+`profiles` com `status='pendente'`, `convite_id=null`, `criado_por=auth.uid()` — substitui `cadastrar_franquia`/`cadastrar_franquia_admin` pro caminho manual | C1 |
-| C3 | front | **Botão "Cadastro manual · exceção"** ao lado de cada "Convidar" (`acessos.tsx` interno/externo, `xacessos.tsx`), com o aviso "fica registrado como exceção da Matriz" e indo direto pra `ClassificarAcessoModal` | C2 |
-| C4 | front | **Aba Cadastros Matriz** unificada: colaboradores (por cargo real, não preset) + Vendedor Matriz (CLT), filtro Cargo/Ano, busca, Configurar (reusa `UsuariosModal`)/Excluir | C1 |
-| C5 | front | **Aba Cadastros Rede** nova: Masters + franquias (com `modelos_franquia.modalidade` real) + vendedores, filtro Perfil/Modelo/Ano, busca, Configurar/Excluir | C1 |
-| C6 | banco | **Travas de exclusão** (V11.3.2): Master com franquia vinculada, ou franquia com vendedor na base, bloqueiam exclusão — RPC dedicada, não o `adminDeleteUser` genérico atual | — |
-| C7 | banco | **Tabela `desligamento_solicitacoes`** (nome/motivo obrigatório/solicitante/alvo/status) + RPCs `solicitar_desligamento`/`resolver_desligamento` — mesmo padrão de `vendedor_solicitacoes`, mas para desligar | — |
-| C8 | front | **Master solicita desligamento** (vendedor ou franquia) com motivo obrigatório, dentro de "Meus cadastrados" | C7 |
-| C9 | front | **Matriz aprova/nega desligamento**, com a trava de C6 replicada aqui (franquia com vendedor bloqueia aprovação, sugere transferir antes) | C6, C7 |
-| C10 | banco | **Motivo obrigatório em todo desligamento**: `check` condicional (só quando `status='suspensa'`, não trava a reativação que zera o motivo) + backfill dos nulos históricos | — |
-| C11 | banco+front | **Retirar `vendedor_solicitacoes`/`CadastrarVendedorForm`**: Master passa a usar só "Convidar" (escopo `master`); migração dos dados pendentes existentes (se houver) antes do DROP | — |
-| C12 | front | **Desligado sai da aba de Cadastros e entra em Desligamentos**; separar situação do cadastro (ativo/suspenso/desligado) do sinal de performance — parcial, o resto trava na Frente 4 | — |
-| C13 | front+infra | **Botão "Quero falar com a Cote Certo"** no login: nome/e-mail/tema/mensagem → e-mail à Matriz **sem persistir** (server fn nova, direto no Resend, sem outbox — o outbox é pra retry garantido, isso aqui é dispara-e-esquece) | — |
-| C14 | banco+front | **Remover `auth.cadastro.tsx`/`cadastro.functions.ts`**: tirar o link "Criar franquia" do login, desativar a rota; o caminho manual passa a ser exclusivamente C2/C3 | C2, C3 |
-| C15 | testes | E2E: cadastro manual vira pendente correto e vai pra classificação; trava de exclusão (Master c/ franquia, franquia c/ vendedor); solicitar→aprovar desligamento com motivo obrigatório; `auth.cadastro.tsx` de fato fora do ar | C3, C6, C9, C10, C14 |
+| Task | Tag         | Descrição                                                                                                                                                                                                                       | Depende de           |
+| ---- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| C1   | banco       | **Log da criação manual**: coluna `empresas.criado_por` (quem acionou o "manual · exceção" — nulo quando vem de convite, onde o log já é o `criado_por` do convite)                                                             | —                    |
+| C2   | banco       | **RPC `criar_pendente_manual`**: cria `empresas`+`profiles` com `status='pendente'`, `convite_id=null`, `criado_por=auth.uid()` — substitui `cadastrar_franquia`/`cadastrar_franquia_admin` pro caminho manual                  | C1                   |
+| C3   | front       | **Botão "Cadastro manual · exceção"** ao lado de cada "Convidar" (`acessos.tsx` interno/externo, `xacessos.tsx`), com o aviso "fica registrado como exceção da Matriz" e indo direto pra `ClassificarAcessoModal`               | C2                   |
+| C4   | front       | **Aba Cadastros Matriz** unificada: colaboradores (por cargo real, não preset) + Vendedor Matriz (CLT), filtro Cargo/Ano, busca, Configurar (reusa `UsuariosModal`)/Excluir                                                     | C1                   |
+| C5   | front       | **Aba Cadastros Rede** nova: Masters + franquias (com `modelos_franquia.modalidade` real) + vendedores, filtro Perfil/Modelo/Ano, busca, Configurar/Excluir                                                                     | C1                   |
+| C6   | banco       | **Travas de exclusão** (V11.3.2): Master com franquia vinculada, ou franquia com vendedor na base, bloqueiam exclusão — RPC dedicada, não o `adminDeleteUser` genérico atual                                                    | —                    |
+| C7   | banco       | **Tabela `desligamento_solicitacoes`** (nome/motivo obrigatório/solicitante/alvo/status) + RPCs `solicitar_desligamento`/`resolver_desligamento` — mesmo padrão de `vendedor_solicitacoes`, mas para desligar                   | —                    |
+| C8   | front       | **Master solicita desligamento** (vendedor ou franquia) com motivo obrigatório, dentro de "Meus cadastrados"                                                                                                                    | C7                   |
+| C9   | front       | **Matriz aprova/nega desligamento**, com a trava de C6 replicada aqui (franquia com vendedor bloqueia aprovação, sugere transferir antes)                                                                                       | C6, C7               |
+| C10  | banco       | **Motivo obrigatório em todo desligamento**: `check` condicional (só quando `status='suspensa'`, não trava a reativação que zera o motivo) + backfill dos nulos históricos                                                      | —                    |
+| C11  | banco+front | **Retirar `vendedor_solicitacoes`/`CadastrarVendedorForm`**: Master passa a usar só "Convidar" (escopo `master`); migração dos dados pendentes existentes (se houver) antes do DROP                                             | —                    |
+| C12  | front       | **Desligado sai da aba de Cadastros e entra em Desligamentos**; separar situação do cadastro (ativo/suspenso/desligado) do sinal de performance — parcial, o resto trava na Frente 4                                            | —                    |
+| C13  | front+infra | **Botão "Quero falar com a Cote Certo"** no login: nome/e-mail/tema/mensagem → e-mail à Matriz **sem persistir** (server fn nova, direto no Resend, sem outbox — o outbox é pra retry garantido, isso aqui é dispara-e-esquece) | —                    |
+| C14  | banco+front | **Remover `auth.cadastro.tsx`/`cadastro.functions.ts`**: tirar o link "Criar franquia" do login, desativar a rota; o caminho manual passa a ser exclusivamente C2/C3                                                            | C2, C3               |
+| C15  | testes      | E2E: cadastro manual vira pendente correto e vai pra classificação; trava de exclusão (Master c/ franquia, franquia c/ vendedor); solicitar→aprovar desligamento com motivo obrigatório; `auth.cadastro.tsx` de fato fora do ar | C3, C6, C9, C10, C14 |
 
 ## Decisões que estou tomando, para você contestar
 
@@ -122,8 +123,8 @@ por dependerem de e-mail/criar-senha — resolvido no PR #104, em produção).
    `profiles.superior_id`; já C5/C6 usavam `empresas.parent_id` pra "quantas franquias
    esse Master tem" e pra saber quem é dono de quem. `parent_id` nunca era escrito por
    nenhum fluxo real (só pelos fixtures de teste, que setavam os dois campos por
-   segurança) — confirmado com `select count(*) filter (where parent_id is not null)
-   from empresas`, zero linhas em dado real. Ou seja, a trava de exclusão do C6 pra
+   segurança). A consulta de conferência por `parent_id` retornou zero linhas em dado
+   real. Ou seja, a trava de exclusão do C6 pra
    Master com franquia ativa nunca disparava de verdade em produção, e a coluna
    "franquias"/"dono" da aba Cadastros Rede (C5) sempre mostrava 0/vazio. Migrado:
    `excluir_cadastro_rede` e `cadastros-rede-tab.tsx` agora usam `profiles.superior_id`

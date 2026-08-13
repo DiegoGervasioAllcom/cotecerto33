@@ -54,3 +54,4 @@ output/
 # Insumos binários mantidos fora do versionamento (a planilha da Movida
 # circula por fora do repositório)
 docs/*.xlsx
+docs/*.pdf

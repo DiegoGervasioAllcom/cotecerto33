@@ -1,8 +1,13 @@
 # Documentação do Banco — CoteCerto V11
 
-> Gerado por introspecção direta do Postgres local (`supabase db reset` limpo, 131 migrations + seed, 04/08/2026) — não é uma cópia manual das migrations, é o schema real. Para o histórico de decisões por frente, ver os `PLANO_*_V11.md` e `PLANO_TASKS_V11.md`.
+> Snapshot original gerado por introspecção direta do Postgres local em
+> 04/08/2026. Atualizado em 12/08/2026 contra as **149 migrations versionadas**
+> da `main`, `database.types.ts` e testes DB. O banco local consultado tinha uma
+> migration experimental adicional (`20260813020000`), ausente do checkout; ela
+> e seus objetos foram excluídos das contagens abaixo. Isto documenta o schema
+> versionado, não comprova aplicação nem configuração em produção.
 
-**Resumo:** 58 tabelas · 5 views · 112 policies RLS · 131 funções/RPCs · 8 enums · 3 jobs `pg_cron`.
+**Resumo:** 62 tabelas · 5 views · 117 policies RLS · 152 funções (RPCs e funções internas) · 8 enums · 3 jobs `pg_cron`.
 
 ## Sumário
 
@@ -39,6 +44,11 @@
 - Escrita em tabelas sensíveis (governança, régua, comissão) normalmente é **negada
   por policy** e só acontece via RPC (`security definer`) — isso aparece na coluna
   de comentário da tabela e na lista de funções.
+- Evidência versionada das atualizações de 06–13/08: migrations
+  `20260806025742`–`20260813010000`, tipos gerados e testes DB
+  `franquia-full-v11-5c.test.ts`, `emails-acesso-v11.test.ts`,
+  `gotrue-criar-senha.test.ts`, `ingerir-lead-externo.test.ts` e
+  `distribuicao-permite-area-mdist.test.ts`. Isto não afirma execução em produção.
 
 ## Visão geral dos domínios
 
@@ -76,13 +86,13 @@ flowchart LR
 | Domínio | Tabelas | Descrição |
 | --- | --- | --- |
 | Identidade e hierarquia | 10 | Quem é quem: perfis, cargos, áreas de escopo, empresas (Matriz/Master/franquias) e trilhas de acesso. |
-| Convite e ciclo de vida de cadastro | 2 | Como uma pessoa entra no sistema (convite, cadastro manual) e como sai (desligamento). |
+| Convite e ciclo de vida de cadastro | 3 | Entrada, emissão/reenvio de acesso e desligamento. |
 | Comercial — leads e cotação | 16 | Captação, taxonomia de canais e o wizard de cotação (uma tabela por etapa). |
 | Vendas e propostas | 7 | Da cotação até a apólice emitida: propostas, versões, catálogo de produtos/seguradoras. |
 | Comissão, metas e premiação | 7 | Fechamento financeiro: comissão por competência, metas, campanhas e premiações. |
 | Distribuição e SLA | 2 | Regras de atribuição automática de leads e prazo de atendimento, com override por empresa. |
 | Régua de performance | 1 | Classificação Ativo/Atenção/Travado por bloco (interno/rede/full), calculada por job periódico. |
-| Franquia Full — matrizinha | 1 | Personalização própria da Franquia Full sobre o próprio time (gate por identidade, não por senha). |
+| Franquia Full — matrizinha | 4 | Personalização, integridade Full→Master e gestão direta do próprio time. |
 | Governança, política e histórico | 9 | Tudo que exige senha de diretor pra alterar, e o registro append-only de quem alterou o quê. |
 | Infra e mensageria | 3 | Outbox de e-mail, integrações externas e biblioteca de mensagens prontas. |
 | Views (leitura agregada) | 5 | Views só de leitura, usadas por telas de relatório/KPI — não têm RLS própria nem PK; a segurança vem das policies das tabelas-base que elas consultam (`security_invoker` quando aplicável). |
@@ -679,6 +689,26 @@ erDiagram
 | `desligamento_solicitacoes_select` | SELECT | {authenticated} | (has_role(auth.uid(), 'matriz'::perfil) OR (solicitante_id = auth.uid()) OR (EXISTS ( SELECT 1 FROM profiles p WHERE ((p.id =… |  |
 | `desligamento_solicitacoes_update_matriz` | UPDATE | {authenticated} | has_role(auth.uid(), 'matriz'::perfil) | has_role(auth.uid(), 'matriz'::perfil) |
 
+### `acesso_emissoes`
+
+> Versões das emissões de criação de senha. Token, URL de recovery e senha
+> permanecem no GoTrue e não são persistidos. Reenvio invalida a emissão
+> anterior; somente `(emissao_id, numero)` corrente ativa o acesso. Claim e
+> reenvio compartilham o lock transacional da empresa contra TOCTOU.
+
+**RLS:** ✅ enabled · **PK:** `id`
+
+| Colunas principais | Contrato |
+| --- | --- |
+| `empresa_id`, `profile_id`, `outbox_id` | FKs obrigatórias; `outbox_id` é único |
+| `numero` | smallint positivo, único por profile |
+| `status` | `novo`, `pendente`, `ativo` ou `invalidada` |
+| `envio_confirmado_em`, `ativado_em` | coerentes com o status por check |
+
+`acesso_emissoes_select_responsavel_ou_titular` permite leitura ao titular ou
+a quem pode aprovar o pedido. Escrita direta autenticada é revogada; triggers e
+RPCs versionam, confirmam envio e ativam a emissão.
+
 ## Comercial — leads e cotação
 
 Captação, taxonomia de canais e o wizard de cotação (uma tabela por etapa).
@@ -917,6 +947,11 @@ erDiagram
 | `leads_select` | SELECT | {authenticated} | ((responsavel_id = auth.uid()) OR (empresa_id IN ( SELECT empresas_visiveis.empresa_id FROM empresas_visiveis(auth.uid()) empresas_visiveis(empresa_id))) OR… |  |
 | `leads_update` | UPDATE | {authenticated} | (has_role(auth.uid(), 'matriz'::perfil) OR (empresa_id IN ( SELECT empresas_visiveis.empresa_id FROM empresas_visiveis(auth.uid())… |  |
 
+Leads da Captação Movida entram por `ingerir_lead_externo`, exclusiva de
+`service_role`: payload normalizado, cliente deduplicado por telefone e lead
+por placa sob locks. Empresa e responsável nascem nulos e seguem o trigger/fila
+global; o lead não é forçado para a empresa Matriz.
+
 ### `lead_eventos`
 
 **RLS:** ✅ enabled  ·  **PK:** `id`
@@ -950,7 +985,7 @@ erDiagram
 | Coluna | Tipo | Nulo? | Default | FK |
 | --- | --- | --- | --- | --- |
 | `id` | uuid | **não** | `gen_random_uuid()` |  |
-| `empresa_id` | uuid | **não** |  | → `empresas.id` (cascade) |
+| `empresa_id` | uuid | sim |  | → `empresas.id` (cascade) |
 | `nome` | text | **não** |  |  |
 | `documento` | text | sim |  |  |
 | `email` | text | sim |  |  |
@@ -977,6 +1012,10 @@ erDiagram
 | `clientes_insert` | INSERT | {authenticated} |  | (has_role(auth.uid(), 'matriz'::perfil) OR (empresa_id IN ( SELECT empresas_visiveis.empresa_id FROM empresas_visiveis(auth.uid())… |
 | `clientes_select` | SELECT | {authenticated} | (has_role(auth.uid(), 'matriz'::perfil) OR (empresa_id IN ( SELECT empresas_visiveis.empresa_id FROM empresas_visiveis(auth.uid())… |  |
 | `clientes_update` | UPDATE | {authenticated} | (has_role(auth.uid(), 'matriz'::perfil) OR (empresa_id IN ( SELECT empresas_visiveis.empresa_id FROM empresas_visiveis(auth.uid())… |  |
+
+`empresa_id` pode permanecer nulo enquanto o lead externo está na fila global;
+se a distribuição resolver empresa, a ingestão religa o cliente protegendo
+colisões do índice único de documento.
 
 ### `oportunidades`
 
@@ -2214,6 +2253,35 @@ Personalização própria da Franquia Full sobre o próprio time (gate por ident
 | --- | --- | --- | --- | --- |
 | `full_comissao_complementos_select` | SELECT | {authenticated} | (empresa_id IN ( SELECT empresas_visiveis(auth.uid()) AS empresas_visiveis)) |  |
 
+### `full_master_historico`
+
+> V11.5c: trilha imutável do vínculo obrigatório Full→Master. Full ativa exige
+> Master ativo/aprovado por constraint triggers diferíveis; legado órfão é
+> suspenso até regularização da Matriz via `fn_vincular_master_full`.
+
+**RLS:** ✅ enabled · **PK:** `id` · **Policy:** Matriz, própria Full ou rede
+visível podem ler. `UPDATE`, `DELETE` e `TRUNCATE` são bloqueados. Registra
+profiles anterior/novo, ação (`suspensao_orfandade`, `vinculo_master` ou
+`reativacao`), motivo de 3–500 caracteres, autor e instante.
+
+### `full_vendedor_config`
+
+> V11.5c: configuração individual do vendedor subordinado diretamente à Full.
+
+**RLS:** ✅ enabled · **PK:** `profile_id` · **Policy:** leitura limitada por
+`empresas_visiveis`; escrita autenticada direta revogada. Guarda empresa,
+percentuais opcionais de venda/renovação entre 0–100, flag de personalização e
+auditoria. Escrita de negócio por `fn_configurar_vendedor_full`.
+
+### `full_vendedor_historico`
+
+> V11.5c: trilha append-only de cadastro, configuração, desligamento e
+> reinclusão do vendedor da Full.
+
+**RLS:** ✅ enabled · **PK:** `id` · **Policy:** Matriz ou rede visível podem
+ler. Guarda empresa, vendedor, ação, motivo opcional de até 500 caracteres,
+detalhes JSON objeto, autor e instante; mutação e truncamento são bloqueados.
+
 ## Governança, política e histórico
 
 Tudo que exige senha de diretor pra alterar, e o registro append-only de quem alterou o quê.
@@ -2653,7 +2721,7 @@ erDiagram
 - `email_outbox_provider_id_check`: `CHECK (((provider_id IS NULL) OR (char_length(provider_id) <= 200)))`
 - `email_outbox_status_check`: `CHECK ((status = ANY (ARRAY['pendente'::text, 'enviando'::text, 'enviado'::text, 'falhou'::text, 'incerto'::text])))`
 - `email_outbox_tentativas_check`: `CHECK (((tentativas >= 0) AND (tentativas <= 10)))`
-- `email_outbox_tipo_check`: `CHECK ((tipo = ANY (ARRAY['pendencia'::text, 'recusa'::text, 'boas_vindas'::text])))`
+- `email_outbox_tipo_check`: `CHECK ((tipo = ANY (ARRAY['pendencia'::text, 'recusa'::text, 'boas_vindas'::text, 'boas_vindas_invalidada'::text])))`
 - `email_outbox_ultimo_erro_check`: `CHECK (((ultimo_erro IS NULL) OR (char_length(ultimo_erro) <= 1000)))`
 
 **Policies RLS:**
@@ -2881,6 +2949,10 @@ comentário; as demais foram agrupadas por nome/uso conhecido.
 | `presence_set` | (p_status text, p_user_agent text DEFAULT NULL::text) → void | sim |  |
 | `admin_atualizar_usuario` | (p_user_id uuid, p_nome text, p_empresa_id uuid) → void | sim |  |
 | `admin_set_usuario_status` | (p_user_id uuid, p_ativo boolean, p_motivo text DEFAULT NULL::text) → void | sim |  |
+| `usuario_ativo` | (_user_id uuid) → boolean | sim | Confere status/desligamento persistidos, não apenas claims antigas do JWT. |
+| `usuario_explicitamente_desligado` | (_user_id uuid) → boolean | sim | Distingue desligado de usuário ainda sem profile no pre-request hook. |
+| `bloquear_request_usuario_inativo` | () → jsonb | sim | Bloqueia JWT antigo de usuário desligado sem impedir cadastro inicial. |
+| `listar_franquias_paginada` | (p_limite integer DEFAULT 50, p_offset integer DEFAULT 0) → TABLE(…) | sim | Gate interno + área `mfranq`, escopo por `empresas_visiveis`, máximo 200. |
 
 ### Convite, aprovação e ciclo de vida
 
@@ -2904,6 +2976,10 @@ comentário; as demais foram agrupadas por nome/uso conhecido.
 | `resolver_desligamento` | (p_id uuid, p_aprovar boolean, p_observacao text DEFAULT NULL::text) → void | sim |  |
 | `excluir_cadastro_rede` | (p_user_id uuid, p_motivo text) → void | sim | V11 C6: exclusão (desligamento) de Master/franquia/vendedor da aba Cadastros Rede, com trava de dependentes ativos. Vendedor nunca tem dependente — cai direto em admin_set_usuario_status. Motivo obrigatório é… |
 | `fn_fila_franquia_id` | (_empresa_id uuid) → uuid | sim | V11 F1: empresa da Franquia Full dona da fila deste pedido. NULL quando o destino não é uma franquia. |
+| `fn_profile_acesso_por_empresa` | (p_empresa_id uuid) → uuid | sim | Resolve o titular estável da emissão, inclusive vendedor Full após aprovação. |
+| `ativar_acesso_apos_criar_senha` | (p_emissao_id uuid, p_versao smallint) → uuid | sim | Só o próprio usuário ativa a emissão/versão corrente. |
+| `obter_contrato_link_acesso` | (p_outbox_id uuid, p_lease_token uuid) → jsonb | sim | Contrato do dispatcher sob fencing token; somente `service_role`. |
+| `reenviar_link_acesso` | (p_empresa_id uuid) → uuid | sim | Sob lock da empresa, invalida emissão anterior e cria nova; nega acesso ativo. |
 
 ### Leads, distribuição e pipeline
 
@@ -2911,8 +2987,8 @@ comentário; as demais foram agrupadas por nome/uso conhecido.
 | --- | --- | --- | --- |
 | `assumir_lead` | (p_lead_id uuid) → uuid | sim |  |
 | `iniciar_atendimento` | (p_lead_id uuid) → void | sim |  |
-| `puxar_lead_de_volta` | (p_lead uuid) → void | sim |  |
-| `redistribuir_lead` | (p_lead uuid, p_empresa uuid, p_responsavel uuid DEFAULT NULL::uuid) → void | sim |  |
+| `puxar_lead_de_volta` | (p_lead uuid) → void | sim | Matriz, Master ou área `mdist`; devolve à fila global. |
+| `redistribuir_lead` | (p_lead uuid, p_empresa uuid, p_responsavel uuid DEFAULT NULL::uuid) → void | sim | Matriz, Master ou área `mdist`; registra evento e reativa perda quando aplicável. |
 | `arquivar_lead` | (p_lead uuid) → void | sim |  |
 | `desarquivar_lead` | (p_lead uuid) → void | sim |  |
 | `bloquear_lead` | (p_lead uuid, p_motivo text) → void | sim |  |
@@ -2920,12 +2996,13 @@ comentário; as demais foram agrupadas por nome/uso conhecido.
 | `avaliar_perda_lead` | (p_lead_id uuid, p_decisao text, p_observacao text DEFAULT NULL::text) → void | sim |  |
 | `classificar_perda_cotacao` | (p_cotacao_id uuid, p_motivo text, p_submotivo text, p_observacao text DEFAULT NULL::text) → void | sim |  |
 | `distribuir_lead_auto` | () → trigger | sim |  |
-| `distribuir_fila_pendente` | () → integer | sim |  |
+| `distribuir_fila_pendente` | () → integer | sim | Gate server-side para Matriz, Master ou área `mdist`. |
 | `expirar_leads_nao_atendidos` | (p_janela_seg integer DEFAULT 180) → integer | sim | V11.5.7: devolve leads não atendidos, com SLA resolvido POR LEAD via fn_sla_aplicavel_lead (canal próprio de Full usa o SLA dela; repassado/sem canal usa o SLA global). Repassado cruza a fronteira (empresa_id -> null,… |
 | `criar_leads_renovacao` | () → jsonb | sim | G6.1: cria leads de renovação p/ apólices vencendo em até 60 dias e marca perdido o que não renovou até o vencimento. Chamada por pg_cron diário; grant a authenticated (não anon) permite disparo manual pela Matriz caso… |
 | `iniciar_renovacao` | (p_proposta_id uuid) → uuid | sim | G6.2: cria manualmente o lead de renovação de uma apólice (distribuição padrão via trigger). Gate: matriz ou rede visível. Idempotente (dedup pelo índice único de renovacao_proposta_id). Security definer para não… |
 | `fn_leads_resolver_canal` | () → trigger | sim | V11.0.4: preenche leads.canal_id a partir do texto legado leads.origem quando o escritor não informa o canal. Rede de segurança para as funções antigas — código novo grava canal_id direto. Texto desconhecido deixa… |
 | `fn_origem_lead` | (p_canal_id uuid) → text | sim | V11.5.8: origem do lead pela taxonomia única de canais (004) — canais.empresa_id preenchido = proprio (canal da própria Full); canais.empresa_id NULL = repassado (canal Supper/Matriz). p_canal_id NULL ou inexistente ->… |
+| `ingerir_lead_externo` | (record jsonb, type text DEFAULT NULL, table text DEFAULT NULL, schema text DEFAULT NULL, old_record jsonb DEFAULT NULL) → TABLE(lead_id uuid, criado boolean) | sim | Entrada `service_role` da Captação Movida; normaliza/deduplica e preserva a fila global. |
 | `tg_lead_ganho` | () → trigger | sim |  |
 | `definir_negociacao_status` | (p_proposta_id uuid, p_status text) → TABLE(id uuid, negociacao_status text) | sim |  |
 | `definir_prazo_resposta` | (p_proposta_id uuid, p_prazo date DEFAULT NULL::date) → TABLE(id uuid, prazo_resposta date) | sim |  |
@@ -3012,6 +3089,13 @@ comentário; as demais foram agrupadas por nome/uso conhecido.
 | --- | --- | --- | --- |
 | `fn_registrar_alteracao_franquia` | (p_empresa_id uuid, p_area text, p_o_que text, p_de_para jsonb DEFAULT NULL::jsonb) → uuid | sim | V11.5b.1: porta de escrita do histórico da FRANQUIA (empresa_id preenchido em historico_alteracoes). Gate por identidade — franqueado dono da própria empresa, com essa empresa resolvendo pro bloco Full… |
 | `fn_salvar_complementos_full` | (p_empresa_id uuid, p_comissao_venda_pct numeric, p_comissao_renovacao_pct numeric,… | sim | V11.5b.3: única porta de escrita de full_comissao_complementos. Gate por identidade (franqueado dono da empresa + modalidade Full via fn_bloco_performance) — nunca senha de diretor. Upsert por empresa_id. Grava… |
+| `fn_master_valido_para_full` | (p_full_profile_id uuid, p_master_profile_id uuid) → boolean | sim | Validador interno da obrigação Full→Master ativo/aprovado. |
+| `fn_vincular_master_full` | (p_full_profile_id uuid, p_master_profile_id uuid, p_motivo text) → void | sim | Matriz regulariza o Master e registra histórico imutável. |
+| `fn_full_dona_vendedor` | (p_full_id uuid, p_vendedor_id uuid) → boolean | sim | Confirma vínculo direto do vendedor com a Full. |
+| `fn_configurar_vendedor_full` | (p_vendedor_id uuid, p_equipe text DEFAULT NULL, p_leads_dia integer DEFAULT NULL, …) → full_vendedor_config | sim | Configuração server-side do vendedor direto com trilha. |
+| `fn_cadastrar_vendedor_full` | (p_user_id uuid, p_criado_por uuid, p_nome text, p_email text, …) → uuid | sim | Porta `service_role`; força empresa, superior e role de vendedor. |
+| `fn_desligar_vendedor_full` | (p_vendedor_id uuid, p_motivo text) → void | sim | Full desliga vendedor sem apagar dados e registra histórico. |
+| `fn_reincluir_vendedor_full` | (p_vendedor_id uuid, p_motivo text) → void | sim | Reinclusão excepcional reservada à Matriz. |
 
 ### Governança, diretor e histórico
 
@@ -3047,6 +3131,7 @@ comentário; as demais foram agrupadas por nome/uso conhecido.
 | `enfileirar_boas_vindas` | (p_empresa_id uuid) → uuid | sim | V11.2.2: cria snapshot tipado de uma das sete boas-vindas, sem persistir link ou token. |
 | `finalizar_email_outbox` | (p_outbox_id uuid, p_lease_token uuid, p_resultado text, p_provider_id text DEFAULT NULL::text,… | sim | Finaliza sob fencing token; resultados ambíguos tornam a mensagem não claimável para evitar duplicidade. |
 | `marcar_email_outbox_enviando` | (p_outbox_id uuid) → jsonb | sim |  |
+| `fn_registrar_emissao_acesso` | () → trigger | sim | Versiona emissão ao criar boas-vindas e invalida versões anteriores não ativas. |
 | `fn_tipo_declarado_email` | (p_empresa_id uuid) → text | sim |  |
 
 ### Validadores JSONB (uso interno em checks)

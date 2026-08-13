@@ -23,6 +23,7 @@ e quem administra o negócio inteiro.
 8. [Segurança e controle](#8-segurança-e-controle)
 9. [Comunicação com a equipe](#9-comunicação-com-a-equipe)
 10. [Visão gerencial e relatórios](#10-visão-gerencial-e-relatórios)
+11. [Integrações de captação](#11-integrações-de-captação)
 
 ---
 
@@ -58,18 +59,18 @@ flowchart LR
 
 ## 2. Quem usa o sistema
 
-| Quem | O que faz no sistema |
-| --- | --- |
-| **Matriz** | Administra o negócio inteiro: configurações, aprovações finais, todos os relatórios |
-| **Diretor** (marcação especial dentro da Matriz) | As poucas ações mais sensíveis (mudar uma regra de comissão, por exemplo) pedem a senha de um diretor, como uma segunda confirmação |
-| **Coordenador Comercial** | Ajuda a Matriz a administrar o dia a dia, sem poder mudar as regras mais sensíveis |
-| **Supervisor de Vendas** | Comanda o time comercial: acompanha vendedores, aprova descontos dentro do limite dele |
-| **Supervisor Operacional** | Foco em leads e distribuição — não aprova desconto |
-| **Marketing / Assistente Comercial** | Acompanham leads, campanhas e vendas da operação própria da Matriz, sem poder editar |
-| **Master** | Gerencia um grupo de franquias/vendedores — vê os números da própria rede |
-| **Franquia Full** | Uma franquia com autonomia própria: gerencia o próprio time, a própria comissão e a própria régua de performance, quase como uma "matrizinha" (ver §7) |
-| **Franquia Individual** | Vende como se fosse uma vendedora — sem gerenciar equipe |
-| **Vendedor** | Atende leads, cota, vende e acompanha a própria comissão |
+| Quem                                             | O que faz no sistema                                                                                                                                   |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Matriz**                                       | Administra o negócio inteiro: configurações, aprovações finais, todos os relatórios                                                                    |
+| **Diretor** (marcação especial dentro da Matriz) | As poucas ações mais sensíveis (mudar uma regra de comissão, por exemplo) pedem a senha de um diretor, como uma segunda confirmação                    |
+| **Coordenador Comercial**                        | Ajuda a Matriz a administrar o dia a dia, sem poder mudar as regras mais sensíveis                                                                     |
+| **Supervisor de Vendas**                         | Comanda o time comercial: acompanha vendedores, aprova descontos dentro do limite dele                                                                 |
+| **Supervisor Operacional**                       | Foco em leads e distribuição — não aprova desconto                                                                                                     |
+| **Marketing / Assistente Comercial**             | Acompanham leads, campanhas e vendas da operação própria da Matriz, sem poder editar                                                                   |
+| **Master**                                       | Gerencia um grupo de franquias/vendedores — vê os números da própria rede                                                                              |
+| **Franquia Full**                                | Uma franquia com autonomia própria: gerencia o próprio time, a própria comissão e a própria régua de performance, quase como uma "matrizinha" (ver §7) |
+| **Franquia Individual**                          | Vende como se fosse uma vendedora — sem gerenciar equipe                                                                                               |
+| **Vendedor**                                     | Atende leads, cota, vende e acompanha a própria comissão                                                                                               |
 
 Cada pessoa só é cadastrada por **convite** (um link que já vem com o papel
 dela definida) ou, em casos excepcionais, por cadastro direto da Matriz — não
@@ -190,6 +191,10 @@ franquia.
   exceção registrada pela Matriz), com e-mail de boas-vindas automático.
 - **E-mails automáticos** — aprovação, recusa, e o link para criar a senha
   (que expira em 48 horas, por segurança).
+- **Reenvio do primeiro acesso** — enquanto a conta ainda não foi ativada, quem
+  administra Acessos pode enviar um novo link; o link anterior deixa de valer.
+- **Recuperação de senha** — a tela de login permite solicitar um link seguro para
+  redefinir a senha, sem revelar se determinado e-mail está cadastrado.
 - **"Quero falar com a Cote Certo"** — um botão na tela de login para quem
   ainda não tem conta e quer ser contatado, sem precisar criar nada.
 - **WhatsApp** — convites e mensagens prontas podem ser enviados direto por
@@ -207,6 +212,17 @@ semana, quinzena, mês, ou um período personalizado):
   prazo de atendimento estourado, vendas ainda não pagas, franquias abaixo da
   meta, vendedores em queda de performance, e mais.
 - 7 relatórios completos, exportáveis em PDF ou Excel.
+
+---
+
+## 11. Integrações de captação
+
+O sistema recebe leads de aplicações externas, incluindo o **Captação Movida**. Esses
+leads entram na fila global, ainda sem vendedor, para seguirem a distribuição normal.
+O mesmo evento não cria o lead duas vezes, e falhas de validação não deixam um cadastro
+parcial. A equipe com a área de **Distribuição** liberada pode redistribuir, puxar um
+lead de volta e executar a distribuição automática; essa permissão acompanha a área da
+pessoa, não apenas o nome do cargo.
 
 ---
 
