@@ -340,7 +340,14 @@ export function AppShell({
       </aside>
 
       <main className="main">
-        <div className="topbar">
+        {/* V11 · Lead Manual — origem virou modal (ModalShell, z-index 70 no
+            proto.css) mas continua sendo a própria página de /venda/novo-lead
+            sem ?id= — não um modal aberto por cima de outra página. O botão
+            Tutorial precisa ficar clicável mesmo com esse "gate" aberto (é
+            assim que o tour reabre a demonstração depois de um passo que
+            passa por lá), então a topbar precisa ficar acima do backdrop do
+            modal aqui. */}
+        <div className="topbar" style={{ position: "sticky", zIndex: 71 }}>
           <div className="page-title">
             {crumbs && <div className="crumbs">{crumbs}</div>}
             <h1>{title}</h1>
