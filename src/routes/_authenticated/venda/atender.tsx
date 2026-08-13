@@ -1,27 +1,25 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { veiculoLabel } from "@/lib/veiculo";
 import { maskCpfCnpj, maskCep } from "@/lib/masks";
+import {
+  ATENDER_AGORA_QUERY_KEY,
+  fetchAtenderAgoraLeads,
+  type AtenderAgoraLead,
+} from "@/lib/nav-badges";
+import { useAuth } from "@/lib/auth";
+import { useGroupScope } from "@/lib/group-scope";
 
 export const Route = createFileRoute("/_authenticated/venda/atender")({
   head: () => ({ meta: [{ title: "Atender agora · CoteCerto" }] }),
   component: Page,
 });
 
-type Lead = {
-  id: string;
-  nome: string;
-  contato: string | null;
-  origem: string | null;
-  valor: number | null;
-  criado_em: string;
-  distribuido_em: string | null;
-  dados: Record<string, unknown> | null;
-  bloqueado: boolean | null;
-};
+type Lead = AtenderAgoraLead;
 
 const WINDOW_MS = 3 * 60 * 1000; // 3 min
 
@@ -37,11 +35,23 @@ function fmtTimer(ms: number): { txt: string; pct: number; tone: "ok" | "warn" |
 }
 
 function Page() {
+  const { loading: authLoading, role } = useAuth();
+  const { loading: scopeLoading, isFranqIndividual } = useGroupScope();
+
+  if (authLoading || scopeLoading) return null;
+  const venLike = role === "vendedor" || (role === "franqueado" && isFranqIndividual);
+  if (!venLike) return <Navigate to="/inicio" replace />;
+
+  return <AtenderPageContent />;
+}
+
+/** Só monta queries depois que o gate venLike confirmou acesso à rota. */
+function AtenderPageContent() {
   const navigate = useNavigate();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [view, setView] = useState<Lead | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -49,33 +59,25 @@ function Page() {
   const firedRef = useRef<Set<string>>(new Set());
   const expiringRef = useRef(false);
 
-  async function load() {
-    setLoading(true);
-    const { data: u } = await supabase.auth.getUser();
-    const uid = u.user?.id;
-    if (!uid) {
-      setLoading(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("leads")
-      .select("id,nome,contato,origem,valor,criado_em,distribuido_em,dados,bloqueado")
-      .eq("responsavel_id", uid)
-      .eq("status_pipeline", "novo")
-      .not("arquivado", "is", true)
-      .is("ultimo_atendimento_em", null)
-      .order("distribuido_em", { ascending: true, nullsFirst: true })
-      .limit(50);
-    if (error) setErr(error.message);
-    const list = (data ?? []) as Lead[];
-    leadsRef.current = list;
-    setLeads(list);
-    setLoading(false);
-  }
+  const uid = session?.user.id ?? null;
+  const leadsQuery = useQuery({
+    queryKey: [...ATENDER_AGORA_QUERY_KEY, uid],
+    queryFn: () => fetchAtenderAgoraLeads(uid!),
+    enabled: !!uid,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+  const leads = leadsQuery.data;
+  const visibleLeads = leads ?? [];
+  const refetchLeads = leadsQuery.refetch;
+  const err = actionError ?? (leadsQuery.error instanceof Error ? leadsQuery.error.message : null);
 
   useEffect(() => {
-    load();
+    leadsRef.current = leads ?? [];
+  }, [leads]);
+
+  useEffect(() => {
     tickRef.current = setInterval(() => {
       const n = Date.now();
       setNow(n);
@@ -95,7 +97,7 @@ function Page() {
       expiringRef.current = true;
       (async () => {
         try {
-          await load();
+          await refetchLeads();
         } finally {
           expiringRef.current = false;
         }
@@ -104,22 +106,23 @@ function Page() {
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
-  }, []);
+  }, [refetchLeads]);
 
   async function assumir(l: Lead) {
     setBusy(l.id);
     const { data, error } = await supabase.rpc("assumir_lead", { p_lead_id: l.id });
     setBusy(null);
     if (error) {
-      setErr(error.message);
+      setActionError(error.message);
       return;
     }
+    await queryClient.invalidateQueries({ queryKey: ATENDER_AGORA_QUERY_KEY });
     const cotId = data as string | null;
     if (cotId) navigate({ to: "/venda/novo-lead", search: { id: cotId, step: 0 } });
     else navigate({ to: "/venda/pipeline" });
   }
 
-  const total = leads.length;
+  const total = visibleLeads.length;
 
   return (
     <AppShell title="Atender agora">
@@ -148,25 +151,27 @@ function Page() {
         </div>
       )}
 
-      <div
-        className="audit-note"
-        style={{ background: "var(--alert-soft)", color: "var(--alert)", marginBottom: 16 }}
-      >
-        <svg width={16} height={16}>
-          <use href="#i-bolt" />
-        </svg>{" "}
-        <strong style={{ marginRight: 4 }}>
-          {total} {total === 1 ? "lead para tratar agora." : "leads para tratar agora."}
-        </strong>{" "}
-        Cada um tem 3 min desde a distribuição; sem reação, volta automaticamente para a Matriz e é
-        redistribuído.
-      </div>
+      {leads && (
+        <div
+          className="audit-note"
+          style={{ background: "var(--alert-soft)", color: "var(--alert)", marginBottom: 16 }}
+        >
+          <svg width={16} height={16}>
+            <use href="#i-bolt" />
+          </svg>{" "}
+          <strong style={{ marginRight: 4 }}>
+            {total} {total === 1 ? "lead para tratar agora." : "leads para tratar agora."}
+          </strong>{" "}
+          Cada um tem 3 min desde a distribuição; sem reação, volta automaticamente para a Matriz e
+          é redistribuído.
+        </div>
+      )}
 
-      {loading ? (
+      {leadsQuery.isPending ? (
         <div className="card">
           <div className="card-b">Carregando…</div>
         </div>
-      ) : total === 0 ? (
+      ) : !leads ? null : total === 0 ? (
         <div className="empty-state">
           <div className="ico">
             <svg width={28} height={28}>
@@ -178,7 +183,7 @@ function Page() {
         </div>
       ) : (
         <div className="atender-grid">
-          {leads.map((l) => {
+          {visibleLeads.map((l) => {
             const blocked = !!l.bloqueado;
             const start = new Date(l.distribuido_em ?? l.criado_em).getTime();
             const left = start + WINDOW_MS - now;

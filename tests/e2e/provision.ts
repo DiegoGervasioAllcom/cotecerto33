@@ -250,6 +250,30 @@ export async function limparVendedorComLead(v: VendedorComLead): Promise<void> {
   await admin.from("empresas").delete().eq("id", v.empresaId);
 }
 
+/** Distribui outro lead para uma persona já autenticada, simulando chegada em tempo real. */
+export async function distribuirLeadE2E(userId: string, empresaId: string): Promise<string> {
+  const { data, error } = await admin
+    .from("leads")
+    .insert({
+      nome: uniq("Cliente distribuído E2E"),
+      contato: "(11) 98888-0000",
+      origem: "teste-e2e",
+      empresa_id: empresaId,
+      responsavel_id: userId,
+      status_pipeline: "novo",
+      distribuido_em: new Date().toISOString(),
+      dados: {},
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`distribuir lead E2E: ${error?.message}`);
+  return data.id;
+}
+
+export async function limparLeadE2E(leadId: string): Promise<void> {
+  await admin.from("leads").delete().eq("id", leadId);
+}
+
 /**
  * Acrescenta ao vendedor uma cotação calculada e uma proposta selecionada.
  * A fixture permite validar os destinos read-only do tutorial sem clicar em

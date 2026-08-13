@@ -1,6 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers";
-import { criarVendedorComLead, limparVendedorComLead, type VendedorComLead } from "./provision";
+import {
+  criarVendedorComLead,
+  distribuirLeadE2E,
+  limparLeadE2E,
+  limparVendedorComLead,
+  type VendedorComLead,
+} from "./provision";
 
 /**
  * E2E do caminho feliz de venda (vendedor): login → vê o lead distribuído em
@@ -36,20 +42,40 @@ test.describe("venda — caminho feliz do vendedor", () => {
     // aguarda o redirecionamento pós-login (saída de /auth) antes de navegar
     await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
 
-    // navega para a fila de atendimento
-    await page.goto("/venda/atender");
-    await expect(page.getByRole("heading", { name: "Atender agora" }).last()).toBeVisible();
+    const atenderLink = page.getByRole("link", { name: /Atender agora.*1 lead aguardando/ });
+    await expect(atenderLink).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("button", { name: /1 lead aguardando; menor tempo restante/ }),
+    ).toBeVisible();
 
-    const card = page.getByText("Cliente E2E", { exact: false }).first();
-    await expect(card).toBeVisible();
+    const segundoLeadId = await distribuirLeadE2E(vendedor.userId, vendedor.empresaId);
+    try {
+      // A chegada deve refletir por Realtime (com polling de 15 s como fallback), sem reload.
+      await expect(
+        page.getByRole("link", { name: /Atender agora.*2 leads aguardando/ }),
+      ).toBeVisible({
+        timeout: 20_000,
+      });
+      await expect(
+        page.getByRole("button", { name: /2 leads aguardando; menor tempo restante/ }),
+      ).toBeVisible();
 
-    await page
-      .getByRole("button", { name: /assumir e iniciar/i })
-      .first()
-      .click();
+      await page.getByRole("link", { name: /Atender agora.*2 leads aguardando/ }).click();
+      await expect(page.getByRole("heading", { name: "Atender agora" }).last()).toBeVisible();
 
-    // `assumir_lead` cria a cotação e o app navega para o wizard já no passo 0
-    await expect(page).toHaveURL(/\/venda\/novo-lead/);
-    await expect(page.getByRole("heading", { name: "Dados do Segurado" })).toBeVisible();
+      const card = page.locator(".atender-card").filter({ hasText: "Cliente E2E" }).first();
+      await expect(card).toBeVisible();
+
+      await card.getByRole("button", { name: /assumir e iniciar/i }).click();
+
+      // `assumir_lead` cria a cotação e invalida o badge antes de abrir o wizard.
+      await expect(page).toHaveURL(/\/venda\/novo-lead/);
+      await expect(page.getByRole("heading", { name: "Dados do Segurado" })).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: /Atender agora.*1 lead aguardando/ }),
+      ).toBeVisible();
+    } finally {
+      await limparLeadE2E(segundoLeadId);
+    }
   });
 });

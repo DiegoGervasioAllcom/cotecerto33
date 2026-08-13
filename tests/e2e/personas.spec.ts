@@ -4,6 +4,8 @@ import {
   criarVendedorComLead,
   limparVendedorComLead,
   criarPersona,
+  distribuirLeadE2E,
+  limparLeadE2E,
   limparPersona,
   type VendedorComLead,
   type Persona,
@@ -26,6 +28,43 @@ async function navPronta(page: Page) {
   // qualquer nav-label aparecer antes de asserir presença/ausência de itens,
   // pra não pegar o instante "loading" (sidebar vazia) do franqueado.
   await expect(page.locator(".nav-label").first()).toBeVisible({ timeout: 15_000 });
+}
+
+function vigiarConsultasFilaAtender(page: Page) {
+  const consultas: string[] = [];
+  const listener = (request: { url(): string }) => {
+    const url = new URL(request.url());
+    if (
+      url.pathname.endsWith("/rest/v1/leads") &&
+      url.searchParams.get("select") ===
+        "id,nome,contato,origem,valor,criado_em,distribuido_em,dados,bloqueado" &&
+      url.searchParams.get("responsavel_id")?.startsWith("eq.") &&
+      url.searchParams.get("status_pipeline") === "eq.novo" &&
+      url.searchParams.get("arquivado") === "eq.false" &&
+      url.searchParams.get("ultimo_atendimento_em") === "is.null"
+    ) {
+      consultas.push(request.url());
+    }
+  };
+  page.on("request", listener);
+  return {
+    consultas,
+    parar: () => page.off("request", listener),
+  };
+}
+
+async function expectAcessoDiretoAtenderNegado(page: Page) {
+  const fila = vigiarConsultasFilaAtender(page);
+  try {
+    await page.goto("/venda/atender");
+    await expect(page).toHaveURL(/\/comando\/visao-geral$/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Atender agora" })).toHaveCount(0);
+    // Dá tempo para denunciar query montada antes do guard ou efeito tardio após o redirect.
+    await page.waitForTimeout(500);
+    expect(fila.consultas).toEqual([]);
+  } finally {
+    fila.parar();
+  }
 }
 
 test.describe("navegação por perfil — venLike (vendedor)", () => {
@@ -60,6 +99,11 @@ test.describe("navegação por perfil — matriz", () => {
     await expect(page.getByRole("link", { name: "Distribuição" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Configurações" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Lead Manual" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Atender agora/ })).toHaveCount(0);
+    await expect(
+      page.locator('[data-tour="shell-react-pill"]', { hasText: "Atender agora" }),
+    ).toHaveCount(0);
+    await expectAcessoDiretoAtenderNegado(page);
   });
 });
 
@@ -90,9 +134,14 @@ test.describe("navegação por perfil — grpLike (master/supervisor)", () => {
     await expect(page.getByRole("link", { name: "Visão geral" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Vendedores" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Lead Manual" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Atender agora/ })).toHaveCount(0);
+    await expect(
+      page.locator('[data-tour="shell-react-pill"]', { hasText: "Atender agora" }),
+    ).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Distribuição" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByText("MASTER", { exact: true }).first()).toBeVisible();
+    await expectAcessoDiretoAtenderNegado(page);
   });
 
   /**
@@ -114,9 +163,14 @@ test.describe("navegação por perfil — grpLike (master/supervisor)", () => {
     await expect(page.getByRole("link", { name: "Supervisão" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Aprovações" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Lead Manual" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Atender agora/ })).toHaveCount(0);
+    await expect(
+      page.locator('[data-tour="shell-react-pill"]', { hasText: "Atender agora" }),
+    ).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Distribuição" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByText("SUPERVISOR DE VENDAS", { exact: true }).first()).toBeVisible();
+    await expectAcessoDiretoAtenderNegado(page);
   });
 });
 
@@ -160,19 +214,27 @@ test.describe("navegação por perfil — fullLike (franquia Full)", () => {
     await expect(menu.getByRole("link", { name: "Franquias" })).toHaveCount(0);
     await expect(menu.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Lead Manual" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Atender agora/ })).toHaveCount(0);
+    await expect(
+      page.locator('[data-tour="shell-react-pill"]', { hasText: "Atender agora" }),
+    ).toHaveCount(0);
     // franquia Full não é "· individual" no avatar (esse selo só sai na Individual).
     await expect(page.getByText("· individual")).toHaveCount(0);
+    await expectAcessoDiretoAtenderNegado(page);
   });
 });
 
 test.describe("navegação por perfil — franquia Individual (venLike)", () => {
   let franquiaIndividual: Persona;
+  let leadId: string;
 
   test.beforeAll(async () => {
     franquiaIndividual = await criarPersona({ role: "franqueado", modalidade: "individual" });
+    leadId = await distribuirLeadE2E(franquiaIndividual.userId, franquiaIndividual.empresaId);
   });
 
   test.afterAll(async () => {
+    await limparLeadE2E(leadId);
     await limparPersona(franquiaIndividual);
   });
 
@@ -185,6 +247,10 @@ test.describe("navegação por perfil — franquia Individual (venLike)", () => 
     await expect(page).toHaveURL(/\/inicio$/);
 
     await expect(page.getByRole("link", { name: "Lead Manual" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Atender agora.*1 lead aguardando/ })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.locator('[data-tour="shell-react-pill"]')).toContainText("1Atender agora");
     await expect(page.getByRole("link", { name: "Vendedores" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Configurações" })).toHaveCount(0);
     await expect(page.getByText("· individual")).toBeVisible();

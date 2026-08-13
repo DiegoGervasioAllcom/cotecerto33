@@ -1,6 +1,41 @@
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Perfil } from "@/integrations/supabase/client";
+
+export const ATENDER_AGORA_QUERY_KEY = ["leads", "atender-agora"] as const;
+
+export type AtenderAgoraLead = {
+  id: string;
+  nome: string;
+  contato: string | null;
+  origem: string | null;
+  valor: number | null;
+  criado_em: string;
+  distribuido_em: string | null;
+  dados: Record<string, unknown> | null;
+  bloqueado: boolean | null;
+};
+
+/** Fila canônica de reação do vendedor. RLS mantém o escopo além deste filtro visual. */
+export async function fetchAtenderAgoraLeads(userId: string): Promise<AtenderAgoraLead[]> {
+  const { data, error } = await supabase
+    .from("leads")
+    .select("id,nome,contato,origem,valor,criado_em,distribuido_em,dados,bloqueado")
+    .eq("responsavel_id", userId)
+    .eq("status_pipeline", "novo")
+    .eq("arquivado", false)
+    .is("ultimo_atendimento_em", null)
+    .order("distribuido_em", { ascending: true, nullsFirst: true });
+  if (error) throw error;
+  return data.map((lead) => ({
+    ...lead,
+    dados:
+      typeof lead.dados === "object" && lead.dados !== null && !Array.isArray(lead.dados)
+        ? (lead.dados as Record<string, unknown>)
+        : null,
+  }));
+}
 
 /** Contagem de leads aguardando distribuição (mesmo critério de comando/leads.tsx). */
 async function countLeadsPendentes(): Promise<number> {
@@ -66,6 +101,8 @@ type NavBadges = {
   leadsPendentes: number | null;
   aprovacoesPendentes: number | null;
   leadMaisAntigoElapsed: string | null;
+  atenderAgora: AtenderAgoraLead[] | null;
+  atenderAgoraErro: string | null;
 };
 
 /**
@@ -77,6 +114,8 @@ export function useNavBadges({
   isMatriz,
   verLeads,
   verAprovacoes,
+  verAtenderAgora,
+  userId,
 }: {
   /**
    * Só para a contagem de aprovações: a Matriz decide o que está com
@@ -88,10 +127,41 @@ export function useNavBadges({
   verLeads: boolean;
   /** É aprovador na cadeia de desconto (tem a área de Aprovações). */
   verAprovacoes: boolean;
+  /** Apenas vendedor e Franquia Individual. */
+  verAtenderAgora: boolean;
+  userId: string | null;
 }): NavBadges {
   const [leadsPendentes, setLeadsPendentes] = useState<number | null>(null);
   const [leadMaisAntigoElapsed, setLeadMaisAntigoElapsed] = useState<string | null>(null);
   const [aprovacoesPendentes, setAprovacoesPendentes] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const atenderQuery = useQuery({
+    queryKey: [...ATENDER_AGORA_QUERY_KEY, userId],
+    queryFn: () => fetchAtenderAgoraLeads(userId!),
+    enabled: verAtenderAgora && !!userId,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+
+  useEffect(() => {
+    if (!verAtenderAgora || !userId) return;
+    const invalidate = () => {
+      void queryClient.invalidateQueries({ queryKey: ATENDER_AGORA_QUERY_KEY });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") invalidate();
+    };
+    const channel = supabase
+      .channel(`nav-atender-agora-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, invalidate)
+      .subscribe();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient, userId, verAtenderAgora]);
 
   useEffect(() => {
     if (!verLeads) {
@@ -131,5 +201,11 @@ export function useNavBadges({
     };
   }, [isMatriz, verAprovacoes]);
 
-  return { leadsPendentes, aprovacoesPendentes, leadMaisAntigoElapsed };
+  return {
+    leadsPendentes,
+    aprovacoesPendentes,
+    leadMaisAntigoElapsed,
+    atenderAgora: verAtenderAgora && userId ? (atenderQuery.data ?? null) : null,
+    atenderAgoraErro: atenderQuery.error instanceof Error ? atenderQuery.error.message : null,
+  };
 }
