@@ -608,6 +608,84 @@ export async function limparPersonaSemEmpresa(p: Pick<Persona, "userId">): Promi
   await admin.auth.admin.deleteUser(p.userId);
 }
 
+export type DistribuicaoMovidaFixture = {
+  vendedor: Persona;
+  empresaNome: string;
+  leadId: string;
+  leadNome: string;
+  lojaNome: string;
+  alias: string;
+};
+
+/**
+ * Monta somente os dados externos ao formulário testado: empresa/vendedor e
+ * um lead Movida ainda na Fila Global. A rota, o alias e o pool são criados
+ * pelo browser para que o E2E valide a integração real da tela com o banco.
+ */
+export async function criarDistribuicaoMovidaFixture(): Promise<DistribuicaoMovidaFixture> {
+  const vendedor = await criarPersona({ role: "vendedor" });
+  const { data: empresa, error: empresaError } = await admin
+    .from("empresas")
+    .select("nome")
+    .eq("id", vendedor.empresaId)
+    .single();
+  if (empresaError || !empresa)
+    throw new Error(`ler empresa do vendedor Movida E2E: ${empresaError?.message}`);
+  const sufixo = crypto.randomUUID().slice(0, 8);
+  const lojaNome = `Movida E2E ${sufixo}`;
+  const alias = `Movida São José ${sufixo}`;
+  const leadNome = `Lead Movida E2E ${sufixo}`;
+  const { data, error } = await admin.rpc("ingerir_lead_externo", {
+    type: "INSERT",
+    record: {
+      nome_cliente: leadNome,
+      telefone: `119${Date.now().toString().slice(-8)}`,
+      placa: `E2E${sufixo.slice(0, 4)}`.toUpperCase(),
+      loja: alias,
+    },
+  } as never);
+  const lead = (data as { lead_id: string; criado: boolean }[] | null)?.[0];
+  if (error || !lead) throw new Error(`ingerir lead Movida E2E: ${error?.message}`);
+  return {
+    vendedor,
+    empresaNome: empresa.nome,
+    leadId: lead.lead_id,
+    leadNome,
+    lojaNome,
+    alias,
+  };
+}
+
+export async function lerDestinoLeadMovidaE2E(leadId: string) {
+  const { data, error } = await admin
+    .from("leads")
+    .select("empresa_id,responsavel_id")
+    .eq("id", leadId)
+    .single();
+  if (error) throw new Error(`ler destino do lead Movida E2E: ${error.message}`);
+  return data;
+}
+
+export async function limparDistribuicaoMovidaFixture(
+  fixture: DistribuicaoMovidaFixture,
+): Promise<void> {
+  await admin.from("leads").delete().eq("id", fixture.leadId);
+  const { data: lojas } = await admin
+    .from("movida_lojas")
+    .select("id")
+    .eq("nome", fixture.lojaNome);
+  if (lojas?.length) {
+    await admin
+      .from("movida_lojas")
+      .delete()
+      .in(
+        "id",
+        lojas.map((loja) => loja.id),
+      );
+  }
+  await limparPersona(fixture.vendedor);
+}
+
 export type CotacaoQuiverFixture = {
   email: string;
   senha: string;

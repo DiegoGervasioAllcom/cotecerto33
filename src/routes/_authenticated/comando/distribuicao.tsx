@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useGroupScope } from "@/lib/group-scope";
 import { usePodeDistribuir } from "@/lib/use-areas";
 import { FullDistribuicaoSlaCanais } from "@/components/comando/full-distribuicao-sla-canais";
+import { DistribuicaoMovida } from "@/components/comando/distribuicao-movida";
 
 export const Route = createFileRoute("/_authenticated/comando/distribuicao")({
   head: () => ({ meta: [{ title: "Distribuição · CoteCerto" }] }),
@@ -910,6 +911,8 @@ function Page() {
           )}
         </div>
       </div>
+
+      <DistribuicaoMovida podeEditar={podeDistribuir} />
     </AppShell>
   );
 }

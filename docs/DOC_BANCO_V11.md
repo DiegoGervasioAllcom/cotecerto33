@@ -1,13 +1,12 @@
 # Documentação do Banco — CoteCerto V11
 
 > Snapshot original gerado por introspecção direta do Postgres local em
-> 04/08/2026. Atualizado em 12/08/2026 contra as **149 migrations versionadas**
-> da `main`, `database.types.ts` e testes DB. O banco local consultado tinha uma
-> migration experimental adicional (`20260813020000`), ausente do checkout; ela
-> e seus objetos foram excluídos das contagens abaixo. Isto documenta o schema
-> versionado, não comprova aplicação nem configuração em produção.
+> 04/08/2026. Atualizado em 14/08/2026 contra as **152 migrations versionadas**
+> do checkout, `database.types.ts` e testes DB. O reset local contém exatamente
+> as mesmas 152 versões. Isto documenta o schema versionado, não comprova
+> aplicação nem configuração em produção.
 
-**Resumo:** 62 tabelas · 5 views · 117 policies RLS · 152 funções (RPCs e funções internas) · 8 enums · 3 jobs `pg_cron`.
+**Resumo:** 66 tabelas · 5 views · 121 policies RLS · 157 funções (RPCs e funções internas) · 8 enums · 3 jobs `pg_cron`.
 
 ## Sumário
 
@@ -45,10 +44,11 @@
   por policy** e só acontece via RPC (`security definer`) — isso aparece na coluna
   de comentário da tabela e na lista de funções.
 - Evidência versionada das atualizações de 06–13/08: migrations
-  `20260806025742`–`20260813010000`, tipos gerados e testes DB
+  `20260806025742`–`20260814000000`, tipos gerados e testes DB
   `franquia-full-v11-5c.test.ts`, `emails-acesso-v11.test.ts`,
   `gotrue-criar-senha.test.ts`, `ingerir-lead-externo.test.ts` e
-  `distribuicao-permite-area-mdist.test.ts`. Isto não afirma execução em produção.
+  `distribuicao-permite-area-mdist.test.ts` e `distribuicao-movida.test.ts`.
+  Isto não afirma execução em produção.
 
 ## Visão geral dos domínios
 
@@ -949,8 +949,11 @@ erDiagram
 
 Leads da Captação Movida entram por `ingerir_lead_externo`, exclusiva de
 `service_role`: payload normalizado, cliente deduplicado por telefone e lead
-por placa sob locks. Empresa e responsável nascem nulos e seguem o trigger/fila
-global; o lead não é forçado para a empresa Matriz.
+por placa sob locks. A função tenta uma rota explícita pelo alias da loja e
+atribui empresa/vendedor atomicamente; sem rota ou membro elegível, empresa e
+responsável permanecem nulos na Fila Global. A empresa Matriz usada internamente
+durante o `INSERT` é apenas uma sentinela transacional para não acionar o motor
+genérico e não fica persistida como fallback.
 
 ### `lead_eventos`
 
@@ -2124,6 +2127,9 @@ erDiagram
         timestamptz atualizado_em
         uuid atualizado_por
     }
+    movida_lojas ||--o{ movida_loja_aliases : "loja_id"
+    movida_lojas ||--o{ movida_loja_vendedores : "loja_id"
+    movida_lojas ||--o{ movida_distribuicao_auditoria : "loja_id"
 ```
 
 ### `distribuicao_config`
@@ -2152,6 +2158,49 @@ erDiagram
 | --- | --- | --- | --- | --- |
 | `dist_cfg_admin` | ALL | {authenticated} | has_role(auth.uid(), 'matriz'::perfil) | has_role(auth.uid(), 'matriz'::perfil) |
 | `dist_cfg_select` | SELECT | {authenticated} | true |  |
+
+### `movida_lojas`
+
+Rota explícita entre uma loja externa da Captação Movida e a empresa CoteCerto
+que deve atendê-la. A rota pode ser pausada e pode exigir presença online.
+
+**RLS:** ✅ enabled · **PK:** `id` · gestão pela Matriz/área `mdist`; Master
+somente nas empresas visíveis da própria rede.
+
+| Coluna | Tipo | Nulo? | Observação |
+| --- | --- | --- | --- |
+| `id` | uuid | não | Identificador da rota |
+| `nome` | text | não | Nome exibido, até 120 caracteres |
+| `empresa_id` | uuid | não | Empresa de destino |
+| `ativa` | boolean | não | Pausa a rota sem apagar a configuração |
+| `exigir_online` | boolean | não | Exclui membros offline quando ativo |
+| `criado_em`, `atualizado_em` | timestamptz | não | Auditoria temporal |
+
+### `movida_loja_aliases`
+
+Aliases recebidos no campo `dados.loja`. A chave normalizada é gerada no banco
+e é única; nomes desconhecidos nunca são associados por aproximação.
+
+**RLS:** ✅ enabled · **PK:** `id` · **FK:** `loja_id → movida_lojas`.
+
+### `movida_loja_vendedores`
+
+Pool muitos-para-muitos da rota. Um único membro é válido e recebe todos os
+leads elegíveis da loja. `peso` aceita 1–100; `limite_diario` nulo significa
+sem limite e é contado por rota no dia de `America/Sao_Paulo`.
+
+**RLS:** ✅ enabled · **PK:** (`loja_id`, `vendedor_id`) · escrita validada para
+role vendedor pertencente à empresa da rota.
+
+### `movida_distribuicao_auditoria`
+
+Registro append-only da decisão (`distribuido`, `sem_loja`, `loja_inativa`,
+`sem_elegivel` ou `nao_pendente`), incluindo carga/limite/peso usados, sem
+duplicar os dados pessoais do lead.
+
+**RLS:** ✅ enabled · **PK:** `id` · Matriz/área `mdist` lê toda a rede e Master
+somente as empresas visíveis; escrita é exclusiva do motor
+`security definer`/`service_role`.
 
 ### `sla_empresa_config`
 
@@ -2997,12 +3046,16 @@ comentário; as demais foram agrupadas por nome/uso conhecido.
 | `classificar_perda_cotacao` | (p_cotacao_id uuid, p_motivo text, p_submotivo text, p_observacao text DEFAULT NULL::text) → void | sim |  |
 | `distribuir_lead_auto` | () → trigger | sim |  |
 | `distribuir_fila_pendente` | () → integer | sim | Gate server-side para Matriz, Master ou área `mdist`. |
+| `distribuir_lead_movida` | (p_lead_id uuid, p_ator_id uuid DEFAULT NULL) → boolean | sim | Motor interno atômico: resolve alias/rota, escolhe membro elegível por carga ponderada e registra auditoria; sem destino mantém Fila Global. Execução direta somente `service_role`. |
+| `fn_salvar_rota_movida` | (p_loja_id uuid, p_nome text, p_alias text, p_empresa_id uuid, p_ativa boolean, p_exigir_online boolean) → uuid | sim | Cria ou atualiza a rota e seu alias inicial atomicamente, com o mesmo gate Matriz/Master escopado/área `mdist` das policies. |
+| `reprocessar_leads_movida_pendentes` | (p_loja_id uuid, p_limite integer DEFAULT 500) → TABLE(processados, distribuidos, pendentes) | sim | Matriz/área `mdist`, ou Master dentro da própria rede; reprocessa apenas leads Movida novos, não bloqueados e ainda sem empresa/responsável da loja indicada. |
+| `normalizar_alias_loja_movida` | (p_valor text) → text | não | Normalização determinística usada pela chave única dos aliases e pelo webhook. |
 | `expirar_leads_nao_atendidos` | (p_janela_seg integer DEFAULT 180) → integer | sim | V11.5.7: devolve leads não atendidos, com SLA resolvido POR LEAD via fn_sla_aplicavel_lead (canal próprio de Full usa o SLA dela; repassado/sem canal usa o SLA global). Repassado cruza a fronteira (empresa_id -> null,… |
 | `criar_leads_renovacao` | () → jsonb | sim | G6.1: cria leads de renovação p/ apólices vencendo em até 60 dias e marca perdido o que não renovou até o vencimento. Chamada por pg_cron diário; grant a authenticated (não anon) permite disparo manual pela Matriz caso… |
 | `iniciar_renovacao` | (p_proposta_id uuid) → uuid | sim | G6.2: cria manualmente o lead de renovação de uma apólice (distribuição padrão via trigger). Gate: matriz ou rede visível. Idempotente (dedup pelo índice único de renovacao_proposta_id). Security definer para não… |
 | `fn_leads_resolver_canal` | () → trigger | sim | V11.0.4: preenche leads.canal_id a partir do texto legado leads.origem quando o escritor não informa o canal. Rede de segurança para as funções antigas — código novo grava canal_id direto. Texto desconhecido deixa… |
 | `fn_origem_lead` | (p_canal_id uuid) → text | sim | V11.5.8: origem do lead pela taxonomia única de canais (004) — canais.empresa_id preenchido = proprio (canal da própria Full); canais.empresa_id NULL = repassado (canal Supper/Matriz). p_canal_id NULL ou inexistente ->… |
-| `ingerir_lead_externo` | (record jsonb, type text DEFAULT NULL, table text DEFAULT NULL, schema text DEFAULT NULL, old_record jsonb DEFAULT NULL) → TABLE(lead_id uuid, criado boolean) | sim | Entrada `service_role` da Captação Movida; normaliza/deduplica e preserva a fila global. |
+| `ingerir_lead_externo` | (record jsonb, type text DEFAULT NULL, table text DEFAULT NULL, schema text DEFAULT NULL, old_record jsonb DEFAULT NULL) → TABLE(lead_id uuid, criado boolean) | sim | Entrada `service_role` da Captação Movida; normaliza/deduplica e tenta a rota explícita da loja. Sem rota/membro elegível preserva a Fila Global. |
 | `tg_lead_ganho` | () → trigger | sim |  |
 | `definir_negociacao_status` | (p_proposta_id uuid, p_status text) → TABLE(id uuid, negociacao_status text) | sim |  |
 | `definir_prazo_resposta` | (p_proposta_id uuid, p_prazo date DEFAULT NULL::date) → TABLE(id uuid, prazo_resposta date) | sim |  |
