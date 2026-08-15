@@ -55,3 +55,6 @@ output/
 # circula por fora do repositório)
 docs/*.xlsx
 docs/*.pdf
+
+# backups locais de .env criados durante configuração
+.env.bkp-*
