@@ -1,13 +1,13 @@
 # Documentação Técnica — CoteCerto V11
 
-> Documento vivo, atualizado em 12/08/2026. Cobre arquitetura, frontend,
+> Documento vivo, atualizado em 14/08/2026. Cobre arquitetura, frontend,
 > domínios de negócio, testes e deploy; o capítulo final referencia a fonte
 > canônica do banco, `docs/DOC_BANCO_V11.md`. Para o histórico de decisões por frente, ver os
 > `docs/PLANO_*_V11.md` e `docs/PLANO_TASKS_V11.md`. Para as 10 regras não
 > negociáveis do repositório, ver `AGENTS.md`.
 
 **Resumo:** SaaS de gestão de vendas de seguros (auto), multi-tenant por
-franquia, com hierarquia de 7 perfis + 7 cargos, 62 tabelas + 5 views no
+franquia, com hierarquia de 7 perfis + 7 cargos, 66 tabelas + 5 views no
 Postgres, RLS em quase tudo, e front React 19/TanStack Start servido por um
 único container Nitro/Bun atrás de nginx.
 
@@ -362,6 +362,13 @@ Apólice vencida sem ação vira perda automaticamente.
 Matriz segue o SLA dela, lead próprio da Full segue o SLA da Full. Lead
 repassado que estoura SLA ou vira perda **cruza a fronteira** de volta como
 Devolvido/Perda da Matriz (V11.5.7).
+
+Na Captação Movida (V11.9.6), cada alias explícito de loja aponta para uma
+empresa e um pool de vendedores. A seleção atômica usa carga ponderada, limite
+diário por membro no fuso `America/Sao_Paulo` e, opcionalmente, presença online.
+Um pool com um único vendedor direciona todos os novos leads elegíveis a ele;
+sem rota ou membro elegível, o lead permanece na Fila Global. Reprocessamento
+manual só alcança leads Movida novos e ainda sem empresa/responsável.
 
 ### 5.9 Régua de performance
 

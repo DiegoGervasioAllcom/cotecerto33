@@ -2488,6 +2488,234 @@ export type Database = {
         };
         Relationships: [];
       };
+      movida_distribuicao_auditoria: {
+        Row: {
+          alias_normalizado: string | null;
+          ator_id: string | null;
+          criado_em: string;
+          detalhes: Json;
+          empresa_id: string | null;
+          id: number;
+          lead_id: string | null;
+          loja_id: string | null;
+          loja_informada: string | null;
+          resultado: string;
+          vendedor_id: string | null;
+        };
+        Insert: {
+          alias_normalizado?: string | null;
+          ator_id?: string | null;
+          criado_em?: string;
+          detalhes?: Json;
+          empresa_id?: string | null;
+          id?: never;
+          lead_id?: string | null;
+          loja_id?: string | null;
+          loja_informada?: string | null;
+          resultado: string;
+          vendedor_id?: string | null;
+        };
+        Update: {
+          alias_normalizado?: string | null;
+          ator_id?: string | null;
+          criado_em?: string;
+          detalhes?: Json;
+          empresa_id?: string | null;
+          id?: never;
+          lead_id?: string | null;
+          loja_id?: string | null;
+          loja_informada?: string | null;
+          resultado?: string;
+          vendedor_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "movida_distribuicao_auditoria_ator_id_fkey";
+            columns: ["ator_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "movida_distribuicao_auditoria_ator_id_fkey";
+            columns: ["ator_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "movida_distribuicao_auditoria_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "movida_distribuicao_auditoria_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+          {
+            foreignKeyName: "movida_distribuicao_auditoria_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "leads";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "movida_distribuicao_auditoria_loja_id_fkey";
+            columns: ["loja_id"];
+            isOneToOne: false;
+            referencedRelation: "movida_lojas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "movida_distribuicao_auditoria_vendedor_id_fkey";
+            columns: ["vendedor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "movida_distribuicao_auditoria_vendedor_id_fkey";
+            columns: ["vendedor_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      movida_loja_aliases: {
+        Row: {
+          alias: string;
+          alias_normalizado: string | null;
+          criado_em: string;
+          id: string;
+          loja_id: string;
+        };
+        Insert: {
+          alias: string;
+          alias_normalizado?: string | null;
+          criado_em?: string;
+          id?: string;
+          loja_id: string;
+        };
+        Update: {
+          alias?: string;
+          alias_normalizado?: string | null;
+          criado_em?: string;
+          id?: string;
+          loja_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "movida_loja_aliases_loja_id_fkey";
+            columns: ["loja_id"];
+            isOneToOne: false;
+            referencedRelation: "movida_lojas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      movida_loja_vendedores: {
+        Row: {
+          ativo: boolean;
+          atualizado_em: string;
+          criado_em: string;
+          limite_diario: number | null;
+          loja_id: string;
+          peso: number;
+          vendedor_id: string;
+        };
+        Insert: {
+          ativo?: boolean;
+          atualizado_em?: string;
+          criado_em?: string;
+          limite_diario?: number | null;
+          loja_id: string;
+          peso?: number;
+          vendedor_id: string;
+        };
+        Update: {
+          ativo?: boolean;
+          atualizado_em?: string;
+          criado_em?: string;
+          limite_diario?: number | null;
+          loja_id?: string;
+          peso?: number;
+          vendedor_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "movida_loja_vendedores_loja_id_fkey";
+            columns: ["loja_id"];
+            isOneToOne: false;
+            referencedRelation: "movida_lojas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "movida_loja_vendedores_vendedor_id_fkey";
+            columns: ["vendedor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "movida_loja_vendedores_vendedor_id_fkey";
+            columns: ["vendedor_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      movida_lojas: {
+        Row: {
+          ativa: boolean;
+          atualizado_em: string;
+          criado_em: string;
+          empresa_id: string;
+          exigir_online: boolean;
+          id: string;
+          nome: string;
+        };
+        Insert: {
+          ativa?: boolean;
+          atualizado_em?: string;
+          criado_em?: string;
+          empresa_id: string;
+          exigir_online?: boolean;
+          id?: string;
+          nome: string;
+        };
+        Update: {
+          ativa?: boolean;
+          atualizado_em?: string;
+          criado_em?: string;
+          empresa_id?: string;
+          exigir_online?: boolean;
+          id?: string;
+          nome?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "movida_lojas_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "movida_lojas_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       oportunidades: {
         Row: {
           comissao_paga: boolean;
@@ -3870,6 +4098,10 @@ export type Database = {
       desarquivar_lead: { Args: { p_lead: string }; Returns: undefined };
       desbloquear_lead: { Args: { p_lead: string }; Returns: undefined };
       distribuir_fila_pendente: { Args: never; Returns: number };
+      distribuir_lead_movida: {
+        Args: { p_ator_id?: string; p_lead_id: string };
+        Returns: boolean;
+      };
       empresas_visiveis: {
         Args: { _user_id: string };
         Returns: {
@@ -4197,6 +4429,17 @@ export type Database = {
         };
         Returns: string;
       };
+      fn_salvar_rota_movida: {
+        Args: {
+          p_alias: string;
+          p_ativa?: boolean;
+          p_empresa_id: string;
+          p_exigir_online?: boolean;
+          p_loja_id: string;
+          p_nome: string;
+        };
+        Returns: string;
+      };
       fn_salvar_sla_empresa: {
         Args: { p_empresa_id: string; p_sla_segundos: number };
         Returns: {
@@ -4328,6 +4571,10 @@ export type Database = {
         Args: { p_id: string; p_obs?: string };
         Returns: undefined;
       };
+      normalizar_alias_loja_movida: {
+        Args: { p_valor: string };
+        Returns: string;
+      };
       normalizar_periodo_visao_geral: {
         Args: {
           p_fim?: string;
@@ -4395,6 +4642,14 @@ export type Database = {
         Returns: {
           id: string;
           versao: number;
+        }[];
+      };
+      reprocessar_leads_movida_pendentes: {
+        Args: { p_limite?: number; p_loja_id: string };
+        Returns: {
+          distribuidos: number;
+          pendentes: number;
+          processados: number;
         }[];
       };
       resolver_desligamento: {

@@ -256,7 +256,7 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     expect(clientes?.[0].id).toBe(clienteAntes?.id);
   });
 
-  it("automático ligado + regra casa por cidade: lead distribuído e cliente religado à mesma empresa", async () => {
+  it("regra genérica por cidade não captura captacao_movida sem rota configurada", async () => {
     const UF = "AC";
     const cidadeAuto = uniq("cidade-captacao-auto").toLowerCase();
 
@@ -307,22 +307,22 @@ describe("ingerir_lead_externo — captacao-movida", () => {
         .select("empresa_id,responsavel_id,cliente_id")
         .eq("id", row.lead_id)
         .single();
-      expect(lead?.empresa_id).toBe(empresaId);
-      expect(lead?.responsavel_id).toBe(vendedorId);
+      expect(lead?.empresa_id).toBeNull();
+      expect(lead?.responsavel_id).toBeNull();
 
-      // cliente religado à mesma empresa que o trigger resolveu pro lead.
+      // Sem rota Movida explícita, lead e cliente permanecem na fila global.
       const { data: cliente } = await admin
         .from("clientes")
         .select("empresa_id")
         .eq("id", lead!.cliente_id!)
         .single();
-      expect(cliente?.empresa_id).toBe(empresaId);
+      expect(cliente?.empresa_id).toBeNull();
     } finally {
       await admin.from("distribuicao_config").update({ automatico_on: false }).eq("id", "default");
     }
   });
 
-  it("religação do cliente é pulada se colidir com o índice único (empresa_id, documento), sem quebrar a RPC", async () => {
+  it("cliente com documento já existente não quebra fallback global sem rota Movida", async () => {
     const UF = "AC";
     const cidadeConflito = uniq("cidade-captacao-conflito").toLowerCase();
     const cpfCompartilhado = uniqDoc();
@@ -392,7 +392,7 @@ describe("ingerir_lead_externo — captacao-movida", () => {
         .select("empresa_id,cliente_id")
         .eq("id", row.lead_id)
         .single();
-      expect(lead?.empresa_id).toBe(empresaId);
+      expect(lead?.empresa_id).toBeNull();
 
       // cliente permanece órfão (empresa_id null): religação pulada por causa
       // do conflito de documento na empresa resolvida.
