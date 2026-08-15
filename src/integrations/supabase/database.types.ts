@@ -527,6 +527,115 @@ export type Database = {
         };
         Relationships: [];
       };
+      consultas_placa: {
+        Row: {
+          ano_fabricacao: string | null;
+          ano_modelo: string | null;
+          categoria: string | null;
+          chassi: string | null;
+          codigo_retorno: string | null;
+          combustivel: string | null;
+          consultado_por: string | null;
+          cotacao_id: string | null;
+          criado_em: string;
+          empresa_id: string | null;
+          erro: string | null;
+          fipe_codigo: string | null;
+          fipe_valor: number | null;
+          id: string;
+          local_fabricacao: string | null;
+          marca: string | null;
+          mensagem_retorno: string | null;
+          modelo: string | null;
+          motor: string | null;
+          origem: string | null;
+          payload: Json | null;
+          placa: string;
+          raw_xml: string | null;
+          sucesso: boolean;
+          tipo_carroceria: string | null;
+          versao: string | null;
+        };
+        Insert: {
+          ano_fabricacao?: string | null;
+          ano_modelo?: string | null;
+          categoria?: string | null;
+          chassi?: string | null;
+          codigo_retorno?: string | null;
+          combustivel?: string | null;
+          consultado_por?: string | null;
+          cotacao_id?: string | null;
+          criado_em?: string;
+          empresa_id?: string | null;
+          erro?: string | null;
+          fipe_codigo?: string | null;
+          fipe_valor?: number | null;
+          id?: string;
+          local_fabricacao?: string | null;
+          marca?: string | null;
+          mensagem_retorno?: string | null;
+          modelo?: string | null;
+          motor?: string | null;
+          origem?: string | null;
+          payload?: Json | null;
+          placa: string;
+          raw_xml?: string | null;
+          sucesso?: boolean;
+          tipo_carroceria?: string | null;
+          versao?: string | null;
+        };
+        Update: {
+          ano_fabricacao?: string | null;
+          ano_modelo?: string | null;
+          categoria?: string | null;
+          chassi?: string | null;
+          codigo_retorno?: string | null;
+          combustivel?: string | null;
+          consultado_por?: string | null;
+          cotacao_id?: string | null;
+          criado_em?: string;
+          empresa_id?: string | null;
+          erro?: string | null;
+          fipe_codigo?: string | null;
+          fipe_valor?: number | null;
+          id?: string;
+          local_fabricacao?: string | null;
+          marca?: string | null;
+          mensagem_retorno?: string | null;
+          modelo?: string | null;
+          motor?: string | null;
+          origem?: string | null;
+          payload?: Json | null;
+          placa?: string;
+          raw_xml?: string | null;
+          sucesso?: boolean;
+          tipo_carroceria?: string | null;
+          versao?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "consultas_placa_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "cotacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "consultas_placa_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "consultas_placa_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       convites: {
         Row: {
           cargo_id: string | null;

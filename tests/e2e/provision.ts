@@ -1012,3 +1012,82 @@ export async function pedidoDoConvitePorCodigo(codigo: string) {
     .maybeSingle();
   return { convite: conv, pedido: emp };
 }
+
+/**
+ * Placa usada pelo spec da integração de placa. É a placa real capturada do
+ * fornecedor (FTP4J82) — mas o spec NUNCA chama a API: `semearConsultaPlacaE2E`
+ * grava o resultado no cache de `consultas_placa`, e a server function devolve
+ * o registro em vez de gastar uma consulta paga a cada rodada de CI.
+ */
+export const PLACA_E2E = "FTP4J82";
+
+/** Payload equivalente ao que `parseDecodificadorXml` produz para PLACA_E2E. */
+const PAYLOAD_PLACA_E2E = {
+  placa: PLACA_E2E,
+  chassi: "9BGJC69Z0FB105973",
+  categoria: "AUTOMOVEL",
+  marca: "CHEVROLET",
+  modelo: "COBALT 1.8 LTZ",
+  versao: "1.8 LTZ",
+  motor: "1.8",
+  origem: "NACIONAL",
+  localFabricacao: "SAO CAETANO DO SUL / SP",
+  tipoCarroceria: "SEDAN",
+  anoModelo: "2015",
+  anoFabricacao: "2014",
+  codigoRetorno: "0",
+  mensagemRetorno: "Marca/Modelo/Ano Identificados",
+  fipe: [
+    {
+      codigo: "004420-2",
+      combustivel: "Gasolina",
+      marca: "GM - Chevrolet",
+      modelo: "COBALT LTZ 1.8 8V Econo.Flex 4p Mec.",
+      valor: 43399,
+    },
+    {
+      codigo: "004421-0",
+      combustivel: "Gasolina",
+      marca: "GM - Chevrolet",
+      modelo: "COBALT LTZ 1.8 8V Econo.Flex 4p Aut.",
+      valor: 45917,
+    },
+  ],
+};
+
+/** Popula o cache de 30 dias para PLACA_E2E, evitando a chamada ao fornecedor. */
+export async function semearConsultaPlacaE2E(userId: string, empresaId: string): Promise<string> {
+  const { data, error } = await admin
+    .from("consultas_placa")
+    .insert({
+      placa: PLACA_E2E,
+      consultado_por: userId,
+      empresa_id: empresaId,
+      sucesso: true,
+      codigo_retorno: "0",
+      mensagem_retorno: "Marca/Modelo/Ano Identificados",
+      marca: "CHEVROLET",
+      modelo: "COBALT 1.8 LTZ",
+      versao: "1.8 LTZ",
+      ano_modelo: "2015",
+      ano_fabricacao: "2014",
+      chassi: "9BGJC69Z0FB105973",
+      combustivel: "Gasolina",
+      categoria: "AUTOMOVEL",
+      tipo_carroceria: "SEDAN",
+      origem: "NACIONAL",
+      motor: "1.8",
+      local_fabricacao: "SAO CAETANO DO SUL / SP",
+      fipe_codigo: "004420-2",
+      fipe_valor: 43399,
+      payload: PAYLOAD_PLACA_E2E,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`semear consulta de placa E2E: ${error?.message}`);
+  return data.id;
+}
+
+export async function limparConsultaPlacaE2E(id: string): Promise<void> {
+  await admin.from("consultas_placa").delete().eq("id", id);
+}

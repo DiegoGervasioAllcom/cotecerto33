@@ -7,6 +7,7 @@ import type { Form } from "@/components/venda/novo-lead/types";
 import { useClassificarPerda } from "@/components/venda/novo-lead/hooks/useClassificarPerda";
 import { useCepLookup } from "@/components/venda/novo-lead/hooks/useCepLookup";
 import { useFipe } from "@/components/venda/novo-lead/hooks/useFipe";
+import { useConsultaPlaca } from "@/components/venda/novo-lead/hooks/useConsultaPlaca";
 import { useValidacaoEtapas } from "@/components/venda/novo-lead/hooks/useValidacaoEtapas";
 import { useSimulacaoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { useCotacaoRascunho } from "@/components/venda/novo-lead/hooks/useCotacaoRascunho";
@@ -245,6 +246,15 @@ function Page() {
     routeId,
     routeStep,
   });
+  // Integração de placa: depende de `marcas` (para casar a marca FIPE) e de
+  // `cotacaoId` (para amarrar a consulta à cotação no histórico).
+  const {
+    consultando: placaConsultando,
+    status: placaStatus,
+    versoes: placaVersoes,
+    consultar: consultarPlaca,
+    escolherVersao: escolherVersaoPlaca,
+  } = useConsultaPlaca({ setF, marcas, setModelos, cotacaoId });
   const {
     calculando,
     resultados,
@@ -330,6 +340,11 @@ function Page() {
               marcas={marcas}
               modelos={modelos}
               fipeValor={fipeValor}
+              placaConsultando={placaConsultando}
+              placaStatus={placaStatus}
+              placaVersoes={placaVersoes}
+              onConsultarPlaca={consultarPlaca}
+              onEscolherVersao={escolherVersaoPlaca}
             />
           )}
 

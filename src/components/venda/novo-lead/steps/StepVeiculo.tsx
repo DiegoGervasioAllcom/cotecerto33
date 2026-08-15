@@ -4,6 +4,8 @@ import { UsoVeiculoFields } from "@/components/venda/novo-lead/steps/veiculo/Uso
 import { DadosComplementaresFold } from "@/components/venda/novo-lead/steps/veiculo/DadosComplementaresFold";
 import { AcessoriosFold } from "@/components/venda/novo-lead/steps/veiculo/AcessoriosFold";
 import type { Form } from "@/components/venda/novo-lead/types";
+import type { StatusPlaca } from "@/components/venda/novo-lead/hooks/useConsultaPlaca";
+import type { PrecificadorFipe } from "@/lib/placa-decodificador";
 
 type Props = {
   f: Form;
@@ -12,9 +14,36 @@ type Props = {
   marcas: { codigo: string; nome: string }[];
   modelos: { codigo: number; nome: string }[];
   fipeValor: string;
+  /** Integração de placa (useConsultaPlaca). */
+  placaConsultando: boolean;
+  placaStatus: StatusPlaca | null;
+  placaVersoes: PrecificadorFipe[];
+  onConsultarPlaca: (placa: string, opts?: { forcar?: boolean }) => void;
+  onEscolherVersao: (v: PrecificadorFipe) => void;
 };
 
-export function StepVeiculo({ f, up, erros, marcas, modelos, fipeValor }: Props) {
+const brl = (v: number | null) =>
+  v == null ? "" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const CORES_STATUS: Record<StatusPlaca["tipo"], string> = {
+  ok: "var(--ok)",
+  aviso: "var(--info)",
+  erro: "var(--alert)",
+};
+
+export function StepVeiculo({
+  f,
+  up,
+  erros,
+  marcas,
+  modelos,
+  fipeValor,
+  placaConsultando,
+  placaStatus,
+  placaVersoes,
+  onConsultarPlaca,
+  onEscolherVersao,
+}: Props) {
   return (
     <>
       <h2>Dados do Veículo</h2>
@@ -29,11 +58,38 @@ export function StepVeiculo({ f, up, erros, marcas, modelos, fipeValor }: Props)
             value={f.placa}
             maxLength={8}
             onChange={(e) => up("placa", maskPlaca(e.target.value))}
+            // A consulta dispara ao sair do campo, com a placa completa. O
+            // hook ignora repetição da mesma placa, então voltar ao campo
+            // sem editar não gasta uma nova consulta.
+            onBlur={(e) => onConsultarPlaca(e.target.value)}
             placeholder="AAA0A00"
           />
           {erros.placa && (
             <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
               {erros.placa}
+            </span>
+          )}
+          {placaConsultando && (
+            <span className="hint" style={{ display: "block" }}>
+              Consultando placa…
+            </span>
+          )}
+          {!placaConsultando && placaStatus && (
+            <span
+              className="hint"
+              style={{ color: CORES_STATUS[placaStatus.tipo], display: "block" }}
+            >
+              {placaStatus.texto}{" "}
+              <button
+                type="button"
+                className="btn-link"
+                // Sem o padding do .btn-link o link flui junto da mensagem em
+                // vez de descer para uma linha própria e indentada.
+                style={{ padding: 0, font: "inherit", textDecoration: "underline" }}
+                onClick={() => onConsultarPlaca(f.placa, { forcar: true })}
+              >
+                Consultar novamente
+              </button>
             </span>
           )}
         </div>
@@ -75,6 +131,28 @@ export function StepVeiculo({ f, up, erros, marcas, modelos, fipeValor }: Props)
             </label>
           </div>
         </div>
+        {placaVersoes.length > 1 && (
+          <div className="field-group full">
+            <label>Versão do veículo (consulta da placa)</label>
+            <div className="sub">
+              A placa corresponde a mais de uma versão na FIPE. Escolha a correta para preencher
+              marca, modelo e valor.
+            </div>
+            <div className="row" style={{ flexWrap: "wrap", gap: 8, paddingTop: 6 }}>
+              {placaVersoes.map((v) => (
+                <button
+                  key={v.codigo || v.modelo}
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => onEscolherVersao(v)}
+                >
+                  {v.modelo}
+                  {v.valor != null ? ` · ${brl(v.valor)}` : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="field-group">
           <label>
             Marca<span className="req">*</span>
