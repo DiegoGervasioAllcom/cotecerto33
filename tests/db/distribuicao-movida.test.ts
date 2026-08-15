@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   admin,
   criarEmpresa,
@@ -68,10 +68,6 @@ async function membro(
 }
 
 describe("V11.9.6 — distribuição captacao_movida por loja", () => {
-  beforeAll(async () => {
-    await admin.from("distribuicao_config").update({ automatico_on: true }).eq("id", "default");
-  });
-
   it("RLS: vendedor comum não lê nem altera a configuração das rotas", async () => {
     const r = await rota();
     const v = await membro(r.lojaId, r.empresaId);
