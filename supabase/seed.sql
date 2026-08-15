@@ -111,6 +111,211 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- Rotas iniciais da Captação Movida
+--
+-- As lojas começam pausadas e sem pool de vendedores. A empresa de destino é
+-- resolvida pelo tipo (não por UUID/nome fixo), para o mesmo seed funcionar em
+-- qualquer ambiente. Duplicidades ou aliases já ligados a outra rota abortam
+-- a carga inteira em vez de produzir um roteamento ambíguo.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  _empresa_id uuid;
+  _quantidade integer;
+  _loja       record;
+  _alias      record;
+  _loja_id    uuid;
+begin
+  select count(*)
+    into _quantidade
+    from public.empresas
+   where tipo = 'matriz';
+
+  if _quantidade <> 1 then
+    raise exception 'Seed Movida exige exatamente uma empresa Matriz; encontradas: %', _quantidade;
+  end if;
+
+  select id
+    into _empresa_id
+    from public.empresas
+   where tipo = 'matriz';
+
+  -- Impede que outra sessão crie uma rota/alias entre as validações e inserts.
+  lock table public.movida_lojas in share row exclusive mode;
+  lock table public.movida_loja_aliases in share row exclusive mode;
+
+  select count(*)
+    into _quantidade
+    from (
+      select trim(nome)
+        from (values
+          ('Americana'), ('Aricanduva'), ('Campinas Amoreiras'),
+          ('Campinas Itapura'), ('Campinas Orosimbo'),
+          ('Campinas Shop Dom Pedro'), ('Itaim Paulista'), ('Jundiaí'),
+          ('Mogi das Cruzes'), ('Penha'), ('Praia Grande'), ('Santos'),
+          ('São José dos Campos'), ('São Miguel Paulista'),
+          ('São Paulo Radial Leste'), ('Suzano'), ('Taubaté'),
+          ('Timóteo Penteado'), ('Vila Carrão'), ('Vila Ema'),
+          ('Vila Guilherme')
+        ) as carga(nome)
+       group by trim(nome)
+      having count(*) > 1
+    ) duplicadas;
+
+  if _quantidade > 0 then
+    raise exception 'Seed Movida contém nomes de loja duplicados';
+  end if;
+
+  select count(*)
+    into _quantidade
+    from (
+      select public.normalizar_alias_loja_movida(alias)
+        from (values
+          ('Americana', 'Americana'),
+          ('Campinas Amoreiras', 'Campinas Amoreiras'),
+          ('Campinas Itapura', 'Campinas Itapura'),
+          ('Campinas Orosimbo', 'Campinas Orosimbo'),
+          ('Campinas Shop Dom Pedro', 'Campinas Shop Dom Pedro'),
+          ('Campinas Shop Dom Pedro', 'Campinas - Shopping Dom Pedro'),
+          ('Campinas Shop Dom Pedro', 'Seminovos Movida Campinas Shopping Dom Pedro'),
+          ('Jundiaí', 'Jundiai'),
+          ('Praia Grande', 'Praia Grande'),
+          ('Praia Grande', 'Seminovos Movida Praia Grande - Sp'),
+          ('Santos', 'Santos'),
+          ('São José dos Campos', 'Sao Jose dos Campos'),
+          ('Suzano', 'Suzano'),
+          ('Suzano', 'Seminovos Movida Suzano'),
+          ('Suzano', 'Seminovos Movida Suzano - Sp'),
+          ('Taubaté', 'Taubate'),
+          ('Timóteo Penteado', 'Guarulhos Timoteo Penteado'),
+          ('Timóteo Penteado', 'Timoteo Penteado'),
+          ('Mogi das Cruzes', 'Mogi das Cruzes'),
+          ('Aricanduva', 'Aricanduva'),
+          ('Itaim Paulista', 'Itaim Paulista'),
+          ('Penha', 'Penha'),
+          ('São Paulo Radial Leste', 'Radial Leste'),
+          ('São Paulo Radial Leste', 'Sao Paulo Radial Leste'),
+          ('São Miguel Paulista', 'Sao Miguel'),
+          ('São Miguel Paulista', 'Sao Miguel Paulista'),
+          ('Vila Carrão', 'Vila Carrao'),
+          ('Vila Ema', 'Vila Ema'),
+          ('Vila Guilherme', 'Vila Guilherme')
+        ) as carga(loja_nome, alias)
+       group by public.normalizar_alias_loja_movida(alias)
+      having count(*) > 1
+          or count(distinct loja_nome) > 1
+    ) duplicados;
+
+  if _quantidade > 0 then
+    raise exception 'Seed Movida contém aliases normalizados duplicados ou conflitantes';
+  end if;
+
+  for _loja in
+    select nome
+      from (values
+        ('Americana'), ('Aricanduva'), ('Campinas Amoreiras'),
+        ('Campinas Itapura'), ('Campinas Orosimbo'),
+        ('Campinas Shop Dom Pedro'), ('Itaim Paulista'), ('Jundiaí'),
+        ('Mogi das Cruzes'), ('Penha'), ('Praia Grande'), ('Santos'),
+        ('São José dos Campos'), ('São Miguel Paulista'),
+        ('São Paulo Radial Leste'), ('Suzano'), ('Taubaté'),
+        ('Timóteo Penteado'), ('Vila Carrão'), ('Vila Ema'),
+        ('Vila Guilherme')
+      ) as carga(nome)
+  loop
+    select count(*)
+      into _quantidade
+      from public.movida_lojas
+     where trim(nome) = _loja.nome;
+
+    if _quantidade > 1 then
+      raise exception 'Conflito no seed Movida: loja "%" existe % vezes', _loja.nome, _quantidade;
+    end if;
+
+    if _quantidade = 1 then
+      select id
+        into _loja_id
+        from public.movida_lojas
+       where trim(nome) = _loja.nome;
+
+      if not exists (
+        select 1 from public.movida_lojas
+         where id = _loja_id and empresa_id = _empresa_id
+      ) then
+        raise exception 'Conflito no seed Movida: loja "%" pertence a outra empresa', _loja.nome;
+      end if;
+
+      update public.movida_lojas
+         set ativa = false,
+             exigir_online = false,
+             atualizado_em = now()
+       where id = _loja_id;
+    else
+      insert into public.movida_lojas (nome, empresa_id, ativa, exigir_online)
+      values (_loja.nome, _empresa_id, false, false);
+    end if;
+  end loop;
+
+  for _alias in
+    select loja_nome, alias
+      from (values
+        ('Americana', 'Americana'),
+        ('Campinas Amoreiras', 'Campinas Amoreiras'),
+        ('Campinas Itapura', 'Campinas Itapura'),
+        ('Campinas Orosimbo', 'Campinas Orosimbo'),
+        ('Campinas Shop Dom Pedro', 'Campinas Shop Dom Pedro'),
+        ('Campinas Shop Dom Pedro', 'Campinas - Shopping Dom Pedro'),
+        ('Campinas Shop Dom Pedro', 'Seminovos Movida Campinas Shopping Dom Pedro'),
+        ('Jundiaí', 'Jundiai'),
+        ('Praia Grande', 'Praia Grande'),
+        ('Praia Grande', 'Seminovos Movida Praia Grande - Sp'),
+        ('Santos', 'Santos'),
+        ('São José dos Campos', 'Sao Jose dos Campos'),
+        ('Suzano', 'Suzano'),
+        ('Suzano', 'Seminovos Movida Suzano'),
+        ('Suzano', 'Seminovos Movida Suzano - Sp'),
+        ('Taubaté', 'Taubate'),
+        ('Timóteo Penteado', 'Guarulhos Timoteo Penteado'),
+        ('Timóteo Penteado', 'Timoteo Penteado'),
+        ('Mogi das Cruzes', 'Mogi das Cruzes'),
+        ('Aricanduva', 'Aricanduva'),
+        ('Itaim Paulista', 'Itaim Paulista'),
+        ('Penha', 'Penha'),
+        ('São Paulo Radial Leste', 'Radial Leste'),
+        ('São Paulo Radial Leste', 'Sao Paulo Radial Leste'),
+        ('São Miguel Paulista', 'Sao Miguel'),
+        ('São Miguel Paulista', 'Sao Miguel Paulista'),
+        ('Vila Carrão', 'Vila Carrao'),
+        ('Vila Ema', 'Vila Ema'),
+        ('Vila Guilherme', 'Vila Guilherme')
+      ) as carga(loja_nome, alias)
+  loop
+    select id
+      into _loja_id
+      from public.movida_lojas
+     where trim(nome) = _alias.loja_nome
+       and empresa_id = _empresa_id;
+
+    if exists (
+      select 1
+        from public.movida_loja_aliases
+       where alias_normalizado = public.normalizar_alias_loja_movida(_alias.alias)
+         and loja_id <> _loja_id
+    ) then
+      raise exception 'Conflito no seed Movida: alias "%" já pertence a outra loja', _alias.alias;
+    end if;
+
+    insert into public.movida_loja_aliases (loja_id, alias)
+    values (_loja_id, _alias.alias)
+    on conflict (alias_normalizado) do update
+       set alias = excluded.alias
+     where public.movida_loja_aliases.loja_id = excluded.loja_id;
+  end loop;
+
+  raise notice 'Rotas Movida prontas: 21 lojas inativas e 29 aliases, sem vendedores';
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- Diretores iniciais (Ana e Melo) — regra 2, ver comentário no topo do arquivo
 -- ---------------------------------------------------------------------------
 do $$
