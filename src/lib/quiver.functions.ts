@@ -405,3 +405,172 @@ export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+type Segurado = {
+  cpf_cnpj?: string | null;
+  nome?: string | null;
+  celular?: string | null;
+  cep?: string | null;
+};
+
+type VeiculoTransmissao = {
+  renavam?: string | null;
+  cor?: string | null;
+  chassi_remarcado?: boolean | null;
+};
+
+type TransmitirPropostaPayload = {
+  cotacaoId: string;
+  caller_token: string;
+  /** Seguradora do card escolhido pelo cliente (ex.: "Suhai"). */
+  seguradora: string;
+  /** Forma de pagamento escolhida (ex.: "Boleto Bancário"). */
+  formaPagamento: string;
+  /** Parcelamento escolhido: "À vista", "2x" … "12x". */
+  parcelas?: string;
+  /** Código do produto no portal (ex.: "10290_81") — chave exata. */
+  produtoId?: string;
+  /** Texto do produto — serve de conferência contra o `produtoId`. */
+  produto?: string;
+};
+
+/**
+ * Dispara a TRANSMISSÃO (efetivação da venda) no robô Playwright.
+ *
+ * Espelha `enviarCotacaoQuiver`, com duas diferenças importantes:
+ * 1. O endpoint `/transmissao` do robô EXIGE autenticação por headers
+ *    (`x-client-key`/`x-client-secret`) — diferente de `/cotacao`, que não
+ *    tem auth. Sem as env vars configuradas o robô devolve 401 (fail-closed).
+ * 2. O robô localiza a cotação pelo NÚMERO DO PORTAL (ex.: "155010"), que é
+ *    diferente do `numero` interno do CoteCerto. Esse número chega no webhook
+ *    de cotação e fica em `cotacoes.quiver_resultado_raw.numeroCotacao`.
+ *
+ * Os dados do formulário de efetivação (RG, endereço, renavam…) são opcionais
+ * no robô: o portal costuma trazê-los do cadastro do cliente. Enviamos o que
+ * temos; se o portal exigir algo que falta, a transmissão falha com
+ * `motivo: CAMPOS_PENDENTES` no webhook, listando exatamente o que pedir.
+ */
+export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
+  .inputValidator((data: TransmitirPropostaPayload) => {
+    if (!data?.cotacaoId) throw new Error("cotacaoId obrigatório.");
+    if (!data?.caller_token) throw new Error("Sem token.");
+    if (!data?.seguradora) throw new Error("Selecione a seguradora do card.");
+    if (!data?.formaPagamento) throw new Error("Selecione a forma de pagamento.");
+    return data;
+  })
+  .handler(async ({ data }) => {
+    const admin = getAdmin();
+    await assertDonoCotacao(admin, data.caller_token, data.cotacaoId);
+
+    const apiUrl = process.env.SELF_QUIVER_API_URL;
+    if (!apiUrl) throw new Error("SELF_QUIVER_API_URL não configurada.");
+    const clientKey = process.env.SELF_QUIVER_TRANSMISSAO_CLIENT_KEY;
+    const clientSecret = process.env.SELF_QUIVER_TRANSMISSAO_CLIENT_SECRET;
+    if (!clientKey || !clientSecret) {
+      throw new Error(
+        "SELF_QUIVER_TRANSMISSAO_CLIENT_KEY/SECRET não configuradas — o endpoint de transmissão exige autenticação.",
+      );
+    }
+
+    const { data: cot, error: cotErr } = await admin
+      .from("cotacoes")
+      .select(
+        "id,quiver_resultado_raw," +
+          "segurado:cotacao_segurado(cpf_cnpj,nome,celular,cep)," +
+          "veiculo:cotacao_veiculo(renavam,cor,chassi_remarcado)",
+      )
+      .eq("id", data.cotacaoId)
+      .maybeSingle();
+    if (cotErr) throw new Error(cotErr.message);
+    if (!cot) throw new Error("Cotação não encontrada.");
+
+    // O select com joins vem tipado de forma imprecisa pelo supabase-js
+    // (relações podem ser objeto ou array); normalizamos aqui.
+    const cotacao = cot as unknown as {
+      quiver_resultado_raw?: Record<string, unknown> | null;
+      segurado?: Segurado | Segurado[] | null;
+      veiculo?: VeiculoTransmissao | VeiculoTransmissao[] | null;
+    };
+
+    const raw = cotacao.quiver_resultado_raw;
+    const numeroCotacao =
+      raw && typeof raw.numeroCotacao === "string" ? raw.numeroCotacao : undefined;
+
+    const segurado = Array.isArray(cotacao.segurado) ? cotacao.segurado[0] : cotacao.segurado;
+    const veiculo = Array.isArray(cotacao.veiculo) ? cotacao.veiculo[0] : cotacao.veiculo;
+
+    // Sem o número do portal o robô cai na busca por nome do cliente, que é
+    // ambígua quando o mesmo cliente tem várias cotações — por isso avisamos.
+    if (!numeroCotacao && !segurado?.nome) {
+      throw new Error(
+        "Cotação sem número do portal e sem nome do cliente — o robô não conseguiria localizá-la.",
+      );
+    }
+
+    const soDigitos = (v?: string | null) => (v ?? "").replace(/\D/g, "");
+    const celular = soDigitos(segurado?.celular);
+
+    const payload = {
+      numeroCotacao,
+      nomeCliente: segurado?.nome ?? undefined,
+      cotacaoId: data.cotacaoId,
+      seguradora: data.seguradora,
+      produtoId: data.produtoId,
+      produto: data.produto,
+      formaPagamento: data.formaPagamento,
+      parcelas: data.parcelas,
+      // Campos opcionais do formulário de efetivação — enviamos só o que o
+      // CoteCerto já tem cadastrado.
+      renavam: veiculo?.renavam ?? undefined,
+      corVeiculo: veiculo?.cor ?? undefined,
+      chassiRemarcado:
+        veiculo?.chassi_remarcado === null || veiculo?.chassi_remarcado === undefined
+          ? undefined
+          : veiculo.chassi_remarcado
+            ? "Sim"
+            : "Não",
+      cepResidencial: segurado?.cep ?? undefined,
+      dddCelular: celular.length >= 2 ? celular.slice(0, 2) : undefined,
+    };
+
+    let res: Response;
+    try {
+      res = await fetch(`${apiUrl}/transmissao`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-client-key": clientKey,
+          "x-client-secret": clientSecret,
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      throw new Error("Não foi possível conectar à API de transmissão (Quiver).");
+    }
+
+    if (res.status !== 201) {
+      let details: string[] = [];
+      try {
+        const body = (await res.json()) as {
+          error?: { code?: string; message?: string; details?: string[] };
+        };
+        details = body.error?.details?.length
+          ? body.error.details
+          : body.error?.message
+            ? [body.error.message]
+            : [];
+      } catch {
+        /* resposta sem JSON — segue sem detalhes */
+      }
+      throw new Error(
+        details.length
+          ? `Transmissão rejeitada: ${details.join("; ")}`
+          : `Falha ao transmitir (HTTP ${res.status}).`,
+      );
+    }
+
+    // O resultado real (transmitido: true/false, motivo, mensagem) chega
+    // depois, de forma assíncrona, no webhook — este 201 significa apenas
+    // que o robô aceitou a solicitação e começou a processar.
+    return { ok: true, numeroCotacao };
+  });

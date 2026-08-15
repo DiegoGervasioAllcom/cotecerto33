@@ -1,8 +1,34 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { printHtml, escapeHtml } from "@/lib/print";
+import { supabase } from "@/integrations/supabase/client";
+import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { ordenarResultados } from "@/components/venda/cotacoes/quiver-resultado";
+
+/**
+ * Parcelas aceitas pelo modal "Formas de pagamento" do portal Suppercerto.
+ * O retorno da cotação traz só o parcelamento em destaque de cada seguradora
+ * (texto livre, ex.: "em 12x sem juros de R$ 190,32") — a grade completa de
+ * À vista a 12x só existe na tela de efetivação. Se a opção escolhida não
+ * existir para aquele produto, o robô devolve `PARCELA_INDISPONIVEL` com as
+ * parcelas reais.
+ */
+const PARCELAS_DISPONIVEIS = [
+  "À vista",
+  ...Array.from({ length: 11 }, (_, i) => `${i + 2}x`),
+] as const;
+
+type EscolhaCard = { formaPagamento: string; parcelas: string };
+
+/** Formas de pagamento que a seguradora retornou para o card. */
+function formasDePagamentoDoCard(r: ResultadoCalculo): string[] {
+  const doRetorno = r.formasPagamento?.opcoes ?? [];
+  if (doRetorno.length > 0) return doRetorno;
+  const unica = r.formasPagamento?.selecionada ?? r.formaPagamento;
+  return unica ? [unica] : [];
+}
 
 type Props = {
   f: Form;
@@ -23,6 +49,69 @@ export function StepCalculo({
   cotacaoId,
   doSimularCalculo,
 }: Props) {
+  // Escolha de forma de pagamento/parcelas por card — o robô precisa das duas
+  // para clicar na célula certa do modal do portal.
+  const [escolhas, setEscolhas] = useState<Record<string, EscolhaCard>>({});
+  const [transmitindoCardId, setTransmitindoCardId] = useState<string | null>(null);
+  const [erroProposta, setErroProposta] = useState<string | null>(null);
+  const [propostaEnviada, setPropostaEnviada] = useState<string | null>(null);
+
+  function escolhaDoCard(r: ResultadoCalculo): EscolhaCard {
+    const formas = formasDePagamentoDoCard(r);
+    return (
+      escolhas[r.cardId] ?? {
+        formaPagamento: r.formasPagamento?.selecionada ?? r.formaPagamento ?? formas[0] ?? "",
+        parcelas: "À vista",
+      }
+    );
+  }
+
+  function setEscolha(cardId: string, patch: Partial<EscolhaCard>) {
+    setEscolhas((atual) => {
+      const base = atual[cardId] ?? { formaPagamento: "", parcelas: "À vista" };
+      return { ...atual, [cardId]: { ...base, ...patch } };
+    });
+  }
+
+  async function gerarProposta(r: ResultadoCalculo) {
+    if (!cotacaoId) {
+      setErroProposta("Salve a cotação antes de gerar a proposta.");
+      return;
+    }
+    const escolha = escolhaDoCard(r);
+    if (!escolha.formaPagamento) {
+      setErroProposta("Selecione a forma de pagamento antes de gerar a proposta.");
+      return;
+    }
+
+    setErroProposta(null);
+    setPropostaEnviada(null);
+    setTransmitindoCardId(r.cardId);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      await transmitirPropostaQuiver({
+        data: {
+          cotacaoId,
+          caller_token: sess.session?.access_token ?? "",
+          seguradora: r.seguradora,
+          produtoId: r.produtoId,
+          produto: r.produto || r.nome || undefined,
+          formaPagamento: escolha.formaPagamento,
+          parcelas: escolha.parcelas,
+        },
+      });
+      // O 201 significa só que o robô aceitou a solicitação: o resultado real
+      // (transmitido / recusado pelo portal) chega depois, pelo webhook.
+      setPropostaEnviada(
+        `Transmissão de ${r.seguradora} enviada ao robô. O resultado chega em instantes.`,
+      );
+    } catch (e) {
+      setErroProposta(e instanceof Error ? e.message : "Falha ao gerar a proposta.");
+    } finally {
+      setTransmitindoCardId(null);
+    }
+  }
+
   return (
     <>
       <div className="row" style={{ alignItems: "center", marginBottom: 14 }}>
@@ -141,6 +230,36 @@ export function StepCalculo({
         </div>
       )}
 
+      {erroProposta && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "10px 14px",
+            borderRadius: 8,
+            background: "var(--alert-soft)",
+            color: "var(--alert)",
+            fontSize: 13,
+          }}
+        >
+          {erroProposta}
+        </div>
+      )}
+
+      {propostaEnviada && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "10px 14px",
+            borderRadius: 8,
+            background: "var(--ok-soft, var(--alert-soft))",
+            color: "var(--ok, var(--alert))",
+            fontSize: 13,
+          }}
+        >
+          {propostaEnviada}
+        </div>
+      )}
+
       {calculando && (
         <div style={{ padding: "12px 0", marginBottom: 8 }}>
           <span className="muted small">
@@ -220,9 +339,34 @@ export function StepCalculo({
                   </div>
                 </div>
                 <div className="calc-foot">
-                  <span className="chip chip-slate" style={{ flex: 1 }}>
-                    {r.formasPagamento?.selecionada ?? r.formaPagamento ?? "—"}
-                  </span>
+                  {/* Forma de pagamento e parcelas são o que o robô precisa
+                      para clicar na célula certa do modal do portal. As opções
+                      vêm do próprio retorno da seguradora (formasPagamento),
+                      não de uma lista fixa. */}
+                  <select
+                    className="select-mini"
+                    aria-label="Forma de pagamento"
+                    value={escolhaDoCard(r).formaPagamento}
+                    onChange={(e) => setEscolha(r.cardId, { formaPagamento: e.target.value })}
+                  >
+                    {formasDePagamentoDoCard(r).map((forma) => (
+                      <option key={forma} value={forma}>
+                        {forma}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="select-mini"
+                    aria-label="Parcelas"
+                    value={escolhaDoCard(r).parcelas}
+                    onChange={(e) => setEscolha(r.cardId, { parcelas: e.target.value })}
+                  >
+                    {PARCELAS_DISPONIVEIS.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
                   <button className="ic-btn" title="Observações">
                     <svg width="15" height="15">
                       <use href="#i-message" />
@@ -233,9 +377,18 @@ export function StepCalculo({
                       <use href="#i-download" />
                     </svg>
                   </button>
-                  <button className="ic-btn ok" title="Gerar proposta">
+                  <button
+                    className="ic-btn ok"
+                    title={
+                      cotacaoId
+                        ? `Gerar proposta (${r.seguradora})`
+                        : "Salve a cotação antes de gerar a proposta"
+                    }
+                    disabled={!cotacaoId || transmitindoCardId !== null}
+                    onClick={() => void gerarProposta(r)}
+                  >
                     <svg width="15" height="15">
-                      <use href="#i-check" />
+                      <use href={transmitindoCardId === r.cardId ? "#i-clock" : "#i-check"} />
                     </svg>
                   </button>
                 </div>

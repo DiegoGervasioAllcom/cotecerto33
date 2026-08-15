@@ -175,10 +175,27 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
       "110% FIPE",
       "Completo",
       "Básico",
-      "Cartão de crédito",
     ]) {
       await expect(page.getByText(valor, { exact: true }).first()).toBeVisible();
     }
+
+    // A forma de pagamento deixou de ser um chip de texto e virou um <select>
+    // alimentado pelas opções que a seguradora retornou — o vendedor precisa
+    // poder trocar para Débito/Boleto antes de gerar a proposta, e o valor
+    // escolhido é o que o robô usa na transmissão. `<option>` não conta como
+    // "visível" para o Playwright, então asserta-se o valor e as opções.
+    const selectPagamento = page
+      .getByLabel("Forma de pagamento")
+      .filter({ hasText: "Débito em conta" });
+    await expect(selectPagamento).toHaveValue("Cartão de crédito");
+    await expect(selectPagamento.locator("option")).toHaveText([
+      "Cartão de crédito",
+      "Débito em conta",
+    ]);
+
+    // Parcelas: grade fixa do modal do portal (À vista a 12x), usada pelo robô
+    // para clicar na célula certa.
+    await expect(page.getByLabel("Parcelas").first()).toHaveValue("À vista");
 
     await page.getByRole("link", { name: "Comparativo lado a lado" }).click();
     await expect(page).toHaveURL(new RegExp(`/venda/cotacoes/${fixture.cotacaoId}$`));

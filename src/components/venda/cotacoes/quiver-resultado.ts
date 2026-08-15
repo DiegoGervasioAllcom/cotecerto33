@@ -25,6 +25,10 @@ export const resultadoCalculoSchema = z.object({
   seguradora: z.string().trim().min(1),
   nome: z.string().trim().default(""),
   produto: textoOpcional,
+  // Código do produto no portal (ex.: "10290_81"). O robô envia no webhook e
+  // é a chave EXATA para a transmissão escolher a oferta certa — sem declarar
+  // aqui, o zod descartava o campo silenciosamente e ele nunca chegava à UI.
+  produtoId: textoOpcional,
   opcoes: z.array(opcaoPremioSchema).default([]),
   formaPagamento: textoOpcional,
   formasPagamento: formasPagamentoSchema.optional(),
