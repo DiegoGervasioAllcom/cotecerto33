@@ -7,6 +7,64 @@ import {
   uniq,
 } from "../helpers/supabase";
 
+const LOJAS_MOVIDA_SEED = [
+  "Americana",
+  "Aricanduva",
+  "Campinas Amoreiras",
+  "Campinas Itapura",
+  "Campinas Orosimbo",
+  "Campinas Shop Dom Pedro",
+  "Itaim Paulista",
+  "Jundiaí",
+  "Mogi das Cruzes",
+  "Penha",
+  "Praia Grande",
+  "Santos",
+  "São José dos Campos",
+  "São Miguel Paulista",
+  "São Paulo Radial Leste",
+  "Suzano",
+  "Taubaté",
+  "Timóteo Penteado",
+  "Vila Carrão",
+  "Vila Ema",
+  "Vila Guilherme",
+].sort();
+
+const ALIASES_MOVIDA_SEED = [
+  ["Americana", "Americana"],
+  ["Aricanduva", "Aricanduva"],
+  ["Campinas Amoreiras", "Campinas Amoreiras"],
+  ["Campinas Itapura", "Campinas Itapura"],
+  ["Campinas Orosimbo", "Campinas Orosimbo"],
+  ["Campinas Shop Dom Pedro", "Campinas - Shopping Dom Pedro"],
+  ["Campinas Shop Dom Pedro", "Campinas Shop Dom Pedro"],
+  ["Campinas Shop Dom Pedro", "Seminovos Movida Campinas Shopping Dom Pedro"],
+  ["Itaim Paulista", "Itaim Paulista"],
+  ["Jundiaí", "Jundiai"],
+  ["Mogi das Cruzes", "Mogi das Cruzes"],
+  ["Penha", "Penha"],
+  ["Praia Grande", "Praia Grande"],
+  ["Praia Grande", "Seminovos Movida Praia Grande - Sp"],
+  ["Santos", "Santos"],
+  ["Suzano", "Seminovos Movida Suzano"],
+  ["Suzano", "Seminovos Movida Suzano - Sp"],
+  ["Suzano", "Suzano"],
+  ["São José dos Campos", "Sao Jose dos Campos"],
+  ["São Miguel Paulista", "Sao Miguel"],
+  ["São Miguel Paulista", "Sao Miguel Paulista"],
+  ["São Paulo Radial Leste", "Radial Leste"],
+  ["São Paulo Radial Leste", "Sao Paulo Radial Leste"],
+  ["Taubaté", "Taubate"],
+  ["Timóteo Penteado", "Guarulhos Timoteo Penteado"],
+  ["Timóteo Penteado", "Timoteo Penteado"],
+  ["Vila Carrão", "Vila Carrao"],
+  ["Vila Ema", "Vila Ema"],
+  ["Vila Guilherme", "Vila Guilherme"],
+]
+  .map(([loja, alias]) => `${loja}|${alias}`)
+  .sort();
+
 const telefone = () => `11${Math.floor(900000000 + Math.random() * 99999999)}`.slice(0, 11);
 const placa = () => `M${Math.floor(Math.random() * 1e7)}`.slice(0, 7).toUpperCase();
 
@@ -68,6 +126,58 @@ async function membro(
 }
 
 describe("V11.9.6 — distribuição captacao_movida por loja", () => {
+  it("seed cadastra exatamente as 21 lojas na Matriz atual, pausadas e sem vendedores", async () => {
+    const { data: matrizes, error: matrizError } = await admin
+      .from("empresas")
+      .select("id")
+      .eq("tipo", "matriz");
+    expect(matrizError).toBeNull();
+    expect(matrizes).toHaveLength(1);
+
+    const matrizId = matrizes![0].id;
+    const { data: lojas, error: lojasError } = await admin
+      .from("movida_lojas")
+      .select("id,nome,empresa_id,ativa,exigir_online")
+      .eq("empresa_id", matrizId)
+      .in("nome", LOJAS_MOVIDA_SEED);
+    expect(lojasError).toBeNull();
+    expect(lojas?.map(({ nome }) => nome).sort()).toEqual(LOJAS_MOVIDA_SEED);
+    expect(lojas?.every((loja) => loja.empresa_id === matrizId)).toBe(true);
+    expect(lojas?.every((loja) => loja.ativa === false && loja.exigir_online === false)).toBe(true);
+
+    const { count, error: poolError } = await admin
+      .from("movida_loja_vendedores")
+      .select("vendedor_id", { count: "exact", head: true })
+      .in(
+        "loja_id",
+        lojas!.map(({ id }) => id),
+      );
+    expect(poolError).toBeNull();
+    expect(count).toBe(0);
+  });
+
+  it("seed liga exatamente os 29 aliases oficiais às lojas corretas", async () => {
+    const { data: lojas, error: lojasError } = await admin
+      .from("movida_lojas")
+      .select("id,nome")
+      .in("nome", LOJAS_MOVIDA_SEED);
+    expect(lojasError).toBeNull();
+    expect(lojas).toHaveLength(21);
+
+    const nomePorId = new Map(lojas!.map(({ id, nome }) => [id, nome]));
+    const { data: aliases, error: aliasesError } = await admin
+      .from("movida_loja_aliases")
+      .select("loja_id,alias")
+      .in(
+        "loja_id",
+        lojas!.map(({ id }) => id),
+      );
+    expect(aliasesError).toBeNull();
+    expect(
+      aliases?.map(({ loja_id, alias }) => `${nomePorId.get(loja_id)}|${alias}`).sort(),
+    ).toEqual(ALIASES_MOVIDA_SEED);
+  });
+
   it("RLS: vendedor comum não lê nem altera a configuração das rotas", async () => {
     const r = await rota();
     const v = await membro(r.lojaId, r.empresaId);
