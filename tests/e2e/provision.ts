@@ -1091,3 +1091,82 @@ export async function semearConsultaPlacaE2E(userId: string, empresaId: string):
 export async function limparConsultaPlacaE2E(id: string): Promise<void> {
   await admin.from("consultas_placa").delete().eq("id", id);
 }
+
+/**
+ * Segunda placa fictícia, com duas versões FIPE de combustível DIFERENTE
+ * (Flex x Diesel) — cobre o bug de `aplicarVersao` deixar o campo
+ * Combustível travado na primeira versão (`fipe[0]`) mesmo quando o
+ * vendedor escolhe a outra. Nomes de modelo reais da FIPE (Fiat Toro,
+ * marca 21 / modelos 7475 e 7476 em 15/08/2026) para que `aplicarVersao`
+ * encontre um `modeloMatch` de verdade, em vez de cair no aviso de
+ * "modelo não está na lista" por causa de um nome inventado.
+ */
+export const PLACA_MISTA_E2E = "ABC1D23";
+
+const PAYLOAD_PLACA_MISTA_E2E = {
+  placa: PLACA_MISTA_E2E,
+  chassi: "1HGCM82633A004352",
+  categoria: "AUTOMOVEL",
+  marca: "FIAT",
+  modelo: "TORO",
+  versao: "FREEDOM",
+  motor: "2.0",
+  origem: "NACIONAL",
+  localFabricacao: "BETIM / MG",
+  tipoCarroceria: "PICAPE",
+  anoModelo: "2019",
+  anoFabricacao: "2019",
+  codigoRetorno: "0",
+  mensagemRetorno: "Marca/Modelo/Ano Identificados",
+  fipe: [
+    {
+      codigo: "007475-0",
+      combustivel: "Flex",
+      marca: "Fiat",
+      modelo: "Toro Freedom 1.8 16V Flex Aut.",
+      valor: 90000,
+    },
+    {
+      codigo: "007476-8",
+      combustivel: "Diesel",
+      marca: "Fiat",
+      modelo: "Toro Freedom 2.0 16V 4x2 TB Diesel Mec.",
+      valor: 110000,
+    },
+  ],
+};
+
+export async function semearConsultaPlacaMistaE2E(
+  userId: string,
+  empresaId: string,
+): Promise<string> {
+  const { data, error } = await admin
+    .from("consultas_placa")
+    .insert({
+      placa: PLACA_MISTA_E2E,
+      consultado_por: userId,
+      empresa_id: empresaId,
+      sucesso: true,
+      codigo_retorno: "0",
+      mensagem_retorno: "Marca/Modelo/Ano Identificados",
+      marca: "FIAT",
+      modelo: "TORO",
+      versao: "FREEDOM",
+      ano_modelo: "2019",
+      ano_fabricacao: "2019",
+      chassi: "1HGCM82633A004352",
+      combustivel: "Flex",
+      categoria: "AUTOMOVEL",
+      tipo_carroceria: "PICAPE",
+      origem: "NACIONAL",
+      motor: "2.0",
+      local_fabricacao: "BETIM / MG",
+      fipe_codigo: "007475-0",
+      fipe_valor: 90000,
+      payload: PAYLOAD_PLACA_MISTA_E2E,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`semear consulta de placa mista E2E: ${error?.message}`);
+  return data.id;
+}

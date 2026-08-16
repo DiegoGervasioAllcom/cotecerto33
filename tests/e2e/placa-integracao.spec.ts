@@ -5,7 +5,9 @@ import {
   limparPersona,
   semearConsultaPlacaE2E,
   limparConsultaPlacaE2E,
+  semearConsultaPlacaMistaE2E,
   PLACA_E2E,
+  PLACA_MISTA_E2E,
   type Persona,
 } from "./provision";
 
@@ -87,11 +89,59 @@ test.describe("integração de placa — passo Veículo", () => {
     const marca = page.locator("select").filter({ hasText: "Chevrolet" }).first();
     await expect(marca).toHaveValue(/\d+/);
 
+    // O fixture usa DsCombustivel="Gasolina" com um nome de modelo que contém
+    // "Flex" ("... Econo.Flex 4p Mec.") — de propósito, para travar a ordem
+    // certa de prioridade: o campo autoritativo da API vence o texto livre do
+    // nome da versão, que só serve de fallback.
+    const combustivel = page.getByLabel("Combustível");
+    await expect(combustivel).toHaveValue("Gasolina");
+
     // O Valor FIPE fecha o ciclo: só preenche se o código de ano/combustível
     // for o que a FIPE devolve (flex é "-5"; montar "-1" à mão deixava vazio).
     await expect(page.locator('input[placeholder="Preenche via FIPE"]')).toHaveValue(
       /R\$\s*43\.399/,
       { timeout: 30_000 },
     );
+  });
+
+  test("escolher uma versão FIPE diferente atualiza o combustível para o dela", async ({
+    page,
+  }) => {
+    const consultaMistaId = await semearConsultaPlacaMistaE2E(vendedor.userId, vendedor.empresaId);
+    try {
+      await loginAs(page, vendedor.email, vendedor.senha);
+      await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
+
+      await page.goto("/venda/novo-lead");
+      await page.locator('input[placeholder="Nome do cliente"]').fill("Cliente Placa Mista E2E");
+      await page.locator('input[placeholder="(00) 00000-0000"]').fill("11999990001");
+      await page.locator('input[placeholder="AAA0A00"]').fill(PLACA_MISTA_E2E);
+      await page.locator("select").first().selectOption("Indicação");
+      await page.getByRole("button", { name: /iniciar cota/i }).click();
+
+      await expect(page.getByRole("heading", { name: "Dados do Segurado" })).toBeVisible({
+        timeout: 15_000,
+      });
+      await page.locator(".stepper .step").filter({ hasText: "Veículo" }).first().click();
+      await expect(page.getByRole("heading", { name: "Dados do Veículo" })).toBeVisible();
+
+      const placa = page.locator('input[placeholder="AAA0A00"]');
+      await placa.fill(PLACA_MISTA_E2E);
+      await placa.blur();
+
+      await expect(page.getByText(/Selecione a versão do veículo/)).toBeVisible({
+        timeout: 15_000,
+      });
+      const combustivel = page.getByLabel("Combustível");
+
+      // A Diesel é a SEGUNDA versão (fipe[1]) — antes da correção, o campo
+      // Combustível ficava travado na primeira versão (Gasolina) mesmo
+      // depois de o vendedor escolher a Diesel.
+      await page.getByRole("button", { name: /Diesel/ }).click();
+      await expect(page.getByText(/Veículo identificado/)).toBeVisible({ timeout: 20_000 });
+      await expect(combustivel).toHaveValue("Diesel");
+    } finally {
+      await limparConsultaPlacaE2E(consultaMistaId);
+    }
   });
 });

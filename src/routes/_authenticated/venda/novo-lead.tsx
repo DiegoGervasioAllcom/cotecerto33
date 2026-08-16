@@ -254,7 +254,14 @@ function Page() {
     versoes: placaVersoes,
     consultar: consultarPlaca,
     escolherVersao: escolherVersaoPlaca,
-  } = useConsultaPlaca({ setF, marcas, setModelos, cotacaoId });
+  } = useConsultaPlaca({
+    setF,
+    marcas,
+    setModelos,
+    cotacaoId,
+    placaAtual: f.placa,
+    carregandoRascunho: loading,
+  });
   const {
     calculando,
     resultados,

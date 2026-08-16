@@ -88,18 +88,38 @@ export const consultarPlaca = createServerFn({ method: "POST" })
     const userId = userData.user.id;
     const { placa } = data;
 
+    // O cotacaoId vem do payload do cliente — sem checar posse, um
+    // vendedor poderia forjar o UUID de uma cotação alheia (obtido por
+    // enumeração/log/URL) e associá-la à própria consulta de placa,
+    // quebrando a integridade do vínculo cotação<->consulta para
+    // qualquer relatório futuro que junte as duas tabelas. Mesmo padrão
+    // de assertDonoCotacao em quiver.functions.ts.
+    let cotacaoId: string | null = null;
+    if (data.cotacaoId) {
+      const { data: cot, error: cotErr } = await admin
+        .from("cotacoes")
+        .select("id,responsavel_id")
+        .eq("id", data.cotacaoId)
+        .maybeSingle();
+      if (cotErr) throw new Error(cotErr.message);
+      if (cot && cot.responsavel_id === userId) cotacaoId = cot.id;
+      // cotação inexistente ou de outro responsável: segue sem vínculo
+      // em vez de falhar a consulta inteira por causa da auditoria.
+    }
+
     // Empresa do usuário, só para escopar a leitura da tabela depois.
-    const { data: perfil } = await admin
+    const { data: perfil, error: perfilErr } = await admin
       .from("profiles")
       .select("empresa_id")
       .eq("id", userId)
       .maybeSingle();
+    if (perfilErr) console.error("[placa] falha ao buscar empresa do usuário:", perfilErr.message);
     const empresaId = (perfil as { empresa_id?: string | null } | null)?.empresa_id ?? null;
 
     // ---- Cache: última consulta bem-sucedida da placa na janela ----
     if (!data.forcar) {
       const desde = new Date(Date.now() - CACHE_DIAS * 24 * 60 * 60 * 1000).toISOString();
-      const { data: cached } = await admin
+      const { data: cached, error: cacheErr } = await admin
         .from("consultas_placa")
         .select("payload")
         .eq("placa", placa)
@@ -108,6 +128,10 @@ export const consultarPlaca = createServerFn({ method: "POST" })
         .order("criado_em", { ascending: false })
         .limit(1)
         .maybeSingle();
+      // Uma falha de leitura do cache não pode passar batido como "sem
+      // cache" sem deixar rastro — o efeito (chamada paga desnecessária)
+      // é o mesmo, mas o motivo precisa aparecer no log do servidor.
+      if (cacheErr) console.error("[placa] falha ao ler cache:", cacheErr.message);
       const payload = (cached as { payload?: PlacaDecodificada | null } | null)?.payload;
       if (payload) return { ok: true, cache: true, dados: payload, mensagem: null };
     }
@@ -146,7 +170,7 @@ export const consultarPlaca = createServerFn({ method: "POST" })
     // ---- Registro (sempre, sucesso ou falha) ----
     const linha = {
       placa,
-      cotacao_id: data.cotacaoId || null,
+      cotacao_id: cotacaoId,
       empresa_id: empresaId,
       consultado_por: userId,
       // O XML cru fica limitado pelo check da coluna (200k).
@@ -164,9 +188,15 @@ export const consultarPlaca = createServerFn({ method: "POST" })
     };
 
     // Gravar é auditoria: uma falha aqui não pode derrubar a consulta que
-    // já foi paga e respondida.
-    const { error: insErr } = await admin.from("consultas_placa").insert(linha);
-    if (insErr) console.error("[placa] falha ao registrar consulta:", insErr.message);
+    // já foi paga e respondida. Mas se a linha nunca chegar a ser gravada,
+    // o cache de 30 dias fica quebrado silenciosamente para essa placa —
+    // uma tentativa extra cobre blips transitórios de conexão/timeout.
+    let { error: insErr } = await admin.from("consultas_placa").insert(linha);
+    if (insErr) {
+      console.error("[placa] falha ao registrar consulta (tentativa 1):", insErr.message);
+      ({ error: insErr } = await admin.from("consultas_placa").insert(linha));
+    }
+    if (insErr) console.error("[placa] falha ao registrar consulta (tentativa 2):", insErr.message);
 
     if (erroTransporte) throw new Error("Não foi possível consultar a placa agora.");
 

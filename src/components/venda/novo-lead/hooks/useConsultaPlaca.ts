@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { consultarPlaca } from "@/lib/placa.functions";
 import { normalizePlaca } from "@/lib/masks";
@@ -16,6 +16,9 @@ type Params = {
   marcas: { codigo: string; nome: string }[];
   setModelos: React.Dispatch<React.SetStateAction<{ codigo: number; nome: string }[]>>;
   cotacaoId: string | null;
+  /** Placa atual do formulário e se um rascunho ainda está carregando (useCotacaoRascunho). */
+  placaAtual: string;
+  carregandoRascunho: boolean;
 };
 
 /** Comparação tolerante de nomes FIPE: sem acento, sem pontuação, sem caixa. */
@@ -38,12 +41,34 @@ function norm(v: string): string {
  * versão FIPE (ex.: câmbio manual e automático), nada é escolhido por
  * conta própria: `versoes` fica preenchido e a tela pede a escolha.
  */
-export function useConsultaPlaca({ setF, marcas, setModelos, cotacaoId }: Params) {
+export function useConsultaPlaca({
+  setF,
+  marcas,
+  setModelos,
+  cotacaoId,
+  placaAtual,
+  carregandoRascunho,
+}: Params) {
   const [consultando, setConsultando] = useState(false);
   const [status, setStatus] = useState<StatusPlaca | null>(null);
   const [versoes, setVersoes] = useState<PrecificadorFipe[]>([]);
   // Última placa consultada, para não repetir a chamada a cada blur do campo.
   const ultimaPlaca = useRef<string>("");
+  // Sequência da chamada em voo mais recente: se o vendedor corrigir a
+  // placa e sair do campo de novo antes da 1ª consulta responder, a
+  // resposta antiga (mais lenta) não pode sobrescrever a mais nova.
+  const sequencia = useRef(0);
+
+  // Ao terminar de carregar um rascunho existente (?id=), os campos do
+  // veículo já refletem o que está salvo para a placa carregada — sem
+  // isto, o primeiro blur no campo Placa depois de reabrir a cotação
+  // reconsultava a mesma placa e sobrescrevia edições manuais já salvas.
+  const sincronizouRascunho = useRef(false);
+  useEffect(() => {
+    if (carregandoRascunho || sincronizouRascunho.current) return;
+    sincronizouRascunho.current = true;
+    ultimaPlaca.current = normalizePlaca(placaAtual);
+  }, [carregandoRascunho, placaAtual]);
 
   const aplicarVersao = useCallback(
     async (v: PrecificadorFipe) => {
@@ -82,6 +107,11 @@ export function useConsultaPlaca({ setF, marcas, setModelos, cotacaoId }: Params
         ...p,
         marca: marcaMatch.codigo,
         modelo: modeloMatch ? String(modeloMatch.codigo) : "",
+        // Cada versão FIPE pode ter um combustível diferente (ex.: uma Flex,
+        // outra Diesel) — precisa ser resolvido de novo a cada escolha, não
+        // só na primeira aplicação em aplicarDados.
+        combustivel:
+          normalizarCombustivel(v.combustivel) || normalizarCombustivel(v.modelo) || p.combustivel,
       }));
 
       setStatus(
@@ -105,9 +135,13 @@ export function useConsultaPlaca({ setF, marcas, setModelos, cotacaoId }: Params
         chassi: dados.chassi || p.chassi,
         anoModelo: dados.anoModelo || p.anoModelo,
         anoFab: dados.anoFabricacao || p.anoFab,
+        // DsCombustivel de cada versão FIPE é o campo autoritativo — o nome
+        // livre do modelo ("... Econo.Flex 4p Mec.") só serve de fallback
+        // quando a API não devolveu o combustível (ex.: "Gasolina" na versão
+        // não pode perder pra "Flex" que aparece no texto do nome).
         combustivel:
-          normalizarCombustivel(dados.fipe[0]?.modelo) ||
           normalizarCombustivel(dados.fipe[0]?.combustivel) ||
+          normalizarCombustivel(dados.fipe[0]?.modelo) ||
           p.combustivel,
       }));
 
@@ -143,6 +177,9 @@ export function useConsultaPlaca({ setF, marcas, setModelos, cotacaoId }: Params
       if (!opts?.forcar && placa === ultimaPlaca.current) return;
 
       ultimaPlaca.current = placa;
+      const minhaSequencia = ++sequencia.current;
+      const souAtual = () => sequencia.current === minhaSequencia;
+
       setConsultando(true);
       setVersoes([]);
       setStatus(null);
@@ -156,6 +193,9 @@ export function useConsultaPlaca({ setF, marcas, setModelos, cotacaoId }: Params
             forcar: opts?.forcar ?? false,
           },
         });
+        // Uma consulta mais nova (placa corrigida e reenviada) já assumiu
+        // o hook enquanto esta esperava a API — não aplicar resposta stale.
+        if (!souAtual()) return;
         if (r.ok && r.dados) {
           await aplicarDados(r.dados);
         } else {
@@ -165,6 +205,7 @@ export function useConsultaPlaca({ setF, marcas, setModelos, cotacaoId }: Params
           });
         }
       } catch (e) {
+        if (!souAtual()) return;
         // Falha da consulta não bloqueia o wizard — o preenchimento manual continua valendo.
         ultimaPlaca.current = "";
         setStatus({
@@ -172,7 +213,7 @@ export function useConsultaPlaca({ setF, marcas, setModelos, cotacaoId }: Params
           texto: e instanceof Error ? e.message : "Falha ao consultar a placa.",
         });
       } finally {
-        setConsultando(false);
+        if (souAtual()) setConsultando(false);
       }
     },
     [aplicarDados, cotacaoId],

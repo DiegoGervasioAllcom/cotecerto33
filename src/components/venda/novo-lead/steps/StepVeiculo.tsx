@@ -217,6 +217,7 @@ export function StepVeiculo({
           <label>Combustível</label>
           <select
             className="input"
+            aria-label="Combustível"
             value={f.combustivel}
             onChange={(e) => up("combustivel", e.target.value)}
           >
