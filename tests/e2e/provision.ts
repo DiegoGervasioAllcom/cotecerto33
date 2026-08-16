@@ -1012,3 +1012,161 @@ export async function pedidoDoConvitePorCodigo(codigo: string) {
     .maybeSingle();
   return { convite: conv, pedido: emp };
 }
+
+/**
+ * Placa usada pelo spec da integração de placa. É a placa real capturada do
+ * fornecedor (FTP4J82) — mas o spec NUNCA chama a API: `semearConsultaPlacaE2E`
+ * grava o resultado no cache de `consultas_placa`, e a server function devolve
+ * o registro em vez de gastar uma consulta paga a cada rodada de CI.
+ */
+export const PLACA_E2E = "FTP4J82";
+
+/** Payload equivalente ao que `parseDecodificadorXml` produz para PLACA_E2E. */
+const PAYLOAD_PLACA_E2E = {
+  placa: PLACA_E2E,
+  chassi: "9BGJC69Z0FB105973",
+  categoria: "AUTOMOVEL",
+  marca: "CHEVROLET",
+  modelo: "COBALT 1.8 LTZ",
+  versao: "1.8 LTZ",
+  motor: "1.8",
+  origem: "NACIONAL",
+  localFabricacao: "SAO CAETANO DO SUL / SP",
+  tipoCarroceria: "SEDAN",
+  anoModelo: "2015",
+  anoFabricacao: "2014",
+  codigoRetorno: "0",
+  mensagemRetorno: "Marca/Modelo/Ano Identificados",
+  fipe: [
+    {
+      codigo: "004420-2",
+      combustivel: "Gasolina",
+      marca: "GM - Chevrolet",
+      modelo: "COBALT LTZ 1.8 8V Econo.Flex 4p Mec.",
+      valor: 43399,
+    },
+    {
+      codigo: "004421-0",
+      combustivel: "Gasolina",
+      marca: "GM - Chevrolet",
+      modelo: "COBALT LTZ 1.8 8V Econo.Flex 4p Aut.",
+      valor: 45917,
+    },
+  ],
+};
+
+/** Popula o cache de 30 dias para PLACA_E2E, evitando a chamada ao fornecedor. */
+export async function semearConsultaPlacaE2E(userId: string, empresaId: string): Promise<string> {
+  const { data, error } = await admin
+    .from("consultas_placa")
+    .insert({
+      placa: PLACA_E2E,
+      consultado_por: userId,
+      empresa_id: empresaId,
+      sucesso: true,
+      codigo_retorno: "0",
+      mensagem_retorno: "Marca/Modelo/Ano Identificados",
+      marca: "CHEVROLET",
+      modelo: "COBALT 1.8 LTZ",
+      versao: "1.8 LTZ",
+      ano_modelo: "2015",
+      ano_fabricacao: "2014",
+      chassi: "9BGJC69Z0FB105973",
+      combustivel: "Gasolina",
+      categoria: "AUTOMOVEL",
+      tipo_carroceria: "SEDAN",
+      origem: "NACIONAL",
+      motor: "1.8",
+      local_fabricacao: "SAO CAETANO DO SUL / SP",
+      fipe_codigo: "004420-2",
+      fipe_valor: 43399,
+      payload: PAYLOAD_PLACA_E2E,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`semear consulta de placa E2E: ${error?.message}`);
+  return data.id;
+}
+
+export async function limparConsultaPlacaE2E(id: string): Promise<void> {
+  await admin.from("consultas_placa").delete().eq("id", id);
+}
+
+/**
+ * Segunda placa fictícia, com duas versões FIPE de combustível DIFERENTE
+ * (Flex x Diesel) — cobre o bug de `aplicarVersao` deixar o campo
+ * Combustível travado na primeira versão (`fipe[0]`) mesmo quando o
+ * vendedor escolhe a outra. Nomes de modelo reais da FIPE (Fiat Toro,
+ * marca 21 / modelos 7475 e 7476 em 15/08/2026) para que `aplicarVersao`
+ * encontre um `modeloMatch` de verdade, em vez de cair no aviso de
+ * "modelo não está na lista" por causa de um nome inventado.
+ */
+export const PLACA_MISTA_E2E = "ABC1D23";
+
+const PAYLOAD_PLACA_MISTA_E2E = {
+  placa: PLACA_MISTA_E2E,
+  chassi: "1HGCM82633A004352",
+  categoria: "AUTOMOVEL",
+  marca: "FIAT",
+  modelo: "TORO",
+  versao: "FREEDOM",
+  motor: "2.0",
+  origem: "NACIONAL",
+  localFabricacao: "BETIM / MG",
+  tipoCarroceria: "PICAPE",
+  anoModelo: "2019",
+  anoFabricacao: "2019",
+  codigoRetorno: "0",
+  mensagemRetorno: "Marca/Modelo/Ano Identificados",
+  fipe: [
+    {
+      codigo: "007475-0",
+      combustivel: "Flex",
+      marca: "Fiat",
+      modelo: "Toro Freedom 1.8 16V Flex Aut.",
+      valor: 90000,
+    },
+    {
+      codigo: "007476-8",
+      combustivel: "Diesel",
+      marca: "Fiat",
+      modelo: "Toro Freedom 2.0 16V 4x2 TB Diesel Mec.",
+      valor: 110000,
+    },
+  ],
+};
+
+export async function semearConsultaPlacaMistaE2E(
+  userId: string,
+  empresaId: string,
+): Promise<string> {
+  const { data, error } = await admin
+    .from("consultas_placa")
+    .insert({
+      placa: PLACA_MISTA_E2E,
+      consultado_por: userId,
+      empresa_id: empresaId,
+      sucesso: true,
+      codigo_retorno: "0",
+      mensagem_retorno: "Marca/Modelo/Ano Identificados",
+      marca: "FIAT",
+      modelo: "TORO",
+      versao: "FREEDOM",
+      ano_modelo: "2019",
+      ano_fabricacao: "2019",
+      chassi: "1HGCM82633A004352",
+      combustivel: "Flex",
+      categoria: "AUTOMOVEL",
+      tipo_carroceria: "PICAPE",
+      origem: "NACIONAL",
+      motor: "2.0",
+      local_fabricacao: "BETIM / MG",
+      fipe_codigo: "007475-0",
+      fipe_valor: 90000,
+      payload: PAYLOAD_PLACA_MISTA_E2E,
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`semear consulta de placa mista E2E: ${error?.message}`);
+  return data.id;
+}
