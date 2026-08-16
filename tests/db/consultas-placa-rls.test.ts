@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { admin, criarPersonaComEmpresa, loginMatriz, uniq } from "../helpers/supabase";
+import {
+  admin,
+  criarEmpresa,
+  criarPersonaComEmpresa,
+  loginMatriz,
+  uniq,
+} from "../helpers/supabase";
 
 /**
  * RLS de `consultas_placa` — o histórico das consultas ao decodificador
@@ -77,6 +83,48 @@ describe("consultas_placa — RLS", () => {
 
     const { data } = await matriz.from("consultas_placa").select("id").eq("id", consulta.id);
     expect(data?.map((r) => r.id)).toEqual([consulta.id]);
+  });
+
+  it("master enxerga a consulta de um vendedor 2 níveis abaixo na rede (via superior_id), mas não a de fora da cadeia", async () => {
+    // Mesmo padrão de rls-hierarquia-multinivel.test.ts: master › franqueado
+    // › vendedor, cada um com empresa própria — cobre a travessia recursiva
+    // de empresas_visiveis() que o caso "matriz" (acima) não exercita, já
+    // que matriz enxerga todas as empresas sem recursão nenhuma.
+    const master = await criarPersonaComEmpresa("master", { emailPrefix: "placaMaster" });
+
+    const empFranqueado = await criarEmpresa({ nome: uniq("Placa Franqueado") });
+    const franqueado = await criarPersonaComEmpresa("franqueado", {
+      empresaId: empFranqueado.id,
+      emailPrefix: "placaFranqueado",
+      superiorId: master.userId,
+    });
+
+    const empVendedor = await criarEmpresa({ nome: uniq("Placa Vendedor") });
+    const vendedorDaRede = await criarPersonaComEmpresa("vendedor", {
+      empresaId: empVendedor.id,
+      emailPrefix: "placaVendedorRede",
+      superiorId: franqueado.userId,
+    });
+
+    const consultaDaRede = await gravarConsulta({
+      userId: vendedorDaRede.userId,
+      empresaId: vendedorDaRede.empresaId,
+    });
+
+    // POSITIVO: master vê a consulta do vendedor 2 níveis abaixo.
+    const { data: vistoPorMaster } = await master.client
+      .from("consultas_placa")
+      .select("id")
+      .eq("id", consultaDaRede.id);
+    expect(vistoPorMaster?.map((r) => r.id)).toEqual([consultaDaRede.id]);
+
+    // NEGATIVO: um master de outra rede (fora da cadeia) não vê essa consulta.
+    const outroMaster = await criarPersonaComEmpresa("master", { emailPrefix: "placaOutroMaster" });
+    const { data: vistoPorOutro } = await outroMaster.client
+      .from("consultas_placa")
+      .select("id")
+      .eq("id", consultaDaRede.id);
+    expect(vistoPorOutro).toEqual([]);
   });
 
   it("authenticated NÃO consegue inserir, atualizar nem apagar", async () => {
