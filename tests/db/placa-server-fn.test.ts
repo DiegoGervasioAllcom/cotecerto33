@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { admin, criarEmpresa, criarPersonaComEmpresa, uniq } from "../helpers/supabase";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { admin, criarEmpresa, criarPersonaComEmpresa } from "../helpers/supabase";
 import { executarConsultaPlaca } from "../../src/lib/placa.functions";
 import { normalizePlaca } from "../../src/lib/masks";
 
@@ -19,17 +19,57 @@ import { normalizePlaca } from "../../src/lib/masks";
  * ao Supabase local, não só a do decodificador. `stubFetchPlaca`
  * intercepta só requisições cuja URL bate com `SELF_PLACA_API_URL` e
  * repassa qualquer outra coisa pro `fetch` real.
+ *
+ * `SELF_PLACA_API_URL/_CLIENTE/_CHAVE` são forjadas aqui (não lidas do
+ * `.env`/CI): o teste nunca chama a API de verdade, então não precisa das
+ * credenciais reais — só precisa que `executarConsultaPlaca` não caia no
+ * guard de "não configurada". Reforçadas em `beforeEach` (não só uma vez
+ * em `beforeAll`): o `env: loadEnv(...)` do `vitest.config.ts` reaplica o
+ * `.env` de cada dev entre testes, e se este `.env` tiver a chave real da
+ * API (como o de desenvolvimento tem), o valor forjado por um `beforeAll`
+ * único era sobrescrito de volta pro real no meio da suíte — o que faria
+ * o "fetch" cair no host de verdade e ir à API paga sem querer.
  */
 
 const XML_SUCESSO_MOCK = `<Root><placa>ABC1D23</placa><chassi>9BGJC69Z0FB105973</chassi><Decodificador><DsCategoria>AUTOMOVEL</DsCategoria><DsPlaca>ABC1D23</DsPlaca><DsChassi>9BGJC69Z0FB105973</DsChassi><DsChassiTratado>9BGJC69Z0FB105973</DsChassiTratado><DsMarca>FIAT</DsMarca><DsModelo>MOBI</DsModelo><DsRetorno>Marca/Modelo/Ano Identificados</DsRetorno><NuAnoModelo>2020</NuAnoModelo><NuAnoFabricacao>2019</NuAnoFabricacao><NuCdRetorno>0</NuCdRetorno><PrecificadorI><DsCodigo>001-1</DsCodigo><DsCombustivel>Flex</DsCombustivel><DsMarca>Fiat</DsMarca><DsModelo>Mobi Like 1.0</DsModelo><NuValor>55000</NuValor></PrecificadorI></Decodificador></Root>`;
 
+const PLACA_API_URL_TESTE = "https://placa-decodificador.teste.local/api";
+const PLACA_API_HOST = new URL(PLACA_API_URL_TESTE).host;
 const fetchReal = globalThis.fetch;
-const PLACA_API_HOST = new URL(process.env.SELF_PLACA_API_URL || "https://ws.sisconsulta.com").host;
+const envOriginal = {
+  url: process.env.SELF_PLACA_API_URL,
+  cliente: process.env.SELF_PLACA_API_CLIENTE,
+  chave: process.env.SELF_PLACA_API_CHAVE,
+};
+
+function forcarEnvDeTeste() {
+  process.env.SELF_PLACA_API_URL = PLACA_API_URL_TESTE;
+  process.env.SELF_PLACA_API_CLIENTE = "teste";
+  process.env.SELF_PLACA_API_CHAVE = "teste";
+}
+
+beforeAll(forcarEnvDeTeste);
+beforeEach(forcarEnvDeTeste);
+
+afterAll(() => {
+  process.env.SELF_PLACA_API_URL = envOriginal.url;
+  process.env.SELF_PLACA_API_CLIENTE = envOriginal.cliente;
+  process.env.SELF_PLACA_API_CHAVE = envOriginal.chave;
+});
+
+// Únicos hosts que este teste pode legitimamente tocar: o Supabase local
+// (via Supabase client) e o host FORJADO do decodificador (via mock). Nada
+// mais deveria estar acessível — nem o fornecedor real, nem qualquer outra
+// coisa. Serve de rede de segurança contra a mesma armadilha de novo (env
+// reaplicado no meio do teste, código futuro que troque a URL etc.): se o
+// host bater com qualquer outra coisa, falha alto em vez de vazar uma
+// chamada de rede de verdade (paga, no caso do decodificador).
+const SUPABASE_LOCAL_HOST = new URL(process.env.VITE_SUPABASE_URL || "http://127.0.0.1:54321").host;
 
 /**
- * Stuba `global.fetch` interceptando só chamadas ao host do decodificador
- * (mock de resposta), e repassa qualquer outra requisição (Supabase auth,
- * PostgREST) para o fetch real — nunca deixa passar batido pro fornecedor.
+ * Stuba `global.fetch` interceptando só chamadas ao host FORJADO do
+ * decodificador (mock de resposta) e repassando as do Supabase local pro
+ * fetch real — qualquer outro host lança em vez de vazar pra rede.
  */
 function stubFetchPlaca(mockImpl: (url: string | URL, init?: RequestInit) => unknown) {
   vi.stubGlobal(
@@ -37,7 +77,10 @@ function stubFetchPlaca(mockImpl: (url: string | URL, init?: RequestInit) => unk
     vi.fn((url: string | URL, init?: RequestInit) => {
       const host = typeof url === "string" ? new URL(url).host : url.host;
       if (host === PLACA_API_HOST) return mockImpl(url, init);
-      return fetchReal(url, init);
+      if (host === SUPABASE_LOCAL_HOST) return fetchReal(url, init);
+      throw new Error(
+        `[placa-server-fn.test] fetch para host inesperado "${host}" — só ${PLACA_API_HOST} (mock) e ${SUPABASE_LOCAL_HOST} (Supabase local) são permitidos neste teste.`,
+      );
     }),
   );
 }
@@ -49,6 +92,19 @@ async function criarVendedorComToken() {
   const token = sess.session?.access_token ?? "";
   if (!token) throw new Error("sessão sem access_token");
   return { ...v, token };
+}
+
+/**
+ * Placa aleatória para o teste (NÃO usa `uniq()`): `normalizePlaca` corta
+ * pro formato de placa (7 caracteres), e o esquema de `uniq()` baseado em
+ * `Date.now()` deixa só os ~4 primeiros dígitos do timestamp — que ficam
+ * constantes por ~11 dias. Rodar esta suíte duas vezes sem `db:reset`
+ * nesse intervalo colidia com uma placa cacheada da rodada anterior,
+ * fazendo um teste de "cache miss" virar "cache hit" por acidente.
+ */
+function placaTeste(prefixo: string): string {
+  const sufixo = Math.random().toString(36).slice(2).toUpperCase();
+  return normalizePlaca(`${prefixo}${sufixo}`);
 }
 
 async function criarCotacao(empresaId: string, responsavelId: string) {
@@ -71,7 +127,7 @@ describe("consultarPlaca — cache, forçar e posse da cotação", () => {
     stubFetchPlaca(fetchEspiao);
 
     const v = await criarVendedorComToken();
-    const placa = normalizePlaca(uniq("ABC"));
+    const placa = placaTeste("ABC");
     await admin.from("consultas_placa").insert({
       placa,
       sucesso: true,
@@ -97,7 +153,7 @@ describe("consultarPlaca — cache, forçar e posse da cotação", () => {
     stubFetchPlaca(fetchMock);
 
     const v = await criarVendedorComToken();
-    const placa = normalizePlaca(uniq("MIS"));
+    const placa = placaTeste("MIS");
 
     const r = await executarConsultaPlaca({ placa, caller_token: v.token, forcar: false });
 
@@ -124,7 +180,7 @@ describe("consultarPlaca — cache, forçar e posse da cotação", () => {
     stubFetchPlaca(fetchMock);
 
     const v = await criarVendedorComToken();
-    const placa = normalizePlaca(uniq("EXP"));
+    const placa = placaTeste("EXP");
     const antigo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
     const { data: inserida, error } = await admin
       .from("consultas_placa")
@@ -150,7 +206,7 @@ describe("consultarPlaca — cache, forçar e posse da cotação", () => {
     stubFetchPlaca(fetchMock);
 
     const v = await criarVendedorComToken();
-    const placa = normalizePlaca(uniq("FOR"));
+    const placa = placaTeste("FOR");
     await admin.from("consultas_placa").insert({
       placa,
       sucesso: true,
@@ -173,7 +229,7 @@ describe("consultarPlaca — cache, forçar e posse da cotação", () => {
     const cotacaoAlheia = await criarCotacao(dono.empresaId, dono.userId);
 
     const atacante = await criarVendedorComToken();
-    const placa = normalizePlaca(uniq("ATK"));
+    const placa = placaTeste("ATK");
     await admin.from("consultas_placa").insert({
       placa,
       sucesso: true,
@@ -221,7 +277,7 @@ describe("consultarPlaca — cache, forçar e posse da cotação", () => {
 
     const dono = await criarVendedorComToken();
     const cotacaoId = await criarCotacao(dono.empresaId, dono.userId);
-    const placa = normalizePlaca(uniq("OWN"));
+    const placa = placaTeste("OWN");
 
     await executarConsultaPlaca({ placa, caller_token: dono.token, forcar: false, cotacaoId });
 
