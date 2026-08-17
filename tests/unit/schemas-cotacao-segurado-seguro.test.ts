@@ -77,10 +77,10 @@ describe("seguradoSchema", () => {
     ).toBe(false);
   });
 
-  it("aceita CNPJ com 14 dígitos", () => {
+  it("rejeita CNPJ com 14 dígitos (robô Quiver só cota Pessoa Física — R.10)", () => {
     expect(
       seguradoSchema.safeParse({ cpf: "12345678000190", nomeSocial: NOME_SOCIAL_VALIDO }).success,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("rejeita CEP com 7 dígitos", () => {
