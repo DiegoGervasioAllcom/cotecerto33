@@ -345,17 +345,36 @@ export function StepCalculo({
                   "A seguradora recusou a transmissão desta proposta."}
               </div>
               <div className="row" style={{ justifyContent: "center", gap: 8, marginTop: 12 }}>
-                <button className="btn btn-ghost" onClick={tentarNovamente}>
-                  Tentar novamente
-                </button>
-                {resultadoTransmissao.propostaId && (
-                  <Link
-                    to="/venda/aceite"
-                    search={{ selected: resultadoTransmissao.propostaId }}
-                    className="btn btn-slate"
-                  >
-                    Ver proposta
-                  </Link>
+                {/* RECUSADA_PELO_PORTAL é rejeição de regra de negócio do portal (ex.:
+                    duplicidade) — reenviar os mesmos dados não muda o resultado, então
+                    "Tentar novamente" não faz sentido aqui. A proposta já foi registrada
+                    como negociação recusada (com o motivo no histórico de versão), então
+                    o link certo é a tela de Propostas, não Aceite & Transmissão. */}
+                {resultadoTransmissao.motivo === "RECUSADA_PELO_PORTAL" ? (
+                  resultadoTransmissao.propostaId && (
+                    <Link
+                      to="/venda/propostas"
+                      search={{ selected: resultadoTransmissao.propostaId }}
+                      className="btn btn-slate"
+                    >
+                      Ver proposta
+                    </Link>
+                  )
+                ) : (
+                  <>
+                    <button className="btn btn-ghost" onClick={tentarNovamente}>
+                      Tentar novamente
+                    </button>
+                    {resultadoTransmissao.propostaId && (
+                      <Link
+                        to="/venda/aceite"
+                        search={{ selected: resultadoTransmissao.propostaId }}
+                        className="btn btn-slate"
+                      >
+                        Ver proposta
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
             </>

@@ -157,7 +157,7 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
     }
   });
 
-  test("falha: webhook transmitido=false → UI mostra a mensagem real e permite tentar de novo", async ({
+  test("falha por RECUSADA_PELO_PORTAL → sem 'Tentar novamente', 'Ver proposta' leva pra Propostas com negociação recusada", async ({
     page,
   }) => {
     const fixture = await prepararCotacaoCalculada(page);
@@ -182,7 +182,54 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       await expect(page.getByText("RECUSADA_PELO_PORTAL")).toBeVisible();
       await expect(page.getByText("Proposta transmitida com sucesso")).toHaveCount(0);
 
-      // "Tentar novamente" volta a mostrar todos os cards.
+      // Rejeição de regra de negócio (ex.: duplicidade) — reenviar os mesmos
+      // dados não resolve, então não há "Tentar novamente" pra esse motivo.
+      await expect(page.getByRole("button", { name: "Tentar novamente" })).toHaveCount(0);
+
+      // "Ver proposta" leva pra Propostas (não Aceite & Transmissão) — a
+      // negociação já foi marcada como recusada, com o motivo no histórico.
+      await page.getByRole("link", { name: "Ver proposta" }).click();
+      await expect(page).toHaveURL(/\/venda\/propostas\?/);
+
+      // Escopado no painel da proposta aberta (data-tour="proposta-painel"),
+      // não na tabela inteira — em CI (fullyParallel) outra proposta rodando
+      // em paralelo pode ter o mesmo chip "Recusada" visível na listagem.
+      const painel = page.locator('[data-tour="proposta-painel"]');
+      await expect(painel.locator("span.chip", { hasText: "Recusada" })).toBeVisible({
+        timeout: 10_000,
+      });
+      await expect(
+        painel.getByText(/Recusada pelo portal.*Mensagem de teste do portal/),
+      ).toBeVisible();
+    } finally {
+      await limparCotacaoTransmissaoFixture(fixture);
+    }
+  });
+
+  test("falha por CAMPOS_PENDENTES → mantém 'Tentar novamente' e link pra Aceite & Transmissão", async ({
+    page,
+  }) => {
+    const fixture = await prepararCotacaoCalculada(page);
+    try {
+      await gerarPropostaComTentativaReal(page, fixture);
+      await page.unroute("**/_serverFn/**");
+
+      const res = await page.request.post("/api/webhooks/quiver-transmissao", {
+        headers: QUIVER_TRANSMISSAO_WEBHOOK_HEADERS,
+        data: {
+          cotacaoId: fixture.cotacaoId,
+          transmitido: false,
+          motivo: "CAMPOS_PENDENTES",
+          mensagem: "Preencha o campo Dia de Vencimento das Demais Parcelas",
+        },
+      });
+      expect(res.ok()).toBeTruthy();
+
+      await expect(
+        page.getByText("Preencha o campo Dia de Vencimento das Demais Parcelas"),
+      ).toBeVisible({ timeout: 15_000 });
+
+      // Esse motivo é corrigível pelo vendedor — mantém "Tentar novamente".
       await page.getByRole("button", { name: "Tentar novamente" }).click();
       await expect(
         page.locator(".calc-card").filter({ hasText: CARD_ALFA.seguradora }),
@@ -190,16 +237,6 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       await expect(
         page.locator(".calc-card").filter({ hasText: CARD_BETA.seguradora }),
       ).toBeVisible();
-
-      // Nesse ponto a RPC de resultado (T.3) já criou a `propostas` com
-      // transmissao_status='falha' — cenário 3 confere a tela de Aceite.
-      await page.goto("/venda/aceite");
-      await expect(page.getByText("Falha na transmissão automática")).toBeVisible({
-        timeout: 10_000,
-      });
-      await expect(page.getByText("Mensagem de teste do portal")).toBeVisible();
-      await expect(page.getByText("RECUSADA_PELO_PORTAL")).toBeVisible();
-      await expect(page.getByText("Aguardando transmissão", { exact: true })).toHaveCount(0);
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
     }

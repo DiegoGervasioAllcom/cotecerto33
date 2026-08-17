@@ -199,7 +199,19 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
     },
     veiculo: {
       placa: normalizePlaca(v.placa as string | null | undefined),
+      // zeroKm mapeado no robô em 17/08/2026 (#Padrao2000_Zerokm) — nem
+      // sempre aparece no portal (depende do veículo resolvido pela placa),
+      // mas quando aparece exige resposta; enviamos sempre, igual
+      // chassiRemarcado/financiado. dataSaidaConcessionaria/odometro só
+      // podem ir quando zeroKm='Sim' (o validador do robô rejeita se vierem
+      // com zeroKm='Não') e são obrigatórios nesse caso.
       zeroKm: simNao(v.zero_km as boolean),
+      ...(v.zero_km
+        ? {
+            dataSaidaConcessionaria: toDDMMYYYY(v.data_saida_concessionaria as string),
+            odometro: onlyDigits(v.odometro as string),
+          }
+        : {}),
       chassiRemarcado: simNao(v.chassi_remarcado as boolean),
       financiado: simNao(alienado),
       ...(alienado && v.banco ? { alienacaoFiduciaria: v.banco as string } : {}),

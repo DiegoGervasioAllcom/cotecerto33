@@ -1218,6 +1218,7 @@ export type Database = {
           condutores_que_utilizam: string | null;
           cor: string | null;
           cotacao_id: string;
+          data_saida_concessionaria: string | null;
           equipamentos: boolean | null;
           fipe_valor: string | null;
           hdi_seguros_basico: boolean | null;
@@ -1231,6 +1232,7 @@ export type Database = {
           modelo_codigo: string | null;
           modelo_nome: string | null;
           num_passageiros: string | null;
+          odometro: string | null;
           opcionais: boolean | null;
           pcd_cnh_especial: boolean | null;
           placa: string | null;
@@ -1270,6 +1272,7 @@ export type Database = {
           condutores_que_utilizam?: string | null;
           cor?: string | null;
           cotacao_id: string;
+          data_saida_concessionaria?: string | null;
           equipamentos?: boolean | null;
           fipe_valor?: string | null;
           hdi_seguros_basico?: boolean | null;
@@ -1283,6 +1286,7 @@ export type Database = {
           modelo_codigo?: string | null;
           modelo_nome?: string | null;
           num_passageiros?: string | null;
+          odometro?: string | null;
           opcionais?: boolean | null;
           pcd_cnh_especial?: boolean | null;
           placa?: string | null;
@@ -1322,6 +1326,7 @@ export type Database = {
           condutores_que_utilizam?: string | null;
           cor?: string | null;
           cotacao_id?: string;
+          data_saida_concessionaria?: string | null;
           equipamentos?: boolean | null;
           fipe_valor?: string | null;
           hdi_seguros_basico?: boolean | null;
@@ -1335,6 +1340,7 @@ export type Database = {
           modelo_codigo?: string | null;
           modelo_nome?: string | null;
           num_passageiros?: string | null;
+          odometro?: string | null;
           opcionais?: boolean | null;
           pcd_cnh_especial?: boolean | null;
           placa?: string | null;
@@ -4876,10 +4882,12 @@ export type Database = {
           saldo: number;
         }[];
       };
-      salvar_cotacao_rascunho: {
-        Args: { p_cotacao_id: string; p_origem?: string; p_payload: Json };
-        Returns: string;
-      };
+      salvar_cotacao_rascunho:
+        | { Args: { p_cotacao_id: string; p_payload: Json }; Returns: string }
+        | {
+            Args: { p_cotacao_id: string; p_origem?: string; p_payload: Json };
+            Returns: string;
+          };
       solicitar_desconto: {
         Args: {
           p_cotacao_id: string;

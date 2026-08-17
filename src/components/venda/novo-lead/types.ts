@@ -68,6 +68,9 @@ export type Form = {
   combustivel: string;
   cor: string;
   zeroKm: boolean;
+  // Só exigidos pelo robô quando zeroKm=true (mapeado em 17/08/2026).
+  dataSaidaConcessionaria: string;
+  odometro: string;
   blindado: boolean;
   alienado: boolean;
   banco: string;
