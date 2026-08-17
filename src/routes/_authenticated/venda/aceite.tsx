@@ -28,6 +28,9 @@ type Row = {
   aceita_em: string | null;
   emitida_em: string | null;
   transmissao_obs: string | null;
+  transmissao_status: string | null;
+  transmissao_motivo: string | null;
+  transmissao_mensagem: string | null;
   cotacoes: {
     segurado: { nome: string | null }[] | null;
     veiculo:
@@ -94,6 +97,7 @@ function Page() {
       .select(
         "id,numero,status,seguradora,premio,valor,forma_pagamento,vencimento,criado_em," +
           "transmitida_em,aceita_em,emitida_em,transmissao_obs," +
+          "transmissao_status,transmissao_motivo,transmissao_mensagem," +
           "cotacoes(segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))," +
           // FK explícita: `leads` tem duas relações com `propostas`
           // (propostas.lead_id e leads.renovacao_proposta_id, da G6) —
@@ -215,9 +219,24 @@ function Page() {
                 <div>
                   <strong>{r.numero}</strong> <span className="muted small">· {segurado}</span>
                 </div>
-                <span className="chip chip-yellow">Aguardando transmissão</span>
+                {r.transmissao_status === "falha" ? (
+                  <span className="chip chip-alert">Falha na transmissão automática</span>
+                ) : (
+                  <span className="chip chip-yellow">Aguardando transmissão</span>
+                )}
               </div>
               <div className="card-b">
+                {r.transmissao_status === "falha" && (
+                  <div className="alert alert-err" style={{ marginBottom: 12 }}>
+                    {r.transmissao_motivo && (
+                      <span className="chip chip-slate" style={{ marginRight: 8 }}>
+                        {r.transmissao_motivo}
+                      </span>
+                    )}
+                    {r.transmissao_mensagem ||
+                      "O robô não conseguiu transmitir esta proposta automaticamente — confira e transmita manualmente."}
+                  </div>
+                )}
                 <Timeline r={r} />
 
                 <div className="confer-card" style={{ marginTop: 12 }}>

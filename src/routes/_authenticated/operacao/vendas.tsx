@@ -35,6 +35,9 @@ type Proposta = {
   empresa_id: string | null;
   responsavel_id: string | null;
   cotacao_id: string | null;
+  transmissao_status: string | null;
+  transmissao_motivo: string | null;
+  transmissao_mensagem: string | null;
   cotacoes: {
     segurado: { nome: string | null; cpf_cnpj: string | null; celular: string | null }[] | null;
     seguro: { tipo_seguro: string | null }[] | null;
@@ -121,6 +124,7 @@ function Page() {
         .from("propostas")
         .select(
           "id,numero,apolice_numero,status,seguradora,premio,valor,tipo_venda,forma_pagamento,comissao_pct,comissao_valor,emitida_em,pago_em,baixa_em,cancelada_em,transmitida_em,criado_em,empresa_id,responsavel_id,cotacao_id," +
+            "transmissao_status,transmissao_motivo,transmissao_mensagem," +
             "cotacoes(segurado:cotacao_segurado(nome,cpf_cnpj,celular),seguro:cotacao_seguro(tipo_seguro))",
         )
         .gte(periodField, period.ini)
@@ -402,6 +406,7 @@ function Page() {
                     ? "Renovação"
                     : "Novo";
                 const t = classify(p);
+                const falhaTransmissao = t === "transmissao" && p.transmissao_status === "falha";
                 const chip =
                   t === "pagas"
                     ? ["chip-ok", "Paga"]
@@ -409,7 +414,9 @@ function Page() {
                       ? ["chip-alert", "Não paga"]
                       : t === "canceladas"
                         ? ["chip", "Cancelada"]
-                        : ["chip-info", "Em transmissão"];
+                        : falhaTransmissao
+                          ? ["chip-alert", "Falha na transmissão"]
+                          : ["chip-info", "Em transmissão"];
                 return (
                   <tr key={p.id}>
                     <td>
@@ -454,7 +461,12 @@ function Page() {
                       <small className="muted">{fmtDate(p.baixa_em)}</small>
                     </td>
                     <td>
-                      <span className={`chip ${chip[0]}`}>{chip[1]}</span>
+                      <span
+                        className={`chip ${chip[0]}`}
+                        title={falhaTransmissao ? p.transmissao_mensagem || undefined : undefined}
+                      >
+                        {chip[1]}
+                      </span>
                     </td>
                   </tr>
                 );
