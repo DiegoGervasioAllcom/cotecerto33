@@ -50,6 +50,12 @@ const semPrefixoMoeda = (v: string | null | undefined) => (v ?? "").replace(/^R\
 // Nome canônico aceito pela Quiver (seguro.seguradorasDisponiveis) a partir
 // do nome exibido no app. Cobre os 12 canônicos + variações mais comuns;
 // qualquer seguradora fora dessa lista não é enviada (a Quiver rejeitaria).
+// R.12 (revisão form vs robô Quiver, 2026-08): o robô trata "hdi seguros fit"
+// e "hdi seguros basico" como produtos DISTINTOS, mas o front só oferece
+// "HDI" genérico na lista de seguradoras (mapeado abaixo sempre para
+// "hdi seguros"). Não implementado agora — exige decisão de produto (qual
+// variante o vendedor quer cotar, ou perguntar as duas?). Só documentado
+// aqui para não perder o achado.
 const SEGURADORA_QUIVER: Record<string, string> = {
   aliro: "aliro",
   allianz: "allianz",
@@ -132,6 +138,18 @@ export type CotacaoRow = {
   coberturas: Record<string, unknown> | null;
 };
 
+// R.11 (revisão form vs robô Quiver, 2026-08): o robô aceita um campo
+// `nomeHierarquico`, hoje nunca enviado pelo front — ele cai no fallback via
+// env NOME_HIERARQUICO_DEFAULT (vazia no .env.example) e, na ausência dela,
+// num valor hardcoded no POM do robô. Investigado sem sucesso um candidato
+// óbvio no CoteCerto: não há, hoje, nenhum dado de "nome do responsável
+// hierárquico da rede/franquia" atrelado à cotação — a hierarquia interna do
+// CoteCerto (profiles.superior_id, ver migrations g1_2/h5/h6) modela cargo e
+// cadeia de aprovação, não guarda um "nome" solto que corresponda claramente
+// a esse campo do robô. Também não há campo de razão social de
+// franquia/supervisor no wizard novo-lead. Decisão: NÃO inventar valor aqui;
+// aguardar definição de produto sobre o que "nomeHierarquico" deveria
+// representar no domínio da Quiver antes de implementar o envio.
 export function montarPayloadQuiver(cot: CotacaoRow) {
   const s = cot.segurado ?? {};
   const sg = cot.seguro ?? {};
