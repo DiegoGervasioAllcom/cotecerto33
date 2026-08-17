@@ -1,5 +1,11 @@
 # Task: endpoint/UI para resultado da transmissão (webhook)
 
+> ✅ **Concluída em 17/08/2026.** Plano completo, decisões e execução em
+> `doc/PLANO_WEBHOOK_TRANSMISSAO.md` — schema não ficou em `cotacoes` como cogitado no item
+> 2 abaixo, e sim numa tabela nova `cotacao_transmissoes` (histórico de tentativas) +
+> colunas em `propostas`, já que o dado de transmissão pertence ao ciclo de vida da
+> proposta. PRs [#181](https://github.com/DiegoGervasioAllcom/cotecerto33/pull/181)-[#184](https://github.com/DiegoGervasioAllcom/cotecerto33/pull/184).
+
 ## Contexto
 
 O robô (repo `playwright`) já envia webhook com `{ transmitido, motivo, mensagem }` ao final de cada transmissão pós-venda, tanto em sucesso quanto em falha (`src/api/services/transmissao.service.ts:81-135`, motivo lido de `data/transmissoes/{requestId}.json`).
