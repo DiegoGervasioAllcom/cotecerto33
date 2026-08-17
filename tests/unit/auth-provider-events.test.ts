@@ -159,7 +159,7 @@ describe("eventos do AuthProvider", () => {
   afterEach(() => vi.useRealTimers());
 
   it.each(["INITIAL_SESSION", "SIGNED_IN"] as const)(
-    "%s carrega sessão e contexto em modo bloqueante",
+    "%s sem contexto carregado carrega sessão e contexto em modo bloqueante",
     async (event) => {
       queueContext("user-1");
       AuthProvider({ children: null });
@@ -174,6 +174,21 @@ describe("eventos do AuthProvider", () => {
       expect(state.loading()).toHaveBeenLastCalledWith(false);
     },
   );
+
+  it("SIGNED_IN repetido do mesmo usuário preserva contexto visível enquanto revalida", async () => {
+    await establishSession();
+    appendContext("user-1", { ...PROFILE("user-1"), nome: "Nome atualizado" });
+
+    await emit("SIGNED_IN", SESSION("user-1"));
+
+    expect(state.profile()).not.toHaveBeenCalledWith(null);
+    expect(state.empresa()).not.toHaveBeenCalledWith(null);
+    expect(state.role()).not.toHaveBeenCalledWith(null);
+    expect(state.loading()).not.toHaveBeenCalledWith(true);
+    expect(state.profile()).toHaveBeenLastCalledWith(
+      expect.objectContaining({ nome: "Nome atualizado" }),
+    );
+  });
 
   it.each(["TOKEN_REFRESHED", "USER_UPDATED"] as const)(
     "%s do mesmo usuário preserva contexto visível enquanto revalida",
@@ -209,16 +224,19 @@ describe("eventos do AuthProvider", () => {
     expect(harness.fromCalls).toEqual([]);
   });
 
-  it("troca de usuário invalida contexto anterior e recarrega em modo bloqueante", async () => {
-    await establishSession();
-    appendContext("user-2");
+  it.each(["SIGNED_IN", "TOKEN_REFRESHED"] as const)(
+    "%s de usuário diferente invalida contexto anterior e recarrega em modo bloqueante",
+    async (event) => {
+      await establishSession();
+      appendContext("user-2");
 
-    await emit("TOKEN_REFRESHED", SESSION("user-2"));
+      await emit(event, SESSION("user-2"));
 
-    expect(state.profile()).toHaveBeenCalledWith(null);
-    expect(state.loading()).toHaveBeenCalledWith(true);
-    expect(state.profile()).toHaveBeenLastCalledWith(expect.objectContaining({ id: "user-2" }));
-  });
+      expect(state.profile()).toHaveBeenCalledWith(null);
+      expect(state.loading()).toHaveBeenCalledWith(true);
+      expect(state.profile()).toHaveBeenLastCalledWith(expect.objectContaining({ id: "user-2" }));
+    },
+  );
 
   it("falha de rede preserva a sessão mas apresenta erro verificável", async () => {
     queueContext("user-1", { profileError: new Error("rede indisponível") });
@@ -244,16 +262,82 @@ describe("eventos do AuthProvider", () => {
     expect(harness.signOut).toHaveBeenCalledTimes(1);
   });
 
-  it("eventos duplicados antes do timer executam somente a revalidação mais recente", async () => {
+  it("SIGNED_IN repetido detecta perfil desligado e expulsa mesmo em revalidação silenciosa", async () => {
     await establishSession();
-    appendContext("user-1");
+    appendContext("user-1", PROFILE("user-1", "suspensa"));
 
-    harness.listener?.("TOKEN_REFRESHED", SESSION("user-1"));
-    harness.listener?.("TOKEN_REFRESHED", SESSION("user-1"));
+    await emit("SIGNED_IN", SESSION("user-1"));
+
+    expect(state.loading()).not.toHaveBeenCalledWith(true);
+    expect(state.session()).toHaveBeenLastCalledWith(null);
+    expect(state.profile()).toHaveBeenLastCalledWith(null);
+    expect(state.error()).toHaveBeenLastCalledWith(DISABLED_ACCESS_MESSAGE);
+    expect(harness.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["SIGNED_IN", "TOKEN_REFRESHED"] as const)(
+    "%s duplicado antes do timer executa somente a revalidação mais recente",
+    async (event) => {
+      await establishSession();
+      appendContext("user-1");
+
+      harness.listener?.(event, SESSION("user-1"));
+      harness.listener?.(event, SESSION("user-1"));
+      await vi.runAllTimersAsync();
+
+      expect(harness.fromCalls.filter((table) => table === "profiles")).toHaveLength(1);
+      expect(state.profile()).not.toHaveBeenCalledWith(null);
+    },
+  );
+
+  it("SIGNED_IN concorrentes resolvidos fora de ordem aplicam somente o contexto mais recente", async () => {
+    await establishSession();
+    const primeiroProfile = deferred<{
+      data: ReturnType<typeof PROFILE> & { nome: string };
+      error: null;
+    }>();
+    const segundoProfile = deferred<{
+      data: ReturnType<typeof PROFILE> & { nome: string };
+      error: null;
+    }>();
+    harness.responses.set("profiles", [primeiroProfile.promise, segundoProfile.promise]);
+    harness.responses.set("user_roles", [
+      { data: ROLE, error: null },
+      { data: ROLE, error: null },
+    ]);
+    harness.responses.set("empresas", [
+      { data: { ...EMPRESA, nome: "Empresa mais recente" }, error: null },
+      { data: { ...EMPRESA, nome: "Empresa antiga" }, error: null },
+    ]);
+
+    harness.listener?.("SIGNED_IN", SESSION("user-1"));
+    await vi.advanceTimersByTimeAsync(0);
+    harness.listener?.("SIGNED_IN", SESSION("user-1"));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(harness.fromCalls.filter((table) => table === "profiles")).toHaveLength(2);
+
+    segundoProfile.resolve({
+      data: { ...PROFILE("user-1"), nome: "Contexto mais recente" },
+      error: null,
+    });
     await vi.runAllTimersAsync();
 
-    expect(harness.fromCalls.filter((table) => table === "profiles")).toHaveLength(1);
-    expect(state.profile()).not.toHaveBeenCalledWith(null);
+    expect(state.profile()).toHaveBeenCalledTimes(1);
+    expect(state.profile()).toHaveBeenLastCalledWith(
+      expect.objectContaining({ nome: "Contexto mais recente" }),
+    );
+
+    primeiroProfile.resolve({
+      data: { ...PROFILE("user-1"), nome: "Contexto antigo" },
+      error: null,
+    });
+    await vi.runAllTimersAsync();
+
+    expect(state.profile()).toHaveBeenCalledTimes(1);
+    expect(state.profile()).not.toHaveBeenCalledWith(
+      expect.objectContaining({ nome: "Contexto antigo" }),
+    );
   });
 
   it("refresh manual pendente não restaura sessão depois de SIGNED_OUT", async () => {
@@ -309,18 +393,21 @@ describe("eventos do AuthProvider", () => {
     expect(harness.unsubscribe).toHaveBeenCalledTimes(1);
   });
 
-  it("erro de rede no refresh silencioso mantém contexto e só expõe erro de acesso", async () => {
-    await establishSession();
-    harness.responses.get("profiles")?.push(new Error("rede indisponível"));
-    harness.responses.get("user_roles")?.push({ data: ROLE, error: null });
+  it.each(["SIGNED_IN", "TOKEN_REFRESHED"] as const)(
+    "%s silencioso com erro de rede mantém contexto e só expõe erro de acesso",
+    async (event) => {
+      await establishSession();
+      harness.responses.get("profiles")?.push(new Error("rede indisponível"));
+      harness.responses.get("user_roles")?.push({ data: ROLE, error: null });
 
-    await emit("TOKEN_REFRESHED", SESSION("user-1"));
+      await emit(event, SESSION("user-1"));
 
-    expect(state.profile()).not.toHaveBeenCalledWith(null);
-    expect(state.empresa()).not.toHaveBeenCalledWith(null);
-    expect(state.role()).not.toHaveBeenCalledWith(null);
-    expect(state.loading()).not.toHaveBeenCalledWith(true);
-    expect(state.error()).toHaveBeenLastCalledWith(ACCESS_CHECK_ERROR_MESSAGE);
-    expect(harness.signOut).not.toHaveBeenCalled();
-  });
+      expect(state.profile()).not.toHaveBeenCalledWith(null);
+      expect(state.empresa()).not.toHaveBeenCalledWith(null);
+      expect(state.role()).not.toHaveBeenCalledWith(null);
+      expect(state.loading()).not.toHaveBeenCalledWith(true);
+      expect(state.error()).toHaveBeenLastCalledWith(ACCESS_CHECK_ERROR_MESSAGE);
+      expect(harness.signOut).not.toHaveBeenCalled();
+    },
+  );
 });
