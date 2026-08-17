@@ -102,6 +102,7 @@ export function StepCoberturas({ f, up, erros }: Props) {
         <div className="field-group">
           <label>Danos materiais a terceiros</label>
           <select className="input" value={f.rcfDm} onChange={(e) => up("rcfDm", e.target.value)}>
+            <option value="">Selecione</option>
             {RCF_VALORES.map((v) => (
               <option key={v} value={String(v)}>
                 {money(v)}
@@ -112,6 +113,7 @@ export function StepCoberturas({ f, up, erros }: Props) {
         <div className="field-group">
           <label>Danos corporais a terceiros</label>
           <select className="input" value={f.rcfDc} onChange={(e) => up("rcfDc", e.target.value)}>
+            <option value="">Selecione</option>
             {RCF_VALORES.map((v) => (
               <option key={v} value={String(v)}>
                 {money(v)}

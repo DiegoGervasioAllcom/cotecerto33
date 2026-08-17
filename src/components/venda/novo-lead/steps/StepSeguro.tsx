@@ -112,8 +112,8 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
           <label>Tipo de cobertura</label>
           <select
             className="input"
-            value={f.tipoCobertura}
-            onChange={(e) => up("tipoCobertura", e.target.value)}
+            value={f.categoriaCoberturaLegado}
+            onChange={(e) => up("categoriaCoberturaLegado", e.target.value)}
           >
             {[
               "Compreensiva",

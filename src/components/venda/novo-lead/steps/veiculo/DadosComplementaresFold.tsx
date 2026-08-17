@@ -26,6 +26,48 @@ export function DadosComplementaresFold({ f, up }: Props) {
   }
   const det = (key: string) => f.antifurtoDetalhes[key] ?? "";
 
+  // Chaves de antifurtoDetalhes específicas de cada tipo de antifurto — a
+  // Quiver rejeita esses campos fora do tipo correspondente. Ao trocar de
+  // tipo (ex.: Bloqueador -> Não), removemos as chaves do tipo anterior que
+  // não sejam também usadas pelo novo tipo.
+  // `bloqueadorPorto` é compartilhado entre Bloqueador e Rastreador de
+  // propósito (a Quiver aceita nos dois modos) — não incluído aqui, mantido
+  // como está por decisão já registrada na revisão.
+  const ANTIFURTO_TIPO_KEYS: Record<string, string[]> = {
+    "Alarme Sonoro": ["alarmeSonoroAllianz", "alarmeSonoroAntiFurtoBradesco"],
+    Bloqueador: [
+      "bloqueadorAllianz",
+      "bloqueadorBradescoSeguros",
+      "bloqueadorYelum",
+      "antifurtoMapfre",
+    ],
+    Rastreador: [
+      "rastreadorAllianz",
+      "rastreadorBradescoSeguros",
+      "rastreadorYelum",
+      "rastreadorMapfre",
+    ],
+    "Dispositivos comuns": ["dispositivosComunsAllianz", "alarmeSonoroAntiFurtoBradesco"],
+  };
+  // Chaves enviadas sempre que antifurto !== "Não", independente do tipo.
+  const ANTIFURTO_SEMPRE_KEYS = ["antifurtoTokio", "gerenciadoraTokio"];
+
+  function onChangeAntifurto(novo: string) {
+    const antigo = f.antifurto;
+    if (novo !== antigo) {
+      const keysNovo = ANTIFURTO_TIPO_KEYS[novo] ?? [];
+      let keysRemover = ANTIFURTO_TIPO_KEYS[antigo] ?? [];
+      if (novo === "Não") keysRemover = [...keysRemover, ...ANTIFURTO_SEMPRE_KEYS];
+      keysRemover = keysRemover.filter((k) => !keysNovo.includes(k));
+      if (keysRemover.length && keysRemover.some((k) => k in f.antifurtoDetalhes)) {
+        const next = { ...f.antifurtoDetalhes };
+        keysRemover.forEach((k) => delete next[k]);
+        up("antifurtoDetalhes", next);
+      }
+    }
+    up("antifurto", novo);
+  }
+
   return (
     <div className={`fold${open ? " open" : ""}`}>
       <div className="fold-h" onClick={() => setOpen((v) => !v)}>
@@ -86,7 +128,7 @@ export function DadosComplementaresFold({ f, up }: Props) {
             <select
               className="input"
               value={f.antifurto}
-              onChange={(e) => up("antifurto", e.target.value)}
+              onChange={(e) => onChangeAntifurto(e.target.value)}
             >
               {ANTIFURTO_TIPOS.map((t) => (
                 <option key={t}>{t}</option>
