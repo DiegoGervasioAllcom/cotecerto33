@@ -59,6 +59,18 @@ export const seguradoSchema = z
   // Nome e composto (nome + sobrenome), pra não aceitar um nome social vazio
   // de fato ou copiado do Nome civil.
   .superRefine((v, ctx) => {
+    // R.10 (revisão form vs robô Quiver, 2026-08): o robô só cota para
+    // Pessoa Física (validarCpf.ts do robô usa módulo 11, 11 dígitos).
+    // O campo aceita CNPJ (14 dígitos) na digitação/máscara e no banco,
+    // mas bloqueamos aqui o avanço de etapa para não gerar 422 no envio.
+    if (v.cpf && onlyDigits(v.cpf).length === 14) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cpf"],
+        message:
+          "O robô de cotação só aceita Pessoa Física (CPF) por enquanto. CNPJ não é suportado.",
+      });
+    }
     const nomeSocial = (v.nomeSocial ?? "").trim();
     if (!nomeSocial) {
       ctx.addIssue({

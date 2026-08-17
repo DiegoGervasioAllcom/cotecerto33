@@ -124,12 +124,20 @@ export function useSimulacaoCalculo(
     iniciarPolling(cotacaoId);
   }
 
+  // R.9 (revisão form vs robô Quiver, 2026-08): o gate reflete os campos que
+  // o robô Playwright exige de fato — ele identifica o veículo pela placa via
+  // FIPE do portal da seguradora, não usa marca/modelo/anoModelo (que
+  // continuam sendo coletados na tela, só não bloqueiam mais o cálculo).
   const podeCalcular = !!(
     f.cpf &&
     f.nome &&
-    f.marca &&
-    f.modelo &&
-    f.anoModelo &&
+    f.placa &&
+    f.email &&
+    f.cep &&
+    f.celular &&
+    f.cepPernoite &&
+    f.cepCirculacao &&
+    f.kmMensal &&
     (f.seguradorasSel?.length ?? 0) > 0
   );
 
