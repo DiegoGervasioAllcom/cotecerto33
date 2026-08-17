@@ -209,6 +209,7 @@ function Page() {
     jovens1825: "nao",
     jovens18a25Detalhes: [],
     tipoCobertura: "Fácil",
+    categoriaCoberturaLegado: "Compreensiva",
     casco: "100% Tabela FIPE",
     cascoValor: "",
     franquia: "Normal",

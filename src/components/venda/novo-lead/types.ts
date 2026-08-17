@@ -141,6 +141,13 @@ export type Form = {
   jovens18a25Detalhes: { nome: string; idade: string; parentesco: string }[];
   // Coberturas
   tipoCobertura: string;
+  // Select legado do Passo 4 (Dados do Seguro) com opções
+  // (Compreensiva/Casco.../RCF...) que não correspondem ao enum
+  // cobertura.plano da Quiver (Fácil/Pleno/Total/Personalizado, usado pelo
+  // select do Passo 5 — StepCoberturas.tsx). Antes reaproveitava o mesmo
+  // estado `tipoCobertura` e o corrompia. Estado próprio, tela apenas —
+  // não persistido nem enviado ao robô hoje.
+  categoriaCoberturaLegado: string;
   casco: string;
   cascoValor: string;
   franquia: string;

@@ -6,7 +6,11 @@
 
 // cobertura.plano na Quiver — só esse enum é estrito (case-insensitive:
 // facil/pleno/total/personalizado). Rótulos com acento do protótipo.
-export const PLANO_COBERTURA = ["Fácil", "Pleno", "Total", "Personalizada"] as const;
+// "Personalizado" (masculino) é proposital: a normalização do robô só
+// remove acentos e faz lowercase, não troca gênero — "Personalizada"
+// normalizava para "personalizada", que não bate com "personalizado" e
+// gerava 422. Trocamos apenas o "a" final por "o".
+export const PLANO_COBERTURA = ["Fácil", "Pleno", "Total", "Personalizado"] as const;
 
 // cobertura.modalidade — texto livre na Quiver, só esses 2 valores existem
 // no select real do protótipo/portal.

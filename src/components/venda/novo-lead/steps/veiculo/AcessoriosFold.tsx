@@ -35,6 +35,53 @@ export function AcessoriosFold({ f, up }: Props) {
   }
   const det = (key: string) => f.acessoriosDetalhes[key] ?? "";
 
+  // Chaves de acessoriosDetalhes ligadas a cada sub-toggle — a Quiver
+  // rejeita esses campos quando o toggle correspondente está em "Não", mas
+  // o objeto acessoriosDetalhes é genérico e mantinha os valores mesmo
+  // depois de o vendedor desligar o toggle. Ao desligar, removemos (não só
+  // ocultamos) as chaves do grupo.
+  const KIT_ACESSORIOS_KEYS = [
+    "radioAmFm",
+    "cdPlayer",
+    "dvdPlayer",
+    "rodasLigaLeve",
+    "kitMultimidia",
+  ];
+  const OPCIONAIS_KEYS = ["opcionais2"];
+  const EQUIPAMENTOS_KEYS = [
+    "capotaFibra",
+    "equipamentoEspecial",
+    "telefoneCelularVeicular",
+    "rebaixado",
+    "tunado",
+  ];
+
+  function removerDetalhes(keys: string[]) {
+    if (!keys.some((k) => k in f.acessoriosDetalhes)) return;
+    const next = { ...f.acessoriosDetalhes };
+    keys.forEach((k) => delete next[k]);
+    up("acessoriosDetalhes", next);
+  }
+
+  function toggleKitAcessorios(v: "sim" | "nao") {
+    if (v === "nao") removerDetalhes(KIT_ACESSORIOS_KEYS);
+    up("kitAcessoriosAtivo", v);
+  }
+  function toggleOpcionais(v: "sim" | "nao") {
+    if (v === "nao") removerDetalhes(OPCIONAIS_KEYS);
+    up("opcionaisAtivo", v);
+  }
+  function toggleEquipamentos(v: "sim" | "nao") {
+    if (v === "nao") removerDetalhes(EQUIPAMENTOS_KEYS);
+    up("equipamentosAtivo", v);
+  }
+  function toggleAcessorios(v: "sim" | "nao") {
+    if (v === "nao") {
+      removerDetalhes([...KIT_ACESSORIOS_KEYS, ...OPCIONAIS_KEYS, ...EQUIPAMENTOS_KEYS]);
+    }
+    up("acessoriosAtivo", v);
+  }
+
   return (
     <div className={`fold${open ? " open" : ""}`}>
       <div className="fold-h" onClick={() => setOpen((v) => !v)}>
@@ -122,7 +169,7 @@ export function AcessoriosFold({ f, up }: Props) {
 
           <div className="field-group">
             <label>Blindagem/kit gás/acessórios (expandir seção)</label>
-            <SimNaoSelect value={f.acessoriosAtivo} onChange={(v) => up("acessoriosAtivo", v)} />
+            <SimNaoSelect value={f.acessoriosAtivo} onChange={toggleAcessorios} />
           </div>
         </div>
 
@@ -131,21 +178,15 @@ export function AcessoriosFold({ f, up }: Props) {
             <div className="wizard-grid" style={{ marginTop: 10 }}>
               <div className="field-group">
                 <label>Kit de acessórios</label>
-                <SimNaoSelect
-                  value={f.kitAcessoriosAtivo}
-                  onChange={(v) => up("kitAcessoriosAtivo", v)}
-                />
+                <SimNaoSelect value={f.kitAcessoriosAtivo} onChange={toggleKitAcessorios} />
               </div>
               <div className="field-group">
                 <label>Opcionais</label>
-                <SimNaoSelect value={f.opcionaisAtivo} onChange={(v) => up("opcionaisAtivo", v)} />
+                <SimNaoSelect value={f.opcionaisAtivo} onChange={toggleOpcionais} />
               </div>
               <div className="field-group">
                 <label>Equipamentos especiais</label>
-                <SimNaoSelect
-                  value={f.equipamentosAtivo}
-                  onChange={(v) => up("equipamentosAtivo", v)}
-                />
+                <SimNaoSelect value={f.equipamentosAtivo} onChange={toggleEquipamentos} />
               </div>
             </div>
 
