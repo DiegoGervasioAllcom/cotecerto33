@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { printHtml, escapeHtml } from "@/lib/print";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,16 @@ import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSim
 import {
   gruposOpcoesResultado,
   ordenarResultados,
+  premioNumerico,
 } from "@/components/venda/cotacoes/quiver-resultado";
+
+const POLL_TRANSMISSAO_MS = 4000;
+
+type TransmissaoResultado = {
+  status: "enviada" | "transmitida" | "falha";
+  motivo: string | null;
+  mensagem: string | null;
+};
 
 type EscolhaCard = { grupoId: string; opcaoId: string };
 
@@ -36,7 +45,57 @@ export function StepCalculo({
   const [escolhas, setEscolhas] = useState<Record<string, EscolhaCard>>({});
   const [transmitindoCardId, setTransmitindoCardId] = useState<string | null>(null);
   const [erroProposta, setErroProposta] = useState<string | null>(null);
-  const [propostaEnviada, setPropostaEnviada] = useState<string | null>(null);
+  // Onda 3 (T.10): enquanto uma transmissão está em andamento, escondemos os
+  // demais cards e mostramos só o card escolhido com o resultado real do
+  // robô (via polling em `cotacao_transmissoes`, mesmo padrão de
+  // `useSimulacaoCalculo`).
+  const [transmissaoEmAndamento, setTransmissaoEmAndamento] = useState<{
+    tentativaId: string;
+    card: ResultadoCalculo;
+  } | null>(null);
+  const [resultadoTransmissao, setResultadoTransmissao] = useState<TransmissaoResultado | null>(
+    null,
+  );
+  const pollTransmissaoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function pararPollingTransmissao() {
+    if (pollTransmissaoTimer.current) {
+      clearInterval(pollTransmissaoTimer.current);
+      pollTransmissaoTimer.current = null;
+    }
+  }
+
+  useEffect(() => {
+    return () => pararPollingTransmissao();
+  }, []);
+
+  function iniciarPollingTransmissao(tentativaId: string) {
+    pararPollingTransmissao();
+    pollTransmissaoTimer.current = setInterval(() => {
+      void (async () => {
+        const { data, error } = await supabase
+          .from("cotacao_transmissoes")
+          .select("status,motivo,mensagem")
+          .eq("id", tentativaId)
+          .maybeSingle();
+        if (error || !data) return;
+        if (data.status !== "enviada") {
+          pararPollingTransmissao();
+          setResultadoTransmissao({
+            status: data.status as TransmissaoResultado["status"],
+            motivo: data.motivo,
+            mensagem: data.mensagem,
+          });
+        }
+      })();
+    }, POLL_TRANSMISSAO_MS);
+  }
+
+  function tentarNovamente() {
+    pararPollingTransmissao();
+    setTransmissaoEmAndamento(null);
+    setResultadoTransmissao(null);
+  }
 
   function escolhaDoCard(r: ResultadoCalculo): EscolhaCard {
     const primeiroGrupo = gruposOpcoesResultado(r)[0];
@@ -68,11 +127,11 @@ export function StepCalculo({
     }
 
     setErroProposta(null);
-    setPropostaEnviada(null);
+    setResultadoTransmissao(null);
     setTransmitindoCardId(r.cardId);
     try {
       const { data: sess } = await supabase.auth.getSession();
-      await transmitirPropostaQuiver({
+      const resposta = await transmitirPropostaQuiver({
         data: {
           cotacaoId,
           caller_token: sess.session?.access_token ?? "",
@@ -81,13 +140,14 @@ export function StepCalculo({
           produto: r.produto || r.nome || undefined,
           formaPagamento: grupo.formaPagamento,
           parcelas: opcao.parcelas,
+          premio: premioNumerico(opcao),
         },
       });
       // O 201 significa só que o robô aceitou a solicitação: o resultado real
-      // (transmitido / recusado pelo portal) chega depois, pelo webhook.
-      setPropostaEnviada(
-        `Transmissão de ${r.seguradora} enviada ao robô. O resultado chega em instantes.`,
-      );
+      // (transmitido / recusado pelo portal) chega depois, pelo webhook —
+      // entramos em modo "transmitindo" e fazemos polling da tentativa.
+      setTransmissaoEmAndamento({ tentativaId: resposta.tentativaId, card: r });
+      iniciarPollingTransmissao(resposta.tentativaId);
     } catch (e) {
       setErroProposta(e instanceof Error ? e.message : "Falha ao gerar a proposta.");
     } finally {
@@ -228,22 +288,69 @@ export function StepCalculo({
         </div>
       )}
 
-      {propostaEnviada && (
-        <div
-          style={{
-            marginBottom: 12,
-            padding: "10px 14px",
-            borderRadius: 8,
-            background: "var(--ok-soft, var(--alert-soft))",
-            color: "var(--ok, var(--alert))",
-            fontSize: 13,
-          }}
-        >
-          {propostaEnviada}
+      {transmissaoEmAndamento && (
+        <div className="card" style={{ padding: 20, marginBottom: 12, textAlign: "center" }}>
+          <div className="calc-ins" style={{ justifyContent: "center", marginBottom: 12 }}>
+            <svg width="18" height="18">
+              <use href="#i-shield" />
+            </svg>{" "}
+            {transmissaoEmAndamento.card.seguradora}
+          </div>
+
+          {!resultadoTransmissao && (
+            <>
+              <svg width="28" height="28" className="pulse" style={{ margin: "0 auto 12px" }}>
+                <use href="#i-clock" />
+              </svg>
+              <div>Aguardando confirmação da seguradora…</div>
+              <div className="sub" style={{ marginTop: 4 }}>
+                O robô já enviou a proposta ao portal — o resultado costuma chegar em instantes.
+              </div>
+            </>
+          )}
+
+          {resultadoTransmissao?.status === "transmitida" && (
+            <>
+              <svg width="28" height="28" style={{ color: "var(--ok, #16a34a)" }}>
+                <use href="#i-check" />
+              </svg>
+              <div style={{ marginTop: 8, fontWeight: 600 }}>Proposta transmitida com sucesso</div>
+              <Link to="/venda/aceite" className="btn btn-yellow" style={{ marginTop: 12 }}>
+                Ir para Aceite &amp; Transmissão
+              </Link>
+            </>
+          )}
+
+          {resultadoTransmissao?.status === "falha" && (
+            <>
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  background: "var(--alert-soft)",
+                  color: "var(--alert)",
+                  fontSize: 13,
+                  textAlign: "left",
+                }}
+              >
+                {resultadoTransmissao.motivo && (
+                  <span className="chip chip-slate" style={{ marginRight: 8 }}>
+                    {resultadoTransmissao.motivo}
+                  </span>
+                )}
+                {resultadoTransmissao.mensagem ||
+                  "A seguradora recusou a transmissão desta proposta."}
+              </div>
+              <button className="btn btn-ghost" style={{ marginTop: 12 }} onClick={tentarNovamente}>
+                Tentar novamente
+              </button>
+            </>
+          )}
         </div>
       )}
 
-      {calculando && (
+      {!transmissaoEmAndamento && calculando && (
         <div style={{ padding: "12px 0", marginBottom: 8 }}>
           <span className="muted small">
             Enviamos a cotação para as seguradoras — o resultado chega em alguns minutos, sem
@@ -252,7 +359,7 @@ export function StepCalculo({
         </div>
       )}
 
-      {resultados.length === 0 && !calculando && (
+      {!transmissaoEmAndamento && resultados.length === 0 && !calculando && (
         <div style={{ padding: "12px 0", marginBottom: 8 }}>
           <button className="btn btn-yellow" disabled={!podeCalcular} onClick={doSimularCalculo}>
             <svg width="14" height="14">
@@ -263,7 +370,7 @@ export function StepCalculo({
         </div>
       )}
 
-      {resultados.length > 0 && (
+      {!transmissaoEmAndamento && resultados.length > 0 && (
         <div className="calc-grid">
           {ordenarResultados(resultados).map((r) => {
             const basicas = Object.entries(r.coberturasBasicas ?? {});

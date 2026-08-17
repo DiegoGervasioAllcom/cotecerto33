@@ -476,6 +476,13 @@ type TransmitirPropostaPayload = {
   produtoId?: string;
   /** Texto do produto — serve de conferência contra o `produtoId`. */
   produto?: string;
+  /**
+   * Prêmio numérico da opção escolhida (à vista ou parcelado — ver
+   * `premioNumerico` em `quiver-resultado.ts`). Calculado no front porque só
+   * ele tem acesso ao card/opção selecionados; usado apenas para registrar o
+   * histórico em `cotacao_transmissoes` (T.9), não é enviado ao robô.
+   */
+  premio?: number;
 };
 
 /**
@@ -577,6 +584,32 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       dddCelular: celular.length >= 2 ? celular.slice(0, 2) : undefined,
     };
 
+    // T.9: registra a tentativa ANTES de chamar o robô — é essa linha que o
+    // front vai fazer polling (por `tentativaId`) até o webhook (Onda 2)
+    // atualizar `status` para 'transmitida'/'falha'.
+    const { data: tentativa, error: tentativaErr } = await admin
+      .from("cotacao_transmissoes")
+      .insert({
+        cotacao_id: data.cotacaoId,
+        seguradora: data.seguradora,
+        produto_id: data.produtoId ?? null,
+        produto: data.produto ?? null,
+        forma_pagamento: data.formaPagamento,
+        parcelas: data.parcelas ?? null,
+        premio: data.premio ?? null,
+        status: "enviada",
+      })
+      .select("id")
+      .single();
+    if (tentativaErr) throw new Error(tentativaErr.message);
+    const tentativaId = tentativa.id as string;
+
+    // Se o fetch abaixo falhar ou o robô recusar de cara (não-201), a
+    // tentativa fica com status='enviada' pra sempre — decisão deliberada
+    // (v1): o vendedor já recebe o erro na hora via exception/throw, então
+    // não há necessidade prática de reconciliar essa linha órfã agora. Uma
+    // limpeza/expiração de tentativas velhas pode ser feita depois se
+    // incomodar em telas de histórico.
     let res: Response;
     try {
       res = await fetch(`${apiUrl}/transmissao`, {
@@ -616,5 +649,5 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     // O resultado real (transmitido: true/false, motivo, mensagem) chega
     // depois, de forma assíncrona, no webhook — este 201 significa apenas
     // que o robô aceitou a solicitação e começou a processar.
-    return { ok: true, numeroCotacao };
+    return { ok: true, numeroCotacao, tentativaId };
   });
