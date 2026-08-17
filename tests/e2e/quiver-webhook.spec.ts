@@ -65,14 +65,38 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
             formaPagamento: "Boleto",
             premiosPorFormaPagamento: [
               {
-                formaPagamento: "PIX",
+                formaPagamento: "Cartão de crédito",
                 opcoes: [
                   {
-                    tipo: "Compreensiva PIX",
-                    franquia: "Reduzida PIX · R$ 2.300,00",
+                    tipo: "Compreensiva cartão",
+                    franquia: "Reduzida cartão · R$ 2.450,00",
+                    avista: "R$ 2.345,67",
+                    parcelas: "10x de R$ 251,90",
+                    desconto: "5% no cartão",
+                  },
+                  {
+                    tipo: "Roubo e furto cartão",
+                    franquia: "Sem franquia",
+                    avista: "R$ 1.234,50",
+                    parcelas: "6x de R$ 220,10",
+                  },
+                  {
+                    tipo: "À vista no cartão",
+                    franquia: "Normal · R$ 2.200,00",
+                    avista: "R$ 2.111,11",
+                    parcelas: "",
+                  },
+                ],
+              },
+              {
+                formaPagamento: "Débito em conta",
+                opcoes: [
+                  {
+                    tipo: "Compreensiva débito",
+                    franquia: "Reduzida débito · R$ 2.300,00",
                     avista: "R$ 2.300,00",
-                    parcelas: "1x",
-                    desconto: "7% no PIX",
+                    parcelas: "1x de R$ 2.300,00",
+                    desconto: "7% no débito",
                   },
                 ],
               },
@@ -163,13 +187,10 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
       "Auto Completo · Plano Premium",
       "Auto Essencial · Plano Econômico",
       "Auto Flex · Plano Flexível",
-      "Reduzida · R$ 2.450,00",
-      "Sem franquia",
+      "Reduzida cartão · R$ 2.450,00",
       "R$ 2.345,67",
       "R$ 1.987,65",
-      "R$ 1.234,50",
       "10x de R$ 251,90",
-      "6x de R$ 220,10",
       "100% FIPE",
       "90% FIPE",
       "110% FIPE",
@@ -184,18 +205,85 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     // poder trocar para Débito/Boleto antes de gerar a proposta, e o valor
     // escolhido é o que o robô usa na transmissão. `<option>` não conta como
     // "visível" para o Playwright, então asserta-se o valor e as opções.
-    const selectPagamento = page
-      .getByLabel("Forma de pagamento")
-      .filter({ hasText: "Débito em conta" });
-    await expect(selectPagamento).toHaveValue("Cartão de crédito");
+    const cardCompleto = page.locator(".calc-card").filter({ hasText: "Auto Completo" });
+    const cardEconomico = page.locator(".calc-card").filter({ hasText: "Auto Essencial" });
+    const selectPagamento = cardCompleto.getByLabel("Forma de pagamento");
+    await expect(selectPagamento).toHaveValue("forma-0");
     await expect(selectPagamento.locator("option")).toHaveText([
       "Cartão de crédito",
       "Débito em conta",
     ]);
 
-    // Parcelas: grade fixa do modal do portal (À vista a 12x), usada pelo robô
-    // para clicar na célula certa.
-    await expect(page.getByLabel("Parcelas").first()).toHaveValue("À vista");
+    const selectParcelas = cardCompleto.getByLabel("Parcelas");
+    await expect(selectParcelas).toHaveValue("forma-0-opcao-0");
+    await expect(selectParcelas.locator("option")).toHaveText([
+      "Compreensiva cartão · 10x de R$ 251,90",
+      "Roubo e furto cartão · 6x de R$ 220,10",
+      "À vista no cartão",
+    ]);
+    const opcoesParcelasReais = await selectParcelas.locator("option").allTextContents();
+    expect(opcoesParcelasReais).not.toContain("À vista");
+    const parcelasReais = opcoesParcelasReais.join(" · ");
+    expect(parcelasReais).not.toContain("12x");
+
+    // A troca afeta somente o card escolhido e passa a exibir exatamente a
+    // opção vinculada à nova forma, sem recalcular ou fabricar parcelas.
+    await selectPagamento.selectOption("forma-1");
+    await expect(selectParcelas).toHaveValue("forma-1-opcao-0");
+    await expect(cardCompleto.getByText("1x de R$ 2.300,00", { exact: true })).toBeVisible();
+    await expect(
+      cardCompleto.getByText("Reduzida débito · R$ 2.300,00", { exact: true }),
+    ).toBeVisible();
+    await expect(cardEconomico.getByLabel("Forma de pagamento")).toHaveValue("forma-legada-0");
+    await expect(cardEconomico.getByLabel("Parcelas")).toHaveValue("forma-legada-0-opcao-0");
+
+    let requisicaoTransmissao = "";
+    await page.route("**/*", async (route) => {
+      const corpo = route.request().postData() ?? "";
+      if (
+        route.request().method() === "POST" &&
+        corpo.includes(fixture.cotacaoId) &&
+        corpo.includes("formaPagamento")
+      ) {
+        requisicaoTransmissao = corpo;
+        await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+        return;
+      }
+      await route.continue();
+    });
+    await cardCompleto.getByRole("button", { name: "Gerar proposta (Seguradora Alfa)" }).click();
+    await expect.poll(() => requisicaoTransmissao).not.toBe("");
+    expect(requisicaoTransmissao).toContain("Débito em conta");
+    expect(requisicaoTransmissao).toContain("1x de R$ 2.300,00");
+    expect(requisicaoTransmissao).not.toContain("valorParcela");
+    expect(requisicaoTransmissao).not.toContain('"calculo"');
+
+    // Trocar a condição dentro da mesma forma atualiza o mesmo card. A opção
+    // real à vista tem parcelas vazio e deve continuar selecionável/transmissível.
+    await selectPagamento.selectOption("forma-0");
+    await selectParcelas.selectOption("forma-0-opcao-1");
+    await expect(cardCompleto.getByText("R$ 1.234,50", { exact: true })).toBeVisible();
+    await expect(cardCompleto.getByText("6x de R$ 220,10", { exact: true })).toBeVisible();
+    await selectParcelas.selectOption("forma-0-opcao-2");
+    await expect(cardCompleto.getByText("R$ 2.111,11", { exact: true })).toBeVisible();
+    await expect(cardCompleto.getByText("Normal · R$ 2.200,00", { exact: true })).toBeVisible();
+    await expect(cardCompleto.getByText("À vista", { exact: true })).toHaveCount(0);
+    const botaoTransmitir = cardCompleto.getByRole("button", {
+      name: "Gerar proposta (Seguradora Alfa)",
+    });
+    await expect(botaoTransmitir).toBeEnabled();
+    requisicaoTransmissao = "";
+    await botaoTransmitir.click();
+    await expect.poll(() => requisicaoTransmissao).not.toBe("");
+    const corpoSerializado = JSON.parse(requisicaoTransmissao) as {
+      t: { p: { v: Array<{ p: { k: string[]; v: Array<{ t: number; s?: string }> } }> } };
+    };
+    const objetoData = corpoSerializado.t.p.v[0].p;
+    const indiceParcelas = objetoData.k.indexOf("parcelas");
+    expect(indiceParcelas).toBeGreaterThanOrEqual(0);
+    expect(objetoData.v[indiceParcelas]).toEqual({ t: 1, s: "" });
+    expect(requisicaoTransmissao).not.toContain("À vista");
+    await page.unroute("**/*");
 
     await page.getByRole("link", { name: "Comparativo lado a lado" }).click();
     await expect(page).toHaveURL(new RegExp(`/venda/cotacoes/${fixture.cotacaoId}$`));
@@ -304,7 +392,7 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
       "Auto Completo · Plano Premium",
       "Auto Essencial · Plano Econômico",
       "Auto Flex · Plano Flexível",
-      "Reduzida · R$ 2.450,00",
+      "Reduzida cartão · R$ 2.450,00",
       "Sem franquia",
       "Normal · R$ 3.100,00",
       "Majorada · R$ 4.000,00",
@@ -323,13 +411,13 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
       "Básico",
       "15 dias",
       "7 dias",
-      "7% no PIX",
+      "7% no débito",
     ]) {
       await expect(page.getByText(valor).first()).toBeVisible();
     }
-    await expect(page.getByText(/Cartão de crédito.*Débito em conta.*Boleto.*PIX/)).toBeVisible();
-    await expect(page.getByText("Compreensiva PIX", { exact: true })).toBeVisible();
-    await expect(page.getByText(/Reduzida PIX · R\$ 2\.300,00/)).toBeVisible();
+    await expect(page.getByText(/Cartão de crédito.*Débito em conta.*Boleto/)).toBeVisible();
+    await expect(page.getByText("Compreensiva débito", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Reduzida débito · R\$ 2\.300,00/)).toBeVisible();
 
     // Os dois produtos Alfa têm pareamentos financeiros distintos e inequívocos,
     // mas desconto é uma ação da seguradora inteira: ambos permanecem bloqueados.
@@ -345,14 +433,14 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     const popup = await popupPromise;
     await expect(popup.locator("body")).toContainText("Auto Completo · Plano Premium");
     await expect(popup.locator("body")).toContainText("Auto Essencial · Plano Econômico");
-    await expect(popup.locator("body")).toContainText("Reduzida · R$ 2.450,00");
+    await expect(popup.locator("body")).toContainText("Reduzida cartão · R$ 2.450,00");
     await expect(popup.locator("body")).toContainText("10x de R$ 251,90");
-    await expect(popup.locator("body")).toContainText("5% no débito");
-    await expect(popup.locator("body")).toContainText("Compreensiva PIX");
+    await expect(popup.locator("body")).toContainText("5% no cartão");
+    await expect(popup.locator("body")).toContainText("Compreensiva débito");
     await expect(popup.locator("body")).toContainText("Auto Protegido · Plano Gama");
     await expect(popup.locator("body")).toContainText("Auto Total · Plano Ômega");
-    await expect(popup.locator("body")).toContainText("Reduzida PIX · R$ 2.300,00");
-    await expect(popup.locator("body")).toContainText("7% no PIX");
+    await expect(popup.locator("body")).toContainText("Reduzida débito · R$ 2.300,00");
+    await expect(popup.locator("body")).toContainText("7% no débito");
     await expect(popup.locator("body")).toContainText("R$ 150.000,00");
     await expect(popup.locator("body")).toContainText("Prêmio registradoR$ 1.987,65R$ 2.345,67");
     await expect(popup.locator("body")).not.toContainText("Vínculo indisponível");
@@ -388,6 +476,42 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await expect(page.getByText("Portal indisponível para o produto solicitado.")).toBeVisible({
       timeout: 10_000,
     });
+  });
+
+  test("NEGATIVO: retorno legado ambíguo não libera combinação inventada", async ({ page }) => {
+    fixture = await criarCotacaoQuiverFixture();
+    const res = await page.request.post("/api/webhooks/quiver", {
+      headers: QUIVER_WEBHOOK_HEADERS,
+      data: {
+        cotacaoId: fixture.cotacaoId,
+        temPremios: true,
+        cards: [
+          {
+            seguradora: "Seguradora Ambígua",
+            formaPagamento: "Boleto",
+            formasPagamento: { selecionada: "Cartão", opcoes: ["Cartão", "PIX"] },
+            opcoes: [
+              {
+                tipo: "Compreensiva",
+                avista: "R$ 2.300,00",
+                parcelas: "10x de R$ 250,00",
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+
+    await loginAs(page, fixture.email, fixture.senha);
+    await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
+    const card = page.locator(".calc-card").filter({ hasText: "Seguradora Ambígua" });
+    await expect(card.getByLabel("Forma de pagamento")).toBeDisabled();
+    await expect(card.getByLabel("Forma de pagamento")).toHaveText("Indisponível");
+    await expect(card.getByLabel("Parcelas")).toBeDisabled();
+    await expect(
+      card.getByRole("button", { name: "Gerar proposta (Seguradora Ambígua)" }),
+    ).toBeDisabled();
   });
 
   test("placa não encontrada: webhook sem prêmios → Passo 6 mostra a mensagem específica", async ({

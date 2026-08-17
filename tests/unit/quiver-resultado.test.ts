@@ -126,10 +126,12 @@ describe("resultado detalhado da Quiver", () => {
       "PIX",
     ]);
     expect(tituloResultado(resultados[0])).toBe("Auto Completo · Plano Premium");
-    expect(gruposOpcoesResultado(resultados[0])[1]).toEqual({
+    expect(gruposOpcoesResultado(resultados[0])[0]).toEqual({
+      id: "forma-0",
       formaPagamento: "PIX",
       opcoes: [
         {
+          id: "forma-0-opcao-0",
           tipo: "Compreensiva PIX",
           franquia: "Reduzida PIX · R$ 2.300,00",
           avista: "R$ 2.300,00",
@@ -198,6 +200,133 @@ describe("resultado detalhado da Quiver", () => {
     expect(resultados.map(({ index }) => index)).toEqual([7, 7]);
     expect(resultados.map(({ cardId }) => cardId)).toEqual(["quiver-card-0", "quiver-card-1"]);
     expect(new Set(resultados.map(({ cardId }) => cardId)).size).toBe(2);
+  });
+
+  it("mantém somente combinações reais de forma, parcelas e valores sem inventar cálculo", () => {
+    const [resultado] = parseQuiverResultado(payloadCompletoAnonimizado);
+
+    expect(gruposOpcoesResultado(resultado)).toEqual([
+      {
+        id: "forma-0",
+        formaPagamento: "PIX",
+        opcoes: [
+          {
+            id: "forma-0-opcao-0",
+            tipo: "Compreensiva PIX",
+            franquia: "Reduzida PIX · R$ 2.300,00",
+            avista: "R$ 2.300,00",
+            parcelas: "1x",
+            desconto: "7% no PIX",
+          },
+        ],
+      },
+    ]);
+    expect(JSON.stringify(gruposOpcoesResultado(resultado))).not.toContain("valorParcela");
+    expect(JSON.stringify(gruposOpcoesResultado(resultado))).not.toContain("calculo");
+    expect(JSON.stringify(gruposOpcoesResultado(resultado))).not.toContain("12x");
+  });
+
+  it("preserva opção real à vista com parcelas vazio sem fabricar rótulo", () => {
+    const [resultado] = parseQuiverResultado({
+      cards: [
+        {
+          seguradora: "Seguradora Alfa",
+          premiosPorFormaPagamento: [
+            {
+              formaPagamento: "Cartão de crédito",
+              opcoes: [
+                {
+                  tipo: "À vista no cartão",
+                  avista: "R$ 2.111,11",
+                  parcelas: "",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(gruposOpcoesResultado(resultado)[0].opcoes[0]).toEqual({
+      id: "forma-0-opcao-0",
+      tipo: "À vista no cartão",
+      avista: "R$ 2.111,11",
+      parcelas: "",
+    });
+    expect(JSON.stringify(gruposOpcoesResultado(resultado))).not.toContain('"parcelas":"À vista"');
+  });
+
+  it("preserva formas e opções duplicadas por índice usando identidades posicionais", () => {
+    const [resultado] = parseQuiverResultado({
+      cards: [
+        {
+          index: 7,
+          seguradora: "Seguradora Alfa",
+          premiosPorFormaPagamento: [
+            {
+              formaPagamento: "Cartão",
+              opcoes: [
+                { tipo: "Plano", parcelas: "6x de R$ 210,00" },
+                { tipo: "Plano", parcelas: "6x de R$ 210,00" },
+              ],
+            },
+            {
+              formaPagamento: "Cartão",
+              opcoes: [{ tipo: "Plano", parcelas: "6x de R$ 210,00" }],
+            },
+          ],
+        },
+      ],
+    });
+    const grupos = gruposOpcoesResultado(resultado);
+
+    expect(grupos.map(({ id }) => id)).toEqual(["forma-0", "forma-1"]);
+    expect(grupos.flatMap(({ opcoes }) => opcoes.map(({ id }) => id))).toEqual([
+      "forma-0-opcao-0",
+      "forma-0-opcao-1",
+      "forma-1-opcao-0",
+    ]);
+  });
+
+  it("aceita fallback legado apenas quando existe uma única forma inequívoca", () => {
+    const [resultado] = parseQuiverResultado({
+      cards: [
+        {
+          seguradora: "Seguradora Legada",
+          formaPagamento: "Boleto",
+          opcoes: [{ tipo: "Compreensiva", parcelas: "7x de R$ 199,90" }],
+        },
+      ],
+    });
+
+    expect(gruposOpcoesResultado(resultado)).toEqual([
+      {
+        id: "forma-legada-0",
+        formaPagamento: "Boleto",
+        opcoes: [
+          {
+            id: "forma-legada-0-opcao-0",
+            tipo: "Compreensiva",
+            parcelas: "7x de R$ 199,90",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("NEGATIVO: bloqueia fallback legado quando várias formas disputam as mesmas opções", () => {
+    const [resultado] = parseQuiverResultado({
+      cards: [
+        {
+          seguradora: "Seguradora Ambígua",
+          formaPagamento: "Boleto",
+          formasPagamento: { selecionada: "Cartão", opcoes: ["Cartão", "PIX"] },
+          opcoes: [{ tipo: "Compreensiva", parcelas: "10x de R$ 250,00" }],
+        },
+      ],
+    });
+
+    expect(gruposOpcoesResultado(resultado)).toEqual([]);
   });
 
   it("faz pareamento global 1:1 sem reutilizar uma linha financeira entre vários cards", () => {
