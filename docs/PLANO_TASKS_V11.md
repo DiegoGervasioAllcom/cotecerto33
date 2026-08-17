@@ -158,24 +158,35 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 
 | Task    | Tag   | Descrição                                                                                                                | Depende de       |
 | ------- | ----- | ------------------------------------------------------------------------------------------------------------------------ | ---------------- |
-| V11.3.1 | front | Aba **Cadastros Matriz** unificada: colaboradores + Vendedores Matriz, filtros de cargo/ano, busca, Configurar/Excluir   | V11.0.3          |
-| V11.3.2 | front | Aba **Cadastros Rede** nova: Masters, franquias com modelo visível/filtrável, vendedores; travas de exclusão             | V11.0.8          |
-| V11.3.3 | front | "Cadastro manual · exceção" ao lado de cada Convidar: selo amarelo, vai direto à classificação, entra no log             | V11.0.6, V11.1.2 |
-| V11.3.4 | front | Master **convida e acompanha** ("Meus cadastrados" com status, lembrete à Matriz) — deixa de cadastrar direto            | V11.1.2          |
-| V11.3.5 | front | Master **solicita** desligamento (vendedor e franquia) com motivo; Matriz aprova/nega, com trava se houver time          | V11.3.4          |
-| V11.3.6 | banco | Motivo **obrigatório** em todo desligamento (hoje `desligado_motivo` é opcional) + "Detalhes"                            | —                |
-| V11.3.7 | front | Excluído vai para Desligamentos; separar **situação do cadastro** (ativo/suspenso/desligado) do **sinal de performance** | V11.4.1          |
+| V11.3.1 | front | ✅ Aba **Cadastros Matriz** unificada: colaboradores + Vendedores Matriz, filtros de cargo/ano, busca, Configurar/Excluir   | V11.0.3          |
+| V11.3.2 | front | ✅ Aba **Cadastros Rede** nova: Masters, franquias com modelo visível/filtrável, vendedores; travas de exclusão             | V11.0.8          |
+| V11.3.3 | front | ✅ "Cadastro manual · exceção" ao lado de cada Convidar: selo amarelo, vai direto à classificação, entra no log             | V11.0.6, V11.1.2 |
+| V11.3.4 | front | ✅ Master **convida e acompanha** (acompanhamento via fila da Matriz e "Minhas solicitações", sem cadastro direto)          | V11.1.2          |
+| V11.3.5 | front | ✅ Master **solicita** desligamento (vendedor e franquia) com motivo; Matriz aprova/nega, com trava se houver time          | V11.3.4          |
+| V11.3.6 | banco | ✅ Motivo **obrigatório** em todo desligamento (`check` em `20260802040000_v11_c10_motivo_obrigatorio_desligamento.sql`) + "Detalhes" | —                |
+| V11.3.7 | front | ✅ Excluído vai para Desligamentos; **situação do cadastro** (`profiles.status`) separada do **sinal de performance** | V11.4.1          |
+
+> **Frente 3 concluída.** As 7 tasks têm implementação confirmada no código atual
+> (`cadastros-matriz-tab.tsx`, `cadastros-rede-tab.tsx`, `cadastro-manual-modal.tsx`,
+> `solicitar-desligamento-modal.tsx`, `desligamento-solicitacoes-tab.tsx`, migrations
+> `20260802030000`/`20260802040000`). Auditoria de código de 17/08/2026.
 
 ## Frente 4 · Régua de performance
 
 | Task    | Tag    | Descrição                                                                                                                  | Depende de       |
 | ------- | ------ | -------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| V11.4.1 | banco  | Tabelas da régua: **duas réguas independentes** (interno e rede) + a da franquia, com histórico de alteração               | V11.0.6          |
-| V11.4.2 | front  | Personalização geral › **Performance**: configurar as réguas, salvando com senha de diretor                                | V11.4.1, V11.0.5 |
-| V11.4.3 | banco  | **Job periódico** (item 5) que recalcula OK/Atenção/Travado por bloco — sem botão manual                                   | V11.4.1          |
-| V11.4.4 | banco  | Travado + pausa ativa sai da distribuição automática; reativação exige registro de quem revisou                            | V11.4.3          |
-| V11.4.5 | front  | Selo nas listas; **clicar no selo** abre resumo com motivo em números e ações do supervisor (notificar / revisar-reativar) | V11.4.3          |
-| V11.4.6 | testes | Travado não recebe lead do distribuidor; reativação sem registro é rejeitada                                               | V11.4.4          |
+| V11.4.1 | banco  | ✅ Tabelas da régua: **duas réguas independentes** (interno e rede) + a da franquia, com histórico de alteração               | V11.0.6          |
+| V11.4.2 | front  | ✅ Personalização geral › **Performance**: configurar as réguas, salvando com senha de diretor                                | V11.4.1, V11.0.5 |
+| V11.4.3 | banco  | ✅ **Job periódico** (pg_cron, `recalcular_regua_performance`) que recalcula OK/Atenção/Travado por bloco — sem botão manual  | V11.4.1          |
+| V11.4.4 | banco  | ✅ Travado + pausa ativa sai da distribuição automática; reativação exige registro de quem revisou                            | V11.4.3          |
+| V11.4.5 | front  | ✅ Selo nas listas; **clicar no selo** abre resumo com motivo em números e ações do supervisor (notificar / revisar-reativar) | V11.4.3          |
+| V11.4.6 | testes | ✅ Travado não recebe lead do distribuidor; reativação sem registro é rejeitada                                               | V11.4.4          |
+
+> **Frente 4 concluída.** Migrations `20260803020000` a `20260803070000` (schema,
+> salvar régua, job de recálculo, trava de distribuição, revisar/reativar), painel
+> `performance-panel.tsx`/`full-performance-panel.tsx`, selo em `performance-status.ts`
+> e `performance-resumo-modal.tsx`, testes em `regua-performance-distribuicao.test.ts`
+> e `regua-performance-revisar.test.ts`. Auditoria de código de 17/08/2026.
 
 ## Frente 5 · Franquia Full como matrizinha
 
@@ -212,7 +223,7 @@ Env novas: chave da API do provider e credenciais SMTP do GoTrue — server-side
 | V11.5.4 | front | ~~Acessos da Full com 5 abas espelhando a Matriz~~ — entregue como 2 seções novas (Personalização geral/Performance) dentro de `/operacao/xacessos` (V11.5b.4)                                                         | V11.2.5, V11.3.1 |
 | V11.5.5 | front | ~~Modelo CLT + complementos; cadastro direto passando pela configuração (produtos/canais/comissão por pessoa, selo "personalizado")~~ — entregue como Modelo CLT (leitura) + Complementos do time, 4 campos (V11.5b.3) | V11.2.7          |
 | V11.5.6 | banco | ~~Régua e histórico próprios da Full~~ — entregue via RPCs novas com gate de identidade, sem senha (V11.5b.1/2)                                                                                                        | V11.4.1, V11.0.6 |
-| V11.5.7 | banco | Lead repassado que dá perda ou estoura SLA **cruza a fronteira** e volta como Devolvido/Perda da Matriz                                                                                                                | V11.5.3          |
+| V11.5.7 | banco | ✅ Lead repassado que dá perda ou estoura SLA **cruza a fronteira** e volta como Devolvido/Perda da Matriz (`20260804003840_v11_5_7_sla_fronteira_franquia.sql`)                                                       | V11.5.3          |
 
 ### Frente 5c · Correção da auditoria Full
 
@@ -239,18 +250,28 @@ da aplicação em produção não foi comprovado nesta revisão documental.
 
 | Task    | Tag    | Descrição                                                                                         | Depende de |
 | ------- | ------ | ------------------------------------------------------------------------------------------------- | ---------- |
-| V11.6.1 | front  | Senha de diretor nos **9 botões "Salvar política"** (um por aba), padronizados                    | V11.0.5    |
-| V11.6.2 | front  | Mensagem "Seu acesso não permite esse tipo de alteração" para quem não é diretor                  | V11.0.5    |
-| V11.6.3 | front  | Tela **Histórico** com DE/PARA, filtro por área persistente                                       | V11.0.6    |
-| V11.6.4 | banco  | Incluir/remover diretor exige aprovação do Diretor Geral/CEO (dupla aprovação)                    | V11.0.5    |
-| V11.6.5 | testes | Toda gravação de política gera linha com antes/depois; alteração sem diretor falha **no backend** | V11.0.7    |
+| V11.6.1 | front  | ✅ Senha de diretor nos **botões "Salvar política"**, padronizados via `SenhaDiretorModal`         | V11.0.5    |
+| V11.6.2 | front  | ✅ Mensagem "Seu acesso não permite esse tipo de alteração" para quem não é diretor                  | V11.0.5    |
+| V11.6.3 | front  | ✅ Tela **Histórico** com DE/PARA, filtro por área persistente (`historico-panel.tsx`)             | V11.0.6    |
+| V11.6.4 | banco  | ✅ Incluir/remover diretor exige aprovação do Diretor Geral/CEO (dupla aprovação, `diretor_propostas`) | V11.0.5    |
+| V11.6.5 | testes | ✅ Toda gravação de política gera linha com antes/depois; alteração sem diretor falha **no backend** | V11.0.7    |
+
+> **Frente 6 concluída.** Padrão de senha de diretor em `senha-diretor-modal.tsx`
+> (reusado em `diretores-panel.tsx`, `perso-geral.tsx`, `performance-panel.tsx`,
+> `desconto-politica-panel.tsx`, `respostas-padrao-panel.tsx`); dupla aprovação em
+> `20260803100000_v11_g6_3_dupla_aprovacao_diretor.sql`; histórico DE/PARA via
+> `fn_registrar_alteracao`, testado em `governanca-politicas.test.ts`,
+> `governanca-diretores.test.ts` e `rls-governanca-v11.test.ts`. Nota: o painel
+> `full-historico-panel.tsx` (variante Franquia Full) ainda não persiste o filtro de
+> área em `localStorage` como o painel principal — divergência pequena, não bloqueia
+> o fechamento. Auditoria de código de 17/08/2026.
 
 ## Frente 7 · Visão geral com período único
 
 | Task    | Tag   | Descrição                                                                                                                                                                                                                            | Depende de                              |
 | ------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
 | V11.7.1 | banco | ✅ **Período único** server-side (item 8): dia/semana/quinzena/mês/personalizado                                                                                                                                                     | —                                       |
-| V11.7.2 | front | Todos os widgets da Visão geral lendo a mesma janela — hoje são 4 opções mensais no cliente (`visao-geral.tsx`)                                                                                                                      | V11.7.1                                 |
+| V11.7.2 | front | 🟡 **Parcial** — período único server-side já chega via `normalizar_periodo_visao_geral` e alimenta funis/comissão/alertas, mas KPI grid, resumo do período, speed-to-lead, rankings, gráfico de evolução e funil exportado ainda agregam client-side em `visao-geral.tsx`, não via RPC | V11.7.1                                 |
 | V11.7.3 | front | ✅ **4 funis por canal** (Movida/Google/Facebook/Manual) escalando com o período                                                                                                                                                     | V11.7.1, V11.0.4                        |
 | V11.7.4 | front | ✅ **Alertas clicáveis** derivados do estado real — 8 alertas (5 originais + os 3 fechados abaixo)                                                                                                                                   | V11.7.2                                 |
 | V11.7.5 | banco | ✅ Modelar o estado real de **pendência da seguradora** após a transmissão; não inferir pendência a partir de proposta apenas `gerada`                                                                                               | regra operacional da pendência definida |
@@ -304,12 +325,12 @@ ser marcada como concluída antes de revisitar as quatro linhas acima.
 
 | Task    | Tag                | Descrição                                                                                                                                             | Depende de |
 | ------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| V11.8.1 | front              | Menu do **Coordenador Comercial**: as 17 áreas (vê tudo que a Matriz vê, mas não altera comissionamento por não ser diretor)                          | V11.0.2    |
-| V11.8.2 | front              | Menu do **Supervisor de Vendas**: time comercial, com alçada de desconto nas Aprovações                                                               | V11.0.2    |
-| V11.8.3 | front              | Menu do **Supervisor Operacional**: Leads, Distribuição, Acessos — sem alçada de desconto                                                             | V11.0.2    |
-| V11.8.4 | front              | Menu recortado pelas áreas do cargo (Backoffice, Assistente Comercial, Marketing)                                                                     | V11.0.3    |
-| V11.8.5 | banco              | Alçada de desconto passa a ser exclusiva do Supervisor de Vendas; cadeia externa ganha Master → Coordenador → Matriz                                  | V11.0.8    |
-| V11.8.6 | testes             | Escopo por perfil dos 4 perfis novos, positivo e negativo (skill `teste-rls`)                                                                         | V11.8.5    |
+| V11.8.1 | front              | ✅ Menu do **Coordenador Comercial**: as 17 áreas (vê tudo que a Matriz vê, mas não altera comissionamento por não ser diretor)                          | V11.0.2    |
+| V11.8.2 | front              | ✅ Menu do **Supervisor de Vendas**: time comercial, com alçada de desconto nas Aprovações                                                               | V11.0.2    |
+| V11.8.3 | front              | ✅ Menu do **Supervisor Operacional**: Leads, Distribuição, Acessos — sem alçada de desconto                                                             | V11.0.2    |
+| V11.8.4 | front              | ✅ Menu recortado pelas áreas do cargo (Backoffice, Assistente Comercial, Marketing)                                                                     | V11.0.3    |
+| V11.8.5 | banco              | ✅ Alçada de desconto passa a ser exclusiva do Supervisor de Vendas; cadeia externa ganha Master → Coordenador → Matriz                                  | V11.0.8    |
+| V11.8.6 | testes             | ✅ Escopo por perfil dos 4 perfis novos, positivo e negativo (skill `teste-rls`)                                                                         | V11.8.5    |
 | V11.8.7 | banco+front+testes | ✅ Ações de Distribuição autorizadas pela área `mdist` (inclusive Supervisor Operacional/Marketing ou override), com o mesmo gate no front e nas RPCs | V11.0.3    |
 
 ## Frente 9 · Fora do caminho crítico
@@ -361,14 +382,23 @@ detalhes da hierarquia estão em `docs/PLANO_HIERARQUIA_V11.md`.
    Decididas", que trava a Frente 4) e V11.5.1 (endereço das configurações da Full).
 3. **Frente 3** — começar por V11.3.1 e V11.3.2 (Cadastros Matriz e Rede), que já
    contam com a hierarquia concluída. V11.3.7 espera a régua da V11.4.1.
-4. **Frente 4** (régua) e **Frente 6** (governança), que dependem de histórico e diretor.
-5. **Frente 5** (Full) depois de V11.5.1 decidido pela Lis.
-6. **Frente 7** (visão geral) em paralelo a partir da taxonomia de canais.
-7. **Frente 8** — auditar o status das tasks contra as entregas H7–H10 da hierarquia
-   antes de abrir nova implementação, evitando refazer menus, alçada e testes já cobertos.
+4. ✅ **Frente 4** (régua) e **Frente 6** (governança) — concluídas, confirmadas por
+   auditoria de código em 17/08/2026.
+5. ✅ **Frente 5** (Full) e **Frente 5c** — concluídas (V11.5.7 confirmada em
+   17/08/2026).
+6. **Frente 7** (visão geral) — só falta V11.7.2 (mover KPI grid, resumo do período,
+   speed-to-lead, rankings, gráfico de evolução e funil exportado do cliente para RPC).
+7. ✅ **Frente 8** — auditoria de 17/08/2026 confirmou as 6 tasks implementadas
+   (menus por cargo, alçada, testes de RLS); tabela atualizada com os ✅ que faltavam.
 8. ✅ **Boas-vindas e senha (V11.2.2, V11.1.6, V11.1.7)** — fecharam junto com a
    ida para produção do e-mail (01/08/2026) e a remoção do autocadastro (03/08/2026).
-9. **Frente 9** por último, exceto os pedidos do item 2.
+9. **Frente 9** — só resta V11.9.1 (WhatsApp Business API), bloqueada aguardando o
+   usuário abrir a conta; demais tasks concluídas.
+
+**Estado geral em 17/08/2026:** das tasks restantes listadas neste plano, só V11.7.2
+(parcial) e V11.9.1 (bloqueada externamente) continuam em aberto. Frentes 3, 4, 5,
+5c, 6 e 8 fecharam por completo — confirmado lendo o código atual, não apenas pelas
+anotações históricas do documento.
 
 ## Decisões pendentes que bloqueiam tasks
 
