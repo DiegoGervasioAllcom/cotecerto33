@@ -783,6 +783,105 @@ export async function limparCotacaoQuiverFixture(f: CotacaoQuiverFixture): Promi
   await admin.from("empresas").delete().eq("id", f.empresaId);
 }
 
+/**
+ * Igual a `criarCotacaoQuiverFixture`, mas já com `cotacao_segurado.nome`
+ * preenchido — necessário para o fluxo de transmissão (`transmitirPropostaQuiver`
+ * exige número do portal OU nome do cliente para o robô localizar a cotação;
+ * ver `webhook-transmissao.spec.ts`).
+ */
+export async function criarCotacaoTransmissaoFixture(): Promise<CotacaoQuiverFixture> {
+  const fixture = await criarCotacaoQuiverFixture();
+  const { error } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: fixture.cotacaoId, nome: "Cliente Transmissão E2E" });
+  if (error) throw new Error(`criar segurado: ${error.message}`);
+  return fixture;
+}
+
+/** Remove os dados extras de `criarCotacaoTransmissaoFixture` além dos de `limparCotacaoQuiverFixture`. */
+export async function limparCotacaoTransmissaoFixture(f: CotacaoQuiverFixture): Promise<void> {
+  await admin.from("propostas").delete().eq("cotacao_id", f.cotacaoId);
+  await admin.from("cotacao_transmissoes").delete().eq("cotacao_id", f.cotacaoId);
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", f.cotacaoId);
+  await limparCotacaoQuiverFixture(f);
+}
+
+const QUIVER_TRANSMISSAO_WEBHOOK_KEY =
+  env.SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_KEY ||
+  process.env.SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_KEY ||
+  "";
+const QUIVER_TRANSMISSAO_WEBHOOK_SECRET =
+  env.SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_SECRET ||
+  process.env.SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_SECRET ||
+  "";
+if (!QUIVER_TRANSMISSAO_WEBHOOK_KEY || !QUIVER_TRANSMISSAO_WEBHOOK_SECRET) {
+  throw new Error(
+    "Defina SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_KEY/SECRET (local: .env; CI: já exportado " +
+      "pelo job `e2e`) — precisam bater com o que o dev server do Playwright está lendo.",
+  );
+}
+
+/** Headers do webhook de resultado de transmissão, prontos para `request.post("/api/webhooks/quiver-transmissao", ...)`. */
+export const QUIVER_TRANSMISSAO_WEBHOOK_HEADERS = {
+  "content-type": "application/json",
+  "x-client-key": QUIVER_TRANSMISSAO_WEBHOOK_KEY,
+  "x-client-secret": QUIVER_TRANSMISSAO_WEBHOOK_SECRET,
+};
+
+/**
+ * Busca a tentativa de transmissão mais recente de uma cotação (via client
+ * admin — não usar em asserts de RLS). Usado para esperar a linha em
+ * `cotacao_transmissoes` que `transmitirPropostaQuiver` insere ao clicar em
+ * "gerar proposta", antes de disparar o webhook de resultado.
+ */
+export async function tentativaTransmissaoMaisRecente(cotacaoId: string) {
+  const { data, error } = await admin
+    .from("cotacao_transmissoes")
+    .select("id,status")
+    .eq("cotacao_id", cotacaoId)
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`buscar tentativa de transmissão: ${error.message}`);
+  return data;
+}
+
+/**
+ * Cria diretamente (via admin) a linha em `cotacao_transmissoes` que
+ * `transmitirPropostaQuiver` (`quiver.functions.ts`) inserta antes de chamar
+ * o robô externo, com `status='enviada'`. Usado pelo E2E de webhook de
+ * transmissão: o robô real (serviço `cotacao-api`, com worker Playwright
+ * contra o portal de verdade) não pode ser exercitado num teste automatizado
+ * — em vez disso, o clique em "gerar proposta" é interceptado via
+ * `page.route` (mesma técnica de `quiver-webhook.spec.ts`) e respondido com o
+ * `tentativaId` desta linha, permitindo testar de ponta a ponta o polling da
+ * UI e o webhook de resultado real (`/api/webhooks/quiver-transmissao`).
+ */
+export async function criarTentativaTransmissaoEnviada(opts: {
+  cotacaoId: string;
+  seguradora: string;
+  produto?: string;
+  formaPagamento: string;
+  parcelas?: string;
+  premio?: number;
+}): Promise<string> {
+  const { data, error } = await admin
+    .from("cotacao_transmissoes")
+    .insert({
+      cotacao_id: opts.cotacaoId,
+      seguradora: opts.seguradora,
+      produto: opts.produto ?? null,
+      forma_pagamento: opts.formaPagamento,
+      parcelas: opts.parcelas ?? null,
+      premio: opts.premio ?? null,
+      status: "enviada",
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`criar tentativa de transmissão: ${error?.message}`);
+  return data.id as string;
+}
+
 // ===========================================================================
 // Cadastro manual · exceção (V11 · C2/C3) e desligamento (C7)
 // ===========================================================================
