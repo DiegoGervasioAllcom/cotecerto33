@@ -190,11 +190,16 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       // negociação já foi marcada como recusada, com o motivo no histórico.
       await page.getByRole("link", { name: "Ver proposta" }).click();
       await expect(page).toHaveURL(/\/venda\/propostas\?/);
-      await expect(page.locator("span.chip", { hasText: "Recusada" })).toBeVisible({
+
+      // Escopado no painel da proposta aberta (data-tour="proposta-painel"),
+      // não na tabela inteira — em CI (fullyParallel) outra proposta rodando
+      // em paralelo pode ter o mesmo chip "Recusada" visível na listagem.
+      const painel = page.locator('[data-tour="proposta-painel"]');
+      await expect(painel.locator("span.chip", { hasText: "Recusada" })).toBeVisible({
         timeout: 10_000,
       });
       await expect(
-        page.getByText(/Recusada pelo portal.*Mensagem de teste do portal/),
+        painel.getByText(/Recusada pelo portal.*Mensagem de teste do portal/),
       ).toBeVisible();
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
