@@ -76,12 +76,29 @@ export function parseQuiverResultado(payload: unknown): ResultadoCalculo[] {
 }
 
 export function premioNumerico(opcao?: OpcaoPremio): number {
-  const texto = opcao?.avista;
-  if (!texto) return Infinity;
-  const match = texto.match(/(?:R\$\s*)?([\d.]+(?:,\d+)?)/);
-  if (!match) return Infinity;
-  const numero = Number(match[1].replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(numero) ? numero : Infinity;
+  const avista = opcao?.avista;
+  if (avista) {
+    const match = avista.match(/(?:R\$\s*)?([\d.]+(?:,\d+)?)/);
+    if (match) {
+      const numero = Number(match[1].replace(/\./g, "").replace(",", "."));
+      if (Number.isFinite(numero)) return numero;
+    }
+  }
+  // Sem preço à vista (produto só parcelado, ex.: Suhai "Roubo e Furto c/
+  // Assistência", parcelas: "em 12x de R$ 463,20"): mesmo fallback usado na
+  // RPC registrar_premios_quiver (ver migração
+  // 20260817000000_quiver_fallback_premio_parcelado.sql) — exige a parte
+  // decimal (vírgula) pra não confundir a quantidade de parcelas ("12x")
+  // com o valor.
+  const parcelas = opcao?.parcelas;
+  if (parcelas) {
+    const match = parcelas.match(/([\d.]*\d,\d{1,2})/);
+    if (match) {
+      const numero = Number(match[1].replace(/\./g, "").replace(",", "."));
+      if (Number.isFinite(numero)) return numero;
+    }
+  }
+  return Infinity;
 }
 
 export function ordenarResultados(resultados: readonly ResultadoCalculo[]): ResultadoCalculo[] {
