@@ -115,6 +115,13 @@ jobs:
             --override-name auth.service_role_key=SELF_SUPABASE_SERVICE_ROLE_KEY \
             | sed -E 's/="(.*)"$/=\1/' >> "$GITHUB_ENV"
 
+          # Segredo do webhook de transmissão da Quiver — tests/db/quiver-transmissao-webhook.test.ts
+          # chama o handler diretamente (sem subir servidor HTTP), então precisa
+          # do par configurado no ambiente pra passar da checagem de auth.
+          # Sem valor real de produção nenhum, é fixo/local só pra CI.
+          echo "SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_KEY=ci-teste-key" >> "$GITHUB_ENV"
+          echo "SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_SECRET=ci-teste-secret" >> "$GITHUB_ENV"
+
       - name: DB tests
         run: bun run test:db
 
