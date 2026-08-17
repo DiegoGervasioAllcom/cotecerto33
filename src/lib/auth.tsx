@@ -247,7 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Invalidate an older bootstrap/revalidation before deferring database reads.
       const eventRequest = ++requestId.current;
       const isSilentEvent =
-        (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") &&
+        (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") &&
         contextUserIdRef.current === newSession?.user.id;
 
       // defer to avoid lock with the auth callback
