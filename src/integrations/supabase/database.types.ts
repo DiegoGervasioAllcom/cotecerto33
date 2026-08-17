@@ -1125,6 +1125,75 @@ export type Database = {
           },
         ];
       };
+      cotacao_transmissoes: {
+        Row: {
+          capturado_em: string | null;
+          cotacao_id: string;
+          criado_em: string;
+          forma_pagamento: string | null;
+          id: string;
+          mensagem: string | null;
+          motivo: string | null;
+          numero_cotacao_portal: string | null;
+          parcelas: string | null;
+          premio: number | null;
+          produto: string | null;
+          produto_id: string | null;
+          proposta_id: string | null;
+          seguradora: string | null;
+          status: string;
+        };
+        Insert: {
+          capturado_em?: string | null;
+          cotacao_id: string;
+          criado_em?: string;
+          forma_pagamento?: string | null;
+          id?: string;
+          mensagem?: string | null;
+          motivo?: string | null;
+          numero_cotacao_portal?: string | null;
+          parcelas?: string | null;
+          premio?: number | null;
+          produto?: string | null;
+          produto_id?: string | null;
+          proposta_id?: string | null;
+          seguradora?: string | null;
+          status?: string;
+        };
+        Update: {
+          capturado_em?: string | null;
+          cotacao_id?: string;
+          criado_em?: string;
+          forma_pagamento?: string | null;
+          id?: string;
+          mensagem?: string | null;
+          motivo?: string | null;
+          numero_cotacao_portal?: string | null;
+          parcelas?: string | null;
+          premio?: number | null;
+          produto?: string | null;
+          produto_id?: string | null;
+          proposta_id?: string | null;
+          seguradora?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cotacao_transmissoes_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "cotacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cotacao_transmissoes_proposta_id_fkey";
+            columns: ["proposta_id"];
+            isOneToOne: false;
+            referencedRelation: "propostas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       cotacao_veiculo: {
         Row: {
           acessorios: boolean | null;
@@ -3623,7 +3692,10 @@ export type Database = {
           seguradora: string | null;
           status: string;
           tipo_venda: string | null;
+          transmissao_mensagem: string | null;
+          transmissao_motivo: string | null;
           transmissao_obs: string | null;
+          transmissao_status: string | null;
           transmitida_em: string | null;
           valor: number | null;
           vencimento: string | null;
@@ -3654,7 +3726,10 @@ export type Database = {
           seguradora?: string | null;
           status?: string;
           tipo_venda?: string | null;
+          transmissao_mensagem?: string | null;
+          transmissao_motivo?: string | null;
           transmissao_obs?: string | null;
+          transmissao_status?: string | null;
           transmitida_em?: string | null;
           valor?: number | null;
           vencimento?: string | null;
@@ -3685,7 +3760,10 @@ export type Database = {
           seguradora?: string | null;
           status?: string;
           tipo_venda?: string | null;
+          transmissao_mensagem?: string | null;
+          transmissao_motivo?: string | null;
           transmissao_obs?: string | null;
+          transmissao_status?: string | null;
           transmitida_em?: string | null;
           valor?: number | null;
           vencimento?: string | null;
@@ -4740,6 +4818,17 @@ export type Database = {
       reenviar_link_acesso: { Args: { p_empresa_id: string }; Returns: string };
       registrar_premios_quiver: {
         Args: { p_cotacao_id: string; p_payload: Json };
+        Returns: undefined;
+      };
+      registrar_resultado_transmissao_quiver: {
+        Args: {
+          p_capturado_em?: string;
+          p_mensagem?: string;
+          p_motivo?: string;
+          p_numero_cotacao?: string;
+          p_tentativa_id: string;
+          p_transmitido: boolean;
+        };
         Returns: undefined;
       };
       registrar_tentativa_login: {
