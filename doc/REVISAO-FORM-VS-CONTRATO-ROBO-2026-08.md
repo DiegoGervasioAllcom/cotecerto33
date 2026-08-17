@@ -3,6 +3,14 @@
 Data: 16/08/2026
 Escopo: comparação entre o formulário `/venda/novo-lead` (front) e `POST /cotacao` do robô Playwright. Revisão apenas — nenhuma alteração de código foi feita nesta etapa.
 
+> **Fechamento em 17/08/2026.** Os 8 bloqueadores de alta gravidade e os itens 5-10
+> das "Tasks de acompanhamento" (ver seção no final deste documento) foram corrigidos
+> em 4 PRs (#176-#179), plano detalhado e status por task em
+> `doc/PLANO_REVISAO_FORM_ROBO.md`. Seguem como decisão de produto em aberto, não como
+> bug: `nomeHierarquico` (task 10, sem candidato claro no domínio do CoteCerto) e a
+> distinção HDI Fit/Básico (parte da task 7). O item 11 ("Achado adicional") também
+> foi corrigido junto.
+
 ## Veredito
 
 O formulário e o contrato do robô divergem em pontos que hoje geram HTTP 422 no **caminho comum**, não só em casos de borda. Uma cotação de renovação, com blindagem, com acessórios ou de PJ não passa. O que passa hoje é um caminho estreito: seguro novo, PF, sem blindagem/kit gás/acessórios, com RCF preenchido manualmente e sem tocar no segundo select de "Tipo de cobertura".

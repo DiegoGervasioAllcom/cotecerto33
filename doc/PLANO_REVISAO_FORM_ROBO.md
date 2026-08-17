@@ -5,43 +5,45 @@ Fora de escopo aqui: `doc/TASK-webhook-resultado-transmissao.md` (fica para depo
 
 Fluxo por onda: planejador → front/testes → revisor (AGENTS.md).
 
-## Onda 1 — Correções isoladas, baixo risco (em andamento)
+## Onda 1 — Correções isoladas, baixo risco ✅ mergeada (PR #176)
 
 | Task | Descrição | Arquivo |
 |---|---|---|
-| R.1 | RCF vazio: trocar `?? undefined` por checagem explícita de string vazia → `undefined` | `quiver.functions.ts:306-307` |
-| R.2 | Remover máscara `R$` residual nos 11 campos monetários que ainda vazam | `quiver.functions.ts:199,205,213,222` |
-| R.3 | Seguradoras não suportadas pelo robô: **removidas da lista de seleção** (decisão do usuário, 17/08/2026) — não oferecer a opção em vez de descartar em silêncio depois | `quiver.functions.ts:70-74,160` + tela de seleção de seguradoras |
-| R.4 | `premioNumerico()`: aplicar o mesmo fallback do PR #175 (extrair de `parcelas` quando `avista` ausente) | `quiver-resultado.ts:78-85` |
+| R.1 | ✅ RCF vazio: trocar `?? undefined` por checagem explícita de string vazia → `undefined` | `quiver.functions.ts:306-307` |
+| R.2 | ✅ Remover máscara `R$` residual nos 11 campos monetários que ainda vazam | `quiver.functions.ts:199,205,213,222` |
+| R.3 | ✅ Seguradoras não suportadas pelo robô: **removidas da lista de seleção** (decisão do usuário, 17/08/2026) — não oferecer a opção em vez de descartar em silêncio depois | `quiver.functions.ts:70-74,160` + `novo-lead.tsx` |
+| R.4 | ✅ `premioNumerico()`: aplicado o mesmo fallback do PR #175 (extrair de `parcelas` quando `avista` ausente) | `quiver-resultado.ts:78-85` |
 
-## Onda 2 — Correções de UI com impacto direto no formulário
-
-| Task | Descrição | Arquivo |
-|---|---|---|
-| R.5 | Corrigir enum `cobertura.plano` (`Personalizada` → `personalizado`) e isolar o segundo select de `StepSeguro.tsx` para não sobrescrever o mesmo estado do primeiro | `enumsCoberturas.ts:9`, `StepSeguro.tsx:110-126` |
-| R.6 | Adicionar opção vazia real nos selects de RCF para não parecer preenchido quando não está | `StepCoberturas.tsx:104-121` |
-| R.7 | Corrigir valores órfãos: zerar/remover `acessorios_detalhes` e `antifurto_detalhes` quando o toggle correspondente vira "não" | `AcessoriosFold.tsx:152`, `quiver.functions.ts:169,222` |
-
-## Onda 3 — Fluxo de Renovação (maior gap)
+## Onda 2 — Correções de UI com impacto direto no formulário ✅ mergeada (PR #177)
 
 | Task | Descrição | Arquivo |
 |---|---|---|
-| R.8 | Implementar envio do bloco "apólice anterior" (7 campos) em `montarPayloadQuiver` quando `seguro.tipo = Renovação` | `quiver.functions.ts:158-161` |
+| R.5 | ✅ Enum `cobertura.plano` corrigido (`Personalizada` → `Personalizado`); segundo select duplicado de `StepSeguro.tsx` isolado num campo próprio (`categoriaCoberturaLegado`), parou de sobrescrever `tipoCobertura` | `enumsCoberturas.ts`, `StepSeguro.tsx`, `types.ts` |
+| R.6 | ✅ Opção vazia real adicionada nos selects de RCF | `StepCoberturas.tsx` |
+| R.7 | ✅ Valores órfãos corrigidos: toggles de acessórios e antifurto agora removem do estado os campos do grupo desligado | `AcessoriosFold.tsx`, `DadosComplementaresFold.tsx` |
 
-## Onda 4 — Gate de cálculo e CPF/CNPJ
+## Onda 3 — Fluxo de Renovação (maior gap) ✅ mergeada (PR #178)
 
 | Task | Descrição | Arquivo |
 |---|---|---|
-| R.9 | Reescrever `podeCalcular` para exigir os campos reais do robô (placa, email, cep, telefone, cepPernoite, cepCirculacao, kmMes) e não os que ele ignora (marca/modelo/ano) | `useSimulacaoCalculo.ts:127-134` |
-| R.10 | CPF/CNPJ: **bloquear PJ na tela** (decisão do usuário, 17/08/2026) — validação impede avançar com CNPJ, com mensagem explicando que o robô só cota PF | `StepSegurado.tsx:30` |
+| R.8 | ✅ `montarPayloadQuiver` envia o bloco "apólice anterior" (7 campos) quando `tipo_seguro` contém "Renovação". 2 campos reaproveitam colunas legadas (`cia_atual`/`apolice_atual`); os outros 5 ganharam coluna nova em `cotacao_seguro` (migrations `20260817010000`/`20260817020000`) | `quiver.functions.ts`, `useCotacaoRascunho.ts` |
 
-## Puxados dos riscos condicionais (baratos, resolvem junto)
+## Onda 4 — Gate de cálculo e CPF/CNPJ ✅ mergeada (PR #179)
 
-| Task | Descrição |
-|---|---|
-| R.11 | `nomeHierarquico` — parar de depender de env vazia; enviar valor real do front |
-| R.12 | Separar produtos "HDI Fit" / "HDI Básico" no lugar do "HDI" genérico |
+| Task | Descrição | Arquivo |
+|---|---|---|
+| R.9 | ✅ `podeCalcular` reescrito para exigir os campos reais do robô (`placa`, `email`, `cep`, `celular`, `cepPernoite`, `cepCirculacao`, `kmMensal`), sem mais depender de marca/modelo/ano | `useSimulacaoCalculo.ts` |
+| R.10 | ✅ CPF/CNPJ: avanço da etapa Segurado **bloqueado com CNPJ** (decisão do usuário, 17/08/2026) — o robô só cota Pessoa Física | `cotacaoSegurado.schema.ts` |
+
+## Puxados dos riscos condicionais — documentados, sem implementação
+
+| Task | Descrição | Estado |
+|---|---|---|
+| R.11 | `nomeHierarquico` nunca é enviado ao robô | 🟡 Investigado, sem candidato claro no domínio do CoteCerto — comentário em `quiver.functions.ts` perto de `montarPayloadQuiver`. Decisão de produto pendente: o que esse campo deveria representar? |
+| R.12 | Separar produtos "HDI Fit" / "HDI Básico" no lugar do "HDI" genérico | 🟡 Documentado em `quiver.functions.ts` perto de `SEGURADORA_QUIVER`. Decisão de produto pendente: oferecer as duas variantes na tela? |
 
 ## Estado
 
-- **17/08/2026**: plano aprovado pelo usuário; decisões de R.3 e R.10 registradas acima. Onda 1 iniciada.
+- **17/08/2026 — frente concluída.** As 4 ondas (R.1–R.10) foram implementadas, revisadas e mergeadas na `main`: [#176](https://github.com/DiegoGervasioAllcom/cotecerto33/pull/176), [#177](https://github.com/DiegoGervasioAllcom/cotecerto33/pull/177), [#178](https://github.com/DiegoGervasioAllcom/cotecerto33/pull/178), [#179](https://github.com/DiegoGervasioAllcom/cotecerto33/pull/179). Branches das 4 ondas apagadas local e remotamente após o merge.
+- **Pendências reais** (não são bugs, são decisões de produto em aberto): R.11 e R.12. Nenhuma outra task do plano original segue aberta.
+- Fora de escopo desta frente, ainda por tratar depois: `doc/TASK-webhook-resultado-transmissao.md`.
