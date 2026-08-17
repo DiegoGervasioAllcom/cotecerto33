@@ -90,13 +90,58 @@ describe("webhook transmissão Quiver — Onda 1 (banco)", () => {
 
     const { data: prop } = await admin
       .from("propostas")
-      .select("status, transmissao_status, transmissao_motivo, transmissao_mensagem")
+      .select("status, transmissao_status, transmissao_motivo, transmissao_mensagem, negociacao_status")
       .eq("id", tent!.proposta_id!)
       .single();
     expect(prop?.status).toBe("gerada");
     expect(prop?.transmissao_status).toBe("falha");
     expect(prop?.transmissao_motivo).toBe("RECUSADA_PELO_PORTAL");
     expect(prop?.transmissao_mensagem).toBe("Portal recusou a cotação");
+    expect(prop?.negociacao_status).toBe("recusada");
+
+    const { data: versoes } = await admin
+      .from("proposta_versoes")
+      .select("versao, nota, criado_por")
+      .eq("proposta_id", tent!.proposta_id!)
+      .order("versao");
+    expect(versoes?.length).toBe(1);
+    expect(versoes?.[0].versao).toBe(1);
+    expect(versoes?.[0].nota).toContain("Portal recusou a cotação");
+    expect(versoes?.[0].criado_por).toBeNull();
+  });
+
+  it("falha com motivo diferente de RECUSADA_PELO_PORTAL não mexe em negociacao_status nem cria versão", async () => {
+    const empresa = await criarEmpresa({ nome: uniq("Empresa Transmissao Falha Campos") });
+    const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: empresa.id });
+    const cotacaoId = await criarCotacao(empresa.id, vendedor.userId);
+    const tentativaId = await criarTentativa(cotacaoId);
+
+    const { error } = await admin.rpc("registrar_resultado_transmissao_quiver", {
+      p_tentativa_id: tentativaId,
+      p_transmitido: false,
+      p_motivo: "CAMPOS_PENDENTES",
+      p_mensagem: "Preencha o campo Dia de Vencimento das Demais Parcelas",
+    });
+    if (error) throw error;
+
+    const { data: tent } = await admin
+      .from("cotacao_transmissoes")
+      .select("proposta_id")
+      .eq("id", tentativaId)
+      .single();
+
+    const { data: prop } = await admin
+      .from("propostas")
+      .select("negociacao_status")
+      .eq("id", tent!.proposta_id!)
+      .single();
+    expect(prop?.negociacao_status).toBe("aguardando");
+
+    const { data: versoes } = await admin
+      .from("proposta_versoes")
+      .select("id")
+      .eq("proposta_id", tent!.proposta_id!);
+    expect(versoes?.length).toBe(0);
   });
 
   it("idempotência: chamar a RPC duas vezes não duplica proposta nem reprocessa", async () => {
