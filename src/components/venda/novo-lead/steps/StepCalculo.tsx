@@ -17,6 +17,7 @@ type TransmissaoResultado = {
   status: "enviada" | "transmitida" | "falha";
   motivo: string | null;
   mensagem: string | null;
+  propostaId: string | null;
 };
 
 type EscolhaCard = { grupoId: string; opcaoId: string };
@@ -75,7 +76,7 @@ export function StepCalculo({
       void (async () => {
         const { data, error } = await supabase
           .from("cotacao_transmissoes")
-          .select("status,motivo,mensagem")
+          .select("status,motivo,mensagem,proposta_id")
           .eq("id", tentativaId)
           .maybeSingle();
         if (error || !data) return;
@@ -85,6 +86,7 @@ export function StepCalculo({
             status: data.status as TransmissaoResultado["status"],
             motivo: data.motivo,
             mensagem: data.mensagem,
+            propostaId: data.proposta_id,
           });
         }
       })();
@@ -342,9 +344,20 @@ export function StepCalculo({
                 {resultadoTransmissao.mensagem ||
                   "A seguradora recusou a transmissão desta proposta."}
               </div>
-              <button className="btn btn-ghost" style={{ marginTop: 12 }} onClick={tentarNovamente}>
-                Tentar novamente
-              </button>
+              <div className="row" style={{ justifyContent: "center", gap: 8, marginTop: 12 }}>
+                <button className="btn btn-ghost" onClick={tentarNovamente}>
+                  Tentar novamente
+                </button>
+                {resultadoTransmissao.propostaId && (
+                  <Link
+                    to="/venda/aceite"
+                    search={{ selected: resultadoTransmissao.propostaId }}
+                    className="btn btn-slate"
+                  >
+                    Ver proposta
+                  </Link>
+                )}
+              </div>
             </>
           )}
         </div>
