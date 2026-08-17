@@ -52,7 +52,11 @@ export type PremioVinculavel = {
   premio: number;
 };
 
-export type GrupoOpcoesPremio = { formaPagamento: string; opcoes: OpcaoPremio[] };
+export type GrupoOpcoesPremio = {
+  id: string;
+  formaPagamento: string;
+  opcoes: Array<OpcaoPremio & { id: string }>;
+};
 
 export function parseQuiverResultado(payload: unknown): ResultadoCalculo[] {
   const parsedPayload = payloadSchema.safeParse(payload);
@@ -99,18 +103,36 @@ export function formasPagamentoResultado(resultado: ResultadoCalculo): string[] 
 }
 
 export function gruposOpcoesResultado(resultado: ResultadoCalculo): GrupoOpcoesPremio[] {
-  const grupos: GrupoOpcoesPremio[] = [];
-  if (resultado.opcoes.length > 0) {
-    grupos.push({
-      formaPagamento:
-        resultado.formasPagamento?.selecionada ?? resultado.formaPagamento ?? "Opções principais",
-      opcoes: resultado.opcoes,
+  if ((resultado.premiosPorFormaPagamento?.length ?? 0) > 0) {
+    return (resultado.premiosPorFormaPagamento ?? []).flatMap((grupo, grupoIndex) => {
+      if (!grupo.formaPagamento.trim() || grupo.opcoes.length === 0) return [];
+      return [
+        {
+          id: `forma-${grupoIndex}`,
+          formaPagamento: grupo.formaPagamento,
+          opcoes: grupo.opcoes.map((opcao, opcaoIndex) => ({
+            ...opcao,
+            id: `forma-${grupoIndex}-opcao-${opcaoIndex}`,
+          })),
+        },
+      ];
     });
   }
-  for (const grupo of resultado.premiosPorFormaPagamento ?? []) {
-    grupos.push({ formaPagamento: grupo.formaPagamento, opcoes: grupo.opcoes });
-  }
-  return grupos;
+
+  // Retornos antigos não vinculavam cada prêmio a uma forma. Só é seguro
+  // transmiti-los quando todos os campos disponíveis apontam para uma única forma.
+  const formasDeclaradas = formasPagamentoResultado(resultado);
+  if (formasDeclaradas.length !== 1 || resultado.opcoes.length === 0) return [];
+  return [
+    {
+      id: "forma-legada-0",
+      formaPagamento: formasDeclaradas[0],
+      opcoes: resultado.opcoes.map((opcao, opcaoIndex) => ({
+        ...opcao,
+        id: `forma-legada-0-opcao-${opcaoIndex}`,
+      })),
+    },
+  ];
 }
 
 const normalizar = (texto: string | null | undefined) =>

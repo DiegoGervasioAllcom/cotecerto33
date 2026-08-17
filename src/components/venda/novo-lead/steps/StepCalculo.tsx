@@ -5,30 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
-import { ordenarResultados } from "@/components/venda/cotacoes/quiver-resultado";
+import {
+  gruposOpcoesResultado,
+  ordenarResultados,
+} from "@/components/venda/cotacoes/quiver-resultado";
 
-/**
- * Parcelas aceitas pelo modal "Formas de pagamento" do portal Suppercerto.
- * O retorno da cotação traz só o parcelamento em destaque de cada seguradora
- * (texto livre, ex.: "em 12x sem juros de R$ 190,32") — a grade completa de
- * À vista a 12x só existe na tela de efetivação. Se a opção escolhida não
- * existir para aquele produto, o robô devolve `PARCELA_INDISPONIVEL` com as
- * parcelas reais.
- */
-const PARCELAS_DISPONIVEIS = [
-  "À vista",
-  ...Array.from({ length: 11 }, (_, i) => `${i + 2}x`),
-] as const;
-
-type EscolhaCard = { formaPagamento: string; parcelas: string };
-
-/** Formas de pagamento que a seguradora retornou para o card. */
-function formasDePagamentoDoCard(r: ResultadoCalculo): string[] {
-  const doRetorno = r.formasPagamento?.opcoes ?? [];
-  if (doRetorno.length > 0) return doRetorno;
-  const unica = r.formasPagamento?.selecionada ?? r.formaPagamento;
-  return unica ? [unica] : [];
-}
+type EscolhaCard = { grupoId: string; opcaoId: string };
 
 type Props = {
   f: Form;
@@ -57,20 +39,17 @@ export function StepCalculo({
   const [propostaEnviada, setPropostaEnviada] = useState<string | null>(null);
 
   function escolhaDoCard(r: ResultadoCalculo): EscolhaCard {
-    const formas = formasDePagamentoDoCard(r);
+    const primeiroGrupo = gruposOpcoesResultado(r)[0];
     return (
       escolhas[r.cardId] ?? {
-        formaPagamento: r.formasPagamento?.selecionada ?? r.formaPagamento ?? formas[0] ?? "",
-        parcelas: "À vista",
+        grupoId: primeiroGrupo?.id ?? "",
+        opcaoId: primeiroGrupo?.opcoes[0]?.id ?? "",
       }
     );
   }
 
-  function setEscolha(cardId: string, patch: Partial<EscolhaCard>) {
-    setEscolhas((atual) => {
-      const base = atual[cardId] ?? { formaPagamento: "", parcelas: "À vista" };
-      return { ...atual, [cardId]: { ...base, ...patch } };
-    });
+  function setEscolha(cardId: string, escolha: EscolhaCard) {
+    setEscolhas((atual) => ({ ...atual, [cardId]: escolha }));
   }
 
   async function gerarProposta(r: ResultadoCalculo) {
@@ -79,8 +58,12 @@ export function StepCalculo({
       return;
     }
     const escolha = escolhaDoCard(r);
-    if (!escolha.formaPagamento) {
-      setErroProposta("Selecione a forma de pagamento antes de gerar a proposta.");
+    const grupo = gruposOpcoesResultado(r).find((item) => item.id === escolha.grupoId);
+    const opcao = grupo?.opcoes.find((item) => item.id === escolha.opcaoId);
+    if (!grupo || !opcao) {
+      setErroProposta(
+        "Esta cotação não possui uma combinação de pagamento válida para transmissão.",
+      );
       return;
     }
 
@@ -96,8 +79,8 @@ export function StepCalculo({
           seguradora: r.seguradora,
           produtoId: r.produtoId,
           produto: r.produto || r.nome || undefined,
-          formaPagamento: escolha.formaPagamento,
-          parcelas: escolha.parcelas,
+          formaPagamento: grupo.formaPagamento,
+          parcelas: opcao.parcelas,
         },
       });
       // O 201 significa só que o robô aceitou a solicitação: o resultado real
@@ -285,6 +268,13 @@ export function StepCalculo({
           {ordenarResultados(resultados).map((r) => {
             const basicas = Object.entries(r.coberturasBasicas ?? {});
             const adicionais = Object.entries(r.coberturasAdicionais ?? {});
+            const gruposPagamento = gruposOpcoesResultado(r);
+            const escolha = escolhaDoCard(r);
+            const grupoSelecionado = gruposPagamento.find((grupo) => grupo.id === escolha.grupoId);
+            const opcaoSelecionada = grupoSelecionado?.opcoes.find(
+              (opcao) => opcao.id === escolha.opcaoId,
+            );
+            const opcoesExibidas = opcaoSelecionada ? [opcaoSelecionada] : r.opcoes;
             return (
               <div className="calc-card" key={r.cardId}>
                 <div className="calc-head">
@@ -302,8 +292,8 @@ export function StepCalculo({
                   </span>
                 </div>
                 <div className="calc-tiers">
-                  {r.opcoes.map((o, i) => (
-                    <div className="calc-tier" key={i}>
+                  {opcoesExibidas.map((o, opcaoIndex) => (
+                    <div className="calc-tier" key={`${r.cardId}-opcao-${opcaoIndex}`}>
                       <div className="t-lbl">{o.tipo || "—"}</div>
                       <div className="t-fr">{o.franquia || "—"}</div>
                       <div className="t-vista">{o.avista || "—"}</div>
@@ -339,31 +329,39 @@ export function StepCalculo({
                   </div>
                 </div>
                 <div className="calc-foot">
-                  {/* Forma de pagamento e parcelas são o que o robô precisa
-                      para clicar na célula certa do modal do portal. As opções
-                      vêm do próprio retorno da seguradora (formasPagamento),
-                      não de uma lista fixa. */}
                   <select
                     className="select-mini"
                     aria-label="Forma de pagamento"
-                    value={escolhaDoCard(r).formaPagamento}
-                    onChange={(e) => setEscolha(r.cardId, { formaPagamento: e.target.value })}
+                    value={escolha.grupoId}
+                    disabled={gruposPagamento.length === 0}
+                    onChange={(e) => {
+                      const grupo = gruposPagamento.find((item) => item.id === e.target.value);
+                      setEscolha(r.cardId, {
+                        grupoId: e.target.value,
+                        opcaoId: grupo?.opcoes[0]?.id ?? "",
+                      });
+                    }}
                   >
-                    {formasDePagamentoDoCard(r).map((forma) => (
-                      <option key={forma} value={forma}>
-                        {forma}
+                    {gruposPagamento.length === 0 && <option value="">Indisponível</option>}
+                    {gruposPagamento.map((grupo) => (
+                      <option key={grupo.id} value={grupo.id}>
+                        {grupo.formaPagamento}
                       </option>
                     ))}
                   </select>
                   <select
                     className="select-mini"
                     aria-label="Parcelas"
-                    value={escolhaDoCard(r).parcelas}
-                    onChange={(e) => setEscolha(r.cardId, { parcelas: e.target.value })}
+                    value={escolha.opcaoId}
+                    disabled={!grupoSelecionado}
+                    onChange={(e) =>
+                      setEscolha(r.cardId, { grupoId: escolha.grupoId, opcaoId: e.target.value })
+                    }
                   >
-                    {PARCELAS_DISPONIVEIS.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
+                    {!grupoSelecionado && <option value="">Indisponível</option>}
+                    {grupoSelecionado?.opcoes.map((opcao) => (
+                      <option key={opcao.id} value={opcao.id}>
+                        {[opcao.tipo, opcao.parcelas].filter(Boolean).join(" · ") || "Opção"}
                       </option>
                     ))}
                   </select>
@@ -384,7 +382,7 @@ export function StepCalculo({
                         ? `Gerar proposta (${r.seguradora})`
                         : "Salve a cotação antes de gerar a proposta"
                     }
-                    disabled={!cotacaoId || transmitindoCardId !== null}
+                    disabled={!cotacaoId || !opcaoSelecionada || transmitindoCardId !== null}
                     onClick={() => void gerarProposta(r)}
                   >
                     <svg width="15" height="15">
