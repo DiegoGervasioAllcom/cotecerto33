@@ -90,7 +90,9 @@ describe("webhook transmissão Quiver — Onda 1 (banco)", () => {
 
     const { data: prop } = await admin
       .from("propostas")
-      .select("status, transmissao_status, transmissao_motivo, transmissao_mensagem, negociacao_status")
+      .select(
+        "status, transmissao_status, transmissao_motivo, transmissao_mensagem, negociacao_status",
+      )
       .eq("id", tent!.proposta_id!)
       .single();
     expect(prop?.status).toBe("gerada");
