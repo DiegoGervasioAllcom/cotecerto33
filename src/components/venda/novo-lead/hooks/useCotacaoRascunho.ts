@@ -76,10 +76,21 @@ export function useCotacaoRascunho(params: {
         categoria: f.categoria,
         vig_ini: f.vigIni,
         vig_fim: f.vigFim,
-        cia_atual: f.ciaAtual,
-        apolice_atual: f.apoliceAtual,
-        ci_atual: f.ciAtual,
-        classe_bonus: f.classeBonus,
+        // cia_atual/apolice_atual/ci_atual/classe_bonus são as 4 colunas legadas
+        // de "apólice anterior" (schema 2024); a tela atual (StepSeguro, bloco
+        // "Dados da apólice anterior") renomeou esses campos para o sufixo
+        // *Anterior e nunca os persistia — reaproveitamos as colunas existentes
+        // para fechar a Onda 3 / R.8. As outras 5 colunas do bloco vieram na
+        // migration 20260817010000 (ver doc/PLANO_REVISAO_FORM_ROBO.md, R.8).
+        cia_atual: f.seguradoraAnterior,
+        apolice_atual: f.apoliceAnterior,
+        ci_atual: f.ciApoliceAnterior,
+        classe_bonus: f.classeBonusAnterior,
+        sucursal_anterior: f.sucursalAnterior,
+        cobertura_anterior: f.coberturaAnterior,
+        status_apolice_anterior: f.statusApoliceAnterior,
+        inicio_vigencia_anterior: f.inicioVigenciaAnterior,
+        fim_vigencia_anterior: f.fimVigenciaAnterior,
         seguradoras_sel: f.seguradorasSel,
         tipo_calculo: f.tipoCalculo,
         tipo_cobertura: f.tipoCobertura,
@@ -285,10 +296,15 @@ export function useCotacaoRascunho(params: {
         categoria: sg.categoria ?? prev.categoria,
         vigIni: sg.vig_ini ?? "",
         vigFim: sg.vig_fim ?? "",
-        ciaAtual: sg.cia_atual ?? "",
-        apoliceAtual: sg.apolice_atual ?? "",
-        ciAtual: sg.ci_atual ?? "",
-        classeBonus: sg.classe_bonus ?? "0",
+        seguradoraAnterior: sg.cia_atual ?? prev.seguradoraAnterior,
+        apoliceAnterior: sg.apolice_atual ?? prev.apoliceAnterior,
+        ciApoliceAnterior: sg.ci_atual ?? prev.ciApoliceAnterior,
+        classeBonusAnterior: sg.classe_bonus ?? prev.classeBonusAnterior,
+        sucursalAnterior: sg.sucursal_anterior ?? prev.sucursalAnterior,
+        coberturaAnterior: sg.cobertura_anterior ?? prev.coberturaAnterior,
+        statusApoliceAnterior: sg.status_apolice_anterior ?? prev.statusApoliceAnterior,
+        inicioVigenciaAnterior: sg.inicio_vigencia_anterior ?? prev.inicioVigenciaAnterior,
+        fimVigenciaAnterior: sg.fim_vigencia_anterior ?? prev.fimVigenciaAnterior,
         seguradorasSel: Array.isArray(sg.seguradoras_sel)
           ? sg.seguradoras_sel
           : prev.seguradorasSel,

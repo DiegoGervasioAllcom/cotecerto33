@@ -158,6 +158,26 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
     seguro: {
       tipo: (sg.tipo_seguro as string) || "Seguro novo",
       seguradorasDisponiveis: seguradorasQuiver.length ? seguradorasQuiver : undefined,
+      // Bloco "Dados da apólice anterior" (StepSeguro, obrigatório quando
+      // tipoSeguro contém "Renovação" — ver R.8 do plano de revisão
+      // form-vs-robô). seguradoraAnterior/apoliceAnterior reaproveitam as
+      // colunas legadas cia_atual/apolice_atual; as outras 5 vieram na
+      // migration 20260817010000_cotacao_seguro_apolice_anterior_full.sql.
+      ...(((sg.tipo_seguro as string) || "").includes("Renovação")
+        ? {
+            seguradoraAnterior: (sg.cia_atual as string) || undefined,
+            sucursalAnterior: (sg.sucursal_anterior as string) || undefined,
+            apoliceAnterior: (sg.apolice_atual as string) || undefined,
+            coberturaAnterior: (sg.cobertura_anterior as string) || undefined,
+            statusApoliceAnterior: (sg.status_apolice_anterior as string) || undefined,
+            inicioVigenciaAnterior: sg.inicio_vigencia_anterior
+              ? toDDMMYYYY(sg.inicio_vigencia_anterior as string)
+              : undefined,
+            fimVigenciaAnterior: sg.fim_vigencia_anterior
+              ? toDDMMYYYY(sg.fim_vigencia_anterior as string)
+              : undefined,
+          }
+        : {}),
     },
     veiculo: {
       placa: normalizePlaca(v.placa as string | null | undefined),
