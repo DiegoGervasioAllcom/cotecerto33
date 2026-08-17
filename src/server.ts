@@ -3,6 +3,10 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { QUIVER_WEBHOOK_PATH, handleQuiverWebhook } from "./lib/quiver-webhook";
+import {
+  QUIVER_TRANSMISSAO_WEBHOOK_PATH,
+  handleQuiverTransmissaoWebhook,
+} from "./lib/quiver-transmissao-webhook";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -43,6 +47,9 @@ export default {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === QUIVER_WEBHOOK_PATH) {
       return handleQuiverWebhook(request);
+    }
+    if (request.method === "POST" && url.pathname === QUIVER_TRANSMISSAO_WEBHOOK_PATH) {
+      return handleQuiverTransmissaoWebhook(request);
     }
     try {
       const handler = await getServerEntry();
