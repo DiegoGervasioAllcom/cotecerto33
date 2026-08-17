@@ -194,6 +194,12 @@ jobs:
           echo "SELF_QUIVER_WEBHOOK_CLIENT_KEY=ci-teste-key" >> "$GITHUB_ENV"
           echo "SELF_QUIVER_WEBHOOK_CLIENT_SECRET=ci-teste-secret" >> "$GITHUB_ENV"
 
+          # Segredo do webhook de transmissão da Quiver — usado por
+          # tests/e2e/webhook-transmissao.spec.ts (via provision.ts) pra
+          # simular o callback de resultado da transmissão.
+          echo "SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_KEY=ci-teste-key" >> "$GITHUB_ENV"
+          echo "SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_SECRET=ci-teste-secret" >> "$GITHUB_ENV"
+
       - name: Install Playwright browsers (chromium)
         run: bunx playwright install --with-deps chromium
 
