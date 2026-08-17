@@ -199,6 +199,7 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
     },
     veiculo: {
       placa: normalizePlaca(v.placa as string | null | undefined),
+      zeroKm: simNao(v.zero_km as boolean),
       chassiRemarcado: simNao(v.chassi_remarcado as boolean),
       financiado: simNao(alienado),
       ...(alienado && v.banco ? { alienacaoFiduciaria: v.banco as string } : {}),
