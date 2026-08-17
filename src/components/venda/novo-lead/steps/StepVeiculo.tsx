@@ -131,6 +131,28 @@ export function StepVeiculo({
             </label>
           </div>
         </div>
+        {f.zeroKm && (
+          <>
+            <div className="field-group">
+              <label>Data de saída da concessionária *</label>
+              <input
+                className="input"
+                type="date"
+                value={f.dataSaidaConcessionaria}
+                onChange={(e) => up("dataSaidaConcessionaria", e.target.value)}
+              />
+            </div>
+            <div className="field-group">
+              <label>Odômetro (km) *</label>
+              <input
+                className="input"
+                inputMode="numeric"
+                value={f.odometro}
+                onChange={(e) => up("odometro", onlyDigits(e.target.value))}
+              />
+            </div>
+          </>
+        )}
         {placaVersoes.length > 1 && (
           <div className="field-group full">
             <label>Versão do veículo (consulta da placa)</label>

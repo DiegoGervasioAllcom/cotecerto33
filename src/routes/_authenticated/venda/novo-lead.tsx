@@ -143,6 +143,8 @@ function Page() {
     combustivel: "Flex",
     cor: "",
     zeroKm: false,
+    dataSaidaConcessionaria: "",
+    odometro: "",
     blindado: false,
     alienado: false,
     banco: "",
