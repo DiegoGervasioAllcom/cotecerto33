@@ -36,6 +36,21 @@ export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   component: Page,
 });
 
+// O robô Quiver (Playwright) não suporta essas 8 das 18 seguradoras
+// semeadas no banco (ver SEGURADORA_QUIVER em quiver.functions.ts) — não
+// oferecer a opção evita que o vendedor marque só não suportadas e o robô
+// acabe cotando todas por padrão.
+const SEGURADORAS_SEM_ROBO = new Set([
+  "Itaú",
+  "Ezze",
+  "Zurich",
+  "Alfa",
+  "Darwin",
+  "Pier",
+  "Indiana",
+  "Sompo",
+]);
+
 function Page() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -52,7 +67,14 @@ function Page() {
       .eq("ativo", true)
       .order("ordem")
       .then(({ data }) => {
-        if (data) setSeguradorasDb(data.map((x) => x.nome));
+        // Só oferece as seguradoras suportadas pelo robô Quiver — o banco
+        // semeia 18, mas 8 (Itaú, Ezze, Zurich, Alfa, Darwin, Pier, Indiana,
+        // Sompo) não são aceitas pelo robô e antes eram descartadas em
+        // silêncio do payload (ver mapSeguradoras em quiver.functions.ts),
+        // o que fazia o robô cotar TODAS as seguradoras quando o vendedor
+        // marcava só não suportadas.
+        if (data)
+          setSeguradorasDb(data.map((x) => x.nome).filter((n) => !SEGURADORAS_SEM_ROBO.has(n)));
       });
   }, []);
 

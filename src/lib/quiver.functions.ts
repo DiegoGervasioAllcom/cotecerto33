@@ -196,13 +196,13 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
         ? { pcdCnhEspecial: simNao(v.pcd_cnh_especial as boolean) }
         : {}),
       ...(v.pcd_cnh_especial && v.valor_adaptacao_pcd
-        ? { valorAdaptacaoPcd: v.valor_adaptacao_pcd as string }
+        ? { valorAdaptacaoPcd: semPrefixoMoeda(v.valor_adaptacao_pcd as string) }
         : {}),
       ...(v.blindagem != null ? { blindagem: simNao(v.blindagem as boolean) } : {}),
       ...(v.blindagem
         ? {
             coberturaBlindagem: v.cobertura_blindagem as string,
-            valorBlindagem: v.valor_blindagem as string,
+            valorBlindagem: semPrefixoMoeda(v.valor_blindagem as string),
             comFranquia: simNao(v.com_franquia_blindagem as boolean),
           }
         : {}),
@@ -210,7 +210,9 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
       ...(v.kit_gas
         ? {
             coberturaKitGas: simNao(v.cobertura_kit_gas as boolean),
-            ...(v.cobertura_kit_gas ? { valorKitGas: v.valor_kit_gas as string } : {}),
+            ...(v.cobertura_kit_gas
+              ? { valorKitGas: semPrefixoMoeda(v.valor_kit_gas as string) }
+              : {}),
             comFranquiaKitGas: simNao(v.com_franquia_kit_gas as boolean),
           }
         : {}),
@@ -220,7 +222,11 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
             kitacessorios: simNao(v.kit_acessorios as boolean),
             opcionais: simNao(v.opcionais as boolean),
             equipamentos: simNao(v.equipamentos as boolean),
-            ...((v.acessorios_detalhes as Record<string, string> | null) ?? {}),
+            ...Object.fromEntries(
+              Object.entries((v.acessorios_detalhes as Record<string, string> | null) ?? {}).map(
+                ([k, val]) => [k, semPrefixoMoeda(val)],
+              ),
+            ),
           }
         : {}),
     },
@@ -303,8 +309,8 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
       ...(c.franquia_segunda_opcao
         ? { franquiaSegundaOpcao: c.franquia_segunda_opcao as string }
         : {}),
-      danosMateriaisTerceiros: c.rcf_dm ?? undefined,
-      danosCorporaisTerceiros: c.rcf_dc ?? undefined,
+      danosMateriaisTerceiros: c.rcf_dm === "" ? undefined : (c.rcf_dm ?? undefined),
+      danosCorporaisTerceiros: c.rcf_dc === "" ? undefined : (c.rcf_dc ?? undefined),
       ...(c.app_morte ? { appMortePorPassageiro: semPrefixoMoeda(c.app_morte as string) } : {}),
       ...(c.app_invalidez
         ? { appInvalidezPorPassageiro: semPrefixoMoeda(c.app_invalidez as string) }
