@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Session } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import {
   isSupabaseConfigured,
   supabase,
@@ -84,6 +84,7 @@ type LoadedContext = {
 };
 
 type ContextLoadResult = LoadedContext | { ok: false; reason: "disabled" | "error" };
+type SessionApplyMode = "blocking" | "silent";
 
 async function loadContext(userId: string): Promise<ContextLoadResult> {
   if (!isSupabaseConfigured) {
@@ -129,9 +130,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [accessError, setAccessError] = useState<string | null>(null);
   const requestId = useRef(0);
+  const mountedRef = useRef(true);
+  const contextUserIdRef = useRef<string | null>(null);
   const disabledSignOutUser = useRef<string | null>(null);
 
   const clearContext = useCallback(() => {
+    contextUserIdRef.current = null;
     setSession(null);
     setProfile(null);
     setEmpresa(null);
@@ -139,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const applySession = useCallback(
-    async (nextSession: Session | null) => {
+    async (nextSession: Session | null, mode: SessionApplyMode = "blocking") => {
       const currentRequest = ++requestId.current;
 
       if (!nextSession?.user) {
@@ -150,10 +154,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       setSession(nextSession);
-      setProfile(null);
-      setEmpresa(null);
-      setRole(null);
-      setLoading(true);
+      if (mode === "blocking") {
+        contextUserIdRef.current = null;
+        setProfile(null);
+        setEmpresa(null);
+        setRole(null);
+        setLoading(true);
+      }
       setAccessError(null);
       let ctx: ContextLoadResult;
       try {
@@ -165,7 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             : "error";
         ctx = { ok: false, reason: reason ?? "error" };
       }
-      if (currentRequest !== requestId.current) return;
+      if (!mountedRef.current || currentRequest !== requestId.current) return;
 
       if (!ctx.ok) {
         if (ctx.reason === "disabled") {
@@ -198,7 +205,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(ctx.profile);
       setEmpresa(ctx.empresa);
       setRole(ctx.role);
-      setLoading(false);
+      contextUserIdRef.current = nextSession.user.id;
+      if (mode === "blocking") setLoading(false);
     },
     [clearContext],
   );
@@ -210,7 +218,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const refreshRequest = ++requestId.current;
     const { data } = await supabase.auth.getSession();
+    if (!mountedRef.current || requestId.current !== refreshRequest) return;
     await applySession(data.session);
   }, [applySession, clearContext]);
 
@@ -220,22 +230,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    mountedRef.current = true;
     let active = true;
-    const sub = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const sub = supabase.auth.onAuthStateChange((event: AuthChangeEvent, newSession) => {
       if (!active) return;
+
+      // Logout must invalidate pending context reads and clear auth state immediately.
+      if (event === "SIGNED_OUT") {
+        requestId.current += 1;
+        clearContext();
+        disabledSignOutUser.current = null;
+        setLoading(false);
+        return;
+      }
+
+      // Invalidate an older bootstrap/revalidation before deferring database reads.
+      const eventRequest = ++requestId.current;
+      const isSilentEvent =
+        (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") &&
+        contextUserIdRef.current === newSession?.user.id;
+
       // defer to avoid lock with the auth callback
       setTimeout(() => {
-        if (active) void applySession(newSession);
+        if (active && requestId.current === eventRequest) {
+          void applySession(newSession, isSilentEvent ? "silent" : "blocking");
+        }
       }, 0);
     });
 
-    refresh();
-
     return () => {
       active = false;
+      mountedRef.current = false;
+      requestId.current += 1;
       sub.data.subscription.unsubscribe();
     };
-  }, [applySession, refresh]);
+  }, [applySession, clearContext]);
 
   const signOut = async () => {
     if (!isSupabaseConfigured) return;
