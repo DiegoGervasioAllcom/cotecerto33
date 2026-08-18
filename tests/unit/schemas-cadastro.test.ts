@@ -152,6 +152,7 @@ describe("cadastroManualSchema", () => {
     tipo: "pf" as const,
     documento: "123.456.789-00",
     email: "fulano@email.com",
+    escopo: "externo" as const,
   };
   const pjValido = { ...pfValido, tipo: "pj" as const, documento: "12.345.678/0001-90" };
 
@@ -197,5 +198,18 @@ describe("cadastroManualSchema", () => {
 
   it("rejeita uf com mais de 2 caracteres", () => {
     expect(cadastroManualSchema.safeParse({ ...pfValido, uf: "SPX" }).success).toBe(false);
+  });
+
+  it("aceita escopo interno", () => {
+    expect(cadastroManualSchema.safeParse({ ...pfValido, escopo: "interno" }).success).toBe(true);
+  });
+
+  it("rejeita escopo ausente", () => {
+    const { escopo: _escopo, ...semEscopo } = pfValido;
+    expect(cadastroManualSchema.safeParse(semEscopo).success).toBe(false);
+  });
+
+  it("rejeita escopo fora de interno/externo", () => {
+    expect(cadastroManualSchema.safeParse({ ...pfValido, escopo: "matriz" }).success).toBe(false);
   });
 });

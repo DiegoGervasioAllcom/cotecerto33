@@ -1895,6 +1895,7 @@ export type Database = {
           documento: string;
           email: string | null;
           endereco: string | null;
+          escopo_manual: string | null;
           faixa_elite_pct: number | null;
           faixa_elite_valor: number | null;
           id: string;
@@ -1938,6 +1939,7 @@ export type Database = {
           documento: string;
           email?: string | null;
           endereco?: string | null;
+          escopo_manual?: string | null;
           faixa_elite_pct?: number | null;
           faixa_elite_valor?: number | null;
           id?: string;
@@ -1981,6 +1983,7 @@ export type Database = {
           documento?: string;
           email?: string | null;
           endereco?: string | null;
+          escopo_manual?: string | null;
           faixa_elite_pct?: number | null;
           faixa_elite_valor?: number | null;
           id?: string;
@@ -4285,6 +4288,7 @@ export type Database = {
           p_criado_por: string;
           p_documento: string;
           p_email?: string;
+          p_escopo?: string;
           p_nome: string;
           p_tipo: string;
           p_uf?: string;

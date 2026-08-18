@@ -30,11 +30,13 @@ export type Pendente = {
   dados_cadastro: Record<string, unknown> | null;
   convite: ConviteDoPendente | null;
   /**
-   * De qual bloco é este pendente — deriva de `convite.trilha` (F1). Sem
-   * convite, cai em `externo` (é onde a Matriz classifica o tipo na análise).
-   * `franquia` nunca aparece aqui: a RLS já filtra esses pendentes fora da
-   * visão da Matriz (F2) — só a `fn_destino_pedido` no banco sabe distinguir
-   * pelo vínculo completo (perfil + vinc_tipo), e a Matriz não precisa saber.
+   * De qual bloco é este pendente — deriva de `convite.trilha` (F1) ou, sem
+   * convite (cadastro manual · exceção), de `empresas.escopo_manual`. Sem
+   * nenhum dos dois, cai em `externo` (é onde a Matriz classifica o tipo na
+   * análise). `franquia` nunca aparece aqui: a RLS já filtra esses pendentes
+   * fora da visão da Matriz (F2) — só a `fn_destino_pedido` no banco sabe
+   * distinguir pelo vínculo completo (perfil + vinc_tipo), e a Matriz não
+   * precisa saber.
    */
   bloco: "interno" | "externo";
 };
