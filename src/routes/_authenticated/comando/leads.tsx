@@ -205,7 +205,12 @@ function Page() {
       const [{ data: lds, error }, { data: emps }, { data: profs }, { data: cnss }] =
         await Promise.all([
           leadsQuery.limit(search.alerta ? 2000 : 500),
-          supabase.from("empresas").select("id,nome").order("nome"),
+          supabase
+            .from("empresas")
+            .select("id,nome")
+            .eq("status", "aprovada")
+            .neq("tipo", "pf")
+            .order("nome"),
           supabase.from("profiles").select("id,nome,empresa_id"),
           // V11 · F11: filtro e selo de mídia paga passam a ler daqui — a tabela
           // canais é a lista canônica, não mais os valores livres de `origem`.
