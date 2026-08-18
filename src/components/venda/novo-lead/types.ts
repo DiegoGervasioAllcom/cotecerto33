@@ -13,6 +13,7 @@ export type Form = {
   telRes: string;
   email: string;
   cep: string;
+  numero: string;
   logradouro: string;
   bairro: string;
   cidade: string;

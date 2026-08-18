@@ -468,6 +468,7 @@ type Segurado = {
   nome?: string | null;
   celular?: string | null;
   cep?: string | null;
+  numero?: string | null;
 };
 
 type VeiculoTransmissao = {
@@ -540,7 +541,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       .from("cotacoes")
       .select(
         "id,quiver_resultado_raw," +
-          "segurado:cotacao_segurado(cpf_cnpj,nome,celular,cep)," +
+          "segurado:cotacao_segurado(cpf_cnpj,nome,celular,cep,numero)," +
           "veiculo:cotacao_veiculo(renavam,cor,chassi_remarcado)",
       )
       .eq("id", data.cotacaoId)
@@ -594,6 +595,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
             ? "Sim"
             : "Não",
       cepResidencial: segurado?.cep ?? undefined,
+      numeroEndereco: segurado?.numero ?? undefined,
       dddCelular: celular.length >= 2 ? celular.slice(0, 2) : undefined,
     };
 

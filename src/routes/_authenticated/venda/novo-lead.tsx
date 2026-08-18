@@ -91,6 +91,7 @@ function Page() {
     telRes: "",
     email: "",
     cep: "",
+    numero: "",
     logradouro: "",
     bairro: "",
     cidade: "",
