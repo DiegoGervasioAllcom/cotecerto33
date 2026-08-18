@@ -174,6 +174,47 @@ export function ClassificarAcessoModal({
   const [clMsCom, setClMsCom] = useState("");
   const [clMsRoy, setClMsRoy] = useState("");
 
+  // Override real de áreas da pessoa (profile_areas), se este já é um acesso
+  // aprovado sendo reclassificado — mesma lógica de cad-matriz-modal.tsx. Sem
+  // isto, <CargoAreasFields> carrega o preset do cargo em vez do que a pessoa
+  // de fato tem, e salvar a reclassificação apaga silenciosamente qualquer
+  // área concedida manualmente (ex.: "Distribuição") que não esteja no preset.
+  const [areasIniciaisInterno, setAreasIniciaisInterno] = useState<string[] | undefined>(undefined);
+  // <CargoAreasFields> só lê `initialAreas` na primeira montagem — precisa
+  // estar pronto ANTES dela montar, senão a busca assíncrona chega tarde e é
+  // ignorada (mesmo motivo pelo qual cad-matriz-modal.tsx só renderiza o
+  // formulário depois que o carregamento termina).
+  const [areasInternoCarregado, setAreasInternoCarregado] = useState(false);
+  useEffect(() => {
+    if (!isPF) return;
+    let ativo = true;
+    setAreasInternoCarregado(false);
+    setAreasIniciaisInterno(undefined);
+    (async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("empresa_id", pendente.id)
+        .maybeSingle();
+      if (!ativo) return;
+      if (!profile) {
+        setAreasInternoCarregado(true);
+        return;
+      }
+      const { data: overrideData } = await supabase
+        .from("profile_areas")
+        .select("area_chave")
+        .eq("profile_id", profile.id);
+      if (!ativo) return;
+      const override = (overrideData ?? []) as { area_chave: string }[];
+      if (override.length) setAreasIniciaisInterno(override.map((r) => r.area_chave));
+      setAreasInternoCarregado(true);
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, [pendente.id, isPF]);
+
   const franquiasFull = useMemo(
     () => franquiasAprovadas.filter((f) => f.modalidade === "full"),
     [franquiasAprovadas],
@@ -927,7 +968,13 @@ export function ClassificarAcessoModal({
                     </>
                   )}
 
-                  {tipoPF === "interno" && (
+                  {tipoPF === "interno" && !areasInternoCarregado && (
+                    <div className="muted small" style={{ padding: "12px 0" }}>
+                      Carregando áreas…
+                    </div>
+                  )}
+
+                  {tipoPF === "interno" && areasInternoCarregado && (
                     <>
                       <CargoAreasFields
                         cargos={cargosCatalogo}
@@ -936,6 +983,7 @@ export function ClassificarAcessoModal({
                         areas={areasInterno}
                         setAreas={setAreasInterno}
                         locked={locked}
+                        initialAreas={areasIniciaisInterno}
                       />
                       {(CARGOS_SUPERVISAO as readonly string[]).includes(cargoInterno) && (
                         <>
