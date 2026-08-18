@@ -991,6 +991,7 @@ export type Database = {
           nascimento: string | null;
           nome: string | null;
           nome_social: string | null;
+          numero: string | null;
           pessoa: string | null;
           sexo: string | null;
           sms_optin: boolean | null;
@@ -1010,6 +1011,7 @@ export type Database = {
           nascimento?: string | null;
           nome?: string | null;
           nome_social?: string | null;
+          numero?: string | null;
           pessoa?: string | null;
           sexo?: string | null;
           sms_optin?: boolean | null;
@@ -1029,6 +1031,7 @@ export type Database = {
           nascimento?: string | null;
           nome?: string | null;
           nome_social?: string | null;
+          numero?: string | null;
           pessoa?: string | null;
           sexo?: string | null;
           sms_optin?: boolean | null;
@@ -4882,12 +4885,10 @@ export type Database = {
           saldo: number;
         }[];
       };
-      salvar_cotacao_rascunho:
-        | { Args: { p_cotacao_id: string; p_payload: Json }; Returns: string }
-        | {
-            Args: { p_cotacao_id: string; p_origem?: string; p_payload: Json };
-            Returns: string;
-          };
+      salvar_cotacao_rascunho: {
+        Args: { p_cotacao_id: string; p_origem?: string; p_payload: Json };
+        Returns: string;
+      };
       solicitar_desconto: {
         Args: {
           p_cotacao_id: string;

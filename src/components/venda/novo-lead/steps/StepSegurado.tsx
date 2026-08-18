@@ -198,6 +198,21 @@ export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
           )}
         </div>
         <div className="field-group">
+          <label>Número</label>
+          <input
+            className="input"
+            value={f.numero}
+            maxLength={20}
+            onChange={(e) => up("numero", e.target.value)}
+            placeholder="Nº"
+          />
+          {erros.numero && (
+            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+              {erros.numero}
+            </span>
+          )}
+        </div>
+        <div className="field-group">
           <label>Cidade / UF</label>
           <input
             className="input"
