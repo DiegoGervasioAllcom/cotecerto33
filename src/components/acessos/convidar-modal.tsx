@@ -74,7 +74,9 @@ function rotuloDeclarado(op: OpcaoPerfil, cargoNome?: string): string {
     case "franquia_indiv":
       return "Franquia | Individual";
     case "vendedor":
-      return op.vincTipo === "full" ? "Vendedor | Full" : "Vendedor | Master";
+      if (op.vincTipo === "full") return "Vendedor | Full";
+      if (op.vincTipo === "matriz") return "Vendedor | Matriz";
+      return "Vendedor | Master";
     default:
       return op.label;
   }
@@ -260,6 +262,7 @@ export function ConvidarModal({ escopo, onClose }: { escopo: EscopoConvite; onCl
           valor: "vend_matriz",
           label: "Matriz · Vendedor Matriz (Modelo CLT)",
           perfil: "vendedor",
+          vincTipo: "matriz",
         },
       ];
     }
