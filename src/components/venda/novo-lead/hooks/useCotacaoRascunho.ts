@@ -219,8 +219,9 @@ export function useCotacaoRascunho(params: {
       p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
       p_payload: buildPayload() as never,
       // Canal capturado no gate "Lead Manual — origem" (só importa na criação
-      // do lead; a RPC ignora em updates). Sem valor, cai no default 'cotacao'.
-      p_origem: f.canalOrigem || undefined,
+      // do lead; a RPC ignora em updates). Sempre explícito — nunca undefined,
+      // pra não depender de resolução de overload no PostgREST.
+      p_origem: f.canalOrigem || "cotacao",
     });
     if (error) {
       console.error("[cotacao] save error", error);
