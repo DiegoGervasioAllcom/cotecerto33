@@ -9,7 +9,7 @@ import type { ConviteDoPendente, Pendente } from "../types";
 // query com "more than one relationship was found" (achado ao verificar F6 no
 // navegador).
 export const PENDENTES_SELECT =
-  "id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro," +
+  "id,nome,tipo,documento,cidade,uf,email,telefone,celular,created_at,dados_cadastro,escopo_manual," +
   "convites!empresas_convite_id_fkey(codigo,trilha,perfil,cargo_id,vinc_tipo,vinc_empresa_id,cargos(nome))";
 
 type PendenteBruto = {
@@ -24,6 +24,7 @@ type PendenteBruto = {
   celular: string | null;
   created_at: string;
   dados_cadastro: Record<string, unknown> | null;
+  escopo_manual: "interno" | "externo" | null;
   // PostgREST devolve objeto único para *-a-1, mas o client-gen tipa como
   // array quando não sabe a cardinalidade da FK — tratamos os dois formatos.
   convites:
@@ -78,9 +79,12 @@ export function mapPendentes(data: unknown): Pendente[] {
       created_at: row.created_at,
       dados_cadastro: row.dados_cadastro,
       convite,
-      // Sem convite: cai no bloco externo, onde a Matriz define o tipo na
-      // análise (a "Prime Riscos" do protótipo). Com convite, segue a trilha.
-      bloco: convite?.trilha === "interno" ? "interno" : "externo",
+      // Com convite, segue a trilha. Sem convite (cadastro manual · exceção),
+      // usa o `escopo_manual` gravado por `criar_pendente_manual` — mesma
+      // lógica do `isInternoPend` do protótipo (trilha OU escopo). Só cai em
+      // "externo" por padrão quando nenhum dos dois está preenchido.
+      bloco:
+        convite?.trilha === "interno" || row.escopo_manual === "interno" ? "interno" : "externo",
     };
   });
 }

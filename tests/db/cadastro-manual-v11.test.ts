@@ -41,12 +41,14 @@ describe("V11 · C2 — criar_pendente_manual", () => {
 
     const { data: empresa } = await admin
       .from("empresas")
-      .select("id,nome,tipo,status,convite_id,criado_por")
+      .select("id,nome,tipo,status,convite_id,criado_por,escopo_manual")
       .eq("id", empresaId as string)
       .single();
     expect(empresa?.status).toBe("pendente");
     expect(empresa?.convite_id).toBeNull();
     expect(empresa?.criado_por).toBe(matriz);
+    // p_escopo não foi passado — usa o default 'externo'.
+    expect(empresa?.escopo_manual).toBe("externo");
 
     const { data: profile } = await admin
       .from("profiles")
@@ -120,6 +122,58 @@ describe("V11 · C2 — criar_pendente_manual", () => {
       p_documento: "123",
     });
     expect(docCurto.error?.message).toContain("documento é obrigatório");
+  });
+
+  it("persiste escopo_manual='interno' — bug do vendedor CLT aparecendo como externo", async () => {
+    const matriz = await matrizId();
+    const { userId } = await criarUsuario(`${uniq("manual-clt")}@teste.local`);
+
+    const { data: empresaId, error } = await admin.rpc("criar_pendente_manual", {
+      p_user_id: userId,
+      p_criado_por: matriz,
+      p_nome: "Vendedor CLT E2E",
+      p_tipo: "pf",
+      p_documento: uniqDoc(),
+      p_escopo: "interno",
+    });
+    expect(error).toBeNull();
+
+    const { data: empresa } = await admin
+      .from("empresas")
+      .select("escopo_manual")
+      .eq("id", empresaId as string)
+      .single();
+    expect(empresa?.escopo_manual).toBe("interno");
+  });
+
+  it("rejeita escopo interno com tipo pj — interno é sempre pessoa física", async () => {
+    const matriz = await matrizId();
+    const { userId } = await criarUsuario(`${uniq("manual-interno-pj")}@teste.local`);
+
+    const { error } = await admin.rpc("criar_pendente_manual", {
+      p_user_id: userId,
+      p_criado_por: matriz,
+      p_nome: "Não deveria nascer",
+      p_tipo: "pj",
+      p_documento: uniqDoc(),
+      p_escopo: "interno",
+    });
+    expect(error?.message).toContain("escopo interno só aceita pessoa física");
+  });
+
+  it("rejeita escopo inválido", async () => {
+    const matriz = await matrizId();
+    const { userId } = await criarUsuario(`${uniq("manual-escopo-invalido")}@teste.local`);
+
+    const { error } = await admin.rpc("criar_pendente_manual", {
+      p_user_id: userId,
+      p_criado_por: matriz,
+      p_nome: "Não deveria nascer",
+      p_tipo: "pf",
+      p_documento: uniqDoc(),
+      p_escopo: "matriz",
+    });
+    expect(error?.message).toContain("escopo inválido");
   });
 });
 

@@ -15,6 +15,7 @@ type CadastroManualPayload = {
   celular?: string;
   cidade?: string;
   uf?: string;
+  escopo: "interno" | "externo";
 };
 
 export const criarPendenteManual = createServerFn({ method: "POST" })
@@ -82,6 +83,7 @@ export const criarPendenteManual = createServerFn({ method: "POST" })
       p_celular: data.celular || undefined,
       p_cidade: data.cidade || undefined,
       p_uf: data.uf || undefined,
+      p_escopo: data.escopo,
     });
     if (rpcError || !empresaId) {
       // Evita usuário órfão (auth.users sem nenhum pendente associado).

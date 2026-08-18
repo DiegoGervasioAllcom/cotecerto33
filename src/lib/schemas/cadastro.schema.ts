@@ -114,6 +114,7 @@ export const cadastroManualSchema = z
       .string()
       .optional()
       .refine((v) => !v || v.trim().length === 2, { message: "UF inválida." }),
+    escopo: z.enum(["interno", "externo"]),
   })
   .superRefine((data, ctx) => {
     const tamanho = data.tipo === "pj" ? 14 : 11;

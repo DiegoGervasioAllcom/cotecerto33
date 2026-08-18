@@ -43,6 +43,7 @@ export function CadastroManualModal({
       documento: documento.trim(),
       email: email.trim(),
       celular: celular.trim() || undefined,
+      escopo,
     });
     if (!parsed.success) {
       setErro(parsed.error.issues[0]?.message ?? "Revise os campos.");
@@ -67,6 +68,7 @@ export function CadastroManualModal({
           documento: parsed.data.documento,
           email: parsed.data.email,
           celular: parsed.data.celular,
+          escopo: parsed.data.escopo,
         },
       });
       onCriado(resultado.empresaId);
