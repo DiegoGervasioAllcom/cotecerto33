@@ -39,13 +39,22 @@ export function DistribuicaoMovida({ podeEditar }: { podeEditar: boolean }) {
         supabase.from("movida_lojas").select("*").order("nome"),
         supabase.from("movida_loja_aliases").select("*").order("alias"),
         supabase.from("movida_loja_vendedores").select("*").order("criado_em"),
-        supabase.from("empresas").select("id,nome").eq("status", "aprovada").order("nome"),
+        supabase
+          .from("empresas")
+          .select("id,nome,modelo_id,modelos_franquia(modalidade)")
+          .eq("status", "aprovada")
+          .order("nome"),
         supabase
           .from("profiles")
           .select("id,nome,empresa_id")
           .eq("status", "aprovada")
           .order("nome"),
-        supabase.from("user_roles").select("user_id").eq("role", "vendedor"),
+        // "vendedor" cobre o time interno/CLT; franqueado individual (PJ que
+        // opera sozinho como um vendedor único, sem equipe — modalidade
+        // 'individual') também pode entrar no pool de uma loja Movida, desde
+        // que a loja seja da empresa dele mesmo. Franquia Full não entra aqui
+        // (ela tem vendedores próprios, que é quem participaria do pool).
+        supabase.from("user_roles").select("user_id,role").in("role", ["vendedor", "franqueado"]),
         supabase
           .from("leads")
           .select("dados")
@@ -61,15 +70,42 @@ export function DistribuicaoMovida({ podeEditar }: { podeEditar: boolean }) {
         (resultado) => resultado.error,
       );
       if (falha?.error) throw falha.error;
-      const vendedoresIds = new Set((roles.data ?? []).map((role) => role.user_id));
+      const empresasData = (empresas.data ?? []) as Array<{
+        id: string;
+        nome: string;
+        modelo_id: string | null;
+        modelos_franquia: { modalidade: string } | { modalidade: string }[] | null;
+      }>;
+      const empresasIndividuais = new Set(
+        empresasData
+          .filter((empresa) => {
+            const modelo = Array.isArray(empresa.modelos_franquia)
+              ? empresa.modelos_franquia[0]
+              : empresa.modelos_franquia;
+            return modelo?.modalidade === "individual";
+          })
+          .map((empresa) => empresa.id),
+      );
+      const rolesData = (roles.data ?? []) as { user_id: string; role: string }[];
+      const vendedoresIds = new Set(
+        rolesData.filter((role) => role.role === "vendedor").map((role) => role.user_id),
+      );
+      const franqueadosIds = new Set(
+        rolesData.filter((role) => role.role === "franqueado").map((role) => role.user_id),
+      );
       return {
         lojas: (lojas.data ?? []) as Loja[],
         aliases: (aliases.data ?? []) as Alias[],
         membros: (membros.data ?? []) as Membro[],
-        empresas: (empresas.data ?? []) as Empresa[],
-        vendedores: (profiles.data ?? []).filter((profile) =>
-          vendedoresIds.has(profile.id),
-        ) as Vendedor[],
+        empresas: empresasData as Empresa[],
+        vendedores: (profiles.data ?? []).filter((profile) => {
+          if (vendedoresIds.has(profile.id)) return true;
+          return (
+            franqueadosIds.has(profile.id) &&
+            !!profile.empresa_id &&
+            empresasIndividuais.has(profile.empresa_id)
+          );
+        }) as Vendedor[],
         pendentes: (pendentes.data ?? []).map((lead) => {
           const dados = lead.dados as { loja?: string } | null;
           return normalizarChaveLojaMovida(dados?.loja ?? "");

@@ -125,6 +125,34 @@ async function membro(
   return vendedor;
 }
 
+/** Franqueado Individual (PJ) atuando sozinho como vendedor — 20260818030000. */
+async function franqueadoIndividual(lojaId: string, empresaId: string) {
+  const { data: modelo, error: modeloError } = await admin
+    .from("modelos_franquia")
+    .select("id")
+    .eq("modalidade", "individual")
+    .limit(1)
+    .single();
+  if (modeloError) throw modeloError;
+  const { error: modeloEmpresaError } = await admin
+    .from("empresas")
+    .update({ modelo_id: modelo.id })
+    .eq("id", empresaId);
+  if (modeloEmpresaError) throw modeloEmpresaError;
+
+  const franqueado = await criarPersonaComEmpresa("franqueado", {
+    empresaId,
+    emailPrefix: "franq-indiv-movida",
+  });
+  const { error } = await admin.from("movida_loja_vendedores").insert({
+    loja_id: lojaId,
+    vendedor_id: franqueado.userId,
+    peso: 1,
+  });
+  if (error) throw error;
+  return franqueado;
+}
+
 describe("V11.9.6 — distribuição captacao_movida por loja", () => {
   it("seed cadastra exatamente as 21 lojas na Matriz atual, pausadas e sem vendedores", async () => {
     const { data: matrizes, error: matrizError } = await admin
@@ -437,6 +465,35 @@ describe("V11.9.6 — distribuição captacao_movida por loja", () => {
       .eq("id", auditId)
       .single();
     expect(retida).toMatchObject({ lead_id: null, resultado: "distribuido" });
+  });
+
+  it("franqueado Individual (PJ) entra no pool e recebe lead distribuído", async () => {
+    const r = await rota();
+    const f = await franqueadoIndividual(r.lojaId, r.empresaId);
+    const id = await ingerir(r.alias);
+    expect(await lead(id)).toMatchObject({ empresa_id: r.empresaId, responsavel_id: f.userId });
+  });
+
+  it("franqueado Full não entra no pool — só franqueado Individual é aceito", async () => {
+    const r = await rota();
+    const { data: modeloFull, error: modeloError } = await admin
+      .from("modelos_franquia")
+      .select("id")
+      .eq("modalidade", "full")
+      .limit(1)
+      .single();
+    expect(modeloError).toBeNull();
+    await admin.from("empresas").update({ modelo_id: modeloFull!.id }).eq("id", r.empresaId);
+    const franqueadoFull = await criarPersonaComEmpresa("franqueado", {
+      empresaId: r.empresaId,
+      emailPrefix: "franq-full-movida",
+    });
+    const { error } = await admin.from("movida_loja_vendedores").insert({
+      loja_id: r.lojaId,
+      vendedor_id: franqueadoFull.userId,
+      peso: 1,
+    });
+    expect(error).not.toBeNull();
   });
 
   it("sem alias cai na fila global; reprocessamento da loja só toca pendentes daquela rota", async () => {
