@@ -50,6 +50,15 @@ export function CargoAreasFields({
 }) {
   const [catalogoAreas, setCatalogoAreas] = useState<{ chave: string; label: string }[]>([]);
   const jaInicializou = useRef(false);
+  // Guarda contra o efeito abaixo rodar mais de uma vez para o MESMO cargoId
+  // (hidratação do TanStack Start invoca o efeito duas vezes mesmo sem
+  // StrictMode explícito — confirmado via log: mesmo cargoId, mesma
+  // initialAreas, duas execuções). Sem isto, a 2ª execução sempre cai no
+  // branch de buscar o preset do cargo (porque `jaInicializou` já é true),
+  // sobrescrevendo silenciosamente o override real da pessoa (`initialAreas`)
+  // aplicado pela 1ª execução — o bug do supervisor que perdia a área
+  // "Distribuição" ao reabrir o cadastro.
+  const ultimoCargoProcessado = useRef<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -65,6 +74,9 @@ export function CargoAreasFields({
   // <select> nunca dispara onChange: sem isto, o pedido chegaria à aprovação
   // com o cargo certo mas nenhuma área marcada.
   useEffect(() => {
+    if (ultimoCargoProcessado.current === cargoId) return;
+    ultimoCargoProcessado.current = cargoId;
+
     if (!jaInicializou.current && initialAreas !== undefined) {
       jaInicializou.current = true;
       setAreas(initialAreas);
