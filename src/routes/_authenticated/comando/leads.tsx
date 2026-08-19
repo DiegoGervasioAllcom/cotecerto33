@@ -179,6 +179,11 @@ function Page() {
   const [modal, setModal] = useState<null | { kind: "hist" | "redist" | "block"; lead: Lead }>(
     null,
   );
+  // Seleção em massa — só faz sentido pra quem tem ação de matriz (mesma
+  // regra do "Distribuir"/"Redistribuir" por linha); limpa ao trocar filtro
+  // ou recarregar, pra não arrastar seleção de leads que saíram da lista.
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [modalMassa, setModalMassa] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -315,6 +320,64 @@ function Page() {
       }),
     [enriched, fStatus, fUf, fCanalId, fArquivados, search.alerta, search.fim, search.inicio],
   );
+
+  // Some da seleção qualquer lead que saiu da lista filtrada (mudou de
+  // filtro, foi distribuído/arquivado por outra ação, etc.) — evita mandar
+  // um id "fantasma" pro RPC em massa.
+  useEffect(() => {
+    setSelecionados((prev) => {
+      if (prev.size === 0) return prev;
+      const idsVisiveis = new Set(filtered.map((l) => l.id));
+      let mudou = false;
+      const proximo = new Set<string>();
+      for (const id of prev) {
+        if (idsVisiveis.has(id)) proximo.add(id);
+        else mudou = true;
+      }
+      return mudou ? proximo : prev;
+    });
+  }, [filtered]);
+
+  // Mesma elegibilidade do botão "Distribuir"/"Redistribuir" por linha —
+  // ação em massa não deve oferecer o que a ação individual já esconde.
+  function elegivelParaDistribuirEmMassa(l: Lead): boolean {
+    return (
+      !semAcaoDeMatriz &&
+      !l.bloqueado &&
+      l.status_pipeline !== "ganho" &&
+      l.status_pipeline !== "perdido"
+    );
+  }
+
+  const elegiveisVisiveis = useMemo(
+    () => filtered.filter(elegivelParaDistribuirEmMassa),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- semAcaoDeMatriz não muda no ciclo de vida da página
+    [filtered],
+  );
+  const todosElegiveisSelecionados =
+    elegiveisVisiveis.length > 0 && elegiveisVisiveis.every((l) => selecionados.has(l.id));
+
+  function toggleSelecionado(id: string) {
+    setSelecionados((prev) => {
+      const proximo = new Set(prev);
+      if (proximo.has(id)) proximo.delete(id);
+      else proximo.add(id);
+      return proximo;
+    });
+  }
+
+  function toggleSelecionarTodosVisiveis() {
+    setSelecionados((prev) => {
+      if (todosElegiveisSelecionados) {
+        const proximo = new Set(prev);
+        for (const l of elegiveisVisiveis) proximo.delete(l.id);
+        return proximo;
+      }
+      const proximo = new Set(prev);
+      for (const l of elegiveisVisiveis) proximo.add(l.id);
+      return proximo;
+    });
+  }
 
   const kpis = useMemo(() => {
     const pendentes = enriched.filter(
@@ -667,10 +730,51 @@ function Page() {
       {err && <div className="alert alert-err">{err}</div>}
       {loading && <div className="muted">Carregando…</div>}
 
+      {selecionados.size > 0 && (
+        <div
+          className="audit-note"
+          style={{
+            background: "var(--info-soft)",
+            color: "var(--info)",
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <svg width="16" height="16">
+            <use href="#i-check-circle"></use>
+          </svg>
+          <strong>{selecionados.size} lead(s) selecionado(s)</strong>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setSelecionados(new Set())}>
+              Limpar seleção
+            </button>
+            <button className="btn btn-yellow btn-sm" onClick={() => setModalMassa(true)}>
+              <svg width="14" height="14">
+                <use href="#i-share"></use>
+              </svg>{" "}
+              Distribuir selecionados
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ overflowX: "auto" }}>
         <table className="table-pipe mtable" style={{ minWidth: 1200 }}>
           <thead>
             <tr>
+              {!semAcaoDeMatriz && (
+                <th style={{ width: 32 }}>
+                  <input
+                    type="checkbox"
+                    checked={todosElegiveisSelecionados}
+                    disabled={elegiveisVisiveis.length === 0}
+                    onChange={toggleSelecionarTodosVisiveis}
+                    title="Selecionar todos os leads elegíveis desta lista"
+                  />
+                </th>
+              )}
               <th>Cliente</th>
               <th>Origem</th>
               <th>Cidade/UF</th>
@@ -725,6 +829,17 @@ function Page() {
                 const isFechado = l.status_pipeline === "ganho";
                 return (
                   <tr key={l.id} style={rowStyle}>
+                    {!semAcaoDeMatriz && (
+                      <td>
+                        {elegivelParaDistribuirEmMassa(l) && (
+                          <input
+                            type="checkbox"
+                            checked={selecionados.has(l.id)}
+                            onChange={() => toggleSelecionado(l.id)}
+                          />
+                        )}
+                      </td>
+                    )}
                     <td>
                       <div className="mini-cell">
                         <strong>{l.nome || "Sem nome"}</strong>
@@ -952,7 +1067,11 @@ function Page() {
               })}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="muted" style={{ textAlign: "center", padding: 20 }}>
+                <td
+                  colSpan={semAcaoDeMatriz ? 9 : 10}
+                  className="muted"
+                  style={{ textAlign: "center", padding: 20 }}
+                >
                   Nenhum lead encontrado com os filtros atuais.
                 </td>
               </tr>
@@ -988,6 +1107,19 @@ function Page() {
           onClose={() => setModal(null)}
           onDone={() => {
             setModal(null);
+            load();
+          }}
+        />
+      )}
+      {modalMassa && (
+        <RedistModalMassa
+          leads={filtered.filter((l) => selecionados.has(l.id))}
+          empresas={empresasList}
+          profiles={profilesList}
+          onClose={() => setModalMassa(false)}
+          onDone={() => {
+            setModalMassa(false);
+            setSelecionados(new Set());
             load();
           }}
         />
@@ -1343,6 +1475,119 @@ function RedistModal({
         </button>
         <button className="btn btn-yellow" onClick={salvar} disabled={saving}>
           {saving ? "Salvando..." : "Confirmar"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * Distribuir/redistribuir vários leads de uma vez — mesma RPC `redistribuir_lead`
+ * do RedistModal individual, chamada uma vez por lead selecionado. Franquia e
+ * vendedor (opcional) são os mesmos para todos os leads do lote; erros
+ * individuais não interrompem o restante (reporta ao final quantos falharam).
+ */
+function RedistModalMassa({
+  leads,
+  empresas,
+  profiles,
+  onClose,
+  onDone,
+}: {
+  leads: Lead[];
+  empresas: Empresa[];
+  profiles: Profile[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [empresaId, setEmpresaId] = useState("");
+  const [responsavelId, setResponsavelId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const vendedoresDaFranquia = profiles.filter((p) => !empresaId || p.empresa_id === empresaId);
+
+  async function salvar() {
+    if (!empresaId) {
+      setErro("Selecione a franquia.");
+      return;
+    }
+    setSaving(true);
+    setErro(null);
+    const falhas: string[] = [];
+    for (const lead of leads) {
+      const { error } = await supabase.rpc("redistribuir_lead", {
+        p_lead: lead.id,
+        p_empresa: empresaId,
+        p_responsavel: responsavelId || undefined,
+      });
+      if (error) falhas.push(`${lead.nome || lead.id}: ${error.message}`);
+    }
+    setSaving(false);
+    if (falhas.length > 0) {
+      setErro(
+        `${falhas.length} de ${leads.length} lead(s) não puderam ser distribuídos:\n${falhas.join("\n")}`,
+      );
+      return;
+    }
+    onDone();
+  }
+
+  return (
+    <Modal
+      title={`Distribuir ${leads.length} lead(s) selecionado(s)`}
+      onClose={onClose}
+      icon="i-share"
+    >
+      <div style={{ display: "grid", gap: 14 }}>
+        <p className="muted small" style={{ margin: 0 }}>
+          A mesma franquia (e vendedor, se escolhido) será aplicada a todos os leads selecionados.
+        </p>
+        <div>
+          <label className="label">Franquia</label>
+          <select
+            className="input"
+            value={empresaId}
+            onChange={(e) => {
+              setEmpresaId(e.target.value);
+              setResponsavelId("");
+            }}
+          >
+            <option value="">Selecione...</option>
+            {empresas.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">Vendedor (opcional)</label>
+          <select
+            className="input"
+            value={responsavelId}
+            onChange={(e) => setResponsavelId(e.target.value)}
+            disabled={!empresaId}
+          >
+            <option value="">Distribuir para a franquia</option>
+            {vendedoresDaFranquia.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+        {erro && (
+          <div className="alert alert-err" style={{ whiteSpace: "pre-line" }}>
+            {erro}
+          </div>
+        )}
+      </div>
+      <div style={{ marginTop: 22, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <button className="btn btn-ghost" onClick={onClose}>
+          Cancelar
+        </button>
+        <button className="btn btn-yellow" onClick={salvar} disabled={saving || leads.length === 0}>
+          {saving ? "Distribuindo..." : `Confirmar (${leads.length})`}
         </button>
       </div>
     </Modal>
