@@ -125,6 +125,33 @@ describe("ingerir_lead_externo — captacao-movida", () => {
     expect(pendente?.id).toBe(row.lead_id);
   });
 
+  it("20260819010000 — lead ganha canal_id do canal 'Movida' (Performance por canal deixa de zerar)", async () => {
+    const { data: canalMovida, error: eCanal } = await admin
+      .from("canais")
+      .select("id")
+      .eq("nome", "Movida")
+      .eq("tipo", "supper")
+      .is("empresa_id", null)
+      .single();
+    expect(eCanal).toBeNull();
+
+    const telefone = uniqTelefone();
+    const placa = uniqPlaca("CNL");
+    const { data, error } = await admin.rpc("ingerir_lead_externo", {
+      type: "INSERT",
+      record: { nome_cliente: "Cliente Canal", telefone, placa },
+    } as never);
+    expect(error).toBeNull();
+    const row = (data as { lead_id: string; criado: boolean }[])[0];
+
+    const { data: lead } = await admin
+      .from("leads")
+      .select("canal_id")
+      .eq("id", row.lead_id)
+      .single();
+    expect(lead?.canal_id).toBe(canalMovida!.id);
+  });
+
   it("mesma placa: segunda chamada NÃO duplica lead, só atualiza (continua pendente)", async () => {
     const telefone = uniqTelefone();
     const placa = uniqPlaca("DUP");
