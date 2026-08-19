@@ -43,9 +43,22 @@ export type PlacaDecodificada = {
   fipe: PrecificadorFipe[];
 };
 
+/**
+ * Campos que o decodificador pode identificar mesmo quando não fecha uma
+ * versão FIPE completa (ex.: "Somente País/Marca/Ano Identificados",
+ * NuCdRetorno != 0) — o front usa isso pra preencher o que dá, em vez de
+ * jogar fora tudo e deixar o vendedor digitar do zero.
+ */
+export type PlacaParcial = {
+  marca: string;
+  anoModelo: string;
+  anoFabricacao: string;
+  chassi: string;
+};
+
 export type ResultadoConsultaPlaca =
   | { ok: true; dados: PlacaDecodificada }
-  | { ok: false; codigo: string | null; mensagem: string };
+  | { ok: false; codigo: string | null; mensagem: string; parcial?: PlacaParcial };
 
 const ENTIDADES: Record<string, string> = {
   amp: "&",
@@ -128,13 +141,24 @@ export function parseDecodificadorXml(xml: string): ResultadoConsultaPlaca {
   const codigoRetorno = tag(dec, "NuCdRetorno");
   const mensagemRetorno = tag(dec, "DsRetorno");
 
-  // NuCdRetorno 0 = "Marca/Modelo/Ano Identificados"; qualquer outro
-  // código significa que o veículo não foi identificado.
+  // NuCdRetorno 0 = "Marca/Modelo/Ano Identificados"; qualquer outro código
+  // significa que o veículo não foi TOTALMENTE identificado (ex.: "Somente
+  // País/Marca/Ano Identificados") — mas o bloco <Decodificador> ainda pode
+  // trazer marca/ano/chassi preenchidos, só sem versão FIPE. Devolve esses
+  // campos em `parcial` pro front aproveitar em vez de descartar tudo.
   if (codigoRetorno && codigoRetorno !== "0") {
+    const parcial: PlacaParcial = {
+      marca: tag(dec, "DsMarca"),
+      anoModelo: tag(dec, "NuAnoModelo"),
+      anoFabricacao: tag(dec, "NuAnoFabricacao"),
+      chassi: tag(dec, "DsChassiTratado") || tag(dec, "DsChassi"),
+    };
+    const temAlgumDado = Object.values(parcial).some(Boolean);
     return {
       ok: false,
       codigo: codigoRetorno,
       mensagem: mensagemRetorno || "Veículo não identificado para esta placa.",
+      ...(temAlgumDado ? { parcial } : {}),
     };
   }
 

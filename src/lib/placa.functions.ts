@@ -12,6 +12,7 @@ import { normalizePlaca } from "@/lib/masks";
 import {
   parseDecodificadorXml,
   type PlacaDecodificada,
+  type PlacaParcial,
   type ResultadoConsultaPlaca,
 } from "@/lib/placa-decodificador";
 
@@ -39,6 +40,8 @@ export type ConsultaPlacaResposta = {
   dados: PlacaDecodificada | null;
   /** Mensagem do fornecedor quando a placa não foi identificada. */
   mensagem: string | null;
+  /** Marca/ano/chassi que o fornecedor identificou mesmo sem versão FIPE. */
+  parcial?: PlacaParcial | null;
 };
 
 export type ConsultarPlacaPayload = {
@@ -214,7 +217,13 @@ export async function executarConsultaPlaca(
 
   return resultado.ok
     ? { ok: true, cache: false, dados: resultado.dados, mensagem: null }
-    : { ok: false, cache: false, dados: null, mensagem: resultado.mensagem };
+    : {
+        ok: false,
+        cache: false,
+        dados: null,
+        mensagem: resultado.mensagem,
+        parcial: resultado.parcial ?? null,
+      };
 }
 
 export const consultarPlaca = createServerFn({ method: "POST" })

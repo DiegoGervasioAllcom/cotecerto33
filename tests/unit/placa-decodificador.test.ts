@@ -107,6 +107,48 @@ describe("parseDecodificadorXml", () => {
     expect(r.mensagem).toBe("Veiculo nao localizado");
   });
 
+  it("20260819040000 — 'Somente País/Marca/Ano Identificados' devolve marca/ano/chassi em `parcial` em vez de descartar tudo", () => {
+    // Réplica do formato real reportado pelo fornecedor pra placa FNY8D32:
+    // identifica marca/ano/chassi, mas não fecha nenhuma versão FIPE
+    // (sem bloco <PrecificadorI>, sem <DsModelo>/<DsVersao>).
+    const xml = `<Root>
+  <placa>FNY8D32</placa>
+  <chassi>9BWZZZ377VT004251</chassi>
+  <Decodificador>
+    <DsPlaca>FNY8D32</DsPlaca>
+    <DsChassi>9BWZZZ377VT004251</DsChassi>
+    <DsChassiTratado>9BWZZZ377VT004251</DsChassiTratado>
+    <DsMarca>VOLKSWAGEN</DsMarca>
+    <DsRetorno>Somente Pais/Marca/Ano Identificados</DsRetorno>
+    <NuAnoModelo>2021</NuAnoModelo>
+    <NuAnoFabricacao>2020</NuAnoFabricacao>
+    <NuCdRetorno>4</NuCdRetorno>
+  </Decodificador>
+</Root>`;
+    const r = parseDecodificadorXml(xml);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.codigo).toBe("4");
+    expect(r.mensagem).toBe("Somente Pais/Marca/Ano Identificados");
+    expect(r.parcial).toEqual({
+      marca: "VOLKSWAGEN",
+      anoModelo: "2021",
+      anoFabricacao: "2020",
+      chassi: "9BWZZZ377VT004251",
+    });
+  });
+
+  it("sem nenhum campo aproveitável no bloco Decodificador, não devolve `parcial`", () => {
+    const xml = `<Root><Decodificador>
+      <DsRetorno>Veiculo nao localizado</DsRetorno>
+      <NuCdRetorno>9</NuCdRetorno>
+    </Decodificador></Root>`;
+    const r = parseDecodificadorXml(xml);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.parcial).toBeUndefined();
+  });
+
   it("não lança com entrada vazia ou lixo", () => {
     for (const entrada of ["", "   ", "<html>502 Bad Gateway</html>", "{}"]) {
       const r = parseDecodificadorXml(entrada);
