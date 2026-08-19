@@ -143,6 +143,7 @@ function Page() {
     anoFab: "",
     combustivel: "Flex",
     cor: "",
+    tipoCambio: "",
     zeroKm: false,
     dataSaidaConcessionaria: "",
     odometro: "",
