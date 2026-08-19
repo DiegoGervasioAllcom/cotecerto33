@@ -2441,6 +2441,7 @@ export type Database = {
           perdida_em: string | null;
           renovacao_proposta_id: string | null;
           responsavel_id: string | null;
+          sla_estourado_em: string | null;
           status_pipeline: Database["public"]["Enums"]["lead_status"];
           submotivo_perda: string | null;
           ultimo_atendimento_em: string | null;
@@ -2472,6 +2473,7 @@ export type Database = {
           perdida_em?: string | null;
           renovacao_proposta_id?: string | null;
           responsavel_id?: string | null;
+          sla_estourado_em?: string | null;
           status_pipeline?: Database["public"]["Enums"]["lead_status"];
           submotivo_perda?: string | null;
           ultimo_atendimento_em?: string | null;
@@ -2503,6 +2505,7 @@ export type Database = {
           perdida_em?: string | null;
           renovacao_proposta_id?: string | null;
           responsavel_id?: string | null;
+          sla_estourado_em?: string | null;
           status_pipeline?: Database["public"]["Enums"]["lead_status"];
           submotivo_perda?: string | null;
           ultimo_atendimento_em?: string | null;
