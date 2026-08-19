@@ -104,11 +104,36 @@ async function expirar(pJanelaSeg = 180) {
 async function buscarLead(id: string) {
   const { data, error } = await admin
     .from("leads")
-    .select("empresa_id, responsavel_id, distribuido_em, status_pipeline")
+    .select("empresa_id, responsavel_id, distribuido_em, status_pipeline, sla_estourado_em")
     .eq("id", id)
     .single();
   if (error) throw error;
   return data;
+}
+
+/** Mesma lógica de `criarLeadDistribuido`, mas com `origem` livre — usado
+ * pelos casos de Movida (20260819000000_sla_movida_so_metrica_nao_devolve). */
+async function criarLeadDistribuidoComOrigem(args: {
+  origem: string;
+  empresaId: string;
+  responsavelId: string;
+  distribuidoHaSeg: number;
+}) {
+  const distribuidoEm = new Date(Date.now() - args.distribuidoHaSeg * 1000).toISOString();
+  const { data, error } = await admin
+    .from("leads")
+    .insert({
+      nome: uniq("Lead Movida SLA"),
+      origem: args.origem,
+      empresa_id: args.empresaId,
+      responsavel_id: args.responsavelId,
+      distribuido_em: distribuidoEm,
+      status_pipeline: "novo",
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
 }
 
 async function buscarEventoSlaExpirado(leadId: string) {
@@ -308,5 +333,102 @@ describe("V11.5.7 — SLA por lead + fronteira Full/Matriz (expirar_leads_nao_at
       .single();
     expect(naPropriaEmpresa?.empresa_id).toBe(fullId);
     expect(naPropriaEmpresa?.responsavel_id).toBeNull();
+  });
+});
+
+describe("20260819000000 — SLA de captacao_movida: só métrica, nunca devolve", () => {
+  let slaGlobalOriginal: number;
+
+  beforeAll(async () => {
+    const { data } = await admin
+      .from("distribuicao_config")
+      .select("sla_segundos")
+      .eq("id", "default")
+      .single();
+    slaGlobalOriginal = data!.sla_segundos;
+    await admin.from("distribuicao_config").update({ sla_segundos: 180 }).eq("id", "default");
+  });
+
+  afterAll(async () => {
+    await admin
+      .from("distribuicao_config")
+      .update({ sla_segundos: slaGlobalOriginal })
+      .eq("id", "default");
+  });
+
+  it("estoura o SLA: marca sla_estourado_em e loga evento, mas NÃO devolve (mantém responsavel_id/empresa_id/status_pipeline)", async () => {
+    const empresa = await criarEmpresaComModalidade("individual");
+    const vendedor = await criarVendedor(empresa);
+    const leadId = await criarLeadDistribuidoComOrigem({
+      origem: "captacao_movida",
+      empresaId: empresa,
+      responsavelId: vendedor,
+      distribuidoHaSeg: 200, // > 180s global
+    });
+
+    const total = await expirar(180);
+    expect(total).toBeGreaterThanOrEqual(1);
+
+    const lead = await buscarLead(leadId);
+    expect(lead.responsavel_id).toBe(vendedor);
+    expect(lead.empresa_id).toBe(empresa);
+    expect(lead.status_pipeline).toBe("novo");
+    expect(lead.sla_estourado_em).not.toBeNull();
+
+    const evento = await buscarEventoSlaExpirado(leadId);
+    expect(evento).not.toBeNull();
+    const meta = evento!.meta as Record<string, unknown>;
+    expect(meta.redistribuido).toBe(false);
+    expect(meta.sla_aplicado_seg).toBe(180);
+  });
+
+  it("já estourado: não reprocessa nem duplica evento nas rodadas seguintes do cron", async () => {
+    const empresa = await criarEmpresaComModalidade("individual");
+    const vendedor = await criarVendedor(empresa);
+    const leadId = await criarLeadDistribuidoComOrigem({
+      origem: "captacao_movida",
+      empresaId: empresa,
+      responsavelId: vendedor,
+      distribuidoHaSeg: 200,
+    });
+
+    await expirar(180);
+    const { count: antes } = await admin
+      .from("lead_eventos")
+      .select("id", { count: "exact", head: true })
+      .eq("lead_id", leadId)
+      .eq("tipo", "sla_expirado");
+
+    // Simula outra rodada do cron 30s depois — não deve achar o lead de novo
+    // (sla_estourado_em is null é a guarda do cursor).
+    const total = await expirar(180);
+    expect(total).toBe(0);
+
+    const { count: depois } = await admin
+      .from("lead_eventos")
+      .select("id", { count: "exact", head: true })
+      .eq("lead_id", leadId)
+      .eq("tipo", "sla_expirado");
+    expect(depois).toBe(antes);
+
+    const lead = await buscarLead(leadId);
+    expect(lead.responsavel_id).toBe(vendedor);
+  });
+
+  it("ainda dentro do prazo: não marca sla_estourado_em — regressão", async () => {
+    const empresa = await criarEmpresaComModalidade("individual");
+    const vendedor = await criarVendedor(empresa);
+    const leadId = await criarLeadDistribuidoComOrigem({
+      origem: "captacao_movida",
+      empresaId: empresa,
+      responsavelId: vendedor,
+      distribuidoHaSeg: 100, // < 180s
+    });
+
+    await expirar(180);
+
+    const lead = await buscarLead(leadId);
+    expect(lead.sla_estourado_em).toBeNull();
+    expect(lead.responsavel_id).toBe(vendedor);
   });
 });
