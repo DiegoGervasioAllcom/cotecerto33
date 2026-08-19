@@ -163,6 +163,26 @@ describe("V11 · D4 — classificação do sinal", () => {
     expect(sinal.performance_status).toBe("travado");
   });
 
+  it("20260819030000 — sem nenhum lead na janela fica ativo, mesmo com cadastro antigo (gente nova não trava)", async () => {
+    const modeloId = await criarModelo("clt");
+    const vendedor = await criarPersonaComEmpresa("vendedor", {
+      emailPrefix: uniq("d4-gente-nova"),
+    });
+    await admin.from("empresas").update({ modelo_id: modeloId }).eq("id", vendedor.empresaId);
+    // Simula um cadastro "antigo" o suficiente pra dias_sem_venda (contado
+    // desde created_at, já que nunca vendeu) sozinho já cruzar dias_travado
+    // (15 no interno) — sem a correção, isso travaria mesmo com 0 leads.
+    await admin
+      .from("profiles")
+      .update({ created_at: ha(30) })
+      .eq("id", vendedor.userId);
+
+    await rodarJob();
+    const sinal = await lerSinal(vendedor.userId);
+    expect(sinal.performance_status).toBe("ativo");
+    expect(sinal.performance_motivo).toMatchObject({ leads: 0, conversao_pct: null });
+  });
+
   it("cancelamentos no limite travam mesmo com conversão boa", async () => {
     const modeloId = await criarModelo("clt");
     const vendedor = await criarPersonaComEmpresa("vendedor", {
