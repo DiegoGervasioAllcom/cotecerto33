@@ -280,6 +280,11 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
             ),
           }
         : {}),
+      // Só enviado se preenchido — o robô usa o valor quando o portal não
+      // consegue inferir o Tipo de Câmbio sozinho pela placa (ex.: FRI0481);
+      // sem valor aqui e o portal exigindo, a cotação falha no robô com erro
+      // apontando o campo pendente.
+      ...(v.tipo_cambio ? { tipoCambio: v.tipo_cambio as string } : {}),
     },
     complementares: {
       tipoGaragem: (p.tipo_garagem as string) || "Não",

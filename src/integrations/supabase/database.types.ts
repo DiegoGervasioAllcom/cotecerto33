@@ -1241,6 +1241,7 @@ export type Database = {
           placa: string | null;
           possui_antifurto_porto: boolean | null;
           renavam: string | null;
+          tipo_cambio: string | null;
           tipo_uso: string | null;
           uso_comercial: string | null;
           uso_comercial_dois_dias: boolean | null;
@@ -1295,6 +1296,7 @@ export type Database = {
           placa?: string | null;
           possui_antifurto_porto?: boolean | null;
           renavam?: string | null;
+          tipo_cambio?: string | null;
           tipo_uso?: string | null;
           uso_comercial?: string | null;
           uso_comercial_dois_dias?: boolean | null;
@@ -1349,6 +1351,7 @@ export type Database = {
           placa?: string | null;
           possui_antifurto_porto?: boolean | null;
           renavam?: string | null;
+          tipo_cambio?: string | null;
           tipo_uso?: string | null;
           uso_comercial?: string | null;
           uso_comercial_dois_dias?: boolean | null;

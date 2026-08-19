@@ -41,6 +41,10 @@ export const veiculoSchema = z.object({
   coberturaBlindagem: optionalMax(150, "Cobertura de blindagem muito longa."),
   valorBlindagem: optionalMax(50, "Valor de blindagem muito longo."),
   valorKitGas: optionalMax(50, "Valor de kit gás muito longo."),
+  // Robô Playwright (19/08/2026): só usado quando o portal não infere
+  // sozinho pelo consulta de placa (ex.: placa FRI0481) — sem valor aqui e
+  // o portal exigindo, a cotação falha no robô.
+  tipoCambio: optionalMax(20, "Tipo de câmbio muito longo."),
 });
 
 export type VeiculoFormValues = z.infer<typeof veiculoSchema>;

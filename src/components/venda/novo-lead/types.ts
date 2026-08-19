@@ -68,6 +68,10 @@ export type Form = {
   anoFab: string;
   combustivel: string;
   cor: string;
+  // Robô Playwright (19/08/2026): só usado quando o portal não infere
+  // sozinho pelo consulta de placa — sem valor aqui e o portal exigindo, a
+  // cotação falha no robô.
+  tipoCambio: string;
   zeroKm: boolean;
   // Só exigidos pelo robô quando zeroKm=true (mapeado em 17/08/2026).
   dataSaidaConcessionaria: string;

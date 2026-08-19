@@ -265,6 +265,25 @@ export function StepVeiculo({
           )}
         </div>
         <div className="field-group">
+          <label>Tipo de Câmbio</label>
+          <select
+            className="input"
+            aria-label="Tipo de Câmbio"
+            value={f.tipoCambio}
+            onChange={(e) => up("tipoCambio", e.target.value)}
+          >
+            <option value="">Deixar o portal inferir (recomendado)</option>
+            <option value="Manual">Manual</option>
+            <option value="Automático">Automático</option>
+            <option value="Semiautomático">Semiautomático</option>
+          </select>
+          {erros.tipoCambio && (
+            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+              {erros.tipoCambio}
+            </span>
+          )}
+        </div>
+        <div className="field-group">
           <label>Valor FIPE</label>
           <input
             className="input"
