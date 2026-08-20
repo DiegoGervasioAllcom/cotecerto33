@@ -116,9 +116,7 @@ test.describe.serial("V11.5c — Franquia Full completa", () => {
           // Aguarda o fetch assíncrono de vendedores terminar antes do snapshot de
           // allTextContents() (sem retry) — sem isso o teste lê o <select> só com o
           // placeholder, antes do Promise.all popular as opções (race condition).
-          await expect(filtroVendedor.locator("option", { hasText: vendedor.nome })).toHaveCount(
-            1,
-          );
+          await expect(filtroVendedor.locator("option", { hasText: vendedor.nome })).toHaveCount(1);
           const opcoes = await filtroVendedor.locator("option").allTextContents();
           expect(opcoes).toEqual(
             rota === "/operacao/pipeline-geral"
