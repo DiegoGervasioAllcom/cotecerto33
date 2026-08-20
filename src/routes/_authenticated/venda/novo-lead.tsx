@@ -288,6 +288,11 @@ function Page() {
     cotacaoId,
     placaAtual: f.placa,
     carregandoRascunho: loading,
+    // Marca já preenchida = uma consulta de placa já resolveu esse veículo
+    // antes (rascunho reaberto). Sem marca, mesmo com placa preenchida (ex.:
+    // lead assumido via assumir_lead, que grava a placa sem consultar), a
+    // primeira saída do campo precisa disparar a consulta de verdade.
+    veiculoJaResolvido: !!f.marca,
   });
   const {
     calculando,
