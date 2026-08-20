@@ -2660,6 +2660,63 @@ export type Database = {
         };
         Relationships: [];
       };
+      modelo_master_config: {
+        Row: {
+          atualizado_em: string;
+          base_calc: string;
+          comissao_grupo: string;
+          elite: Json;
+          id: string;
+          pagamento: string;
+          royalties: string;
+        };
+        Insert: {
+          atualizado_em?: string;
+          base_calc?: string;
+          comissao_grupo?: string;
+          elite?: Json;
+          id?: string;
+          pagamento?: string;
+          royalties?: string;
+        };
+        Update: {
+          atualizado_em?: string;
+          base_calc?: string;
+          comissao_grupo?: string;
+          elite?: Json;
+          id?: string;
+          pagamento?: string;
+          royalties?: string;
+        };
+        Relationships: [];
+      };
+      modelo_supervisor_config: {
+        Row: {
+          atualizado_em: string;
+          base_calc: string;
+          comissao_grupo: string;
+          id: string;
+          pagamento: string;
+          royalties: string;
+        };
+        Insert: {
+          atualizado_em?: string;
+          base_calc?: string;
+          comissao_grupo?: string;
+          id?: string;
+          pagamento?: string;
+          royalties?: string;
+        };
+        Update: {
+          atualizado_em?: string;
+          base_calc?: string;
+          comissao_grupo?: string;
+          id?: string;
+          pagamento?: string;
+          royalties?: string;
+        };
+        Relationships: [];
+      };
       modelos_franquia: {
         Row: {
           ativo: boolean;
@@ -4607,8 +4664,37 @@ export type Database = {
         Args: { p_delete: Json; p_senha: string; p_upsert: Json };
         Returns: undefined;
       };
+      fn_salvar_modelo_master: {
+        Args: {
+          p_base_calc: string;
+          p_comissao_grupo: string;
+          p_elite: Json;
+          p_pagamento: string;
+          p_royalties: string;
+          p_senha: string;
+        };
+        Returns: undefined;
+      };
+      fn_salvar_modelo_supervisor: {
+        Args: {
+          p_base_calc: string;
+          p_comissao_grupo: string;
+          p_pagamento: string;
+          p_royalties: string;
+          p_senha: string;
+        };
+        Returns: undefined;
+      };
       fn_salvar_modelos_franquia: {
         Args: { p_modelos: Json; p_senha: string };
+        Returns: undefined;
+      };
+      fn_salvar_produtos_catalogo: {
+        Args: { p_novo_nome?: string; p_produtos?: Json; p_senha: string };
+        Returns: undefined;
+      };
+      fn_salvar_produtos_padrao: {
+        Args: { p_bloco: string; p_produto_ids: Json; p_senha: string };
         Returns: undefined;
       };
       fn_salvar_regua_performance: {

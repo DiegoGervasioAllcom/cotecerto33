@@ -18,7 +18,7 @@ export type TutorialPreparation =
   | "acessos-pendentes"
   | "acessos-desligamentos"
   | "acessos-modelos-franquia"
-  | "acessos-modelos-clt"
+  | "acessos-modelos-master"
   | "proposta-ajuste"
   | "proposta-envio"
   | "aceite-aceita"

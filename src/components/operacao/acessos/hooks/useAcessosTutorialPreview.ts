@@ -25,8 +25,8 @@ export function useAcessosTutorialPreview({
   const visiblePersoSub: PersoSub =
     tutorialPreview === "acessos-modelos-franquia"
       ? "franquia"
-      : tutorialPreview === "acessos-modelos-clt"
-        ? "clt"
+      : tutorialPreview === "acessos-modelos-master"
+        ? "master"
         : persoSub;
   const setVisiblePersoSub = useCallback(
     (next: PersoSub) => {
