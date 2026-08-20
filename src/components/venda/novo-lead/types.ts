@@ -72,10 +72,8 @@ export type Form = {
   // Só exigidos pelo robô quando zeroKm=true (mapeado em 17/08/2026).
   dataSaidaConcessionaria: string;
   odometro: string;
-  blindado: boolean;
   alienado: boolean;
   banco: string;
-  usoComercial: string;
   kmMensal: string;
   // Veículo — uso (espelha a API real da Quiver, ver enumsQuiver.ts)
   tipoUso: string;
@@ -86,7 +84,6 @@ export type Form = {
   utilizacaoLocadora: string;
   condutoresQueUtilizam: string;
   cepCirculacao: string;
-  numPassageiros: string;
   // Veículo — dados complementares
   chassiRemarcado: "sim" | "nao";
   leilao: string;
@@ -154,10 +151,8 @@ export type Form = {
   categoriaCoberturaLegado: string;
   casco: string;
   cascoValor: string;
-  franquia: string;
   appMorte: string;
   appInval: string;
-  dmh: string;
   rcfDm: string;
   rcfDc: string;
   vidros: boolean;

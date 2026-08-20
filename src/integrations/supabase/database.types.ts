@@ -754,8 +754,6 @@ export type Database = {
           danos_morais: string | null;
           descontos_agravos: Json;
           despesas_extras: string | null;
-          dmh: string | null;
-          franquia: string | null;
           franquia_primeira_opcao: string | null;
           franquia_segunda_opcao: string | null;
           mais_assistencias: boolean | null;
@@ -781,8 +779,6 @@ export type Database = {
           danos_morais?: string | null;
           descontos_agravos?: Json;
           despesas_extras?: string | null;
-          dmh?: string | null;
-          franquia?: string | null;
           franquia_primeira_opcao?: string | null;
           franquia_segunda_opcao?: string | null;
           mais_assistencias?: boolean | null;
@@ -808,8 +804,6 @@ export type Database = {
           danos_morais?: string | null;
           descontos_agravos?: Json;
           despesas_extras?: string | null;
-          dmh?: string | null;
-          franquia?: string | null;
           franquia_primeira_opcao?: string | null;
           franquia_segunda_opcao?: string | null;
           mais_assistencias?: boolean | null;
@@ -1207,7 +1201,6 @@ export type Database = {
           antifurto: string | null;
           antifurto_detalhes: Json;
           banco: string | null;
-          blindado: boolean | null;
           blindagem: boolean | null;
           categoria_taxi: string | null;
           cep_circulacao: string | null;
@@ -1234,7 +1227,6 @@ export type Database = {
           marca_nome: string | null;
           modelo_codigo: string | null;
           modelo_nome: string | null;
-          num_passageiros: string | null;
           odometro: string | null;
           opcionais: boolean | null;
           pcd_cnh_especial: boolean | null;
@@ -1243,7 +1235,6 @@ export type Database = {
           renavam: string | null;
           tipo_cambio: string | null;
           tipo_uso: string | null;
-          uso_comercial: string | null;
           uso_comercial_dois_dias: boolean | null;
           uso_estudo: string | null;
           uso_trabalho: string | null;
@@ -1262,7 +1253,6 @@ export type Database = {
           antifurto?: string | null;
           antifurto_detalhes?: Json;
           banco?: string | null;
-          blindado?: boolean | null;
           blindagem?: boolean | null;
           categoria_taxi?: string | null;
           cep_circulacao?: string | null;
@@ -1289,7 +1279,6 @@ export type Database = {
           marca_nome?: string | null;
           modelo_codigo?: string | null;
           modelo_nome?: string | null;
-          num_passageiros?: string | null;
           odometro?: string | null;
           opcionais?: boolean | null;
           pcd_cnh_especial?: boolean | null;
@@ -1298,7 +1287,6 @@ export type Database = {
           renavam?: string | null;
           tipo_cambio?: string | null;
           tipo_uso?: string | null;
-          uso_comercial?: string | null;
           uso_comercial_dois_dias?: boolean | null;
           uso_estudo?: string | null;
           uso_trabalho?: string | null;
@@ -1317,7 +1305,6 @@ export type Database = {
           antifurto?: string | null;
           antifurto_detalhes?: Json;
           banco?: string | null;
-          blindado?: boolean | null;
           blindagem?: boolean | null;
           categoria_taxi?: string | null;
           cep_circulacao?: string | null;
@@ -1344,7 +1331,6 @@ export type Database = {
           marca_nome?: string | null;
           modelo_codigo?: string | null;
           modelo_nome?: string | null;
-          num_passageiros?: string | null;
           odometro?: string | null;
           opcionais?: boolean | null;
           pcd_cnh_especial?: boolean | null;
@@ -1353,7 +1339,6 @@ export type Database = {
           renavam?: string | null;
           tipo_cambio?: string | null;
           tipo_uso?: string | null;
-          uso_comercial?: string | null;
           uso_comercial_dois_dias?: boolean | null;
           uso_estudo?: string | null;
           uso_trabalho?: string | null;

@@ -193,18 +193,6 @@ export function StepCoberturas({ f, up, erros }: Props) {
             )}
           </div>
         )}
-        <div className="field-group">
-          <label>Franquia</label>
-          <select
-            className="input"
-            value={f.franquia}
-            onChange={(e) => up("franquia", e.target.value)}
-          >
-            <option>Reduzida</option>
-            <option>Normal</option>
-            <option>Majorada</option>
-          </select>
-        </div>
       </div>
 
       <div className="field-group full" style={{ marginTop: 10 }}>

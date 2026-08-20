@@ -251,7 +251,6 @@ describe("D1 — CHECK de char_length em auditoria e cotação", () => {
       ["combustivel", 50],
       ["cor", 50],
       ["banco", 150],
-      ["uso_comercial", 50],
       ["km_mensal", 100],
       ["fipe_valor", 100],
     ];
@@ -301,10 +300,8 @@ describe("D1 — CHECK de char_length em auditoria e cotação", () => {
       ["tipo_cobertura", 50],
       ["casco", 100],
       ["casco_valor", 100],
-      ["franquia", 100],
       ["app_morte", 100],
       ["app_invalidez", 100],
-      ["dmh", 100],
       ["rcf_dm", 100],
       ["rcf_dc", 100],
       ["carro_reserva", 30],

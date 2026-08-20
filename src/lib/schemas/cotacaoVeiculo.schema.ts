@@ -26,7 +26,6 @@ export const veiculoSchema = z.object({
   combustivel: optionalMax(50, "Combustível muito longo."),
   cor: z.string().trim().min(1, "Cor é obrigatória.").max(50, "Cor muito longa."),
   banco: optionalMax(150, "Banco/financeira muito longo."),
-  usoComercial: optionalMax(50, "Campo muito longo."),
   kmMensal: optionalMax(100, "KM mensal muito longo."),
   fipeValor: optionalMax(100, "Valor FIPE muito longo."),
   // Uso do veículo / dados complementares (espelha cotacao_veiculo — G2.1)
@@ -37,7 +36,6 @@ export const veiculoSchema = z.object({
   utilizacaoLocadora: optionalMax(100, "Campo muito longo."),
   condutoresQueUtilizam: optionalMax(100, "Campo muito longo."),
   cepCirculacao: optionalMax(20, "CEP de circulação inválido."),
-  numPassageiros: optionalMax(10, "Número de passageiros inválido."),
   leilao: optionalMax(150, "Campo muito longo."),
   isencaoImposto: optionalMax(50, "Isenção de imposto muito longa."),
   valorAdaptacaoPcd: optionalMax(50, "Valor de adaptação PcD muito longo."),
