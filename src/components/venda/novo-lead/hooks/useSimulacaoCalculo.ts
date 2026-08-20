@@ -131,6 +131,7 @@ export function useSimulacaoCalculo(
   const CAMPOS_OBRIGATORIOS_CALCULO: { campo: keyof Form; label: string }[] = [
     { campo: "cpf", label: "CPF" },
     { campo: "nome", label: "Nome completo" },
+    { campo: "sexo", label: "Sexo" },
     { campo: "estadoCivil", label: "Estado civil" },
     { campo: "placa", label: "Placa" },
     { campo: "email", label: "E-mail" },
