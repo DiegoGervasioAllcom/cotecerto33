@@ -127,9 +127,12 @@ export function CadastrosMatrizTab({
       };
       const profiles = (profilesRes.data ?? []) as ProfileBruto[];
 
-      // Só entram aqui: cargo_id definido (time interno) OU role='vendedor' sem
-      // cargo cuja empresa vinculada não tem modelo de franquia (Vendedor
-      // Matriz — nunca é dono/vinculado de uma franquia).
+      // Só entram aqui: cargo_id definido (time interno) OU role='vendedor' cuja
+      // empresa vinculada não tem modelo de FRANQUIA (Vendedor Matriz — nunca é
+      // dono/vinculado de uma franquia). `modelo_id` sozinho não basta: um
+      // Vendedor Matriz CLT pode ter a empresa ligada a um modelo de
+      // comissionamento `tipo='clt'` (ex.: cálculo de comissão progressiva,
+      // ver G4) sem isso o tornar rede externa — só `tipo='franqueada'` conta.
       const empresaIds = profiles.map((p) => p.empresa_id);
       const { data: empresasData, error: empresasError } = await selectInBatches(
         empresaIds,
@@ -140,6 +143,16 @@ export function CadastrosMatrizTab({
           e.id,
           e.modelo_id,
         ]),
+      );
+      const modeloIds = Array.from(
+        new Set(Array.from(modeloPorEmpresa.values()).filter((id): id is string => !!id)),
+      );
+      const { data: modelosTipoData, error: modelosTipoError } = await selectInBatches(
+        modeloIds,
+        (lote) => supabase.from("modelos_franquia").select("id,tipo").in("id", lote),
+      );
+      const tipoPorModelo = new Map(
+        (modelosTipoData as { id: string; tipo: string }[]).map((m) => [m.id, m.tipo]),
       );
 
       const { data: rolesData, error: rolesError } = await selectInBatches(
@@ -153,7 +166,9 @@ export function CadastrosMatrizTab({
       const internos = profiles.filter((p) => {
         if (p.cargo_id) return true;
         const role = roleByUser.get(p.id);
-        return role === "vendedor" && modeloPorEmpresa.get(p.empresa_id) == null;
+        if (role !== "vendedor") return false;
+        const modeloId = modeloPorEmpresa.get(p.empresa_id);
+        return !modeloId || tipoPorModelo.get(modeloId) !== "franqueada";
       });
 
       // Áreas: override por pessoa (profile_areas) substitui o preset por
@@ -163,10 +178,10 @@ export function CadastrosMatrizTab({
         (lote) =>
           supabase.from("profile_areas").select("profile_id,area_chave").in("profile_id", lote),
       );
-      if (empresasError || rolesError || overridesError) {
+      if (empresasError || modelosTipoError || rolesError || overridesError) {
         setErr(
           `Alguns cadastros podem não ter carregado (base grande demais para uma consulta só): ${
-            (empresasError ?? rolesError ?? overridesError)?.message
+            (empresasError ?? modelosTipoError ?? rolesError ?? overridesError)?.message
           }`,
         );
       }

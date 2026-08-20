@@ -83,7 +83,7 @@ export function CadastrosRedeTab({
           .from("user_roles")
           .select("user_id,role")
           .in("role", ["master", "franqueado", "vendedor"]),
-        supabase.from("modelos_franquia").select("id,nome,modalidade").order("nome"),
+        supabase.from("modelos_franquia").select("id,nome,modalidade,tipo").order("nome"),
       ]);
       if (!ativo) return;
       if (rolesRes.error) {
@@ -93,8 +93,13 @@ export function CadastrosRedeTab({
       }
       const modelosData = (modelosRes.data ?? []) as (ModeloOpcao & {
         modalidade: "individual" | "full" | null;
+        tipo: string;
       })[];
-      setModelos(modelosData.map((m) => ({ id: m.id, nome: m.nome })));
+      // Só modelos de franquia entram no filtro "Modelo" desta aba — modelos
+      // `tipo='clt'` (comissionamento do Vendedor Matriz, ver G4) não são rede.
+      setModelos(
+        modelosData.filter((m) => m.tipo === "franqueada").map((m) => ({ id: m.id, nome: m.nome })),
+      );
       const modeloById = new Map(modelosData.map((m) => [m.id, m]));
 
       const roleByUser = new Map<string, "master" | "franqueado" | "vendedor">(
@@ -109,14 +114,16 @@ export function CadastrosRedeTab({
         return;
       }
 
-      const { data: profilesData, error: profilesErr } = await selectInBatches(profileIds, (lote) =>
-        supabase
-          .from("profiles")
-          .select(
-            "id,nome,email,empresa_id,equipe,aprovada_em,created_at,desligado_em,status,performance_status,superior_id",
-          )
-          .in("id", lote)
-          .in("status", ["aprovada", "suspensa"]),
+      const { data: profilesDataBruto, error: profilesErr } = await selectInBatches(
+        profileIds,
+        (lote) =>
+          supabase
+            .from("profiles")
+            .select(
+              "id,nome,email,empresa_id,equipe,aprovada_em,created_at,desligado_em,status,performance_status,superior_id",
+            )
+            .in("id", lote)
+            .in("status", ["aprovada", "suspensa"]),
       );
       if (!ativo) return;
       if (profilesErr) {
@@ -137,9 +144,9 @@ export function CadastrosRedeTab({
         performance_status: PerformanceStatus;
         superior_id: string | null;
       };
-      const profiles = profilesData as ProfileBruto[];
+      const profilesBruto = profilesDataBruto as ProfileBruto[];
       const empresaIds = Array.from(
-        new Set(profiles.map((p) => p.empresa_id).filter((id): id is string => !!id)),
+        new Set(profilesBruto.map((p) => p.empresa_id).filter((id): id is string => !!id)),
       );
 
       type EmpresaBruta = {
@@ -159,6 +166,20 @@ export function CadastrosRedeTab({
       }
       const empresas = empresasData as EmpresaBruta[];
       const empresaById = new Map(empresas.map((e) => [e.id, e]));
+
+      // Vendedor Matriz (Modelo CLT) também tem role='vendedor' no banco — mesma
+      // dívida de modelagem documentada em cadastros-matriz-tab.tsx. Sem essa
+      // exclusão, ele aparece nas duas listas (Cadastros Matriz e Cadastros
+      // Rede) — o protótipo nunca mistura os dois (redeAll() só lê
+      // MASTERS/FRANCHISES/SELLERS da rede). `modelo_id` sozinho não basta: um
+      // Vendedor Matriz CLT pode ter a empresa ligada a um modelo
+      // `tipo='clt'` (comissionamento, ver G4) — só `tipo='franqueada'` é rede.
+      const profiles = profilesBruto.filter((p) => {
+        if (roleByUser.get(p.id) !== "vendedor") return true;
+        const empresa = p.empresa_id ? empresaById.get(p.empresa_id) : undefined;
+        const modelo = empresa?.modelo_id ? modeloById.get(empresa.modelo_id) : undefined;
+        return modelo?.tipo === "franqueada";
+      });
 
       // Dono de cada franquia = quem esse franqueado reporta (profiles.superior_id)
       // — é a mesma hierarquia que empresas_visiveis() e excluir_cadastro_rede já
