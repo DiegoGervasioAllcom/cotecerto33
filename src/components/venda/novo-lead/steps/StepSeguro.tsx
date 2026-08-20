@@ -1,5 +1,21 @@
 import type { Form, BonusFieldKey } from "@/components/venda/novo-lead/types";
 
+const ANOS_POR_TIPO_CALCULO: Record<string, number> = {
+  Anual: 1,
+  Bianual: 2,
+  Trianual: 3,
+  Quadrianual: 4,
+  Quinquenal: 5,
+};
+
+export function vigenciaAPartirDeHoje(anos: number): { ini: string; fim: string } {
+  const ini = new Date();
+  const fim = new Date(ini);
+  fim.setFullYear(fim.getFullYear() + anos);
+  fim.setDate(fim.getDate() - 1);
+  return { ini: ini.toISOString().slice(0, 10), fim: fim.toISOString().slice(0, 10) };
+}
+
 type Props = {
   f: Form;
   up: <K extends keyof Form>(k: K, v: Form[K]) => void;
@@ -79,24 +95,16 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
               const tc = e.target.value;
               // Plurianual não tem duração fixa (varia por seguradora/negociação)
               // e Prazo curto é, por definição, período curto e manual — em
-              // ambos os casos não recalculamos "Até" automaticamente.
-              const yearsMap: Record<string, number> = {
-                Anual: 1,
-                Bianual: 2,
-                Trianual: 3,
-                Quadrianual: 4,
-                Quinquenal: 5,
-              };
-              const add = yearsMap[tc];
-              if (!f.vigIni || !add) {
+              // ambos os casos não recalculamos a vigência automaticamente.
+              const anos = ANOS_POR_TIPO_CALCULO[tc];
+              if (!anos) {
                 up("tipoCalculo", tc);
                 return;
               }
-              const d = new Date(f.vigIni + "T00:00:00");
-              d.setFullYear(d.getFullYear() + add);
-              d.setDate(d.getDate() - 1);
-              const fim = d.toISOString().slice(0, 10);
-              setF((s) => ({ ...s, tipoCalculo: tc, vigFim: fim }));
+              // Assume a partir de hoje (decisão de negócio) — o vendedor pode
+              // ajustar manualmente os dois campos de vigência depois.
+              const { ini, fim } = vigenciaAPartirDeHoje(anos);
+              setF((s) => ({ ...s, tipoCalculo: tc, vigIni: ini, vigFim: fim }));
             }}
           >
             {[
@@ -139,14 +147,7 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
             value={f.vigIni}
             onChange={(e) => {
               const ini = e.target.value;
-              const yearsMap: Record<string, number> = {
-                Anual: 1,
-                Bianual: 2,
-                Trianual: 3,
-                Quadrianual: 4,
-                Quinquenal: 5,
-              };
-              const add = yearsMap[f.tipoCalculo];
+              const add = ANOS_POR_TIPO_CALCULO[f.tipoCalculo];
               let fim = f.vigFim;
               if (ini && add) {
                 const d = new Date(ini + "T00:00:00");
