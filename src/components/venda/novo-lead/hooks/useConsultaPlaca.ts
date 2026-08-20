@@ -5,6 +5,7 @@ import { normalizePlaca } from "@/lib/masks";
 import {
   normalizarCombustivel,
   type PlacaDecodificada,
+  type PlacaParcial,
   type PrecificadorFipe,
 } from "@/lib/placa-decodificador";
 import type { Form } from "../types";
@@ -85,21 +86,17 @@ export function useConsultaPlaca({
     if (veiculoJaResolvido) ultimaPlaca.current = normalizePlaca(placaAtual);
   }, [carregandoRascunho, placaAtual, veiculoJaResolvido]);
 
-  const aplicarVersao = useCallback(
-    async (v: PrecificadorFipe) => {
-      setVersoes([]);
-      const alvo = norm(v.marca);
+  /** Acha a marca FIPE correspondente ao nome livre e já popula `modelos`
+   * dessa marca (fetch da FIPE) — usado tanto para aplicar uma versão FIPE
+   * completa quanto para aproveitar uma identificação parcial (sem versão). */
+  const resolverMarca = useCallback(
+    async (nomeMarca: string) => {
+      const alvo = norm(nomeMarca);
       const marcaMatch =
         marcas.find((m) => norm(m.nome) === alvo) ??
         marcas.find((m) => norm(m.nome).includes(alvo) || alvo.includes(norm(m.nome)));
-
-      if (!marcaMatch) {
-        setStatus({
-          tipo: "aviso",
-          texto: `Dados preenchidos. Marca "${v.marca}" não está na lista FIPE — selecione marca e modelo manualmente.`,
-        });
-        return;
-      }
+      if (!marcaMatch)
+        return { marcaMatch: undefined, lista: [] as { codigo: number; nome: string }[] };
 
       let lista: { codigo: number; nome: string }[] = [];
       try {
@@ -109,9 +106,26 @@ export function useConsultaPlaca({
         const j = await r.json();
         lista = j.modelos || [];
       } catch {
-        /* sem lista: cai no aviso de seleção manual abaixo */
+        /* sem lista: quem chamou decide o aviso de seleção manual */
       }
       if (lista.length) setModelos(lista);
+      return { marcaMatch, lista };
+    },
+    [marcas, setModelos],
+  );
+
+  const aplicarVersao = useCallback(
+    async (v: PrecificadorFipe) => {
+      setVersoes([]);
+      const { marcaMatch, lista } = await resolverMarca(v.marca);
+
+      if (!marcaMatch) {
+        setStatus({
+          tipo: "aviso",
+          texto: `Dados preenchidos. Marca "${v.marca}" não está na lista FIPE — selecione marca e modelo manualmente.`,
+        });
+        return;
+      }
 
       const alvoModelo = norm(v.modelo);
       const modeloMatch =
@@ -138,7 +152,45 @@ export function useConsultaPlaca({
             },
       );
     },
-    [marcas, setF, setModelos],
+    [resolverMarca, setF],
+  );
+
+  /**
+   * Identificação PARCIAL do decodificador (ex.: "Somente País/Marca/Ano
+   * Identificados", sem versão FIPE) — aproveita marca/ano/chassi em vez de
+   * descartar tudo e deixar o formulário vazio.
+   */
+  const aplicarParcial = useCallback(
+    async (parcial: PlacaParcial, mensagemProvedor: string) => {
+      setF((p) => ({
+        ...p,
+        chassi: parcial.chassi || p.chassi,
+        anoModelo: parcial.anoModelo || p.anoModelo,
+        anoFab: parcial.anoFabricacao || p.anoFab,
+      }));
+
+      if (!parcial.marca) {
+        setStatus({
+          tipo: "aviso",
+          texto: `${mensagemProvedor} Preencha marca e modelo manualmente.`,
+        });
+        return;
+      }
+      const { marcaMatch } = await resolverMarca(parcial.marca);
+      if (!marcaMatch) {
+        setStatus({
+          tipo: "aviso",
+          texto: `${mensagemProvedor} Preencha marca e modelo manualmente.`,
+        });
+        return;
+      }
+      setF((p) => ({ ...p, marca: marcaMatch.codigo }));
+      setStatus({
+        tipo: "aviso",
+        texto: `${mensagemProvedor} Marca preenchida (${marcaMatch.nome}) — selecione o modelo manualmente.`,
+      });
+    },
+    [resolverMarca, setF],
   );
 
   const aplicarDados = useCallback(
@@ -213,6 +265,8 @@ export function useConsultaPlaca({
         if (!souAtual()) return;
         if (r.ok && r.dados) {
           await aplicarDados(r.dados);
+        } else if (r.parcial) {
+          await aplicarParcial(r.parcial, r.mensagem || "Identificação parcial.");
         } else {
           setStatus({
             tipo: "erro",
@@ -231,7 +285,7 @@ export function useConsultaPlaca({
         if (souAtual()) setConsultando(false);
       }
     },
-    [aplicarDados, cotacaoId],
+    [aplicarDados, aplicarParcial, cotacaoId],
   );
 
   return { consultando, status, versoes, consultar, escolherVersao: aplicarVersao };
