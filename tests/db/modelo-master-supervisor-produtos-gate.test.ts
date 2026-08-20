@@ -61,7 +61,10 @@ describe("V11 · fn_salvar_modelo_master", () => {
     expect(hist?.de_para).toBeTruthy();
 
     // devolve ao valor original pra não afetar outros testes
-    await admin.from("modelo_master_config").update({ comissao_grupo: atual!.comissao_grupo }).eq("id", "default");
+    await admin
+      .from("modelo_master_config")
+      .update({ comissao_grupo: atual!.comissao_grupo })
+      .eq("id", "default");
   });
 
   it("não-diretor é rejeitado, config não muda", async () => {
@@ -200,11 +203,19 @@ describe("V11 · fn_salvar_produtos_catalogo", () => {
     });
     expect(error).toBeNull();
 
-    const { data: celular } = await admin.from("produtos").select("nome,ativo").eq("id", "celular").single();
+    const { data: celular } = await admin
+      .from("produtos")
+      .select("nome,ativo")
+      .eq("id", "celular")
+      .single();
     expect(celular?.nome).toBe("Celular Editado");
     expect(celular?.ativo).toBe(false);
 
-    const { data: novo } = await admin.from("produtos").select("id,nome,fixo,ativo").eq("nome", nomeNovo).single();
+    const { data: novo } = await admin
+      .from("produtos")
+      .select("id,nome,fixo,ativo")
+      .eq("nome", nomeNovo)
+      .single();
     expect(novo).toBeTruthy();
     expect(novo?.fixo).toBe(false);
     expect(novo?.ativo).toBe(true);
@@ -226,7 +237,11 @@ describe("V11 · fn_salvar_produtos_catalogo", () => {
     });
     expect(error).toBeNull();
 
-    const { data: auto } = await admin.from("produtos").select("nome,ativo,fixo").eq("id", "auto").single();
+    const { data: auto } = await admin
+      .from("produtos")
+      .select("nome,ativo,fixo")
+      .eq("id", "auto")
+      .single();
     expect(auto?.nome).toBe("Auto");
     expect(auto?.ativo).toBe(true);
     expect(auto?.fixo).toBe(true);
@@ -270,12 +285,17 @@ describe("V11 · fn_salvar_produtos_padrao", () => {
     });
     expect(error).toBeNull();
 
-    const { data: rows } = await admin.from("produtos_padrao").select("produto_id").eq("bloco", "externo");
+    const { data: rows } = await admin
+      .from("produtos_padrao")
+      .select("produto_id")
+      .eq("bloco", "externo");
     const ids = (rows || []).map((r) => r.produto_id);
     expect(ids).toContain("moto");
 
     const { data: padraoComAuto } = await admin.rpc("fn_produtos_padrao", { _bloco: "externo" });
-    const padraoIds = (padraoComAuto as unknown as { fn_produtos_padrao: string }[] | string[])?.map((x: any) =>
+    const padraoIds = (
+      padraoComAuto as unknown as { fn_produtos_padrao: string }[] | string[]
+    )?.map((x: { fn_produtos_padrao: string } | string) =>
       typeof x === "string" ? x : x.fn_produtos_padrao,
     );
     expect(padraoIds).toContain("auto");
@@ -346,7 +366,10 @@ describe("V11 · RLS bloqueia escrita direta nas tabelas novas", () => {
   it("produtos e produtos_padrao: authenticated não pode INSERT/UPDATE/DELETE direto", async () => {
     const diretor = await criarDiretor(uniq("rls-prod"));
 
-    const { error: e1 } = await diretor.client.from("produtos").update({ nome: "hack" }).eq("id", "moto");
+    const { error: e1 } = await diretor.client
+      .from("produtos")
+      .update({ nome: "hack" })
+      .eq("id", "moto");
     expect(e1).toBeTruthy();
 
     const { error: e2 } = await diretor.client
