@@ -2,8 +2,9 @@
 // Espelha as constraints reais do banco (D1 tamanho + D3 formato) para avisar
 // o usuário ANTES de avançar, sem serem mais restritivos: todo campo é
 // opcional (mesma lógica dos checks `col is null or col = '' or ...`) e só
-// valida formato/tamanho se o campo estiver preenchido — exceto `nomeSocial`,
-// ver superRefine abaixo.
+// valida formato/tamanho se o campo estiver preenchido — exceto `nome`,
+// `nomeSocial`, `estadoCivil`, `celular`, `email` e `numero`, obrigatórios
+// via superRefine abaixo (decisão de negócio, não vem do protótipo).
 
 import { z } from "zod";
 import { onlyDigits } from "@/lib/masks";
@@ -71,6 +72,27 @@ export const seguradoSchema = z
           "O robô de cotação só aceita Pessoa Física (CPF) por enquanto. CNPJ não é suportado.",
       });
     }
+    const nome = (v.nome ?? "").trim();
+    if (!nome) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["nome"],
+        message: "Nome completo é obrigatório.",
+      });
+    } else if (nome.split(/\s+/).filter(Boolean).length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["nome"],
+        message: "Informe nome e sobrenome (nome completo).",
+      });
+    }
+    if (!(v.estadoCivil ?? "").trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["estadoCivil"],
+        message: "Estado civil é obrigatório.",
+      });
+    }
     if (!(v.celular ?? "").trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -101,7 +123,6 @@ export const seguradoSchema = z
       });
       return;
     }
-    const nome = (v.nome ?? "").trim();
     if (nome && nomeSocial.toLowerCase() === nome.toLowerCase()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

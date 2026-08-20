@@ -130,7 +130,8 @@ export function useSimulacaoCalculo(
   // continuam sendo coletados na tela, só não bloqueiam mais o cálculo).
   const CAMPOS_OBRIGATORIOS_CALCULO: { campo: keyof Form; label: string }[] = [
     { campo: "cpf", label: "CPF" },
-    { campo: "nome", label: "Nome" },
+    { campo: "nome", label: "Nome completo" },
+    { campo: "estadoCivil", label: "Estado civil" },
     { campo: "placa", label: "Placa" },
     { campo: "email", label: "E-mail" },
     { campo: "cep", label: "CEP" },
