@@ -22,7 +22,7 @@ interface ResultadoPerformance {
   propostas: number;
   vendas: number;
   cancelamentos: number;
-  conversao_pct: number;
+  conversao_pct: number | null;
   comissao: number;
   dias_sem_venda: number;
   meta_vendas_mes: number | null;
@@ -159,7 +159,7 @@ describe("V11 · D3 — fn_calcular_performance_pessoa", () => {
     expect(data.meta_vendas_prorata).toBeCloseTo((10 * janela) / 30, 1);
   });
 
-  it("sem lead nenhum, conversão é 0 (não divide por zero)", async () => {
+  it("sem lead nenhum, conversão é NULL (não avaliável — não divide por zero, e não é '0% ruim')", async () => {
     const pessoa = await criarPersonaComEmpresa("vendedor", { emailPrefix: uniq("perf-zero") });
     const { data: raw, error } = await admin.rpc("fn_calcular_performance_pessoa", {
       p_profile_id: pessoa.userId,
@@ -169,7 +169,7 @@ describe("V11 · D3 — fn_calcular_performance_pessoa", () => {
     const data = raw as unknown as ResultadoPerformance;
     expect(data.leads).toBe(0);
     expect(data.vendas).toBe(0);
-    expect(data.conversao_pct).toBe(0);
+    expect(data.conversao_pct).toBeNull();
     expect(data.meta_vendas_mes).toBeNull();
     expect(data.meta_vendas_prorata).toBeNull();
   });
