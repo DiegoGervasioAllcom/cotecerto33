@@ -174,21 +174,12 @@ export function ResumoCotacao({
                     <b>Renavam:</b> {f.renavam}
                   </div>
                 )}
-                {(f.zeroKm || f.blindado || f.alienado) && (
+                {(f.zeroKm || f.alienado) && (
                   <div>
                     <b>Flags:</b>{" "}
-                    {[
-                      f.zeroKm && "0km",
-                      f.blindado && "Blindado",
-                      f.alienado && `Alienado${f.banco ? ` (${f.banco})` : ""}`,
-                    ]
+                    {[f.zeroKm && "0km", f.alienado && `Alienado${f.banco ? ` (${f.banco})` : ""}`]
                       .filter(Boolean)
                       .join(" · ")}
-                  </div>
-                )}
-                {f.usoComercial && (
-                  <div>
-                    <b>Uso comercial:</b> {f.usoComercial}
                   </div>
                 )}
                 {f.kmMensal && (
@@ -237,7 +228,7 @@ export function ResumoCotacao({
                 )}
               </div>
             )}
-            {(f.tipoCobertura || f.casco || f.franquia) && (
+            {(f.tipoCobertura || f.casco) && (
               <div style={{ display: "grid", gap: 4 }}>
                 <div
                   className="muted small"
@@ -256,11 +247,6 @@ export function ResumoCotacao({
                     {f.cascoValor ? ` · ${f.cascoValor}` : ""}
                   </div>
                 )}
-                {f.franquia && (
-                  <div>
-                    <b>Franquia:</b> {f.franquia}
-                  </div>
-                )}
                 {(f.appMorte || f.appInval) && (
                   <div>
                     <b>APP:</b> M {f.appMorte || "—"} / I {f.appInval || "—"}
@@ -269,11 +255,6 @@ export function ResumoCotacao({
                 {(f.rcfDm || f.rcfDc) && (
                   <div>
                     <b>RCF:</b> DM {f.rcfDm || "—"} / DC {f.rcfDc || "—"}
-                  </div>
-                )}
-                {f.dmh && (
-                  <div>
-                    <b>DMH:</b> {f.dmh}
                   </div>
                 )}
                 {f.carroReserva && (

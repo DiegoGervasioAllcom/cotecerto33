@@ -303,19 +303,6 @@ export function StepVeiculo({
           />
         </div>
         <div className="field-group">
-          <label>Blindado</label>
-          <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-            <label>
-              <input
-                type="checkbox"
-                checked={f.blindado}
-                onChange={(e) => up("blindado", e.target.checked)}
-              />{" "}
-              Sim
-            </label>
-          </div>
-        </div>
-        <div className="field-group">
           <label>Alienado</label>
           <div className="row" style={{ gap: 14, paddingTop: 6 }}>
             <label>
@@ -345,17 +332,6 @@ export function StepVeiculo({
           </div>
         )}
         <div className="field-group">
-          <label>Uso comercial</label>
-          <select
-            className="input"
-            value={f.usoComercial}
-            onChange={(e) => up("usoComercial", e.target.value)}
-          >
-            <option>Não</option>
-            <option>Sim</option>
-          </select>
-        </div>
-        <div className="field-group">
           <label>KM mensal</label>
           <input
             className="input"
@@ -373,16 +349,6 @@ export function StepVeiculo({
             inputMode="numeric"
             onChange={(e) => up("cepCirculacao", maskCep(e.target.value))}
             placeholder="00000-000"
-          />
-        </div>
-        <div className="field-group">
-          <label>Nº de passageiros</label>
-          <input
-            className="input"
-            value={f.numPassageiros}
-            inputMode="numeric"
-            maxLength={2}
-            onChange={(e) => up("numPassageiros", onlyDigits(e.target.value).slice(0, 2))}
           />
         </div>
       </div>
