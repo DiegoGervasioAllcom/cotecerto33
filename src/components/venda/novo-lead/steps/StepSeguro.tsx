@@ -77,6 +77,9 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
             value={f.tipoCalculo}
             onChange={(e) => {
               const tc = e.target.value;
+              // Plurianual não tem duração fixa (varia por seguradora/negociação)
+              // e Prazo curto é, por definição, período curto e manual — em
+              // ambos os casos não recalculamos "Até" automaticamente.
               const yearsMap: Record<string, number> = {
                 Anual: 1,
                 Bianual: 2,
@@ -85,13 +88,14 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
                 Quinquenal: 5,
               };
               const add = yearsMap[tc];
-              let fim = f.vigFim;
-              if (f.vigIni && add) {
-                const d = new Date(f.vigIni + "T00:00:00");
-                d.setFullYear(d.getFullYear() + add);
-                d.setDate(d.getDate() - 1);
-                fim = d.toISOString().slice(0, 10);
+              if (!f.vigIni || !add) {
+                up("tipoCalculo", tc);
+                return;
               }
+              const d = new Date(f.vigIni + "T00:00:00");
+              d.setFullYear(d.getFullYear() + add);
+              d.setDate(d.getDate() - 1);
+              const fim = d.toISOString().slice(0, 10);
               setF((s) => ({ ...s, tipoCalculo: tc, vigFim: fim }));
             }}
           >
@@ -163,32 +167,9 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
             onChange={(e) => up("vigFim", e.target.value)}
           />
         </div>
-        <div className="field-group">
-          <label>
-            Grupo de produção<span className="req">*</span>
-          </label>
-          <input
-            className="input"
-            value={f.grupoProducao}
-            onChange={(e) => up("grupoProducao", e.target.value)}
-            placeholder="Busca o produtor"
-          />
-        </div>
       </div>
 
       <div className="wizard-grid">
-        <div className="field-group">
-          <label>Campanha</label>
-          <select
-            className="input"
-            value={f.campanha}
-            onChange={(e) => up("campanha", e.target.value)}
-          >
-            <option value="">Selecione</option>
-            <option>Campanha Supper Auto 2026</option>
-            <option>Indique e ganhe</option>
-          </select>
-        </div>
         <div className="field-group full">
           <label>Observações para a cotação</label>
           <textarea

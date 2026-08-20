@@ -18,9 +18,13 @@ export const veiculoSchema = z.object({
   marcaNome: optionalMax(150, "Marca muito longa."),
   modeloNome: optionalMax(150, "Modelo muito longo."),
   anoModelo: optionalMax(4, "Ano modelo inválido."),
-  anoFab: optionalMax(4, "Ano fabricação inválido."),
+  anoFab: z
+    .string()
+    .trim()
+    .min(1, "Ano fabricação é obrigatório.")
+    .max(4, "Ano fabricação inválido."),
   combustivel: optionalMax(50, "Combustível muito longo."),
-  cor: optionalMax(50, "Cor muito longa."),
+  cor: z.string().trim().min(1, "Cor é obrigatória.").max(50, "Cor muito longa."),
   banco: optionalMax(150, "Banco/financeira muito longo."),
   usoComercial: optionalMax(50, "Campo muito longo."),
   kmMensal: optionalMax(100, "KM mensal muito longo."),

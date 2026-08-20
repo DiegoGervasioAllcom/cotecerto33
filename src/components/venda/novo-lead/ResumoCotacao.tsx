@@ -7,6 +7,7 @@ type Props = {
   modelos: { codigo: number; nome: string }[];
   fipeValor: string;
   podeCalcular: boolean;
+  camposFaltantes: string[];
   setStep: React.Dispatch<React.SetStateAction<number>>;
   doSimularCalculo: () => void;
   persistir: (extra?: { premios?: ResultadoCalculo[] }) => Promise<void>;
@@ -21,6 +22,7 @@ export function ResumoCotacao({
   modelos,
   fipeValor,
   podeCalcular,
+  camposFaltantes,
   setStep,
   doSimularCalculo,
   persistir,
@@ -309,6 +311,7 @@ export function ResumoCotacao({
           className="btn btn-yellow"
           disabled={!podeCalcular}
           style={!podeCalcular ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
+          title={!podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined}
           onClick={() => {
             setStep(5);
             doSimularCalculo();
@@ -319,6 +322,11 @@ export function ResumoCotacao({
           </svg>{" "}
           Calcular
         </button>
+        {!podeCalcular && camposFaltantes.length > 0 && (
+          <div className="muted small" style={{ marginTop: 4 }}>
+            Faltam: {camposFaltantes.join(", ")}
+          </div>
+        )}
         <button
           className="btn btn-ghost btn-sm"
           onClick={() => void persistir()}

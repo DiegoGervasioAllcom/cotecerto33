@@ -88,7 +88,6 @@ function Page() {
     sexo: "",
     estadoCivil: "",
     celular: "",
-    telRes: "",
     email: "",
     cep: "",
     numero: "",
@@ -96,7 +95,6 @@ function Page() {
     bairro: "",
     cidade: "",
     uf: "",
-    sms: "nao",
     tipoSeguro: "Seguro novo",
     ramo: "Automóvel",
     categoria: "Particular",
@@ -108,8 +106,6 @@ function Page() {
     classeBonus: "0",
     seguradorasSel: ["Mapfre", "Aliro", "Yelum", "HDI", "Suhai"],
     tipoCalculo: "Anual",
-    grupoProducao: "",
-    campanha: "",
     observacoesCot: "",
     seguradoraAnterior: "",
     sucursalAnterior: "",
@@ -232,11 +228,6 @@ function Page() {
     danosMorais: "",
     despesasExtras: "Não contratada",
     pequenosReparos: false,
-    maisAssistencias: false,
-    maisAssistenciasSeguradora: "",
-    descontosAgravos: {},
-    comissoes: {},
-    condicoesEspeciais: { worksite: false, yelumVarejo: false, planosPopulares: false },
   });
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
   const { cepLoading, lookupCep } = useCepLookup(setF);
@@ -300,6 +291,7 @@ function Page() {
     erro: erroCalculo,
     simularCalculo,
     podeCalcular,
+    camposFaltantes,
   } = useSimulacaoCalculo(f, cotacaoId, persistir);
 
   const {
@@ -398,6 +390,7 @@ function Page() {
               calculando={calculando}
               erro={erroCalculo}
               podeCalcular={podeCalcular}
+              camposFaltantes={camposFaltantes}
               cotacaoId={cotacaoId}
               doSimularCalculo={doSimularCalculo}
             />
@@ -420,6 +413,7 @@ function Page() {
             modelos={modelos}
             fipeValor={fipeValor}
             podeCalcular={podeCalcular}
+            camposFaltantes={camposFaltantes}
             setStep={setVisibleStep}
             doSimularCalculo={doSimularCalculo}
             persistir={persistir}

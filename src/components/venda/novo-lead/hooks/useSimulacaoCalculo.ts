@@ -128,18 +128,32 @@ export function useSimulacaoCalculo(
   // o robô Playwright exige de fato — ele identifica o veículo pela placa via
   // FIPE do portal da seguradora, não usa marca/modelo/anoModelo (que
   // continuam sendo coletados na tela, só não bloqueiam mais o cálculo).
-  const podeCalcular = !!(
-    f.cpf &&
-    f.nome &&
-    f.placa &&
-    f.email &&
-    f.cep &&
-    f.celular &&
-    f.cepPernoite &&
-    f.cepCirculacao &&
-    f.kmMensal &&
-    (f.seguradorasSel?.length ?? 0) > 0
-  );
+  const CAMPOS_OBRIGATORIOS_CALCULO: { campo: keyof Form; label: string }[] = [
+    { campo: "cpf", label: "CPF" },
+    { campo: "nome", label: "Nome" },
+    { campo: "placa", label: "Placa" },
+    { campo: "email", label: "E-mail" },
+    { campo: "cep", label: "CEP" },
+    { campo: "celular", label: "Telefone celular" },
+    { campo: "cepPernoite", label: "CEP de pernoite" },
+    { campo: "cepCirculacao", label: "CEP de circulação" },
+    { campo: "kmMensal", label: "Km mensal" },
+  ];
 
-  return { calculando, resultados, setResultados, erro, simularCalculo, podeCalcular };
+  const camposFaltantes = CAMPOS_OBRIGATORIOS_CALCULO.filter((c) => !f[c.campo]).map(
+    (c) => c.label,
+  );
+  if ((f.seguradorasSel?.length ?? 0) === 0) camposFaltantes.push("Seguradoras selecionadas");
+
+  const podeCalcular = camposFaltantes.length === 0;
+
+  return {
+    calculando,
+    resultados,
+    setResultados,
+    erro,
+    simularCalculo,
+    podeCalcular,
+    camposFaltantes,
+  };
 }

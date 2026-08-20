@@ -28,6 +28,7 @@ type Props = {
   calculando: boolean;
   erro: string | null;
   podeCalcular: boolean;
+  camposFaltantes: string[];
   cotacaoId: string | null;
   doSimularCalculo: () => void;
 };
@@ -38,6 +39,7 @@ export function StepCalculo({
   calculando,
   erro,
   podeCalcular,
+  camposFaltantes,
   cotacaoId,
   doSimularCalculo,
 }: Props) {
@@ -188,6 +190,7 @@ export function StepCalculo({
         <button
           className="btn btn-ghost btn-sm"
           disabled={!podeCalcular || calculando}
+          title={!podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined}
           onClick={doSimularCalculo}
         >
           <svg width="13" height="13">
@@ -393,12 +396,22 @@ export function StepCalculo({
 
       {!transmissaoEmAndamento && resultados.length === 0 && !calculando && (
         <div style={{ padding: "12px 0", marginBottom: 8 }}>
-          <button className="btn btn-yellow" disabled={!podeCalcular} onClick={doSimularCalculo}>
+          <button
+            className="btn btn-yellow"
+            disabled={!podeCalcular}
+            title={!podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined}
+            onClick={doSimularCalculo}
+          >
             <svg width="14" height="14">
               <use href="#i-bolt" />
             </svg>
-            {podeCalcular ? " Calcular agora" : " Selecione seguradoras no passo Seguro"}
+            {podeCalcular ? " Calcular agora" : " Faltam campos"}
           </button>
+          {!podeCalcular && camposFaltantes.length > 0 && (
+            <div className="muted small" style={{ marginTop: 6 }}>
+              Faltam: {camposFaltantes.join(", ")}
+            </div>
+          )}
         </div>
       )}
 

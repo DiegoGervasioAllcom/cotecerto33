@@ -1,5 +1,5 @@
 import { onlyDigits, maskCpfCnpj } from "@/lib/masks";
-import { maskCel, maskFixo, maskCep } from "@/components/venda/novo-lead/masks";
+import { maskCel, maskCep } from "@/components/venda/novo-lead/masks";
 import type { Form } from "@/components/venda/novo-lead/types";
 
 type Props = {
@@ -141,24 +141,10 @@ export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
             </span>
           )}
         </div>
-        <div className="field-group">
-          <label>Telefone residencial</label>
-          <input
-            className="input"
-            value={f.telRes}
-            inputMode="numeric"
-            maxLength={14}
-            onChange={(e) => up("telRes", maskFixo(e.target.value))}
-            placeholder="(00) 0000-0000"
-          />
-          {erros.telRes && (
-            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
-              {erros.telRes}
-            </span>
-          )}
-        </div>
         <div className="field-group full">
-          <label>E-mail</label>
+          <label>
+            E-mail<span className="req">*</span>
+          </label>
           <input
             className="input"
             type="email"
@@ -198,7 +184,9 @@ export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
           )}
         </div>
         <div className="field-group">
-          <label>Número</label>
+          <label>
+            Número<span className="req">*</span>
+          </label>
           <input
             className="input"
             value={f.numero}
@@ -221,29 +209,6 @@ export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
             style={{ background: "var(--offwhite)" }}
             placeholder="Preenche via CEP"
           />
-        </div>
-        <div className="field-group">
-          <label>Autorizo o envio por SMS</label>
-          <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-            <label>
-              <input
-                type="radio"
-                name="sms"
-                checked={f.sms === "sim"}
-                onChange={() => up("sms", "sim")}
-              />{" "}
-              Sim
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="sms"
-                checked={f.sms === "nao"}
-                onChange={() => up("sms", "nao")}
-              />{" "}
-              Não
-            </label>
-          </div>
         </div>
       </div>
     </>

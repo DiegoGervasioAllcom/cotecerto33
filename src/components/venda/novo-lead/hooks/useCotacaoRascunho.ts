@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj, normalizePlaca } from "@/lib/masks";
-import { maskCel, maskFixo, maskCep } from "../masks";
+import { maskCel, maskCep } from "../masks";
 import type { Form } from "../types";
 
 type MarcaOpt = { codigo: string; nome: string };
@@ -61,7 +61,6 @@ export function useCotacaoRascunho(params: {
         sexo: f.sexo,
         estado_civil: f.estadoCivil,
         celular: f.celular,
-        tel_res: f.telRes,
         email: f.email,
         cep: f.cep,
         numero: f.numero,
@@ -69,7 +68,6 @@ export function useCotacaoRascunho(params: {
         bairro: f.bairro,
         cidade: f.cidade,
         uf: f.uf,
-        sms_optin: f.sms === "sim",
       },
       seguro: {
         tipo_seguro: f.tipoSeguro,
@@ -95,8 +93,6 @@ export function useCotacaoRascunho(params: {
         seguradoras_sel: f.seguradorasSel,
         tipo_calculo: f.tipoCalculo,
         tipo_cobertura: f.tipoCobertura,
-        grupo_producao: f.grupoProducao,
-        campanha: f.campanha,
         observacoes: f.observacoesCot,
       },
       veiculo: {
@@ -204,11 +200,6 @@ export function useCotacaoRascunho(params: {
         danos_morais: f.danosMorais,
         despesas_extras: f.despesasExtras,
         pequenos_reparos: f.pequenosReparos,
-        mais_assistencias: f.maisAssistencias,
-        mais_assistencias_seguradora: f.maisAssistenciasSeguradora,
-        descontos_agravos: f.descontosAgravos,
-        comissoes: f.comissoes,
-        condicoes_especiais: f.condicoesEspeciais,
       },
     };
   }
@@ -288,7 +279,6 @@ export function useCotacaoRascunho(params: {
         sexo: s.sexo ?? "",
         estadoCivil: s.estado_civil ?? "",
         celular: s.celular ? maskCel(s.celular) : "",
-        telRes: s.tel_res ? maskFixo(s.tel_res) : "",
         email: s.email ?? "",
         cep: s.cep ? maskCep(s.cep) : "",
         numero: s.numero ?? "",
@@ -296,7 +286,6 @@ export function useCotacaoRascunho(params: {
         bairro: s.bairro ?? "",
         cidade: s.cidade ?? "",
         uf: s.uf ?? "",
-        sms: s.sms_optin ? "sim" : "nao",
         tipoSeguro: sg.tipo_seguro ?? prev.tipoSeguro,
         ramo: sg.ramo ?? prev.ramo,
         categoria: sg.categoria ?? prev.categoria,
@@ -316,8 +305,6 @@ export function useCotacaoRascunho(params: {
           : prev.seguradorasSel,
         tipoCalculo: sg.tipo_calculo ?? prev.tipoCalculo,
         tipoCobertura: sg.tipo_cobertura ?? prev.tipoCobertura,
-        grupoProducao: sg.grupo_producao ?? prev.grupoProducao,
-        campanha: sg.campanha ?? prev.campanha,
         observacoesCot: sg.observacoes ?? prev.observacoesCot,
         placa: normalizePlaca(v.placa),
         chassi: v.chassi ?? "",
@@ -418,15 +405,6 @@ export function useCotacaoRascunho(params: {
         danosMorais: c.danos_morais ?? "",
         despesasExtras: c.despesas_extras ?? prev.despesasExtras,
         pequenosReparos: !!c.pequenos_reparos,
-        maisAssistencias: !!c.mais_assistencias,
-        maisAssistenciasSeguradora: c.mais_assistencias_seguradora ?? "",
-        descontosAgravos: (c.descontos_agravos as Record<string, Record<string, string>>) ?? {},
-        comissoes: (c.comissoes as Record<string, string>) ?? {},
-        condicoesEspeciais: (c.condicoes_especiais as Form["condicoesEspeciais"] | null) ?? {
-          worksite: false,
-          yelumVarejo: false,
-          planosPopulares: false,
-        },
       }));
       if (v.fipe_valor) setFipeValor(v.fipe_valor);
       if (v.marca_codigo && v.marca_nome) {
