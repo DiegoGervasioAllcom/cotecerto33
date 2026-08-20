@@ -27,7 +27,6 @@ export const coberturasSchema = z.object({
   franquiaSegundaOpcao: optionalMax(30, "Campo muito longo."),
   danosMorais: optionalMax(100, "Danos morais muito longo."),
   despesasExtras: optionalMax(30, "Despesas extras muito longo."),
-  maisAssistenciasSeguradora: optionalMax(50, "Campo muito longo."),
 });
 
 export type CoberturasFormValues = z.infer<typeof coberturasSchema>;

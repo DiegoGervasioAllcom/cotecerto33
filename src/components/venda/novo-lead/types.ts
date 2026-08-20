@@ -10,7 +10,6 @@ export type Form = {
   sexo: string;
   estadoCivil: string;
   celular: string;
-  telRes: string;
   email: string;
   cep: string;
   numero: string;
@@ -18,7 +17,6 @@ export type Form = {
   bairro: string;
   cidade: string;
   uf: string;
-  sms: "sim" | "nao";
   // Seguro
   tipoSeguro: string;
   ramo: string;
@@ -31,8 +29,6 @@ export type Form = {
   classeBonus: string;
   seguradorasSel: string[];
   tipoCalculo: string;
-  grupoProducao: string;
-  campanha: string;
   observacoesCot: string;
   // Renovação (conditional)
   seguradoraAnterior: string;
@@ -175,18 +171,6 @@ export type Form = {
   danosMorais: string;
   despesasExtras: string;
   pequenosReparos: boolean;
-  maisAssistencias: boolean;
-  maisAssistenciasSeguradora: string;
-  // Coberturas — descontos/agravos/comissões por seguradora e condições
-  // especiais (não fazem parte do objeto `cobertura` da Quiver — uso
-  // interno de negociação com a matriz).
-  descontosAgravos: Record<string, Record<string, string>>;
-  comissoes: Record<string, string>;
-  condicoesEspeciais: {
-    worksite: boolean;
-    yelumVarejo: boolean;
-    planosPopulares: boolean;
-  };
 };
 
 export type BonusFieldKey =

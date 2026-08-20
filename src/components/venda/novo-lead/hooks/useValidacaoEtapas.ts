@@ -28,9 +28,9 @@ export function useValidacaoEtapas(
         sexo: f.sexo,
         estadoCivil: f.estadoCivil,
         celular: f.celular,
-        telRes: f.telRes,
         email: f.email,
         cep: f.cep,
+        numero: f.numero,
         logradouro: f.logradouro,
         bairro: f.bairro,
         cidade: f.cidade,
@@ -170,7 +170,6 @@ export function useValidacaoEtapas(
         franquiaSegundaOpcao: f.franquiaSegundaOpcao,
         danosMorais: f.danosMorais,
         despesasExtras: f.despesasExtras,
-        maisAssistenciasSeguradora: f.maisAssistenciasSeguradora,
       });
       if (!r.success) {
         const novos: Record<string, string> = {};

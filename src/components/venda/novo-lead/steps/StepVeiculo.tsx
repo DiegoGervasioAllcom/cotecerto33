@@ -226,7 +226,9 @@ export function StepVeiculo({
           />
         </div>
         <div className="field-group">
-          <label>Ano fabricação</label>
+          <label>
+            Ano fabricação<span className="req">*</span>
+          </label>
           <input
             className="input"
             value={f.anoFab}
@@ -234,6 +236,11 @@ export function StepVeiculo({
             onChange={(e) => up("anoFab", maskAno(e.target.value))}
             placeholder="2023"
           />
+          {erros.anoFab && (
+            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+              {erros.anoFab}
+            </span>
+          )}
         </div>
         <div className="field-group">
           <label>Combustível</label>
@@ -251,7 +258,9 @@ export function StepVeiculo({
           </select>
         </div>
         <div className="field-group">
-          <label>Cor</label>
+          <label>
+            Cor<span className="req">*</span>
+          </label>
           <input
             className="input"
             value={f.cor}

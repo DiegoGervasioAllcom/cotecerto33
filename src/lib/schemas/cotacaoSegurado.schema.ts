@@ -40,7 +40,6 @@ export const seguradoSchema = z
     sexo: optionalMax(30, "Campo muito longo."),
     estadoCivil: optionalMax(30, "Campo muito longo."),
     celular: optionalDigitsRange(10, 11, "Telefone celular inválido."),
-    telRes: optionalDigitsRange(10, 11, "Telefone residencial inválido."),
     email: z
       .string()
       .optional()
@@ -70,6 +69,27 @@ export const seguradoSchema = z
         path: ["cpf"],
         message:
           "O robô de cotação só aceita Pessoa Física (CPF) por enquanto. CNPJ não é suportado.",
+      });
+    }
+    if (!(v.celular ?? "").trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["celular"],
+        message: "Celular é obrigatório.",
+      });
+    }
+    if (!(v.email ?? "").trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["email"],
+        message: "E-mail é obrigatório.",
+      });
+    }
+    if (!(v.numero ?? "").trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["numero"],
+        message: "Número é obrigatório.",
       });
     }
     const nomeSocial = (v.nomeSocial ?? "").trim();

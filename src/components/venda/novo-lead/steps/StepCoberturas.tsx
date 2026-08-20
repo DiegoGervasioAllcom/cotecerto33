@@ -5,11 +5,7 @@ import {
   FRANQUIA_OPCOES,
   RCF_VALORES,
   DESPESAS_EXTRAS_OPCOES,
-  SEG_HABILITADAS,
 } from "@/components/venda/novo-lead/enumsCoberturas";
-import { DescontosFold } from "@/components/venda/novo-lead/steps/coberturas/DescontosFold";
-import { ComissoesFold } from "@/components/venda/novo-lead/steps/coberturas/ComissoesFold";
-import { CondicoesEspeciaisFold } from "@/components/venda/novo-lead/steps/coberturas/CondicoesEspeciaisFold";
 import type { Form } from "@/components/venda/novo-lead/types";
 
 type Props = {
@@ -27,8 +23,6 @@ function money(v: number) {
 }
 
 export function StepCoberturas({ f, up, erros }: Props) {
-  const seguradoras = f.seguradorasSel.length ? f.seguradorasSel : SEG_HABILITADAS;
-
   return (
     <>
       <h2>Coberturas</h2>
@@ -259,43 +253,6 @@ export function StepCoberturas({ f, up, erros }: Props) {
           </div>
         </div>
       </div>
-
-      <div className="field-group full" style={{ marginTop: 10 }}>
-        <label>Mais Assistências</label>
-        <div
-          className="row"
-          style={{ gap: 18, paddingTop: 6, flexWrap: "wrap", alignItems: "center" }}
-        >
-          <label
-            className={`switch ${f.maisAssistencias ? "on" : ""}`}
-            onClick={() => up("maisAssistencias", !f.maisAssistencias)}
-          >
-            <span className="track"></span>
-            <span className="label">Contratar pacote de mais assistências</span>
-          </label>
-          {f.maisAssistencias && (
-            <div className="field-group" style={{ margin: 0, minWidth: 240 }}>
-              <label>
-                Seguradora do pacote<span className="req">*</span>
-              </label>
-              <select
-                className="input"
-                value={f.maisAssistenciasSeguradora}
-                onChange={(e) => up("maisAssistenciasSeguradora", e.target.value)}
-              >
-                <option value="">Selecione</option>
-                {seguradoras.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <DescontosFold f={f} up={up} seguradoras={seguradoras} />
-      <ComissoesFold f={f} up={up} seguradoras={seguradoras} />
-      <CondicoesEspeciaisFold f={f} up={up} />
     </>
   );
 }
