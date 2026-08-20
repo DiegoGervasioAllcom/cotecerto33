@@ -478,13 +478,13 @@ export const matrizTutorialChapters = [
         page: "macessos",
         target: "#page-macessos .card",
         pos: "top",
-        title: "Personalização geral — Modelo CLT",
-        body: "<p>No <strong>Modelo CLT</strong> ficam as regras do vendedor interno, vindas das políticas da Supper: comissão <strong>progressiva</strong> por faturamento (2%–3,5%), o <strong>fator de comissão média</strong> (Novas Vendas e Remalho), a tabela <strong>Ituran</strong> (planos e adicionais) e as regras gerais — apuração 26→25 e pagamento no <strong>5º dia útil</strong>.</p>",
+        title: "Personalização geral — Modelo Master",
+        body: "<p>No <strong>Modelo Master</strong> ficam as regras padrão de comissionamento do Master sobre a equipe: percentual sobre a comissão do grupo, royalties + FPP, base de cálculo e pagamento — além da <strong>Campanha Elite Master</strong>, bônus trimestral por faixa de faturamento da equipe de franqueados.</p>",
         tip: {
           label: "Tudo num lugar",
           text: "O que hoje vive em PDFs e planilhas de comissão vira parâmetro editável — e alimenta automaticamente a classificação de cada acesso.",
         },
-        prepare: "acessos-modelos-clt",
+        prepare: "acessos-modelos-master",
       },
     ],
     outro: {

@@ -524,8 +524,8 @@ test.describe("roteiro da Matriz — previews e destinos de detalhe", () => {
     await expect(page.locator('[data-tour="acessos-modelos-franquia"]')).toHaveClass(/on/);
     await expectSpotlightAround(page, page.locator(".toggle-sub"));
     await dialog.getByRole("button", { name: "Próximo" }).click();
-    dialog = await esperarPasso(page, "Personalização geral — Modelo CLT", "6 / 6");
-    await expect(page.locator('[data-tour="acessos-modelos-clt"]')).toHaveClass(/on/);
+    dialog = await esperarPasso(page, "Personalização geral — Modelo Master", "6 / 6");
+    await expect(page.locator('[data-tour="acessos-modelos-master"]')).toHaveClass(/on/);
     await expectSpotlightAround(page, page.locator(".card").first());
     await page.waitForTimeout(1_700);
     expect(mutations, "previews não podem salvar modelos ou chamar RPC").toEqual([]);
