@@ -88,7 +88,42 @@ export type CltConfig = {
 };
 
 export type Tab = "cadastros" | "pend" | "deslig" | "modelos";
-export type PersoSub = "franquia" | "clt" | "performance" | "diretores" | "historico";
+export type PersoSub =
+  | "franquia"
+  | "clt"
+  | "supervisor"
+  | "master"
+  | "produtos"
+  | "performance"
+  | "diretores"
+  | "historico";
+
+/** [categoria, faixa_minima, bonus_pct] — Campanha Elite do Modelo Master. */
+export type EliteRow = [string, string, string];
+
+export type ModeloMasterConfig = {
+  comissao_grupo: string;
+  royalties: string;
+  base_calc: string;
+  pagamento: string;
+  elite: EliteRow[];
+};
+
+export type ModeloSupervisorConfig = {
+  comissao_grupo: string;
+  royalties: string;
+  base_calc: string;
+  pagamento: string;
+};
+
+export type ProdutoCatalogo = {
+  id: string;
+  nome: string;
+  fixo: boolean;
+  ativo: boolean;
+  tem_jornada: boolean;
+  ordem: number;
+};
 
 export type Superior = { id: string; nome: string; role: "master" | "supervisor" };
 export type FranquiaAprovada = {

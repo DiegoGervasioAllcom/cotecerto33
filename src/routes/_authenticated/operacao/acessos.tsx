@@ -133,7 +133,7 @@ function Page() {
   function abrirExterno(t: typeof visibleTab) {
     setBlocoAtivo("externo");
     setVisibleTab(t);
-    if (t === "modelos") setVisiblePersoSub("franquia");
+    if (t === "modelos") setVisiblePersoSub("franquia"); // rede abre em Modelo Franquia
   }
 
   if (denied) return denied;
@@ -159,10 +159,13 @@ function Page() {
     );
   }
 
-  // V11 · F6 — mesmo componente nos dois blocos (Modelo Franquia é o único
-  // das 5 sub-abas específico de rede externa), mas a sub-aba Performance
-  // precisa ficar travada no bloco de quem entrou (Matriz -> interno,
-  // Externos -> rede) — sem picker interno, conforme o protótipo.
+  // V11 · F6 — mesmo componente nos dois blocos, mas as sub-abas de modelo
+  // divergem por bloco (accModelos()/accModelosMatriz() do protótipo): MATRIZ
+  // (interno) mostra Modelo Supervisor/Modelo CLT — sem Modelo Franquia;
+  // EXTERNOS (rede) mostra Modelo Franquia/Modelo Master — sem Modelo CLT.
+  // Produtos, Performance, Diretores e Histórico são comuns aos dois, mas a
+  // sub-aba Performance fica travada no bloco de quem entrou (Matriz ->
+  // interno, Externos -> rede) — sem picker interno, conforme o protótipo.
   function personalizacaoGeral(bloco: "interno" | "rede") {
     return (
       <PersoGeral
@@ -279,7 +282,7 @@ function Page() {
             onClick={() => {
               abrirInterno();
               setTabInterno("modelos");
-              setVisiblePersoSub("clt");
+              setVisiblePersoSub("supervisor"); // interno abre em Modelo Supervisor
             }}
           >
             Personalização geral

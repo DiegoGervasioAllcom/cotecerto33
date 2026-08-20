@@ -1,5 +1,8 @@
-// Aba "Personalização geral" — sub-abas Modelo Franquia / Modelo CLT.
-import { useState } from "react";
+// Aba "Personalização geral" — sub-abas variam por bloco: MATRIZ (interno)
+// mostra Modelo Supervisor/Modelo CLT, EXTERNOS (rede) mostra Modelo
+// Franquia/Modelo Master — Produtos, Performance, Diretores e Histórico são
+// comuns aos dois (accModelos()/accModelosMatriz() no protótipo v11).
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { maskPct } from "@/lib/masks";
 import { modeloFranquiaNomeSchema } from "@/lib/schemas/catalogos.schema";
@@ -9,6 +12,9 @@ import { SenhaDiretorModal } from "@/components/acessos/senha-diretor-modal";
 import { PerformancePanel } from "./performance-panel";
 import { DiretoresPanel } from "./diretores-panel";
 import { HistoricoPanel } from "./historico-panel";
+import { ModeloSupervisorPanel } from "./modelo-supervisor-panel";
+import { ModeloMasterPanel } from "./modelo-master-panel";
+import { ProdutosPanel } from "./produtos-panel";
 import { Icon } from "./icon";
 import { PARAMS } from "./constants";
 import { DynamicPairCard, DynamicRangeCard } from "./dynamic-cards";
@@ -38,22 +44,61 @@ export function PersoGeral({
   /** Escopo do painel de Performance — Matriz sempre "interno", Externos sempre "rede" (ver prototype). */
   bloco: "interno" | "rede";
 }) {
+  // Sub-aba inválida para o bloco atual (ex.: "clt" selecionado ao trocar pra
+  // rede) — cai no default do bloco em vez de deixar a tela vazia.
+  useEffect(() => {
+    const invalidoNoInterno = bloco === "interno" && (sub === "franquia" || sub === "master");
+    const invalidoNaRede = bloco === "rede" && (sub === "supervisor" || sub === "clt");
+    if (invalidoNoInterno) setSub("supervisor");
+    if (invalidoNaRede) setSub("franquia");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bloco]);
+
   return (
     <>
       <div className="toggle toggle-sub" style={{ marginBottom: 16 }}>
+        {bloco === "interno" && (
+          <button
+            className={sub === "supervisor" ? "on" : ""}
+            data-tour="acessos-modelos-supervisor"
+            onClick={() => setSub("supervisor")}
+          >
+            Modelo Supervisor
+          </button>
+        )}
+        {bloco === "rede" && (
+          <button
+            className={sub === "franquia" ? "on" : ""}
+            data-tour="acessos-modelos-franquia"
+            onClick={() => setSub("franquia")}
+          >
+            Modelo Franquia
+          </button>
+        )}
+        {bloco === "interno" && (
+          <button
+            className={sub === "clt" ? "on" : ""}
+            data-tour="acessos-modelos-clt"
+            onClick={() => setSub("clt")}
+          >
+            Modelo CLT
+          </button>
+        )}
+        {bloco === "rede" && (
+          <button
+            className={sub === "master" ? "on" : ""}
+            data-tour="acessos-modelos-master"
+            onClick={() => setSub("master")}
+          >
+            Modelo Master
+          </button>
+        )}
         <button
-          className={sub === "franquia" ? "on" : ""}
-          data-tour="acessos-modelos-franquia"
-          onClick={() => setSub("franquia")}
+          className={sub === "produtos" ? "on" : ""}
+          data-tour="acessos-produtos"
+          onClick={() => setSub("produtos")}
         >
-          Modelo Franquia
-        </button>
-        <button
-          className={sub === "clt" ? "on" : ""}
-          data-tour="acessos-modelos-clt"
-          onClick={() => setSub("clt")}
-        >
-          Modelo CLT
+          Produtos
         </button>
         <button
           className={sub === "performance" ? "on" : ""}
@@ -77,7 +122,7 @@ export function PersoGeral({
           Histórico
         </button>
       </div>
-      {sub === "franquia" && (
+      {sub === "franquia" && bloco === "rede" && (
         <ModeloFranquiaPanel
           modelos={modelos}
           setModelos={setModelos}
@@ -86,11 +131,16 @@ export function PersoGeral({
           reload={reload}
         />
       )}
-      {sub === "clt" && <ModeloCltPanel clt={clt} setClt={setClt} onToast={onToast} />}
+      {sub === "clt" && bloco === "interno" && (
+        <ModeloCltPanel clt={clt} setClt={setClt} onToast={onToast} />
+      )}
+      {sub === "supervisor" && bloco === "interno" && <ModeloSupervisorPanel onToast={onToast} />}
+      {sub === "master" && bloco === "rede" && <ModeloMasterPanel onToast={onToast} />}
+      {sub === "produtos" && <ProdutosPanel bloco={bloco} onToast={onToast} />}
       {sub === "performance" && <PerformancePanel bloco={bloco} />}
       {sub === "diretores" && <DiretoresPanel />}
       {sub === "historico" && <HistoricoPanel />}
-      {sub !== "performance" && sub !== "diretores" && sub !== "historico" && (
+      {(sub === "franquia" || sub === "clt" || sub === "supervisor" || sub === "master") && (
         <>
           <DescontoPoliticaPanel />
           <RespostasPadraoPanel />
