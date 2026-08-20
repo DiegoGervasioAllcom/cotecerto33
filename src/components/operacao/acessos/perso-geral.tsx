@@ -24,6 +24,7 @@ export function PersoGeral({
   onToast,
   onError,
   reload,
+  bloco,
 }: {
   sub: PersoSub;
   setSub: (s: PersoSub) => void;
@@ -34,6 +35,8 @@ export function PersoGeral({
   onToast: (msg: string, kind: "ok" | "alert") => void;
   onError: (e: string) => void;
   reload: () => Promise<void>;
+  /** Escopo do painel de Performance — Matriz sempre "interno", Externos sempre "rede" (ver prototype). */
+  bloco: "interno" | "rede";
 }) {
   return (
     <>
@@ -84,7 +87,7 @@ export function PersoGeral({
         />
       )}
       {sub === "clt" && <ModeloCltPanel clt={clt} setClt={setClt} onToast={onToast} />}
-      {sub === "performance" && <PerformancePanel />}
+      {sub === "performance" && <PerformancePanel bloco={bloco} />}
       {sub === "diretores" && <DiretoresPanel />}
       {sub === "historico" && <HistoricoPanel />}
       {sub !== "performance" && sub !== "diretores" && sub !== "historico" && (
