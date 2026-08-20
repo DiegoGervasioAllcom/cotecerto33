@@ -21,6 +21,13 @@ import { admin, criarEmpresa, criarPersonaComEmpresa, uniq, type Db } from "../h
  * abaixo provam que a escrita ficou restrita ao responsável (ou matriz): colega de
  * empresa consegue LER mas não EDITAR proposta alheia; o próprio responsável edita
  * normalmente; usuário de outra empresa continua bloqueado.
+ *
+ * `leads_select` foi corrigida por 20260820000000_fix_leads_select_vazamento_vendedor_full.sql:
+ * o branch de "toda a empresa" via `empresas_visiveis()` deixou de valer para
+ * `vendedor` raso (só continua valendo pra franqueado/master/supervisor/
+ * coordenador/matriz/interno) — vendedor só vê lead onde é `responsavel_id`.
+ * Ver também `rls-full-vendedor-leads.test.ts` para o cenário completo de
+ * Franquia Full (dois vendedores no mesmo empresa_id).
  */
 describe("RLS leads/clientes/oportunidades/propostas — visibilidade por rede", () => {
   let empresaFilhaA: string;
@@ -150,14 +157,14 @@ describe("RLS leads/clientes/oportunidades/propostas — visibilidade por rede",
     propostaA = pA.id;
   });
 
-  it("POSITIVO: vendedor vê lead da própria empresa e lead onde é responsavel_id", async () => {
+  it("POSITIVO: vendedor vê o lead onde é responsavel_id, mas NÃO o lead da empresa sem ser o responsável", async () => {
     const { data, error } = await vendedorA
       .from("leads")
       .select("id")
       .in("id", [leadEmpresaA, leadResponsavelA]);
     expect(error).toBeNull();
     const ids = new Set((data ?? []).map((l) => l.id));
-    expect(ids).toEqual(new Set([leadEmpresaA, leadResponsavelA]));
+    expect(ids).toEqual(new Set([leadResponsavelA]));
   });
 
   it("NEGATIVO: vendedor não vê lead da rede B", async () => {
