@@ -28,8 +28,7 @@ const BLOCO_LABEL: Record<Bloco, string> = {
   rede: "Vendedor de rede / Franquia Individual",
 };
 
-export function PerformancePanel() {
-  const [bloco, setBloco] = useState<Bloco>("interno");
+export function PerformancePanel({ bloco }: { bloco: Bloco }) {
   const [reguas, setReguas] = useState<Record<Bloco, Regua | null>>({
     interno: null,
     rede: null,
@@ -48,33 +47,35 @@ export function PerformancePanel() {
         .select(
           "bloco,janela_dias,conv_atencao_pct,conv_travado_pct,dias_atencao,dias_travado,cancelamentos_limite,pausa_leads_ativa,notifica_supervisor",
         )
-        .in("bloco", ["interno", "rede"]);
+        .eq("bloco", bloco)
+        .maybeSingle();
       if (!ativo) return;
       if (error) {
         setErr(error.message);
         setLoading(false);
         return;
       }
-      const map: Record<Bloco, Regua | null> = { interno: null, rede: null };
-      for (const r of data ?? []) {
-        map[r.bloco as Bloco] = {
-          janela_dias: r.janela_dias,
-          conv_atencao_pct: Number(r.conv_atencao_pct),
-          conv_travado_pct: Number(r.conv_travado_pct),
-          dias_atencao: r.dias_atencao,
-          dias_travado: r.dias_travado,
-          cancelamentos_limite: r.cancelamentos_limite,
-          pausa_leads_ativa: r.pausa_leads_ativa,
-          notifica_supervisor: r.notifica_supervisor,
-        };
-      }
-      setReguas(map);
+      setReguas((prev) => ({
+        ...prev,
+        [bloco]: data
+          ? {
+              janela_dias: data.janela_dias,
+              conv_atencao_pct: Number(data.conv_atencao_pct),
+              conv_travado_pct: Number(data.conv_travado_pct),
+              dias_atencao: data.dias_atencao,
+              dias_travado: data.dias_travado,
+              cancelamentos_limite: data.cancelamentos_limite,
+              pausa_leads_ativa: data.pausa_leads_ativa,
+              notifica_supervisor: data.notifica_supervisor,
+            }
+          : null,
+      }));
       setLoading(false);
     })();
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [bloco]);
 
   function patch(patch: Partial<Regua>) {
     setReguas((prev) => ({ ...prev, [bloco]: prev[bloco] ? { ...prev[bloco]!, ...patch } : null }));
@@ -127,17 +128,8 @@ export function PerformancePanel() {
           leads da distribuição automática (se "Pausar leads" estiver ativo) até revisão. Salvar
           exige confirmar com senha de diretor — a alteração entra no histórico imutável.
         </div>
-        <div className="acc-pills" style={{ marginBottom: 16 }}>
-          {(["interno", "rede"] as const).map((b) => (
-            <button
-              key={b}
-              type="button"
-              className={`acc-pill ${bloco === b ? "on" : ""}`}
-              onClick={() => setBloco(b)}
-            >
-              {BLOCO_LABEL[b]}
-            </button>
-          ))}
+        <div className="muted small" style={{ marginBottom: 16, fontWeight: 600 }}>
+          {BLOCO_LABEL[bloco]}
         </div>
 
         {!atual ? (

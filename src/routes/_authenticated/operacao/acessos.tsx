@@ -159,28 +159,32 @@ function Page() {
     );
   }
 
-  // V11 · F6 — mesmo painel nos dois blocos: Modelo Franquia é o único das 5
-  // sub-abas específico de rede externa (Modelo CLT, Performance, Diretores e
-  // Histórico são governança da Matriz como um todo — ver Interno acima).
-  const personalizacaoGeral = (
-    <PersoGeral
-      sub={visiblePersoSub}
-      setSub={setVisiblePersoSub}
-      modelos={modelos.filter((m) => m.tipo === "franqueada")}
-      setModelos={(updater) =>
-        setModelos((prev) => {
-          const fran = prev.filter((m) => m.tipo === "franqueada");
-          const next = typeof updater === "function" ? updater(fran) : updater;
-          return [...next, ...prev.filter((m) => m.tipo !== "franqueada")];
-        })
-      }
-      clt={clt}
-      setClt={setClt}
-      onToast={(msg, kind) => setToast({ msg, kind })}
-      onError={(e) => setErr(e)}
-      reload={reload}
-    />
-  );
+  // V11 · F6 — mesmo componente nos dois blocos (Modelo Franquia é o único
+  // das 5 sub-abas específico de rede externa), mas a sub-aba Performance
+  // precisa ficar travada no bloco de quem entrou (Matriz -> interno,
+  // Externos -> rede) — sem picker interno, conforme o protótipo.
+  function personalizacaoGeral(bloco: "interno" | "rede") {
+    return (
+      <PersoGeral
+        sub={visiblePersoSub}
+        setSub={setVisiblePersoSub}
+        modelos={modelos.filter((m) => m.tipo === "franqueada")}
+        setModelos={(updater) =>
+          setModelos((prev) => {
+            const fran = prev.filter((m) => m.tipo === "franqueada");
+            const next = typeof updater === "function" ? updater(fran) : updater;
+            return [...next, ...prev.filter((m) => m.tipo !== "franqueada")];
+          })
+        }
+        clt={clt}
+        setClt={setClt}
+        onToast={(msg, kind) => setToast({ msg, kind })}
+        onError={(e) => setErr(e)}
+        reload={reload}
+        bloco={bloco}
+      />
+    );
+  }
 
   return (
     <AppShell title="Acessos e permissões">
@@ -347,7 +351,9 @@ function Page() {
         <DesligamentosTab deslig={desligInterno} />
       )}
 
-      {blocoParaConteudo === "interno" && tabInterno === "modelos" && personalizacaoGeral}
+      {blocoParaConteudo === "interno" &&
+        tabInterno === "modelos" &&
+        personalizacaoGeral("interno")}
 
       {blocoParaConteudo === "externo" && visibleTab === "cadastros" && (
         <CadastrosRedeTab onTotalChange={setTotalCadastrosRede} />
@@ -364,7 +370,7 @@ function Page() {
         </>
       )}
 
-      {blocoParaConteudo === "externo" && visibleTab === "modelos" && personalizacaoGeral}
+      {blocoParaConteudo === "externo" && visibleTab === "modelos" && personalizacaoGeral("rede")}
 
       {analisando && (
         <ClassificarAcessoModal
