@@ -311,11 +311,7 @@ export function ResumoCotacao({
           className="btn btn-yellow"
           disabled={!podeCalcular}
           style={!podeCalcular ? { opacity: 0.5, cursor: "not-allowed" } : undefined}
-          title={
-            !podeCalcular
-              ? `Faltam preencher: ${camposFaltantes.join(", ")}`
-              : undefined
-          }
+          title={!podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined}
           onClick={() => {
             setStep(5);
             doSimularCalculo();

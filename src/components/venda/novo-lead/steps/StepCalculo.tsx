@@ -190,9 +190,7 @@ export function StepCalculo({
         <button
           className="btn btn-ghost btn-sm"
           disabled={!podeCalcular || calculando}
-          title={
-            !podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined
-          }
+          title={!podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined}
           onClick={doSimularCalculo}
         >
           <svg width="13" height="13">
@@ -401,9 +399,7 @@ export function StepCalculo({
           <button
             className="btn btn-yellow"
             disabled={!podeCalcular}
-            title={
-              !podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined
-            }
+            title={!podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined}
             onClick={doSimularCalculo}
           >
             <svg width="14" height="14">
