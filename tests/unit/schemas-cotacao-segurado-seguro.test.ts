@@ -2,22 +2,42 @@ import { describe, it, expect } from "vitest";
 import { seguradoSchema } from "@/lib/schemas/cotacaoSegurado.schema";
 import { seguroSchema } from "@/lib/schemas/cotacaoSeguro.schema";
 
-// `nomeSocial`, `email`, `numero` e `celular` são exceções à regra "todo
-// campo é opcional" desta etapa (ver comentário no schema) — por isso todo
-// caso abaixo que testa OUTRO campo precisa incluir valores válidos para
-// esses quatro, senão falha por um motivo que não é o que o teste quer
-// verificar.
+// `nome`, `nomeSocial`, `estadoCivil`, `email`, `numero` e `celular` são
+// exceções à regra "todo campo é opcional" desta etapa (ver comentário no
+// schema) — por isso todo caso abaixo que testa OUTRO campo precisa incluir
+// valores válidos para esses seis, senão falha por um motivo que não é o
+// que o teste quer verificar.
 const NOME_SOCIAL_VALIDO = "Nome Social Válido";
 const CAMPOS_OBRIGATORIOS_VALIDOS = {
+  nome: "Fulano de Tal",
   nomeSocial: NOME_SOCIAL_VALIDO,
+  estadoCivil: "Solteiro(a)",
   email: "fulano@email.com",
   numero: "123",
   celular: "(11) 98765-4321",
 };
 
 describe("seguradoSchema", () => {
-  it("rejeita objeto vazio (nomeSocial, email, número e celular são obrigatórios)", () => {
+  it("rejeita objeto vazio (nome, nomeSocial, estado civil, email, número e celular são obrigatórios)", () => {
     expect(seguradoSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("rejeita nome vazio", () => {
+    expect(seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, nome: "" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejeita nome de uma palavra só (não é nome completo)", () => {
+    expect(
+      seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, nome: "Fulano" }).success,
+    ).toBe(false);
+  });
+
+  it("rejeita estado civil vazio", () => {
+    expect(
+      seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, estadoCivil: "" }).success,
+    ).toBe(false);
   });
 
   it("rejeita nomeSocial vazio", () => {
@@ -84,9 +104,7 @@ describe("seguradoSchema", () => {
         ...CAMPOS_OBRIGATORIOS_VALIDOS,
         cpf: "",
         pessoa: "",
-        nome: "",
         sexo: "",
-        estadoCivil: "",
         cep: "",
         logradouro: "",
         bairro: "",

@@ -45,7 +45,7 @@ export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
         </div>
         <div className="field-group full">
           <label>
-            Nome<span className="req">*</span>
+            Nome completo<span className="req">*</span>
           </label>
           <input
             className="input"
