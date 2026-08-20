@@ -2,11 +2,12 @@ import { describe, it, expect } from "vitest";
 import { seguradoSchema } from "@/lib/schemas/cotacaoSegurado.schema";
 import { seguroSchema } from "@/lib/schemas/cotacaoSeguro.schema";
 
-// `nome`, `nomeSocial`, `estadoCivil`, `email`, `numero` e `celular` são
-// exceções à regra "todo campo é opcional" desta etapa (ver comentário no
-// schema) — por isso todo caso abaixo que testa OUTRO campo precisa incluir
-// valores válidos para esses seis, senão falha por um motivo que não é o
-// que o teste quer verificar.
+// `nomeSocial`, `email`, `numero` e `celular` são exceções à regra "todo
+// campo é opcional" desta etapa (ver comentário no schema) — por isso todo
+// caso abaixo que testa OUTRO campo precisa incluir valores válidos para
+// esses quatro, senão falha por um motivo que não é o que o teste quer
+// verificar. `nome` e `estadoCivil` não bloqueiam o avanço de etapa (só o
+// Calcular, via useSimulacaoCalculo.ts) — continuam opcionais aqui.
 const NOME_SOCIAL_VALIDO = "Nome Social Válido";
 const CAMPOS_OBRIGATORIOS_VALIDOS = {
   nome: "Fulano de Tal",
@@ -18,26 +19,26 @@ const CAMPOS_OBRIGATORIOS_VALIDOS = {
 };
 
 describe("seguradoSchema", () => {
-  it("rejeita objeto vazio (nome, nomeSocial, estado civil, email, número e celular são obrigatórios)", () => {
+  it("rejeita objeto vazio (nomeSocial, email, número e celular são obrigatórios)", () => {
     expect(seguradoSchema.safeParse({}).success).toBe(false);
   });
 
-  it("rejeita nome vazio", () => {
+  it("aceita nome vazio (não bloqueia etapa; obrigatoriedade fica no gate de Calcular)", () => {
     expect(seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, nome: "" }).success).toBe(
-      false,
+      true,
     );
   });
 
-  it("rejeita nome de uma palavra só (não é nome completo)", () => {
+  it("aceita nome de uma palavra só (não bloqueia etapa)", () => {
     expect(
       seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, nome: "Fulano" }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it("rejeita estado civil vazio", () => {
+  it("aceita estado civil vazio (não bloqueia etapa; obrigatoriedade fica no gate de Calcular)", () => {
     expect(
       seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, estadoCivil: "" }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("rejeita nomeSocial vazio", () => {

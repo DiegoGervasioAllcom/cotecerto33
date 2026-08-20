@@ -14,7 +14,7 @@ import { useCotacaoRascunho } from "@/components/venda/novo-lead/hooks/useCotaca
 import { useTutorialWizardPreview } from "@/components/venda/novo-lead/hooks/useTutorialWizardPreview";
 import { NovoLeadHeader } from "@/components/venda/novo-lead/NovoLeadHeader";
 import { StepSegurado } from "@/components/venda/novo-lead/steps/StepSegurado";
-import { StepSeguro } from "@/components/venda/novo-lead/steps/StepSeguro";
+import { StepSeguro, vigenciaAPartirDeHoje } from "@/components/venda/novo-lead/steps/StepSeguro";
 import { StepVeiculo } from "@/components/venda/novo-lead/steps/StepVeiculo";
 import { StepPerfil } from "@/components/venda/novo-lead/steps/StepPerfil";
 import { StepCoberturas } from "@/components/venda/novo-lead/steps/StepCoberturas";
@@ -78,6 +78,7 @@ function Page() {
       });
   }, []);
 
+  const vigenciaInicial = vigenciaAPartirDeHoje(1);
   const [f, setF] = useState<Form>({
     canalOrigem: "",
     cpf: "",
@@ -98,8 +99,8 @@ function Page() {
     tipoSeguro: "Seguro novo",
     ramo: "Automóvel",
     categoria: "Particular",
-    vigIni: "",
-    vigFim: "",
+    vigIni: vigenciaInicial.ini,
+    vigFim: vigenciaInicial.fim,
     ciaAtual: "",
     apoliceAtual: "",
     ciAtual: "",
