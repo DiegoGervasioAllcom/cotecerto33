@@ -122,7 +122,6 @@ export function useValidacaoEtapas(
         condRelacao: f.condRelacao,
         condNomeSocial: f.condNomeSocial,
         condTempoHabilitacao: f.condTempoHabilitacao,
-        profissao: f.profissao,
         cepPernoite: f.cepPernoite,
         tipoGaragem: f.tipoGaragem,
         relacaoComProprietario: f.relacaoComProprietario,

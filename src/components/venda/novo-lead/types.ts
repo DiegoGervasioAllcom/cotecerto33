@@ -118,7 +118,6 @@ export type Form = {
   condRelacao: string;
   condNomeSocial: string;
   condTempoHabilitacao: string;
-  profissao: string;
   cepPernoite: string;
   tipoGaragem: string;
   // Perfil — proprietário do veículo

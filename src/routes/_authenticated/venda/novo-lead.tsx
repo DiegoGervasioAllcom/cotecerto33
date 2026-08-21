@@ -186,7 +186,6 @@ function Page() {
     condRelacao: "",
     condNomeSocial: "",
     condTempoHabilitacao: "",
-    profissao: "",
     cepPernoite: "",
     tipoGaragem: "Sim, com portão manual",
     segProprietario: true,

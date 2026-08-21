@@ -258,9 +258,7 @@ export function StepVeiculo({
           </select>
         </div>
         <div className="field-group">
-          <label>
-            Cor<span className="req">*</span>
-          </label>
+          <label>Cor</label>
           <input
             className="input"
             value={f.cor}

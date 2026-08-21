@@ -841,7 +841,6 @@ export type Database = {
           cotacao_id: string;
           jovens_18_25: boolean | null;
           jovens_18_25_detalhes: Json;
-          profissao: string | null;
           profissao_principal_condutor: string | null;
           proprietario_cnpj: string | null;
           proprietario_cpf: string | null;
@@ -873,7 +872,6 @@ export type Database = {
           cotacao_id: string;
           jovens_18_25?: boolean | null;
           jovens_18_25_detalhes?: Json;
-          profissao?: string | null;
           profissao_principal_condutor?: string | null;
           proprietario_cnpj?: string | null;
           proprietario_cpf?: string | null;
@@ -905,7 +903,6 @@ export type Database = {
           cotacao_id?: string;
           jovens_18_25?: boolean | null;
           jovens_18_25_detalhes?: Json;
-          profissao?: string | null;
           profissao_principal_condutor?: string | null;
           proprietario_cnpj?: string | null;
           proprietario_cpf?: string | null;

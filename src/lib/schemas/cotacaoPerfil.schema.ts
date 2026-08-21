@@ -25,7 +25,6 @@ export const perfilSchema = z.object({
   condRelacao: optionalMax(50, "Campo muito longo."),
   condNomeSocial: optionalMax(150, "Nome social muito longo."),
   condTempoHabilitacao: optionalMax(10, "Campo muito longo."),
-  profissao: optionalMax(150, "Profissão muito longa."),
   cepPernoite: optionalDigitsExact([8], "CEP de pernoite inválido."),
   tipoGaragem: optionalMax(100, "Campo muito longo."),
   relacaoComProprietario: optionalMax(100, "Campo muito longo."),

@@ -277,7 +277,6 @@ describe("D1 — CHECK de char_length em auditoria e cotação", () => {
       ["cond_nome", 150],
       ["cond_sexo", 30],
       ["cond_estado_civil", 30],
-      ["profissao", 150],
     ];
 
     for (const [col, limite] of campos) {
