@@ -348,20 +348,6 @@ export function StepPerfil({ f, up, erros }: Props) {
           </>
         )}
         <div className="field-group">
-          <label>Profissão</label>
-          <input
-            className="input"
-            value={f.profissao}
-            maxLength={150}
-            onChange={(e) => up("profissao", e.target.value)}
-          />
-          {erros.profissao && (
-            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
-              {erros.profissao}
-            </span>
-          )}
-        </div>
-        <div className="field-group">
           <label>CEP de pernoite</label>
           <input
             className="input"

@@ -189,7 +189,7 @@ export function ResumoCotacao({
                 )}
               </div>
             )}
-            {(f.condNome || f.condCpf || f.profissao || f.cepPernoite) && (
+            {(f.condNome || f.condCpf || f.cepPernoite) && (
               <div style={{ display: "grid", gap: 4 }}>
                 <div
                   className="muted small"
@@ -204,11 +204,6 @@ export function ResumoCotacao({
                 {f.condCpf && f.condutorMesmo === "nao" && (
                   <div>
                     <b>CPF cond.:</b> {f.condCpf}
-                  </div>
-                )}
-                {f.profissao && (
-                  <div>
-                    <b>Profissão:</b> {f.profissao}
                   </div>
                 )}
                 {f.cepPernoite && (

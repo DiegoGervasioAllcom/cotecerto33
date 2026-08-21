@@ -1,7 +1,7 @@
 // Schema zod da etapa "Veículo" do wizard novo-lead (cotacao_veiculo).
 // Espelha as constraints reais do banco (D1 tamanho — cotacao_veiculo não tem
 // checks de formato D3): todo campo é opcional e só valida tamanho se
-// preenchido, sem tornar nenhum campo obrigatório.
+// preenchido, exceto anoFab (obrigatório no avanço do wizard).
 
 import { z } from "zod";
 
@@ -24,7 +24,7 @@ export const veiculoSchema = z.object({
     .min(1, "Ano fabricação é obrigatório.")
     .max(4, "Ano fabricação inválido."),
   combustivel: optionalMax(50, "Combustível muito longo."),
-  cor: z.string().trim().min(1, "Cor é obrigatória.").max(50, "Cor muito longa."),
+  cor: optionalMax(50, "Cor muito longa."),
   banco: optionalMax(150, "Banco/financeira muito longo."),
   kmMensal: optionalMax(100, "KM mensal muito longo."),
   fipeValor: optionalMax(100, "Valor FIPE muito longo."),

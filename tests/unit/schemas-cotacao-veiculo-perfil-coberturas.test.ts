@@ -4,11 +4,11 @@ import { perfilSchema } from "@/lib/schemas/cotacaoPerfil.schema";
 import { coberturasSchema } from "@/lib/schemas/cotacaoCoberturas.schema";
 
 describe("veiculoSchema", () => {
-  it("rejeita objeto vazio (ano fabricação e cor são obrigatórios)", () => {
+  it("rejeita objeto vazio (ano fabricação é obrigatório)", () => {
     expect(veiculoSchema.safeParse({}).success).toBe(false);
   });
 
-  it("rejeita quando ano fabricação e cor estão vazios, mesmo com demais campos opcionais vazios", () => {
+  it("rejeita quando ano fabricação está vazio, mesmo com demais campos opcionais vazios", () => {
     expect(
       veiculoSchema.safeParse({
         placa: "",
@@ -27,6 +27,27 @@ describe("veiculoSchema", () => {
         fipeValor: "",
       }).success,
     ).toBe(false);
+  });
+
+  it("aceita ano fabricação válido com cor vazia (cor é opcional)", () => {
+    expect(
+      veiculoSchema.safeParse({
+        placa: "",
+        chassi: "",
+        renavam: "",
+        marcaCodigo: "",
+        modeloCodigo: "",
+        marcaNome: "",
+        modeloNome: "",
+        anoModelo: "",
+        anoFab: "2023",
+        combustivel: "",
+        cor: "",
+        banco: "",
+        kmMensal: "",
+        fipeValor: "",
+      }).success,
+    ).toBe(true);
   });
 
   it("aceita demais campos opcionais preenchidos com strings vazias, com ano fabricação e cor válidos", () => {
@@ -99,7 +120,6 @@ describe("perfilSchema", () => {
         condNome: "",
         condSexo: "",
         condEstadoCivil: "",
-        profissao: "",
         cepPernoite: "",
       }).success,
     ).toBe(true);
@@ -112,7 +132,6 @@ describe("perfilSchema", () => {
         condNome: "Fulano de Tal",
         condSexo: "Masculino",
         condEstadoCivil: "Solteiro(a)",
-        profissao: "Engenheiro",
         cepPernoite: "01310-100",
       }).success,
     ).toBe(true);
@@ -136,10 +155,6 @@ describe("perfilSchema", () => {
 
   it("rejeita condNome maior que 150", () => {
     expect(perfilSchema.safeParse({ condNome: "a".repeat(151) }).success).toBe(false);
-  });
-
-  it("rejeita profissao maior que 150", () => {
-    expect(perfilSchema.safeParse({ profissao: "a".repeat(151) }).success).toBe(false);
   });
 });
 
