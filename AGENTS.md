@@ -57,7 +57,7 @@ Sistema da Supper para o ciclo do corretor de seguros (lead → cotação → pr
 4. **Views novas: `security_invoker = true`** — views sem isso ignoram RLS (vulnerabilidade S1 conhecida).
 5. **Formulários usam zod** espelhando as constraints do banco; sem `any` novos. Tipos do banco são gerados: após criar/aplicar migration, rodar `bun run db:reset && bun run db:types` e commitar o `src/integrations/supabase/database.types.ts` junto (arquivo gerado — nunca editar à mão). Antes de qualquer commit, push ou Pull Request, rodar localmente `bun run lint`, `bun run typecheck` e os testes proporcionais à mudança; todos devem passar sem erros.
 6. **Visual: usar as classes existentes de `src/styles/proto.css`** (é o CSS do protótipo, byte a byte). Não criar estilos paralelos nem alterar esse arquivo.
-7. **Perfis:** `matriz`, `master`, `supervisor` (a criar), `vendedor`, `franqueado` — franquia bifurca Individual (cockpit de vendedor) vs Full (área de grupo). Gate visual em `app-shell.tsx` (`canSee`) **não é segurança** — a policy é.
+7. **Perfis:** `matriz`, `master`, `supervisor`, `vendedor`, `franqueado` — franquia bifurca Individual (cockpit de vendedor) vs Full (área de grupo). Gate visual em `app-shell.tsx` (`canSee`) **não é segurança** — a policy é.
 8. **Não commitar segredos.** Chaves e URLs vêm de env (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SELF_SUPABASE_SERVICE_ROLE_KEY` — esta só em server functions).
 9. Arquivos grandes (`novo-lead.tsx`, `acessos.tsx`, `configuracoes.tsx`): ao mexer, extrair componentes/hooks em vez de crescer o arquivo.
 10. `src/data/proto-pages.json` e `ProtoPage` são resíduo do protótipo — não usar em telas novas; serão removidos (task G5.4).

@@ -65,6 +65,19 @@ Em `AcessoriosFold.tsx:152` os inputs somem quando o toggle vai para "não", mas
 
 Cerca de 45 colunas são preenchidas, gravadas e nunca enviadas (endereço detalhado, nascimento do segurado, dados FIPE do veículo). Não quebra nada — é custo de tela, não de integração. Há também campos "fantasma" no tipo `Form` sem input em nenhuma etapa, e pares duplicados de controles sobre o mesmo assunto (`blindado` vs `blindagemAtiva`, `usoComercial` vs `usoComercialDoisDias`) onde só um lado chega ao robô.
 
+> **Resolvido em 22/08/2026.** As colunas redundantes `cotacao_veiculo.blindado`,
+> `cotacao_veiculo.uso_comercial` e `cotacao_veiculo.num_passageiros` foram removidas
+> (migration `20260822000000_remover_campos_redundantes_cotacao.sql`); só sobraram
+> `blindagemAtiva`/`usoComercialDoisDias`, que já eram os campos enviados ao robô. O
+> mesmo commit removeu `cotacao_coberturas.franquia` e `cotacao_coberturas.dmh`
+> (resquícios sem uso), e a migration `20260823000000` removeu `cotacao_perfil.profissao`
+> (distinto de `profissao_principal_condutor`, que continua existindo). Confirmado via
+> `grep` em `src/` — só `blindagemAtiva`/`usoComercialDoisDias` existem no front hoje.
+> Não confunda com o item "5 campos `franquia*` por acessório" na seção de riscos
+> condicionais abaixo — são campos diferentes (franquia por item de acessório, não a
+> coluna genérica `cotacao_coberturas.franquia` removida), e esse item não foi
+> reverificado nesta auditoria.
+
 ### Achado adicional (17/08/2026)
 
 `premioNumerico()` em `src/components/venda/cotacoes/quiver-resultado.ts:78-85` só lê `opcao?.avista` pra calcular o valor numérico usado em `ordenarResultados()`. Cards que só oferecem parcelado (sem preço à vista — ex.: Suhai "Roubo e Furto c/ Assistência") retornam `Infinity` e vão pro fim da lista ordenada, mesmo sendo uma oferta real e válida. Mesma raiz do bug corrigido na RPC `registrar_premios_quiver` (PR #175) — vale aplicar o mesmo fallback (extrair de `opcao.parcelas` quando `avista` ausente) no front, por consistência de ordenação.
