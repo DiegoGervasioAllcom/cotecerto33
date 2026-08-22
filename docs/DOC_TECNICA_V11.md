@@ -242,6 +242,7 @@ src/routes/
     │   └── vendedores.*.tsx       → detalhe de vendedor
     └── venda/                       → cockpit do vendedor/Individual
         ├── novo-lead.tsx            → wizard de cotação (6 etapas)
+        ├── atender.tsx              → fila "Atender agora" (leads distribuídos aguardando contato)
         ├── cotacoes.*.tsx           → lista + detalhe de cotação
         ├── pipeline.tsx             → kanban pessoal
         ├── propostas.tsx           → propostas geradas
