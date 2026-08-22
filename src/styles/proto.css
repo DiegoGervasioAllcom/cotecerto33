@@ -3070,6 +3070,11 @@ textarea.input:focus {
   padding-top: 12px;
   border-top: 1px solid var(--border-soft);
 }
+.calc-foot .select-mini {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+}
 .ic-btn {
   width: 34px;
   height: 34px;
