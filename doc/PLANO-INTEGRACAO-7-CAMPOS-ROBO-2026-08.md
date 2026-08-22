@@ -1,5 +1,15 @@
 # Plano — Integração de 7 campos novos do robô Quiver no formulário
 
+> **Fechamento em 22/08/2026.** Front (PR #214) e robô Playwright (PR #29, repo
+> separado) mergeados. 3 bugs reais encontrados e corrigidos durante a
+> validação ponta-a-ponta contra o portal real da Quiver: enum de leilão
+> ("administrativa" → "administrativo"), crash de `preencherPercentualAjuste`
+> com `modalidade = "Valor Determinado"`, e a regra 17 anos × reside-que-implica-
+> dirigir (agora rejeitada com 422 em vez de falhar no portal). Migrations
+> `20260821010000`/`20260824000000` aplicadas em produção em 22/08/2026 (ver
+> `docs/RUNBOOK_DEPLOY.md`, §6.6 e §8). Campo `franquia` (órfão, sem UI,
+> introduzido por engano durante a implementação) foi removido antes do merge.
+
 Contexto: auditoria em 20/08/2026 cruzando `/venda/novo-lead` (front, este repo) contra o
 contrato do robô Playwright (repo separado `/Users/diego.gervasio/Documents/playwright`)
 encontrou 7 campos que o portal real da Quiver aceita e o robô já passou a suportar

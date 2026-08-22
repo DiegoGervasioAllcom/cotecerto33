@@ -56,9 +56,10 @@ Domínios:
 > Para mudanças incrementais depois, ver §6.
 
 O schema é definido pelas migrations atuais em `supabase/migrations/` +
-`supabase/seed.sql`. Havia 149 migrations em 12/08/2026; confirme a contagem
-antes de cada rebuild (`find supabase/migrations -maxdepth 1 -name '*.sql' |
-wc -l`), porque esse número cresce.
+`supabase/seed.sql`. Havia 175 migrations em 22/08/2026 (última aplicada em
+produção até então: `20260824000000`); confirme a contagem antes de cada
+rebuild (`find supabase/migrations -maxdepth 1 -name '*.sql' | wc -l`), porque
+esse número cresce.
 O procedimento gera um **artefato único** (`bootstrap_prod.sql`) validado localmente e o
 aplica no Postgres de produção.
 
@@ -406,6 +407,14 @@ SMTP do Resend configurado no GoTrue, incluindo os callbacks públicos da allowl
 operacionalmente. Essa evidência é histórica: qualquer mudança de DNS, provider,
 SMTP, GoTrue, allowlist, domínio ou imagem exige uma nova rodada.
 
+**22/08/2026 — migrations `20260821010000`/`20260823000000`/`20260824000000`
+aplicadas:** produção estava parada em `20260822000000` (pulou a
+`20260821010000` — ver gotcha na §8 sobre a ordem). Rodado o script combinado
+descrito na §8 (DDL das duas primeiras + função completa da última), sem
+`ERROR`, histórico confirmado com as 3 versões no topo. Publicação da imagem
+do app (tag `sha-3c8b23a`, PR #214) e smoke test da §6.5 ainda pendentes de
+confirmação nesta rodada.
+
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
@@ -462,3 +471,4 @@ sudo docker exec -i supabase-db psql -U postgres -d postgres < ~/backup_prod_XXX
 | porta 3000 ocupada                                                         | Kong (Supabase) já usa a 3000 do host                                                                                                                          | publicar o app em **3001**                                                                                                                                                                    |
 | login não conecta                                                          | anon key embutida ≠ anon key do Supabase                                                                                                                       | conferir fingerprint (§4)                                                                                                                                                                     |
 | `MAILER_OTP_EXP` no `.env` não muda a validade do link                     | a distribuição self-hosted não mapeia `GOTRUE_MAILER_OTP_EXP` no `docker-compose.yml` — só `GOTRUE_SITE_URL` e `GOTRUE_URI_ALLOW_LIST` vêm mapeados por padrão | adicionar `GOTRUE_MAILER_OTP_EXP: ${MAILER_OTP_EXP}` no serviço `auth` do `docker-compose.yml` (mesmo lugar do §6.2), antes de `--force-recreate auth` — confirmado em produção em 01/08/2026 |
+| `column ... does not exist` ao aplicar uma migration incremental atrasada  | PRs mergeados fora de ordem: uma migration mais antiga (ex. `20260821010000`) fica pendente enquanto uma mais nova (ex. `20260822000000`) já foi aplicada — e a mais antiga recria uma função referenciando colunas que a mais nova já removeu | não aplicar os arquivos crus em sequência; monte um script combinado que pula o `CREATE OR REPLACE FUNCTION` das migrations intermediárias (mantendo só a DDL de cada uma) e usa a função da migration **mais recente** por último. Registre todas as versões no histórico mesmo assim (§3.5) — validado num banco local simulando o estado real da produção antes de rodar de verdade (confirmado em produção em 22/08/2026) |
