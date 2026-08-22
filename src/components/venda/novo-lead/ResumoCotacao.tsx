@@ -223,7 +223,7 @@ export function ResumoCotacao({
                 )}
               </div>
             )}
-            {(f.tipoCobertura || f.casco) && (
+            {(f.tipoCobertura || f.valorDeterminado) && (
               <div style={{ display: "grid", gap: 4 }}>
                 <div
                   className="muted small"
@@ -236,10 +236,9 @@ export function ResumoCotacao({
                     <b>Plano:</b> {f.tipoCobertura}
                   </div>
                 )}
-                {f.casco && (
+                {f.valorDeterminado && (
                   <div>
-                    <b>Casco:</b> {f.casco}
-                    {f.cascoValor ? ` · ${f.cascoValor}` : ""}
+                    <b>Valor determinado (Casco):</b> {f.valorDeterminado}
                   </div>
                 )}
                 {(f.appMorte || f.appInval) && (
@@ -262,9 +261,9 @@ export function ResumoCotacao({
                     <b>Assist. 24h:</b> {f.assist24}
                   </div>
                 )}
-                {f.vidros && (
+                {f.vidros && f.vidros !== "Não contratada" && (
                   <div>
-                    <b>Vidros:</b> Sim
+                    <b>Vidros:</b> {f.vidros}
                   </div>
                 )}
               </div>

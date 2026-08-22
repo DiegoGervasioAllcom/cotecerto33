@@ -764,7 +764,7 @@ export type Database = {
           rcf_dc: string | null;
           rcf_dm: string | null;
           tipo_cobertura: string | null;
-          vidros: boolean | null;
+          vidros: string | null;
         };
         Insert: {
           app_invalidez?: string | null;
@@ -789,7 +789,7 @@ export type Database = {
           rcf_dc?: string | null;
           rcf_dm?: string | null;
           tipo_cobertura?: string | null;
-          vidros?: boolean | null;
+          vidros?: string | null;
         };
         Update: {
           app_invalidez?: string | null;
@@ -814,7 +814,7 @@ export type Database = {
           rcf_dc?: string | null;
           rcf_dm?: string | null;
           tipo_cobertura?: string | null;
-          vidros?: boolean | null;
+          vidros?: string | null;
         };
         Relationships: [
           {
@@ -4215,6 +4215,7 @@ export type Database = {
         Args: { p_cotacao_id: string; p_pct: number; p_seguradora_id: string };
         Returns: undefined;
       };
+      _normalizar_vidros: { Args: { p_valor: string }; Returns: string };
       abrir_convite: { Args: { p_token: string }; Returns: Json };
       aceitar_desconto: { Args: { p_id: string }; Returns: undefined };
       admin_atualizar_usuario: {

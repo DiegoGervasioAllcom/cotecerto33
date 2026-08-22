@@ -11,8 +11,7 @@ function optionalMax(max: number, message: string) {
 
 export const coberturasSchema = z.object({
   tipoCobertura: optionalMax(50, "Tipo de cobertura muito longo."),
-  casco: optionalMax(100, "Casco muito longo."),
-  cascoValor: optionalMax(100, "Valor determinado muito longo."),
+  valorDeterminado: optionalMax(100, "Valor determinado muito longo."),
   appMorte: optionalMax(100, "APP — Morte muito longo."),
   appInvalidez: optionalMax(100, "APP — Invalidez muito longo."),
   rcfDm: optionalMax(100, "RCF — Danos materiais muito longo."),

@@ -285,6 +285,7 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
       // sem valor aqui e o portal exigindo, a cotação falha no robô com erro
       // apontando o campo pendente.
       ...(v.tipo_cambio ? { tipoCambio: v.tipo_cambio as string } : {}),
+      ...(v.leilao ? { historicoLeilao: v.leilao as string } : {}),
     },
     complementares: {
       tipoGaragem: (p.tipo_garagem as string) || "Não",
@@ -354,6 +355,30 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
         ? { condutoresQueUtilizam: v.condutores_que_utilizam as string }
         : {}),
       pessoas17a25: simNao(p.jovens_18_25 as boolean),
+      // complementares.jovensCondutores — só aceito pela Quiver quando
+      // pessoas17a25="Sim" (senão HTTP 422). `nome` não existe no payload do
+      // robô — é só identificador de UX no front (types.ts).
+      ...(p.jovens_18_25
+        ? {
+            jovensCondutores: (
+              (p.jovens_18_25_detalhes as
+                | {
+                    idade?: string;
+                    sexo?: string;
+                    reside?: string;
+                    filhoOuFuncionarioPrincipalCondutor?: string;
+                  }[]
+                | null) ?? []
+            ).map((j) => ({
+              idade: j.idade ?? "",
+              ...(j.sexo ? { sexo: j.sexo } : {}),
+              ...(j.reside ? { reside: j.reside } : {}),
+              ...(j.filhoOuFuncionarioPrincipalCondutor
+                ? { filhoOuFuncionarioPrincipalCondutor: j.filhoOuFuncionarioPrincipalCondutor }
+                : {}),
+            })),
+          }
+        : {}),
     },
     cobertura: {
       plano: (c.tipo_cobertura as string) || "Fácil",
@@ -373,6 +398,17 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
         : {}),
       ...(c.danos_morais ? { danosMorais: semPrefixoMoeda(c.danos_morais as string) } : {}),
       ...(c.despesas_extras ? { despesasExtras: c.despesas_extras as string } : {}),
+      // cobertura.valorDeterminado só é aceito pela Quiver com
+      // modalidade="Valor Determinado" (reaproveita a coluna casco_valor,
+      // ver Onda 2 do plano de integração dos 7 campos — 2026-08).
+      ...(c.modalidade === "Valor Determinado" && c.casco_valor
+        ? { valorDeterminado: semPrefixoMoeda(c.casco_valor as string) }
+        : {}),
+      // pequenosReparos: boolean no CoteCerto, string na Quiver.
+      pequenosReparos: (c.pequenos_reparos as boolean) ? "Contratado" : "Não contratada",
+      ...(c.vidros != null ? { vidrosFarosRetrovisores: c.vidros as string } : {}),
+      ...(c.assist_24 ? { assistencia24h: c.assist_24 as string } : {}),
+      ...(c.carro_reserva ? { carroReserva: c.carro_reserva as string } : {}),
       ...(c.mais_assistencias
         ? {
             maisAssistencias: "Sim",
