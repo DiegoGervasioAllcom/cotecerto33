@@ -73,9 +73,7 @@ function colunasDecodificadas(dados: CpfDecodificado | null) {
  * `createServerFn` para poder ser testada direto (mesmo motivo de
  * `executarConsultaPlaca` em placa.functions.ts).
  */
-export async function executarConsultaCpf(
-  data: ConsultarCpfPayload,
-): Promise<ConsultaCpfResposta> {
+export async function executarConsultaCpf(data: ConsultarCpfPayload): Promise<ConsultaCpfResposta> {
   if (!data?.caller_token) throw new Error("Sem token.");
   const cpf = onlyDigits(data?.cpf ?? "");
   if (cpf.length !== 11) throw new Error("CPF inválido.");

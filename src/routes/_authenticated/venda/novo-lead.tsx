@@ -280,8 +280,11 @@ function Page() {
     // primeira saída do campo precisa disparar a consulta de verdade.
     veiculoJaResolvido: !!f.marca,
   });
-  const { consultando: cpfConsultando, status: cpfStatus, consultar: consultarCpf } =
-    useConsultaCpf({ setF, cotacaoId });
+  const {
+    consultando: cpfConsultando,
+    status: cpfStatus,
+    consultar: consultarCpf,
+  } = useConsultaCpf({ setF, cotacaoId });
   const {
     calculando,
     resultados,
