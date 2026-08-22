@@ -60,6 +60,17 @@ Em `AcessoriosFold.tsx:152` os inputs somem quando o toggle vai para "não", mas
 - `nomeHierarquico` nunca é enviado; o fallback do robô só age se `NOME_HIERARQUICO_DEFAULT` estiver setada (vazia no `.env.example`) — cai num valor hardcoded no POM.
 - `hdi seguros fit` / `hdi seguros basico` são produtos distintos no robô; o front só oferece "HDI" genérico.
 - 5 campos `franquia*` por acessório aceitos pelo robô e ausentes do front.
+  **Confirmado em 22/08/2026: é gap real, não bloqueante.** Os campos-base
+  (`capotaFibra`, `equipamentoEspecial`, `telefoneCelularVeicular`, `cdPlayer`,
+  `radioAmFm`) já existem em `AcessoriosFold.tsx`/`f.acessoriosDetalhes` e chegam
+  ao robô via `acessorios_detalhes` (`quiver.functions.ts`), mas os 5 toggles de
+  "com franquia" (`franquiaCapotaFibra`, `franquiaEquipamentoEspecial`,
+  `franquiaTelefoneCelularVeicular`, `franquiaCdPlayer`, `franquiaRadioAmFm`) não
+  têm UI/estado no front, diferente do padrão já usado em
+  `comFranquiaBlindagem`/`comFranquiaKitGas`. Não bloqueia a cotação — se
+  omitidos, o robô mantém o padrão do portal (já "Sim" para a maioria). Fica
+  como melhoria futura caso o vendedor precise explicitamente marcar "sem
+  franquia" nesses itens.
 
 ## Baixa gravidade / custo de tela
 
