@@ -8,6 +8,7 @@ import { useClassificarPerda } from "@/components/venda/novo-lead/hooks/useClass
 import { useCepLookup } from "@/components/venda/novo-lead/hooks/useCepLookup";
 import { useFipe } from "@/components/venda/novo-lead/hooks/useFipe";
 import { useConsultaPlaca } from "@/components/venda/novo-lead/hooks/useConsultaPlaca";
+import { useConsultaCpf } from "@/components/venda/novo-lead/hooks/useConsultaCpf";
 import { useValidacaoEtapas } from "@/components/venda/novo-lead/hooks/useValidacaoEtapas";
 import { useSimulacaoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { useCotacaoRascunho } from "@/components/venda/novo-lead/hooks/useCotacaoRascunho";
@@ -280,6 +281,11 @@ function Page() {
     veiculoJaResolvido: !!f.marca,
   });
   const {
+    consultando: cpfConsultando,
+    status: cpfStatus,
+    consultar: consultarCpf,
+  } = useConsultaCpf({ setF, cotacaoId });
+  const {
     calculando,
     resultados,
     erro: erroCalculo,
@@ -350,6 +356,9 @@ function Page() {
               erros={erros}
               cepLoading={cepLoading}
               lookupCep={lookupCep}
+              cpfConsultando={cpfConsultando}
+              cpfStatus={cpfStatus}
+              consultarCpf={consultarCpf}
             />
           )}
 
