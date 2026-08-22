@@ -3,6 +3,7 @@ import {
   PLANO_COBERTURA,
   MODALIDADE_COBERTURA,
   FRANQUIA_OPCOES,
+  FRANQUIA_SEGUNDA_OPCOES,
   RCF_VALORES,
   DESPESAS_EXTRAS_OPCOES,
   NIVEL_COBERTURA_OPCOES,
@@ -23,6 +24,62 @@ function money(v: number) {
   });
 }
 
+// Presets aplicados pela Quiver ao trocar o Plano de Coberturas
+// (confirmado ao vivo no portal real, cotação 155651). "Personalizado" não
+// tem preset próprio — mantém os valores já preenchidos.
+const PLANO_PRESETS: Record<
+  Exclude<(typeof PLANO_COBERTURA)[number], "Personalizado">,
+  {
+    modalidade: (typeof MODALIDADE_COBERTURA)[number];
+    percentualAjuste: string;
+    franquiaPrimeiraOpcao: (typeof FRANQUIA_OPCOES)[number];
+    franquiaSegundaOpcao: (typeof FRANQUIA_SEGUNDA_OPCOES)[number];
+    rcfDm: string;
+    rcfDc: string;
+    appMorte: string;
+    appInval: string;
+    danosMorais: string;
+    despesasExtras: (typeof DESPESAS_EXTRAS_OPCOES)[number];
+  }
+> = {
+  Fácil: {
+    modalidade: "Valor de Mercado",
+    percentualAjuste: "100",
+    franquiaPrimeiraOpcao: "Normal 100%",
+    franquiaSegundaOpcao: "Reduzida 50%",
+    rcfDm: "100000",
+    rcfDc: "100000",
+    appMorte: "R$ 10.000,00",
+    appInval: "R$ 10.000,00",
+    danosMorais: "R$ 10.000,00",
+    despesasExtras: "Não contratada",
+  },
+  Pleno: {
+    modalidade: "Valor de Mercado",
+    percentualAjuste: "100",
+    franquiaPrimeiraOpcao: "Normal 100%",
+    franquiaSegundaOpcao: "Reduzida 50%",
+    rcfDm: "50000",
+    rcfDc: "50000",
+    appMorte: "R$ 5.000,00",
+    appInval: "R$ 5.000,00",
+    danosMorais: "R$ 0,00",
+    despesasExtras: "Não contratada",
+  },
+  Total: {
+    modalidade: "Valor de Mercado",
+    percentualAjuste: "100",
+    franquiaPrimeiraOpcao: "Normal 100%",
+    franquiaSegundaOpcao: "Reduzida 50%",
+    rcfDm: "100000",
+    rcfDc: "100000",
+    appMorte: "R$ 10.000,00",
+    appInval: "R$ 10.000,00",
+    danosMorais: "R$ 10.000,00",
+    despesasExtras: "Não contratada",
+  },
+};
+
 export function StepCoberturas({ f, up, erros }: Props) {
   return (
     <>
@@ -39,7 +96,21 @@ export function StepCoberturas({ f, up, erros }: Props) {
               key={t}
               className={"chip " + (f.tipoCobertura === t ? "chip-yellow" : "chip-outline")}
               style={{ cursor: "pointer" }}
-              onClick={() => up("tipoCobertura", t)}
+              onClick={() => {
+                up("tipoCobertura", t);
+                if (t === "Personalizado") return;
+                const preset = PLANO_PRESETS[t];
+                up("modalidade", preset.modalidade);
+                up("percentualAjuste", preset.percentualAjuste);
+                up("franquiaPrimeiraOpcao", preset.franquiaPrimeiraOpcao);
+                up("franquiaSegundaOpcao", preset.franquiaSegundaOpcao);
+                up("rcfDm", preset.rcfDm);
+                up("rcfDc", preset.rcfDc);
+                up("appMorte", preset.appMorte);
+                up("appInval", preset.appInval);
+                up("danosMorais", preset.danosMorais);
+                up("despesasExtras", preset.despesasExtras);
+              }}
             >
               {t}
             </span>
@@ -89,7 +160,7 @@ export function StepCoberturas({ f, up, erros }: Props) {
             value={f.franquiaSegundaOpcao}
             onChange={(e) => up("franquiaSegundaOpcao", e.target.value)}
           >
-            {FRANQUIA_OPCOES.map((t) => (
+            {FRANQUIA_SEGUNDA_OPCOES.map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>

@@ -16,27 +16,35 @@ export const PLANO_COBERTURA = ["Fácil", "Pleno", "Total", "Personalizado"] as 
 // no select real do protótipo/portal.
 export const MODALIDADE_COBERTURA = ["Valor de Mercado", "Valor Determinado"] as const;
 
-// cobertura.franquiaPrimeiraOpcao / franquiaSegundaOpcao — texto livre na
-// Quiver, só esses 9 valores existem no select real do protótipo/portal.
+// cobertura.franquiaPrimeiraOpcao — texto livre na Quiver, só esses 7
+// valores existem no select real do portal (PremiosCob_4031).
 export const FRANQUIA_OPCOES = [
   "Reduzida 25%",
   "Reduzida 50%",
   "Reduzida 75%",
   "Normal 100%",
-  "Majorada 125%",
   "Majorada 150%",
-  "Majorada 175%",
   "Majorada 200%",
   "Majorada 300%",
 ] as const;
 
+// cobertura.franquiaSegundaOpcao — mesmos 7 valores da 1ª opção mais "Não"
+// (select real do portal, PremiosCob_7031).
+export const FRANQUIA_SEGUNDA_OPCOES = [...FRANQUIA_OPCOES, "Não"] as const;
+
 // cobertura.danosMateriaisTerceiros / danosCorporaisTerceiros — texto livre
-// na Quiver, protótipo usa select fixo com esses 4 valores monetários.
-export const RCF_VALORES = [50000, 100000, 150000, 200000] as const;
+// na Quiver, select real do portal (PremiosCob_4) tem esses 59 valores.
+export const RCF_VALORES = [
+  0, 10000, 20000, 25000, 30000, 35000, 40000, 45000, 50000, 55000, 60000, 65000, 70000, 75000,
+  80000, 85000, 90000, 95000, 100000, 110000, 120000, 125000, 130000, 140000, 150000, 160000,
+  170000, 175000, 180000, 200000, 230000, 250000, 275000, 300000, 350000, 400000, 450000, 500000,
+  550000, 600000, 650000, 700000, 750000, 800000, 850000, 900000, 950000, 1000000, 1100000, 1200000,
+  1300000, 1400000, 1500000, 1600000, 1700000, 1800000, 1900000, 2000000,
+] as const;
 
 // cobertura.despesasExtras — texto livre na Quiver, só esses 2 valores
-// existem no select real do protótipo/portal.
-export const DESPESAS_EXTRAS_OPCOES = ["Não contratada", "Contratada"] as const;
+// existem no select real do portal (PremiosCob_20).
+export const DESPESAS_EXTRAS_OPCOES = ["Não contratada", "Sim"] as const;
 
 // cobertura.vidrosFarosRetrovisores / assistencia24h / carroReserva — enum
 // estrito de 4 níveis, idêntico para os 3 campos (contrato real Quiver, ver
