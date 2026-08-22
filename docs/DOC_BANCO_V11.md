@@ -848,7 +848,6 @@ erDiagram
         date cond_nasc
         text cond_sexo
         text cond_estado_civil
-        text profissao
         text cep_pernoite
         string more_columns
     }
@@ -857,10 +856,8 @@ erDiagram
         text tipo_cobertura
         text casco
         text casco_valor
-        text franquia
         text app_morte
         text app_invalidez
-        text dmh
         text rcf_dm
         string more_columns
     }
@@ -1316,10 +1313,8 @@ colisões do índice único de documento.
 | `combustivel` | text | sim |  |  |
 | `cor` | text | sim |  |  |
 | `zero_km` | boolean | sim |  |  |
-| `blindado` | boolean | sim |  |  |
 | `alienado` | boolean | sim |  |  |
 | `banco` | text | sim |  |  |
-| `uso_comercial` | text | sim |  |  |
 | `km_mensal` | text | sim |  |  |
 | `fipe_valor` | text | sim |  |  |
 | `tipo_uso` | text | sim |  |  |
@@ -1339,7 +1334,6 @@ colisões do índice único de documento.
 | `antifurto` | text | sim |  |  |
 | `antifurto_detalhes` | jsonb | **não** | `'{}'::jsonb` |  |
 | `cep_circulacao` | text | sim |  |  |
-| `num_passageiros` | text | sim |  |  |
 | `blindagem` | boolean | sim |  |  |
 | `cobertura_blindagem` | text | sim |  |  |
 | `valor_blindagem` | text | sim |  |  |
@@ -1376,11 +1370,9 @@ colisões do índice único de documento.
 - `cotacao_veiculo_marca_nome_tamanho`: `CHECK ((char_length(marca_nome) <= 150))`
 - `cotacao_veiculo_modelo_codigo_tamanho`: `CHECK ((char_length(modelo_codigo) <= 20))`
 - `cotacao_veiculo_modelo_nome_tamanho`: `CHECK ((char_length(modelo_nome) <= 150))`
-- `cotacao_veiculo_num_passageiros_tam`: `CHECK ((char_length(num_passageiros) <= 10))`
 - `cotacao_veiculo_placa_tamanho`: `CHECK ((char_length(placa) <= 8))`
 - `cotacao_veiculo_renavam_tamanho`: `CHECK ((char_length(renavam) <= 11))`
 - `cotacao_veiculo_tipo_uso_tam`: `CHECK ((char_length(tipo_uso) <= 100))`
-- `cotacao_veiculo_uso_comercial_tamanho`: `CHECK ((char_length(uso_comercial) <= 50))`
 - `cotacao_veiculo_uso_estudo_tam`: `CHECK ((char_length(uso_estudo) <= 150))`
 - `cotacao_veiculo_uso_trabalho_tam`: `CHECK ((char_length(uso_trabalho) <= 150))`
 - `cotacao_veiculo_utilizacao_locadora_tam`: `CHECK ((char_length(utilizacao_locadora) <= 100))`
@@ -1407,7 +1399,6 @@ colisões do índice único de documento.
 | `cond_nasc` | date | sim |  |  |
 | `cond_sexo` | text | sim |  |  |
 | `cond_estado_civil` | text | sim |  |  |
-| `profissao` | text | sim |  |  |
 | `cep_pernoite` | text | sim |  |  |
 | `jovens_18_25` | boolean | sim |  |  |
 | `tipo_garagem` | text | sim |  |  |
@@ -1444,7 +1435,6 @@ colisões do índice único de documento.
 - `cotacao_perfil_cond_tempo_habilitacao_tam`: `CHECK ((char_length(cond_tempo_habilitacao) <= 10))`
 - `cotacao_perfil_jovens_18_25_detalhes_arr`: `CHECK ((jsonb_typeof(jovens_18_25_detalhes) = 'array'::text))`
 - `cotacao_perfil_profissao_principal_condutor_tam`: `CHECK ((char_length(profissao_principal_condutor) <= 150))`
-- `cotacao_perfil_profissao_tamanho`: `CHECK ((char_length(profissao) <= 150))`
 - `cotacao_perfil_proprietario_cnpj_tam`: `CHECK ((char_length(proprietario_cnpj) <= 20))`
 - `cotacao_perfil_proprietario_cpf_tam`: `CHECK ((char_length(proprietario_cpf) <= 20))`
 - `cotacao_perfil_proprietario_estado_civil_tam`: `CHECK ((char_length(proprietario_estado_civil) <= 30))`
@@ -1478,13 +1468,11 @@ colisões do índice único de documento.
 | `tipo_cobertura` | text | sim |  |  |
 | `casco` | text | sim |  |  |
 | `casco_valor` | text | sim |  |  |
-| `franquia` | text | sim |  |  |
 | `app_morte` | text | sim |  |  |
 | `app_invalidez` | text | sim |  |  |
-| `dmh` | text | sim |  |  |
 | `rcf_dm` | text | sim |  |  |
 | `rcf_dc` | text | sim |  |  |
-| `vidros` | boolean | sim |  |  |
+| `vidros` | text | sim | `'Não contratada'` |  |
 | `carro_reserva` | text | sim |  |  |
 | `assist_24` | text | sim |  |  |
 | `modalidade` | text | sim |  |  |
@@ -1512,16 +1500,15 @@ colisões do índice único de documento.
 - `cotacao_coberturas_danos_morais_tam`: `CHECK ((char_length(danos_morais) <= 100))`
 - `cotacao_coberturas_descontos_agravos_obj`: `CHECK ((jsonb_typeof(descontos_agravos) = 'object'::text))`
 - `cotacao_coberturas_despesas_extras_tam`: `CHECK ((char_length(despesas_extras) <= 30))`
-- `cotacao_coberturas_dmh_tamanho`: `CHECK ((char_length(dmh) <= 100))`
 - `cotacao_coberturas_franquia_primeira_opcao_tam`: `CHECK ((char_length(franquia_primeira_opcao) <= 30))`
 - `cotacao_coberturas_franquia_segunda_opcao_tam`: `CHECK ((char_length(franquia_segunda_opcao) <= 30))`
-- `cotacao_coberturas_franquia_tamanho`: `CHECK ((char_length(franquia) <= 100))`
 - `cotacao_coberturas_mais_assistencias_seguradora_tam`: `CHECK ((char_length(mais_assistencias_seguradora) <= 50))`
 - `cotacao_coberturas_modalidade_tam`: `CHECK ((char_length(modalidade) <= 50))`
 - `cotacao_coberturas_percentual_ajuste_tam`: `CHECK ((char_length(percentual_ajuste) <= 10))`
 - `cotacao_coberturas_rcf_dc_tamanho`: `CHECK ((char_length(rcf_dc) <= 100))`
 - `cotacao_coberturas_rcf_dm_tamanho`: `CHECK ((char_length(rcf_dm) <= 100))`
 - `cotacao_coberturas_tipo_cobertura_tamanho`: `CHECK ((char_length(tipo_cobertura) <= 50))`
+- `cotacao_coberturas_vidros_check`: `CHECK ((vidros = ANY (ARRAY['Não contratada'::text, 'Básico'::text, 'Intermediário'::text, 'Superior'::text])))`
 
 **Policies RLS:**
 | Nome | Comando | Roles | Condição (qual) | Com verificação (with check) |
