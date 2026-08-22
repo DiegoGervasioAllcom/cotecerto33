@@ -437,10 +437,7 @@ export function StepCalculo({
                     {r.seguradora}
                   </div>
                   <span className="chip chip-slate">
-                    {r.produto ? `${r.produto} · ${r.nome}` : r.nome}
-                  </span>
-                  <span className="chip chip-slate" style={{ marginLeft: "auto" }}>
-                    {r.nome || "Compreensiva"}
+                    {r.produto ? `${r.produto} · ${r.nome}` : r.nome || "Compreensiva"}
                   </span>
                 </div>
                 <div className="calc-tiers">
