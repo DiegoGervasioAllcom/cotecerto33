@@ -8,9 +8,21 @@ type Props = {
   erros: Record<string, string>;
   cepLoading: boolean;
   lookupCep: (cep: string) => void;
+  cpfConsultando?: boolean;
+  cpfStatus?: { tipo: "ok" | "erro" | "aviso"; texto: string } | null;
+  consultarCpf?: (cpf: string) => void;
 };
 
-export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
+export function StepSegurado({
+  f,
+  up,
+  erros,
+  cepLoading,
+  lookupCep,
+  cpfConsultando,
+  cpfStatus,
+  consultarCpf,
+}: Props) {
   return (
     <>
       <h2>Dados do Segurado</h2>
@@ -28,8 +40,23 @@ export function StepSegurado({ f, up, erros, cepLoading, lookupCep }: Props) {
             inputMode="numeric"
             maxLength={18}
             onChange={(e) => up("cpf", maskCpfCnpj(e.target.value))}
+            onBlur={() => {
+              if (onlyDigits(f.cpf).length === 11) consultarCpf?.(f.cpf);
+            }}
             placeholder="000.000.000-00"
           />
+          {cpfConsultando && <span className="hint">Buscando cadastro…</span>}
+          {!cpfConsultando && cpfStatus && (
+            <span
+              className="hint"
+              style={{
+                display: "block",
+                color: cpfStatus.tipo === "erro" ? "var(--alert)" : undefined,
+              }}
+            >
+              {cpfStatus.texto}
+            </span>
+          )}
           {erros.cpf && (
             <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
               {erros.cpf}
