@@ -138,7 +138,18 @@ export type Form = {
   profissaoPrincipalCondutor: string;
   seguroCorretorProximo: "sim" | "nao";
   jovens1825: "sim" | "nao";
-  jovens18a25Detalhes: { nome: string; idade: string; parentesco: string }[];
+  // Detalhe por jovem condutor (17-25 anos) — espelha complementares.jovensCondutores
+  // da Quiver (ver EXTERNAL_API_GUIDE.md). `nome` é só identificador interno de UX
+  // (rótulo da linha), não existe campo de nome no payload do robô para esse array.
+  // `idade`/`sexo`/`reside`/`filhoOuFuncionarioPrincipalCondutor` usam os enums
+  // exatos do robô (ver enumsPerfil.ts); só `idade` é obrigatória no robô.
+  jovens18a25Detalhes: {
+    nome: string;
+    idade: string;
+    sexo: string;
+    reside: string;
+    filhoOuFuncionarioPrincipalCondutor: string;
+  }[];
   // Coberturas
   tipoCobertura: string;
   // Select legado do Passo 4 (Dados do Seguro) com opções
@@ -148,13 +159,14 @@ export type Form = {
   // estado `tipoCobertura` e o corrompia. Estado próprio, tela apenas —
   // não persistido nem enviado ao robô hoje.
   categoriaCoberturaLegado: string;
-  casco: string;
-  cascoValor: string;
   appMorte: string;
   appInval: string;
   rcfDm: string;
   rcfDc: string;
-  vidros: boolean;
+  // Nível de vidros/faróis/retrovisores — enum de 4 valores do robô
+  // (cobertura.vidrosFarosRetrovisores, ver enumsCoberturas.ts). Persistido em
+  // `cotacao_coberturas.vidros` (text, migration 20260821010000).
+  vidros: string;
   carroReserva: string;
   assist24: string;
   // Coberturas — espelha o protótipo v10 e o objeto `cobertura` da Quiver
@@ -165,6 +177,10 @@ export type Form = {
   danosMorais: string;
   despesasExtras: string;
   pequenosReparos: boolean;
+  // cobertura.valorDeterminado — só enviado à Quiver quando modalidade ===
+  // "Valor Determinado". Substitui o par legado casco/cascoValor (nunca
+  // enviado, tela órfã — reaproveita a coluna cotacao_coberturas.casco_valor).
+  valorDeterminado: string;
 };
 
 export type BonusFieldKey =

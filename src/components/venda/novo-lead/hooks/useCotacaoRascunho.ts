@@ -178,8 +178,10 @@ export function useCotacaoRascunho(params: {
       },
       coberturas: {
         tipo_cobertura: f.tipoCobertura,
-        casco: f.casco,
-        casco_valor: f.cascoValor,
+        // Coluna legada `casco` (texto livre 100%/95%/110% FIPE) descontinuada
+        // no front — reaproveitamos só `casco_valor` para persistir o novo
+        // valorDeterminado (par antigo nunca era enviado à Quiver).
+        casco_valor: f.valorDeterminado,
         app_morte: f.appMorte,
         app_invalidez: f.appInval,
         rcf_dm: f.rcfDm,
@@ -375,15 +377,13 @@ export function useCotacaoRascunho(params: {
         profissaoPrincipalCondutor: p.profissao_principal_condutor ?? "",
         seguroCorretorProximo: p.seguro_corretor_proximo ? "sim" : "nao",
         jovens1825: p.jovens_18_25 ? "sim" : "nao",
-        jovens18a25Detalhes:
-          (p.jovens_18_25_detalhes as { nome: string; idade: string; parentesco: string }[]) ?? [],
-        casco: c.casco ?? prev.casco,
-        cascoValor: c.casco_valor ?? "",
+        jovens18a25Detalhes: (p.jovens_18_25_detalhes as Form["jovens18a25Detalhes"]) ?? [],
+        valorDeterminado: c.casco_valor ?? "",
         appMorte: c.app_morte ?? "",
         appInval: c.app_invalidez ?? "",
         rcfDm: c.rcf_dm ?? "",
         rcfDc: c.rcf_dc ?? "",
-        vidros: c.vidros ?? prev.vidros,
+        vidros: (c.vidros as Form["vidros"]) ?? prev.vidros,
         carroReserva: c.carro_reserva ?? prev.carroReserva,
         assist24: c.assist_24 ?? prev.assist24,
         modalidade: c.modalidade ?? prev.modalidade,

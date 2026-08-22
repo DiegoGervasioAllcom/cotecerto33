@@ -38,6 +38,18 @@ export const RCF_VALORES = [50000, 100000, 150000, 200000] as const;
 // existem no select real do protótipo/portal.
 export const DESPESAS_EXTRAS_OPCOES = ["Não contratada", "Contratada"] as const;
 
+// cobertura.vidrosFarosRetrovisores / assistencia24h / carroReserva — enum
+// estrito de 4 níveis, idêntico para os 3 campos (contrato real Quiver, ver
+// EXTERNAL_API_GUIDE.md do repo do robô). Antes eram um boolean (vidros) ou
+// selects com opções que não existem de fato no portal (assist24: "Básica/
+// Intermediária/Premium"; carroReserva: "Não/7/15/30 dias").
+export const NIVEL_COBERTURA_OPCOES = [
+  "Não contratada",
+  "Básico",
+  "Intermediário",
+  "Superior",
+] as const;
+
 // Seguradoras habilitadas por padrão nos folds de Descontos/Comissões
 // quando a cotação ainda não tem seguradoras selecionadas (Passo 2) — mesma
 // lista SEG_HABILITADAS do protótipo.

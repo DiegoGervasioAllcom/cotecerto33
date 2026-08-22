@@ -8,6 +8,10 @@ import {
   TIPO_RESIDENCIA,
   TIPO_ATIVIDADE_EMPRESA,
   RAMO_ATIVIDADE,
+  IDADE_JOVEM_CONDUTOR,
+  SEXO_JOVEM_CONDUTOR,
+  RESIDE_JOVEM_CONDUTOR,
+  FILHO_FUNCIONARIO_PRINCIPAL_CONDUTOR,
 } from "@/components/venda/novo-lead/enumsPerfil";
 import {
   CONDUTORES_QUE_UTILIZAM,
@@ -27,7 +31,10 @@ export function StepPerfil({ f, up, erros }: Props) {
   const precisaCondutores = (TIPOS_USO_COM_CONDUTORES as readonly string[]).includes(f.tipoUso);
 
   function addJovem() {
-    up("jovens18a25Detalhes", [...f.jovens18a25Detalhes, { nome: "", idade: "", parentesco: "" }]);
+    up("jovens18a25Detalhes", [
+      ...f.jovens18a25Detalhes,
+      { nome: "", idade: "", sexo: "", reside: "", filhoOuFuncionarioPrincipalCondutor: "" },
+    ]);
   }
   function updJovem(i: number, patch: Partial<Form["jovens18a25Detalhes"][number]>) {
     up(
@@ -492,43 +499,21 @@ export function StepPerfil({ f, up, erros }: Props) {
               Jovens condutores (17–25 anos)
             </strong>
             {f.jovens18a25Detalhes.map((j, i) => (
-              <div className="wizard-grid cols-3" style={{ marginTop: 10 }} key={i}>
-                <div className="field-group" style={{ margin: 0 }}>
-                  <label>Nome</label>
-                  <input
-                    className="input"
-                    value={j.nome}
-                    onChange={(e) => updJovem(i, { nome: e.target.value })}
-                    placeholder="Nome do condutor"
-                  />
-                </div>
-                <div className="field-group" style={{ margin: 0 }}>
-                  <label>Idade</label>
-                  <input
-                    className="input"
-                    value={j.idade}
-                    inputMode="numeric"
-                    maxLength={2}
-                    onChange={(e) => updJovem(i, { idade: e.target.value })}
-                    placeholder="19"
-                  />
-                </div>
+              <div
+                className="card"
+                style={{
+                  marginTop: 10,
+                  padding: 10,
+                  background: "var(--surface, #fff)",
+                  borderRadius: 10,
+                }}
+                key={i}
+              >
                 <div
-                  className="field-group"
-                  style={{ margin: 0, display: "flex", gap: 8, alignItems: "flex-end" }}
+                  className="row"
+                  style={{ justifyContent: "space-between", alignItems: "center" }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <label>Parentesco / reside?</label>
-                    <select
-                      className="input"
-                      value={j.parentesco}
-                      onChange={(e) => updJovem(i, { parentesco: e.target.value })}
-                    >
-                      <option>Filho(a) — reside</option>
-                      <option>Filho(a) — não reside</option>
-                      <option>Outro</option>
-                    </select>
-                  </div>
+                  <strong style={{ fontSize: 13 }}>{j.nome || `Jovem ${i + 1}`}</strong>
                   <button
                     type="button"
                     className="btn btn-ghost"
@@ -537,6 +522,71 @@ export function StepPerfil({ f, up, erros }: Props) {
                   >
                     ✕
                   </button>
+                </div>
+                <div className="wizard-grid cols-3" style={{ marginTop: 8 }}>
+                  <div className="field-group" style={{ margin: 0 }}>
+                    <label>Nome (uso interno, não vai ao robô)</label>
+                    <input
+                      className="input"
+                      value={j.nome}
+                      onChange={(e) => updJovem(i, { nome: e.target.value })}
+                      placeholder="Nome do condutor"
+                    />
+                  </div>
+                  <div className="field-group" style={{ margin: 0 }}>
+                    <label>Idade</label>
+                    <select
+                      className="input"
+                      value={j.idade}
+                      onChange={(e) => updJovem(i, { idade: e.target.value })}
+                    >
+                      <option value="">Selecione</option>
+                      {IDADE_JOVEM_CONDUTOR.map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field-group" style={{ margin: 0 }}>
+                    <label>Sexo</label>
+                    <select
+                      className="input"
+                      value={j.sexo}
+                      onChange={(e) => updJovem(i, { sexo: e.target.value })}
+                    >
+                      <option value="">Selecione</option>
+                      {SEXO_JOVEM_CONDUTOR.map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field-group" style={{ margin: 0 }}>
+                    <label>Reside/dirige</label>
+                    <select
+                      className="input"
+                      value={j.reside}
+                      onChange={(e) => updJovem(i, { reside: e.target.value })}
+                    >
+                      <option value="">Selecione</option>
+                      {RESIDE_JOVEM_CONDUTOR.map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field-group" style={{ margin: 0 }}>
+                    <label>Filho(a) ou funcionário do principal condutor?</label>
+                    <select
+                      className="input"
+                      value={j.filhoOuFuncionarioPrincipalCondutor}
+                      onChange={(e) =>
+                        updJovem(i, { filhoOuFuncionarioPrincipalCondutor: e.target.value })
+                      }
+                    >
+                      <option value="">Selecione</option>
+                      {FILHO_FUNCIONARIO_PRINCIPAL_CONDUTOR.map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             ))}

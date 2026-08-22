@@ -101,11 +101,13 @@ export const TIPOS_USO_COM_CONDUTORES = [
   "Transporte de funcionários",
 ] as const;
 
-// Campo só do protótipo v10 — sem contrapartida na Quiver hoje (não existe
-// no validator nem no guia). Mantido por decisão do usuário para fidelidade
-// visual; não é enviado em montarPayloadQuiver() até a Quiver suportar.
+// Histórico de leilão (Página 3 do robô, veiculo.historicoLeilao) — mapeado
+// ao vivo no portal real da Quiver em 20/08/2026. O 3º valor usa
+// "administrativo" (não "administrativa") porque é esse o texto exato do
+// portal e do validator do robô (cotacao.validator.ts) — qualquer outra
+// grafia é rejeitada com 422.
 export const LEILAO = [
   "Não possui histórico de leilão",
   "Leilão de indenização integral",
-  "Outros tipos de leilão (administrativa, financeira, renovação de frota, etc.)",
+  "Outros tipos de leilão (administrativo, financeira, renovação de frota, etc.)",
 ] as const;

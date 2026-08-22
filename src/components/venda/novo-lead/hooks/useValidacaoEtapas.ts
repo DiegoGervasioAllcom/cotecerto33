@@ -151,8 +151,7 @@ export function useValidacaoEtapas(
     if (atual === 4) {
       const r = coberturasSchema.safeParse({
         tipoCobertura: f.tipoCobertura,
-        casco: f.casco,
-        cascoValor: f.cascoValor,
+        valorDeterminado: f.valorDeterminado,
         appMorte: f.appMorte,
         appInvalidez: f.appInval,
         rcfDm: f.rcfDm,

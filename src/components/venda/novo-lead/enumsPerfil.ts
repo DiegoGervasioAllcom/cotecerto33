@@ -119,6 +119,25 @@ export const RAMO_ATIVIDADE = [
   "Organismos internacionais e outras instituições extraterritoriais",
 ] as const;
 
+// complementares.jovensCondutores[].idade — enum estrito da Quiver (só
+// aceito quando pessoas17a25="Sim"). Substitui o antigo campo de texto livre.
+export const IDADE_JOVEM_CONDUTOR = ["17 anos", "Entre 18 e 24 anos", "25 anos"] as const;
+
+// complementares.jovensCondutores[].sexo — opcional.
+export const SEXO_JOVEM_CONDUTOR = ["Masculino", "Feminino", "Ambos"] as const;
+
+// complementares.jovensCondutores[].reside — opcional. Antes misturado com
+// "parentesco" num único select de 3 opções que não batiam com o robô.
+export const RESIDE_JOVEM_CONDUTOR = [
+  "Mora e dirige o veículo",
+  "Mora, mas não dirige o veículo",
+  "Não mora, mas dirige o veículo",
+] as const;
+
+// complementares.jovensCondutores[].filhoOuFuncionarioPrincipalCondutor —
+// opcional, "Sim"/"Não".
+export const FILHO_FUNCIONARIO_PRINCIPAL_CONDUTOR = ["Sim", "Não"] as const;
+
 // Substrings usados pelo validator (normalizeText, case/acento-insensível)
 // para decidir se relacaoSeguradoComProprietario exige dados do
 // proprietário, e se esses dados podem ser Pessoa Jurídica. Replicado aqui

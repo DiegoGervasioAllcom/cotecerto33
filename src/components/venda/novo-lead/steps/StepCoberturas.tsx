@@ -5,6 +5,7 @@ import {
   FRANQUIA_OPCOES,
   RCF_VALORES,
   DESPESAS_EXTRAS_OPCOES,
+  NIVEL_COBERTURA_OPCOES,
 } from "@/components/venda/novo-lead/enumsCoberturas";
 import type { Form } from "@/components/venda/novo-lead/types";
 
@@ -167,28 +168,19 @@ export function StepCoberturas({ f, up, erros }: Props) {
             ))}
           </select>
         </div>
-        <div className="field-group">
-          <label>Casco</label>
-          <select className="input" value={f.casco} onChange={(e) => up("casco", e.target.value)}>
-            <option>100% Tabela FIPE</option>
-            <option>95% Tabela FIPE</option>
-            <option>110% Tabela FIPE</option>
-            <option>Valor determinado</option>
-          </select>
-        </div>
-        {f.casco === "Valor determinado" && (
+        {f.modalidade === "Valor Determinado" && (
           <div className="field-group">
-            <label>Valor determinado</label>
+            <label>Valor determinado (Casco)</label>
             <input
               className="input"
-              value={f.cascoValor}
+              value={f.valorDeterminado}
               maxLength={100}
-              onChange={(e) => up("cascoValor", maskBRL(e.target.value))}
+              onChange={(e) => up("valorDeterminado", maskBRL(e.target.value))}
               placeholder="R$ 0,00"
             />
-            {erros.cascoValor && (
+            {erros.valorDeterminado && (
               <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
-                {erros.cascoValor}
+                {erros.valorDeterminado}
               </span>
             )}
           </div>
@@ -199,13 +191,6 @@ export function StepCoberturas({ f, up, erros }: Props) {
         <label>Adicionais</label>
         <div className="row" style={{ gap: 18, paddingTop: 6, flexWrap: "wrap" }}>
           <label
-            className={`switch ${f.vidros ? "on" : ""}`}
-            onClick={() => up("vidros", !f.vidros)}
-          >
-            <span className="track"></span>
-            <span className="label">Vidros · faróis · retrovisores</span>
-          </label>
-          <label
             className={`switch ${f.pequenosReparos ? "on" : ""}`}
             onClick={() => up("pequenosReparos", !f.pequenosReparos)}
           >
@@ -213,7 +198,19 @@ export function StepCoberturas({ f, up, erros }: Props) {
             <span className="label">Pequenos reparos</span>
           </label>
         </div>
-        <div className="wizard-grid" style={{ marginTop: 8 }}>
+        <div className="wizard-grid cols-3" style={{ marginTop: 8 }}>
+          <div className="field-group">
+            <label>Vidros · faróis · retrovisores</label>
+            <select
+              className="input"
+              value={f.vidros}
+              onChange={(e) => up("vidros", e.target.value)}
+            >
+              {NIVEL_COBERTURA_OPCOES.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </div>
           <div className="field-group">
             <label>Assistência 24h</label>
             <select
@@ -221,9 +218,9 @@ export function StepCoberturas({ f, up, erros }: Props) {
               value={f.assist24}
               onChange={(e) => up("assist24", e.target.value)}
             >
-              <option>Básica</option>
-              <option>Intermediária</option>
-              <option>Premium</option>
+              {NIVEL_COBERTURA_OPCOES.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
             </select>
           </div>
           <div className="field-group">
@@ -233,10 +230,9 @@ export function StepCoberturas({ f, up, erros }: Props) {
               value={f.carroReserva}
               onChange={(e) => up("carroReserva", e.target.value)}
             >
-              <option>Não</option>
-              <option>7 dias</option>
-              <option>15 dias</option>
-              <option>30 dias</option>
+              {NIVEL_COBERTURA_OPCOES.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
             </select>
           </div>
         </div>
