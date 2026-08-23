@@ -226,6 +226,83 @@ describe("resultado detalhado da Quiver", () => {
     expect(JSON.stringify(gruposOpcoesResultado(resultado))).not.toContain("12x");
   });
 
+  it("expande uma faixa em uma opção por variante de parcelamento retornada pelo Quiver", () => {
+    const [resultado] = parseQuiverResultado({
+      cards: [
+        {
+          seguradora: "Seguradora Alfa",
+          premiosPorFormaPagamento: [
+            {
+              formaPagamento: "Cartão de crédito",
+              opcoes: [
+                {
+                  tipo: "normal 100%",
+                  franquia: "Franquia: R$ 6.116,96",
+                  avista: "à vista R$ 11.376,52",
+                  parcelas: "12x sem juros de R$ 948,04",
+                  parcelasOpcoes: [
+                    "à vista R$ 11.376,52",
+                    "10x sem juros de R$ 1.137,65",
+                    "11x sem juros de R$ 1.034,23",
+                    "12x sem juros de R$ 948,04",
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const [grupo] = gruposOpcoesResultado(resultado);
+    expect(grupo.opcoes.map((o) => o.parcelas)).toEqual([
+      "10x sem juros de R$ 1.137,65",
+      "11x sem juros de R$ 1.034,23",
+      "12x sem juros de R$ 948,04",
+    ]);
+    expect(grupo.opcoes.every((o) => o.avista === "à vista R$ 11.376,52")).toBe(true);
+    expect(new Set(grupo.opcoes.map((o) => o.id)).size).toBe(3);
+  });
+
+  it("mantém ids únicos quando duas faixas do mesmo grupo expandem em várias parcelas", () => {
+    const [resultado] = parseQuiverResultado({
+      cards: [
+        {
+          seguradora: "Seguradora Alfa",
+          premiosPorFormaPagamento: [
+            {
+              formaPagamento: "Cartão de crédito",
+              opcoes: [
+                {
+                  tipo: "normal 100%",
+                  avista: "R$ 1.000,00",
+                  parcelas: "10x de R$ 100,00",
+                  parcelasOpcoes: ["9x de R$ 111,11", "10x de R$ 100,00"],
+                },
+                {
+                  tipo: "reduzida 50%",
+                  avista: "R$ 500,00",
+                  parcelas: "5x de R$ 100,00",
+                  parcelasOpcoes: ["4x de R$ 125,00", "5x de R$ 100,00"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const [grupo] = gruposOpcoesResultado(resultado);
+    expect(grupo.opcoes.map((o) => `${o.tipo}|${o.parcelas}`)).toEqual([
+      "normal 100%|9x de R$ 111,11",
+      "normal 100%|10x de R$ 100,00",
+      "reduzida 50%|4x de R$ 125,00",
+      "reduzida 50%|5x de R$ 100,00",
+    ]);
+    const ids = grupo.opcoes.map((o) => o.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it("preserva opção real à vista com parcelas vazio sem fabricar rótulo", () => {
     const [resultado] = parseQuiverResultado({
       cards: [
