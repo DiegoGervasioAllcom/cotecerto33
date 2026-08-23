@@ -126,7 +126,8 @@ export function formasPagamentoResultado(resultado: ResultadoCalculo): string[] 
   return [...new Set(formas)];
 }
 
-const isTextoParcelamento = (texto: string) => /^\d+\s*x\s*/i.test(texto) || /em\s*\d+\s*x\s*/i.test(texto);
+const isTextoParcelamento = (texto: string) =>
+  /^\d+\s*x\s*/i.test(texto) || /em\s*\d+\s*x\s*/i.test(texto);
 
 /**
  * Expande uma faixa (ex.: "normal 100%") em uma opção por variante de
