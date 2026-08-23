@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SolicitarDescontoModal } from "@/components/venda/solicitar-desconto-modal";
 import { escapeHtml, fmtBRL, printHtml } from "@/lib/print";
 import {
+  faixasComParcelas,
   formasPagamentoResultado,
   gruposOpcoesResultado,
   ordenarResultados,
@@ -355,19 +356,26 @@ export function ComparativoQuiver({
                           style={{ marginBottom: 10 }}
                         >
                           <strong>{grupo.formaPagamento}</strong>
-                          {grupo.opcoes.map((opcao, opcaoIndex) => (
-                            <div key={opcaoIndex} style={{ marginTop: 6 }}>
-                              <span>{opcao.tipo || "Opção"}</span>
+                          {faixasComParcelas(grupo.opcoes).map((faixa, faixaIndex) => (
+                            <div key={faixaIndex} style={{ marginTop: 6 }}>
+                              <span>{faixa.tipo || "Opção"}</span>
                               <br />
-                              <span className="small">Franquia: {opcao.franquia || "—"}</span>
+                              <span className="small">Franquia: {faixa.franquia || "—"}</span>
                               <br />
-                              <span className="v-lmi">{opcao.avista || "—"}</span>
+                              <span className="v-lmi">{faixa.avista || "—"}</span>
                               <br />
-                              <span className="small muted">
-                                {opcao.parcelas || "Parcelamento não informado"}
-                              </span>
-                              {opcao.desconto && (
-                                <div className="chip chip-ok">{opcao.desconto}</div>
+                              {faixa.parcelas.length === 0 ? (
+                                <span className="small muted">Parcelamento não informado</span>
+                              ) : (
+                                faixa.parcelas.map((parcela, parcelaIndex) => (
+                                  <span className="small muted" key={parcelaIndex}>
+                                    {parcela}
+                                    {parcelaIndex < faixa.parcelas.length - 1 ? " · " : ""}
+                                  </span>
+                                ))
+                              )}
+                              {faixa.desconto && (
+                                <div className="chip chip-ok">{faixa.desconto}</div>
                               )}
                             </div>
                           ))}
