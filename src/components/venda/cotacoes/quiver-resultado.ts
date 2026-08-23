@@ -8,6 +8,13 @@ export const opcaoPremioSchema = z.object({
   desconto: textoOpcional,
   franquia: textoOpcional,
   parcelas: textoOpcional,
+  // Todas as variantes de parcelamento que o portal Quiver calculou pra essa
+  // faixa (ex.: "6x sem juros de R$ 1.896,08", "12x sem juros de R$ 948,04"),
+  // não só a que o robô via renderizada por padrão em `parcelas`. O robô lê
+  // isso de spans escondidos no DOM (ver cotacaoPaginaPremios.ts no repo
+  // playwright) — sem esse campo, o card só conseguia mostrar 1 opção de
+  // parcela por faixa mesmo quando a seguradora oferecia várias.
+  parcelasOpcoes: z.array(z.string()).optional(),
 });
 
 const formasPagamentoSchema = z.object({
@@ -119,15 +126,35 @@ export function formasPagamentoResultado(resultado: ResultadoCalculo): string[] 
   return [...new Set(formas)];
 }
 
+const isTextoParcelamento = (texto: string) =>
+  /^\d+\s*x\s*/i.test(texto) || /em\s*\d+\s*x\s*/i.test(texto);
+
+/**
+ * Expande uma faixa (ex.: "normal 100%") em uma opção por variante de
+ * parcelamento disponível (`parcelasOpcoes`), em vez de só a que o robô
+ * capturou em `parcelas` (a que o portal deixava visível por padrão).
+ * Sem `parcelasOpcoes`, ou com só 1 variante de parcelamento, devolve a
+ * faixa original sem alteração.
+ */
+function expandirOpcoesPorParcela(opcoes: OpcaoPremio[]): OpcaoPremio[] {
+  return opcoes.flatMap((opcao) => {
+    const variantes = (opcao.parcelasOpcoes ?? []).filter(isTextoParcelamento);
+    const variantesUnicas = [...new Set(variantes)];
+    if (variantesUnicas.length < 2) return [opcao];
+    return variantesUnicas.map((parcelas) => ({ ...opcao, parcelas }));
+  });
+}
+
 export function gruposOpcoesResultado(resultado: ResultadoCalculo): GrupoOpcoesPremio[] {
   if ((resultado.premiosPorFormaPagamento?.length ?? 0) > 0) {
     return (resultado.premiosPorFormaPagamento ?? []).flatMap((grupo, grupoIndex) => {
       if (!grupo.formaPagamento.trim() || grupo.opcoes.length === 0) return [];
+      const opcoesExpandidas = expandirOpcoesPorParcela(grupo.opcoes);
       return [
         {
           id: `forma-${grupoIndex}`,
           formaPagamento: grupo.formaPagamento,
-          opcoes: grupo.opcoes.map((opcao, opcaoIndex) => ({
+          opcoes: opcoesExpandidas.map((opcao, opcaoIndex) => ({
             ...opcao,
             id: `forma-${grupoIndex}-opcao-${opcaoIndex}`,
           })),
@@ -140,16 +167,54 @@ export function gruposOpcoesResultado(resultado: ResultadoCalculo): GrupoOpcoesP
   // transmiti-los quando todos os campos disponíveis apontam para uma única forma.
   const formasDeclaradas = formasPagamentoResultado(resultado);
   if (formasDeclaradas.length !== 1 || resultado.opcoes.length === 0) return [];
+  const opcoesExpandidas = expandirOpcoesPorParcela(resultado.opcoes);
   return [
     {
       id: "forma-legada-0",
       formaPagamento: formasDeclaradas[0],
-      opcoes: resultado.opcoes.map((opcao, opcaoIndex) => ({
+      opcoes: opcoesExpandidas.map((opcao, opcaoIndex) => ({
         ...opcao,
         id: `forma-legada-0-opcao-${opcaoIndex}`,
       })),
     },
   ];
+}
+
+export type FaixaComParcelas = {
+  tipo?: string;
+  franquia?: string;
+  avista?: string;
+  desconto?: string;
+  parcelas: string[];
+};
+
+/**
+ * Reagrupa as opções já expandidas por parcela (uma por variante de
+ * parcelamento — ver `expandirOpcoesPorParcela`) de volta por faixa
+ * (tipo/franquia/à vista/desconto), juntando as parcelas numa lista.
+ * Evita repetir tipo/franquia/à vista em blocos idênticos na UI — um por
+ * faixa, com as N variantes de parcelamento listadas dentro dela.
+ */
+export function faixasComParcelas(opcoes: readonly OpcaoPremio[]): FaixaComParcelas[] {
+  const faixas: FaixaComParcelas[] = [];
+  const indicePorChave = new Map<string, number>();
+  for (const opcao of opcoes) {
+    const chave = [opcao.tipo, opcao.franquia, opcao.avista, opcao.desconto].join("|");
+    let indice = indicePorChave.get(chave);
+    if (indice === undefined) {
+      indice = faixas.length;
+      indicePorChave.set(chave, indice);
+      faixas.push({
+        tipo: opcao.tipo,
+        franquia: opcao.franquia,
+        avista: opcao.avista,
+        desconto: opcao.desconto,
+        parcelas: [],
+      });
+    }
+    if (opcao.parcelas) faixas[indice].parcelas.push(opcao.parcelas);
+  }
+  return faixas;
 }
 
 const normalizar = (texto: string | null | undefined) =>
