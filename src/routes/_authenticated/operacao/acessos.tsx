@@ -35,8 +35,9 @@ export const Route = createFileRoute("/_authenticated/operacao/acessos")({
 });
 
 function Page() {
-  // AreaChave decide quais pessoas do time interno entram. As ações continuam
-  // limitadas à família administrativa que já existia antes deste recorte.
+  // AreaChave decide quais pessoas do time interno entram — e, desde a
+  // revisão de 22/08/2026, quem entra também administra por completo. A
+  // Matriz é quem decide ao marcar (ou não) a área `macessos` no cadastro.
   const denied = useRequirePerfilInterno();
   const { role, profile } = useAuth();
   const canAdmin = podeAdministrarAcessos(role, profile?.cargo_id);
@@ -152,8 +153,9 @@ function Page() {
           <svg width="16" height="16">
             <use href="#i-eye" />
           </svg>{" "}
-          <strong style={{ marginRight: 4 }}>Somente leitura.</strong> Convites, cadastros,
-          aprovações, desligamentos e personalizações permanecem com os perfis administrativos.
+          <strong style={{ marginRight: 4 }}>Somente leitura.</strong> Seu acesso não tem a área
+          Acessos e permissões liberada para administração. Fale com a Matriz para revisar seu
+          cadastro.
         </div>
       </AppShell>
     );

@@ -59,8 +59,8 @@ function Page() {
           <svg width="16" height="16">
             <use href="#i-eye" />
           </svg>{" "}
-          <strong style={{ marginRight: 4 }}>Somente leitura.</strong> O Coordenador Comercial
-          visualiza as configurações, mas alterações permanecem exclusivas da Matriz.
+          <strong style={{ marginRight: 4 }}>Somente leitura.</strong> Seu acesso não tem a área
+          Configurações liberada para edição. Fale com a Matriz para revisar seu cadastro.
         </div>
       )}
 

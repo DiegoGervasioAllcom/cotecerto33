@@ -22,33 +22,40 @@ export function podeAcessarAreaInterna(role: Perfil | null | undefined): boolean
 }
 
 /**
- * Escrita na tela de Configuracoes permanece exclusiva da Matriz.
- * Coordenador compartilha a visualizacao, nunca a capacidade de alterar.
+ * Escrita na tela de Configuracoes acompanha a concessão de área da Matriz.
+ *
+ * Decisão revista em 22/08/2026: antes só `matriz` editava e todo o resto
+ * (Coordenador incluso) só visualizava, mesmo já tendo a área `mconf`
+ * concedida — quem chegou até aqui já passou pelo guard de área
+ * (`useRequireAreaAtual`, aplicado a toda `_authenticated/route.tsx`), então
+ * a decisão de "quem pode" já foi tomada pela Matriz ao marcar a área no
+ * cadastro. Escopo read-only sem a área ser opção da Matriz nunca fez
+ * sentido: ou ela concede a área e a pessoa administra por completo, ou não
+ * concede e a pessoa nem abre a tela.
  */
 export function podeEditarConfiguracoes(role: Perfil | null | undefined): boolean {
-  return role === "matriz";
+  return podeAcessarAreaInterna(role);
 }
 
 /**
- * Mantém as ações administrativas de Acessos nos perfis/cargos que já as
- * possuíam.
+ * Ações administrativas de Acessos acompanham a concessão da área
+ * `macessos`, não mais um cargo específico.
  *
- * Fluxo "Acesso e visualização" (documento da Lis): o Supervisor Operacional
- * "cuida da fila de entrada e da liberação dos cadastros" — administra
- * Acessos e permissões igual à Matriz. Já o Supervisor de Vendas nem tem essa
- * área no menu (11 áreas, sem Acessos) — ver H8 (20260803130000). Por isso o
- * cargo decide aqui, não o `role` genérico (os três supervisores compartilham
- * o mesmo `role`).
+ * Decisão revista em 22/08/2026, substituindo a regra anterior (só
+ * matriz/coordenador/sup_operacional administravam — H8, 20260803130000):
+ * a tela só é alcançada depois do guard de área (`useRequireAreaAtual`, em
+ * `_authenticated/route.tsx`), então se a Matriz marcou `macessos` no
+ * cadastro de alguém, essa pessoa já devia ter o poder completo — não um
+ * modo somente-leitura que a própria Matriz não pediu.
  */
 export function podeAdministrarAcessos(
   role: Perfil | null | undefined,
-  cargoId?: string | null,
+  _cargoId?: string | null,
 ): boolean {
-  if (role === "matriz" || role === "coordenador") return true;
-  return role === "supervisor" && cargoId === "sup_operacional";
+  return podeAcessarAreaInterna(role);
 }
 
-/** Evita até a consulta administrativa quando a tela é negada ou read-only. */
+/** Evita até a consulta administrativa quando a tela é negada. */
 export function deveCarregarDadosAcessos(
   role: Perfil | null | undefined,
   cargoId: string | null | undefined,

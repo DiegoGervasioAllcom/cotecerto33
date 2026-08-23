@@ -81,42 +81,42 @@ describe("resolverAcessoAreaInterna sem loop", () => {
 });
 
 describe("podeEditarConfiguracoes", () => {
-  it("mantem escrita para a Matriz", () => {
-    expect(podeEditarConfiguracoes("matriz")).toBe(true);
-  });
+  // Revisão 22/08/2026: quem abre a tela já passou pelo guard de área
+  // (`useRequireAreaAtual`) — a Matriz decide ao conceder `mconf`, não o
+  // código. Read-only sem a Matriz ter pedido não fazia sentido.
+  it.each(["matriz", "coordenador", "supervisor", "interno"] as const)(
+    "concede escrita a qualquer perfil interno (%s) — a área já filtrou quem entra",
+    (role) => expect(podeEditarConfiguracoes(role)).toBe(true),
+  );
 
-  it.each(["coordenador", "supervisor", "interno", "master", "franqueado", "vendedor"] as const)(
-    "mantem %s em consulta sem escrita",
+  it.each(["master", "franqueado", "vendedor"] as const)(
+    "nunca concede escrita a perfil externo %s",
     (role) => expect(podeEditarConfiguracoes(role)).toBe(false),
   );
 });
 
 describe("podeAdministrarAcessos", () => {
-  it.each(["matriz", "coordenador"] as const)("preserva ações administrativas para %s", (role) =>
-    expect(podeAdministrarAcessos(role)).toBe(true),
+  // Revisão 22/08/2026, substituindo a regra por cargo (H8): a área
+  // `macessos` já decidiu quem entra na tela; quem entra administra por
+  // completo, independente do cargo.
+  it.each(["matriz", "coordenador", "supervisor", "interno"] as const)(
+    "concede ações administrativas a qualquer perfil interno (%s)",
+    (role) => expect(podeAdministrarAcessos(role)).toBe(true),
   );
 
-  // Fluxo "Acesso e visualização" (documento da Lis): "[Supervisor
-  // Operacional] cuida da fila de entrada e da liberação dos cadastros" —
-  // administra Acessos igual à Matriz. Supervisor de Vendas nem tem essa
-  // área no menu (11 áreas, sem Acessos) — não acompanha, não administra.
-  it("concede ações administrativas ao Supervisor Operacional (cuida da liberação dos cadastros)", () => {
-    expect(podeAdministrarAcessos("supervisor", "sup_operacional")).toBe(true);
-  });
-
-  it.each(["sup_vendas", "sup_backoffice", null, undefined] as const)(
-    "não concede ações administrativas a supervisor com cargo %s",
-    (cargoId) => expect(podeAdministrarAcessos("supervisor", cargoId)).toBe(false),
+  it.each(["sup_vendas", "sup_operacional", "sup_backoffice", null, undefined] as const)(
+    "ignora o cargo — só o perfil interno decide (cargo %s)",
+    (cargoId) => expect(podeAdministrarAcessos("supervisor", cargoId)).toBe(true),
   );
 
-  it.each(["interno", "master", "franqueado", "vendedor"] as const)(
-    "não concede ações administrativas a %s",
+  it.each(["master", "franqueado", "vendedor"] as const)(
+    "não concede ações administrativas a perfil externo %s",
     (role) => expect(podeAdministrarAcessos(role)).toBe(false),
   );
 });
 
 describe("deveCarregarDadosAcessos", () => {
-  it.each(["matriz", "coordenador"] as const)(
+  it.each(["matriz", "coordenador", "supervisor", "interno"] as const)(
     "carrega para %s somente quando o guard permitiu",
     (role) => {
       expect(deveCarregarDadosAcessos(role, null, false)).toBe(true);
@@ -124,15 +124,14 @@ describe("deveCarregarDadosAcessos", () => {
     },
   );
 
-  it("carrega para o Supervisor Operacional quando o guard permitiu", () => {
-    expect(deveCarregarDadosAcessos("supervisor", "sup_operacional", false)).toBe(true);
-    expect(deveCarregarDadosAcessos("supervisor", "sup_operacional", true)).toBe(false);
+  it("carrega para o Supervisor de Vendas também — cargo não decide mais", () => {
+    expect(deveCarregarDadosAcessos("supervisor", "sup_vendas", false)).toBe(true);
   });
 
-  it("não consulta dados administrativos no modo interno read-only", () => {
-    expect(deveCarregarDadosAcessos("interno", null, false)).toBe(false);
-    expect(deveCarregarDadosAcessos("supervisor", "sup_vendas", false)).toBe(false);
-  });
+  it.each(["master", "franqueado", "vendedor"] as const)(
+    "nunca carrega para perfil externo %s",
+    (role) => expect(deveCarregarDadosAcessos(role, null, false)).toBe(false),
+  );
 });
 
 describe("recorte de URL por AreaChave", () => {
