@@ -67,8 +67,8 @@ export function useRequireMatrizOuFranquiaFull(): ReactNode | null {
  * por URL direta e via "Convidar vendedor" — plenamente funcional — apesar de
  * o protótipo/docs deixarem claro que a Individual "opera como um vendedor,
  * sem cadastro de vendedores". Master e Supervisor não passam por aqui: o
- * Supervisor migrou para `/operacao/acessos` (somente leitura, via
- * `podeAdministrarAcessos`/área `macessos`).
+ * Supervisor migrou para `/operacao/acessos`, administrado por completo
+ * sempre que a Matriz concede a área `macessos` (`podeAdministrarAcessos`).
  */
 export function useRequireGrupoAcessos(): ReactNode | null {
   const { loading: authLoading, role } = useAuth();

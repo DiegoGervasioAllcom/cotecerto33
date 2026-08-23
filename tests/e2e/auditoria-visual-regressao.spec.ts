@@ -42,7 +42,7 @@ test.describe("regressões da auditoria visual V11", () => {
     }
   });
 
-  test("Coordenador abre as 17 áreas anunciadas e Configurações é somente leitura", async ({
+  test("Coordenador abre as 17 áreas anunciadas e administra Configurações por completo", async ({
     page,
   }) => {
     let coordenador: Persona | undefined;
@@ -62,8 +62,12 @@ test.describe("regressões da auditoria visual V11", () => {
       ]) {
         await abrirSemRedirecionar(page, rota);
       }
+      // Revisão 22/08/2026: a área já decidiu quem entra (17 áreas concedidas
+      // ao Coordenador); quem entra administra por completo — sem modo
+      // somente-leitura por baixo da decisão da Matriz.
       await expect(page.getByRole("heading", { name: "Configurações" }).last()).toBeVisible();
-      await expect(page.getByRole("spinbutton").first()).toBeDisabled();
+      await expect(page.getByText("Somente leitura.")).toHaveCount(0);
+      await expect(page.getByRole("spinbutton").first()).toBeEnabled();
     } finally {
       if (coordenador) await limparPersona(coordenador);
     }
@@ -90,7 +94,7 @@ test.describe("regressões da auditoria visual V11", () => {
     }
   });
 
-  test("override bloqueia URL removida e mantém Configurações/Acessos em leitura para interno", async ({
+  test("override bloqueia URL removida e concede Configurações/Acessos por completo para interno", async ({
     page,
   }) => {
     let supervisor: Persona | undefined;
@@ -106,16 +110,20 @@ test.describe("regressões da auditoria visual V11", () => {
 
       await page.context().clearCookies();
       await page.evaluate(() => localStorage.clear());
+      // Revisão 22/08/2026: a área é o único portão — um cargo sem alçada
+      // nenhuma (marketing) que recebe `macessos`/`mconf` da Matriz administra
+      // as duas telas por completo, sem modo somente-leitura por baixo.
       consulta = await criarPersona({ role: "interno", cargo: "marketing" });
       await definirAreasPersona(consulta.userId, ["macessos", "mconf"]);
       await loginAs(page, consulta.email, consulta.senha);
       await esperarLogin(page);
 
       await abrirSemRedirecionar(page, "/operacao/acessos");
-      await expect(page.getByText("Somente leitura.")).toBeVisible();
+      await expect(page.getByText("Somente leitura.")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Convidar · time interno" })).toBeVisible();
       await abrirSemRedirecionar(page, "/operacao/configuracoes");
-      await expect(page.getByText("Somente leitura.")).toBeVisible();
-      await expect(page.getByRole("spinbutton").first()).toBeDisabled();
+      await expect(page.getByText("Somente leitura.")).toHaveCount(0);
+      await expect(page.getByRole("spinbutton").first()).toBeEnabled();
     } finally {
       if (consulta) await limparPersona(consulta);
       if (supervisor) await limparPersona(supervisor);
