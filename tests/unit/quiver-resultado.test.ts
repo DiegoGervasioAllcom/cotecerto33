@@ -256,12 +256,13 @@ describe("resultado detalhado da Quiver", () => {
 
     const [grupo] = gruposOpcoesResultado(resultado);
     expect(grupo.opcoes.map((o) => o.parcelas)).toEqual([
+      "à vista R$ 11.376,52",
       "10x sem juros de R$ 1.137,65",
       "11x sem juros de R$ 1.034,23",
       "12x sem juros de R$ 948,04",
     ]);
     expect(grupo.opcoes.every((o) => o.avista === "à vista R$ 11.376,52")).toBe(true);
-    expect(new Set(grupo.opcoes.map((o) => o.id)).size).toBe(3);
+    expect(new Set(grupo.opcoes.map((o) => o.id)).size).toBe(4);
   });
 
   it("expande variantes no formato 'à vista R$ X Nx sem juros...' (produção: card HDI só exibia 12x)", () => {
@@ -295,6 +296,43 @@ describe("resultado detalhado da Quiver", () => {
     expect(grupo.opcoes.map((o) => o.parcelas)).toEqual([
       "à vista R$ 4.756,99 12x sem juros de R$ 396,41",
       "à vista R$ 4.756,99 6x sem juros de R$ 792,83",
+      "à vista R$ 4.756,99",
+    ]);
+  });
+
+  it("inclui 'à vista' como opção selecionável (transmissão suporta essa forma de pagamento)", () => {
+    const [resultado] = parseQuiverResultado({
+      cards: [
+        {
+          seguradora: "suhai",
+          premiosPorFormaPagamento: [
+            {
+              formaPagamento: "Cartão de Crédito",
+              opcoes: [
+                {
+                  tipo: "normal 100%",
+                  franquia: "Franquia: R$ 6.370,00",
+                  parcelas: "12x R$ 528,65",
+                  parcelasOpcoes: [
+                    "À vista R$ 4.919,83",
+                    "2x R$ 2.459,91 *",
+                    "3x R$ 1.639,94 *",
+                    "12x R$ 528,65",
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const [grupo] = gruposOpcoesResultado(resultado);
+    expect(grupo.opcoes.map((o) => o.parcelas)).toEqual([
+      "À vista R$ 4.919,83",
+      "2x R$ 2.459,91 *",
+      "3x R$ 1.639,94 *",
+      "12x R$ 528,65",
     ]);
   });
 
