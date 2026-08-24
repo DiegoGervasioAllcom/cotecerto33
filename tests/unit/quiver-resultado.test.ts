@@ -264,6 +264,40 @@ describe("resultado detalhado da Quiver", () => {
     expect(new Set(grupo.opcoes.map((o) => o.id)).size).toBe(3);
   });
 
+  it("expande variantes no formato 'à vista R$ X Nx sem juros...' (produção: card HDI só exibia 12x)", () => {
+    const [resultado] = parseQuiverResultado({
+      cards: [
+        {
+          seguradora: "hdi seguros",
+          premiosPorFormaPagamento: [
+            {
+              formaPagamento: "Cartão de Crédito",
+              opcoes: [
+                {
+                  tipo: "normal 100%",
+                  franquia: "Franquia: R$ 10.206,55",
+                  avista: "à vista R$ 4.756,99",
+                  parcelas: "12x sem juros de R$ 396,41",
+                  parcelasOpcoes: [
+                    "à vista R$ 4.756,99 12x sem juros de R$ 396,41",
+                    "à vista R$ 4.756,99 6x sem juros de R$ 792,83",
+                    "à vista R$ 4.756,99",
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const [grupo] = gruposOpcoesResultado(resultado);
+    expect(grupo.opcoes.map((o) => o.parcelas)).toEqual([
+      "à vista R$ 4.756,99 12x sem juros de R$ 396,41",
+      "à vista R$ 4.756,99 6x sem juros de R$ 792,83",
+    ]);
+  });
+
   it("mantém ids únicos quando duas faixas do mesmo grupo expandem em várias parcelas", () => {
     const [resultado] = parseQuiverResultado({
       cards: [

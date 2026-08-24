@@ -126,8 +126,15 @@ export function formasPagamentoResultado(resultado: ResultadoCalculo): string[] 
   return [...new Set(formas)];
 }
 
-const isTextoParcelamento = (texto: string) =>
-  /^\d+\s*x\s*/i.test(texto) || /em\s*\d+\s*x\s*/i.test(texto);
+// Aceita "Nx" em qualquer posição do texto (não só no início ou após "em"),
+// pois o portal varia o formato por seguradora/produto: "em 12x de R$ X",
+// "12x sem juros de R$ X" e também "à vista R$ X 12x sem juros de R$ Y" (o
+// valor à vista aparece antes da parcela na mesma string). Com o padrão
+// antigo (só início ou "em Nx"), esse último formato não era reconhecido
+// como variante de parcelamento e a expansão em expandirOpcoesPorParcela
+// abaixo desistia, mostrando só 1 opção mesmo com várias disponíveis
+// (bug real: card HDI só exibia 12x, produção 23/08/2026).
+const isTextoParcelamento = (texto: string) => /\d+\s*x\b/i.test(texto);
 
 /**
  * Expande uma faixa (ex.: "normal 100%") em uma opção por variante de
