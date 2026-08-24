@@ -78,6 +78,20 @@ describe("payload Quiver - cobertura.assistencia24h", () => {
       montarPayloadQuiver(cotacao({ coberturas: { assist_24: "" } })).cobertura.assistencia24h,
     ).toBe("Não contratada");
   });
+
+  // Bug real (produção, 24/08/2026, cotação e10818ee): cotação antiga com
+  // assist_24="Básica" salvo no banco — valor de um select anterior a este
+  // enum ("Básica/Intermediária/Premium", ver enumsCoberturas.ts), nunca
+  // migrado. Era "truthy" então passava direto pro payload sem cair no
+  // fallback de vazio, e a Quiver rejeitava com "deve ser um dos valores:
+  // Não contratada, Básico, Intermediário, Superior" mesmo depois do fix
+  // acima (que só cobria ausente/vazio, não valor legado inválido).
+  it("cai para 'Não contratada' quando o valor salvo é legado/inválido (não está no enum atual)", () => {
+    expect(
+      montarPayloadQuiver(cotacao({ coberturas: { assist_24: "Básica" } })).cobertura
+        .assistencia24h,
+    ).toBe("Não contratada");
+  });
 });
 
 describe("payload Quiver - cobertura.carroReserva", () => {
@@ -92,6 +106,15 @@ describe("payload Quiver - cobertura.carroReserva", () => {
     );
     expect(
       montarPayloadQuiver(cotacao({ coberturas: { carro_reserva: "" } })).cobertura.carroReserva,
+    ).toBe("Não contratada");
+  });
+
+  // Mesmo bug real (cotação e10818ee): carro_reserva="7 dias" salvo por um
+  // select anterior a este enum ("Não/7/15/30 dias").
+  it("cai para 'Não contratada' quando o valor salvo é legado/inválido (não está no enum atual)", () => {
+    expect(
+      montarPayloadQuiver(cotacao({ coberturas: { carro_reserva: "7 dias" } })).cobertura
+        .carroReserva,
     ).toBe("Não contratada");
   });
 });

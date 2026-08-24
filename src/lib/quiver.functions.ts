@@ -9,6 +9,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { normalizePlaca } from "@/lib/masks";
+import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
 
 function getAdmin() {
   const url =
@@ -150,6 +151,21 @@ export type CotacaoRow = {
 // franquia/supervisor no wizard novo-lead. Decisão: NÃO inventar valor aqui;
 // aguardar definição de produto sobre o que "nomeHierarquico" deveria
 // representar no domínio da Quiver antes de implementar o envio.
+// cobertura.assistencia24h/carroReserva são enum estrito na Quiver (só os 4
+// valores de NIVEL_COBERTURA_OPCOES). Cotações antigas, criadas antes desse
+// enum existir, podem ter valores legados salvos no banco que nunca foram
+// migrados (ex.: assist_24="Básica" — feminino, de um select anterior com
+// "Básica/Intermediária/Premium"; carro_reserva="7 dias", de um select
+// anterior com "Não/7/15/30 dias" — ver comentário em enumsCoberturas.ts).
+// Um valor "truthy" mas inválido passava direto pro payload e a Quiver
+// rejeitava a cotação inteira com "deve ser um dos valores: ..." — cai aqui
+// no mesmo fallback usado para valor ausente/vazio.
+function nivelCoberturaValido(valor: unknown): string {
+  return NIVEL_COBERTURA_OPCOES.includes(valor as (typeof NIVEL_COBERTURA_OPCOES)[number])
+    ? (valor as string)
+    : "Não contratada";
+}
+
 export function montarPayloadQuiver(cot: CotacaoRow) {
   const s = cot.segurado ?? {};
   const sg = cot.seguro ?? {};
@@ -414,8 +430,8 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
       // engano): a Quiver rejeita a cotação inteira com "deve ser um dos
       // valores: ..." quando a chave simplesmente não existe no JSON. Mesmo
       // padrão de fallback explícito já usado em `pequenosReparos` acima.
-      assistencia24h: (c.assist_24 as string) || "Não contratada",
-      carroReserva: (c.carro_reserva as string) || "Não contratada",
+      assistencia24h: nivelCoberturaValido(c.assist_24),
+      carroReserva: nivelCoberturaValido(c.carro_reserva),
       ...(c.mais_assistencias
         ? {
             maisAssistencias: "Sim",
