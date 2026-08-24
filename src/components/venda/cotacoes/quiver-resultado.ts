@@ -150,7 +150,9 @@ const isVista = (texto: string) => /(?:^|\s)[àa]\s*vista\b/i.test(texto);
  */
 function expandirOpcoesPorParcela(opcoes: OpcaoPremio[]): OpcaoPremio[] {
   return opcoes.flatMap((opcao) => {
-    const variantes = (opcao.parcelasOpcoes ?? []).filter((texto) => isTextoParcelamento(texto) || isVista(texto));
+    const variantes = (opcao.parcelasOpcoes ?? []).filter(
+      (texto) => isTextoParcelamento(texto) || isVista(texto),
+    );
     const variantesUnicas = [...new Set(variantes)];
     if (variantesUnicas.length < 2) return [opcao];
     return variantesUnicas.map((parcelas) => ({ ...opcao, parcelas }));
