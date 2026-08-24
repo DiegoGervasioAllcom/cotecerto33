@@ -136,16 +136,21 @@ export function formasPagamentoResultado(resultado: ResultadoCalculo): string[] 
 // (bug real: card HDI só exibia 12x, produção 23/08/2026).
 const isTextoParcelamento = (texto: string) => /\d+\s*x\b/i.test(texto);
 
+// "À vista" também é uma forma de pagamento selecionável na transmissão
+// (TransmissaoPage.ts reconhece "à vista"/"a vista" e clica na linha certa
+// da tabela) — precisa aparecer como opção no select, não só ser descartada.
+const isVista = (texto: string) => /(?:^|\s)[àa]\s*vista\b/i.test(texto);
+
 /**
  * Expande uma faixa (ex.: "normal 100%") em uma opção por variante de
- * parcelamento disponível (`parcelasOpcoes`), em vez de só a que o robô
- * capturou em `parcelas` (a que o portal deixava visível por padrão).
- * Sem `parcelasOpcoes`, ou com só 1 variante de parcelamento, devolve a
- * faixa original sem alteração.
+ * parcelamento/pagamento disponível (`parcelasOpcoes`) — incluindo "à
+ * vista" —, em vez de só a que o robô capturou em `parcelas` (a que o
+ * portal deixava visível por padrão). Sem `parcelasOpcoes`, ou com só 1
+ * variante, devolve a faixa original sem alteração.
  */
 function expandirOpcoesPorParcela(opcoes: OpcaoPremio[]): OpcaoPremio[] {
   return opcoes.flatMap((opcao) => {
-    const variantes = (opcao.parcelasOpcoes ?? []).filter(isTextoParcelamento);
+    const variantes = (opcao.parcelasOpcoes ?? []).filter((texto) => isTextoParcelamento(texto) || isVista(texto));
     const variantesUnicas = [...new Set(variantes)];
     if (variantesUnicas.length < 2) return [opcao];
     return variantesUnicas.map((parcelas) => ({ ...opcao, parcelas }));
