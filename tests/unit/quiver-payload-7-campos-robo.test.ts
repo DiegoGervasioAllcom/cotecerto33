@@ -62,12 +62,37 @@ describe("payload Quiver - cobertura.assistencia24h", () => {
     const payload = montarPayloadQuiver(cotacao({ coberturas: { assist_24: "Superior" } }));
     expect(payload.cobertura.assistencia24h).toBe("Superior");
   });
+
+  // Bug real (produção, 24/08/2026): rascunho não visitado na etapa
+  // Coberturas (ou string vazia salva por engano) chegava com assist_24
+  // null/"" no banco, e o spread condicional truthy omitia a chave inteira
+  // do payload — a Quiver rejeitava a cotação inteira com "Campo
+  // cobertura.assistencia24h deve ser um dos valores: ...", mesmo o front
+  // exibindo "Não contratada" selecionado (era só o default visual do
+  // <select>, não o valor real enviado).
+  it("cai para 'Não contratada' (default do front) quando ausente/vazio, em vez de omitir a chave", () => {
+    expect(montarPayloadQuiver(cotacao({ coberturas: {} })).cobertura.assistencia24h).toBe(
+      "Não contratada",
+    );
+    expect(
+      montarPayloadQuiver(cotacao({ coberturas: { assist_24: "" } })).cobertura.assistencia24h,
+    ).toBe("Não contratada");
+  });
 });
 
 describe("payload Quiver - cobertura.carroReserva", () => {
   it("envia o nível selecionado (sem opção por dias)", () => {
     const payload = montarPayloadQuiver(cotacao({ coberturas: { carro_reserva: "Básico" } }));
     expect(payload.cobertura.carroReserva).toBe("Básico");
+  });
+
+  it("cai para 'Não contratada' (default do front) quando ausente/vazio, em vez de omitir a chave", () => {
+    expect(montarPayloadQuiver(cotacao({ coberturas: {} })).cobertura.carroReserva).toBe(
+      "Não contratada",
+    );
+    expect(
+      montarPayloadQuiver(cotacao({ coberturas: { carro_reserva: "" } })).cobertura.carroReserva,
+    ).toBe("Não contratada");
   });
 });
 

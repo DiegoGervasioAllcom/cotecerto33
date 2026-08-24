@@ -407,8 +407,15 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
       // pequenosReparos: boolean no CoteCerto, string na Quiver.
       pequenosReparos: (c.pequenos_reparos as boolean) ? "Contratado" : "Não contratada",
       ...(c.vidros != null ? { vidrosFarosRetrovisores: c.vidros as string } : {}),
-      ...(c.assist_24 ? { assistencia24h: c.assist_24 as string } : {}),
-      ...(c.carro_reserva ? { carroReserva: c.carro_reserva as string } : {}),
+      // Enum obrigatório na Quiver (aceita só "Não contratada"/"Básico"/
+      // "Intermediário"/"Superior") — diferente dos demais campos opcionais
+      // acima, não pode ficar ausente do payload quando vazio/nulo no banco
+      // (rascunho não visitado na etapa Coberturas, ou string vazia salva por
+      // engano): a Quiver rejeita a cotação inteira com "deve ser um dos
+      // valores: ..." quando a chave simplesmente não existe no JSON. Mesmo
+      // padrão de fallback explícito já usado em `pequenosReparos` acima.
+      assistencia24h: (c.assist_24 as string) || "Não contratada",
+      carroReserva: (c.carro_reserva as string) || "Não contratada",
       ...(c.mais_assistencias
         ? {
             maisAssistencias: "Sim",
