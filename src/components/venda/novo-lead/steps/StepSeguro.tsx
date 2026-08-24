@@ -1,6 +1,6 @@
 import type { Form, BonusFieldKey } from "@/components/venda/novo-lead/types";
 
-const ANOS_POR_TIPO_CALCULO: Record<string, number> = {
+export const ANOS_POR_TIPO_CALCULO: Record<string, number> = {
   Anual: 1,
   Bianual: 2,
   Trianual: 3,

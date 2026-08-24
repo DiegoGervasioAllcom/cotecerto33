@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj, normalizePlaca } from "@/lib/masks";
 import { maskCel, maskCep } from "../masks";
+import { ANOS_POR_TIPO_CALCULO, vigenciaAPartirDeHoje } from "../steps/StepSeguro";
 import type { Form } from "../types";
 
 type MarcaOpt = { codigo: string; nome: string };
@@ -285,8 +286,19 @@ export function useCotacaoRascunho(params: {
         tipoSeguro: sg.tipo_seguro ?? prev.tipoSeguro,
         ramo: sg.ramo ?? prev.ramo,
         categoria: sg.categoria ?? prev.categoria,
-        vigIni: sg.vig_ini ?? "",
-        vigFim: sg.vig_fim ?? "",
+        // Rascunhos antigos podem ter tipo_calculo salvo (ex.: "Anual", default
+        // do formulário) sem vig_ini/vig_fim persistidos — o preenchimento
+        // desses dois campos hoje só acontece no onChange do select de Tipo de
+        // cálculo (ver StepSeguro.tsx), então um valor que "nasce" pronto (sem
+        // o usuário mexer no select) nunca dispara o cálculo. Recalcula aqui a
+        // partir do tipo_calculo carregado em vez de zerar com "", pra não
+        // perder a vigência esperada.
+        ...(() => {
+          if (sg.vig_ini && sg.vig_fim) return { vigIni: sg.vig_ini, vigFim: sg.vig_fim };
+          const anos = ANOS_POR_TIPO_CALCULO[sg.tipo_calculo ?? ""];
+          if (anos) return vigenciaAPartirDeHoje(anos);
+          return { vigIni: sg.vig_ini ?? "", vigFim: sg.vig_fim ?? "" };
+        })(),
         seguradoraAnterior: sg.cia_atual ?? prev.seguradoraAnterior,
         apoliceAnterior: sg.apolice_atual ?? prev.apoliceAnterior,
         ciApoliceAnterior: sg.ci_atual ?? prev.ciApoliceAnterior,
