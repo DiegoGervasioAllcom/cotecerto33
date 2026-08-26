@@ -320,6 +320,18 @@ Seguro → Veículo → Perfil → Coberturas → Cálculo, uma tabela por etapa
 estágios configuráveis (`pipeline_stages`). Perda é sempre motivo + submotivo
 (`perda_motivos`/`perda_submotivos`), nunca free-text solto.
 
+A busca de dados do veículo pela placa (etapa Veículo do wizard) chama a
+sisconsulta (XML, `src/lib/placa.functions.ts`), com cache de 30 dias em
+`consultas_placa`. Quando a sisconsulta falha de vez — erro de transporte ou
+"não identificado" sem nem dado parcial — o servidor tenta uma segunda API,
+wdapi2 (JSON), como fallback antes de reportar erro ao vendedor; se a
+sisconsulta trouxe identificação parcial (marca/ano/chassi sem versão FIPE),
+não há fallback, pra não gastar uma segunda chamada paga à toa. Qual provedor
+respondeu fica registrado na coluna `fonte` de `consultas_placa`, e ambas as
+respostas (a que motivou o fallback e a do fallback em si) vão pro log do
+servidor. O fallback é opcional: sem `SELF_PLACA_API_BACKUP_URL`/`_TOKEN`
+configuradas, o comportamento é o mesmo de antes (só sisconsulta).
+
 ### 5.4 Vendas e propostas
 
 Da cotação nasce a proposta; a proposta tem versões (`proposta_versoes` —

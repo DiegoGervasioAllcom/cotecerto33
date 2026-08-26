@@ -189,6 +189,13 @@ SELF_APP_URL=https://cote-certo.sandboxallcom.com
 SELF_QUIVER_API_URL=https://quiver-bot.sandboxallcom.com
 SELF_QUIVER_WEBHOOK_CLIENT_KEY=<segredo compartilhado com a Quiver>
 SELF_QUIVER_WEBHOOK_CLIENT_SECRET=<segredo compartilhado com a Quiver>
+SELF_PLACA_API_URL=https://ws.sisconsulta.com/ApiSisconsulta/Integracao/DecodificadorAR
+SELF_PLACA_API_CLIENTE=<cliente da conta sisconsulta>
+SELF_PLACA_API_CHAVE=<chave da conta sisconsulta>
+SELF_CPF_API_URL=https://ws.sisconsulta.com/ApiSisconsulta/Bot/LocalizacaoSimples
+# Fallback de placa (opcional — sem isso o app funciona só com a sisconsulta acima)
+SELF_PLACA_API_BACKUP_URL=https://wdapi2.com.br/consulta
+SELF_PLACA_API_BACKUP_TOKEN=<token da conta wdapi2>
 ```
 
 O arquivo deve permanecer `600`. `SELF_SUPABASE_SERVICE_ROLE_KEY` e

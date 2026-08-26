@@ -197,6 +197,103 @@ export function parseDecodificadorXml(xml: string): ResultadoConsultaPlaca {
 }
 
 /**
+ * Formato mínimo que a API de fallback (wdapi2.com.br) devolve — JSON, bem
+ * mais simples que o XML da sisconsulta. Só os campos que o parser usa;
+ * a resposta real tem muito mais (extra, fipe.dados[], etc.).
+ */
+type Wdapi2Resposta = {
+  MARCA?: string;
+  MODELO?: string;
+  SUBMODELO?: string;
+  VERSAO?: string;
+  ano?: string;
+  anoModelo?: string;
+  chassi?: string;
+  extra?: {
+    chassi?: string;
+    combustivel?: string;
+    carroceria?: string;
+    nacionalidade?: string;
+  };
+  fipe?: {
+    dados?: Array<{
+      codigo_fipe?: string;
+      combustivel?: string;
+      texto_marca?: string;
+      texto_modelo?: string;
+      texto_valor?: string;
+    }>;
+  };
+  erro?: string;
+  mensagemRetorno?: string;
+  placa?: string;
+};
+
+/**
+ * "R$ 4.027,00" -> 4027. Mesma ideia de `parseValor`, formato diferente
+ * (a wdapi2 sempre manda o "R$" e o separador de milhar).
+ */
+function parseValorReais(v: string | undefined): number | null {
+  if (!v) return null;
+  const n = Number.parseFloat(v.replace(/[^\d,]/g, "").replace(",", "."));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * Traduz o JSON da wdapi2 (API de fallback) para o mesmo shape usado pelo
+ * decodificador principal — assim o resto do app (front, cache, tabela de
+ * auditoria) não precisa saber qual provedor respondeu. Nunca lança: erro
+ * de rede/parse chega como texto vindo de fora, aqui só tratamos o corpo já
+ * desserializado.
+ */
+export function parseWdapi2Json(json: unknown): ResultadoConsultaPlaca {
+  if (!json || typeof json !== "object") {
+    return { ok: false, codigo: null, mensagem: "Resposta inválida do fornecedor." };
+  }
+  const r = json as Wdapi2Resposta;
+
+  // A API devolve HTTP 200 mesmo em erro, sinalizando por `erro`/mensagem.
+  if (r.erro || !r.MARCA) {
+    return {
+      ok: false,
+      codigo: null,
+      mensagem: r.erro || r.mensagemRetorno || "Veículo não identificado para esta placa.",
+    };
+  }
+
+  const fipe: PrecificadorFipe[] = (r.fipe?.dados ?? [])
+    .map((d) => ({
+      codigo: d.codigo_fipe || "",
+      combustivel: d.combustivel || "",
+      marca: d.texto_marca || "",
+      modelo: d.texto_modelo || "",
+      valor: parseValorReais(d.texto_valor),
+    }))
+    .filter((p) => p.codigo || p.modelo);
+
+  return {
+    ok: true,
+    dados: {
+      placa: r.placa || "",
+      chassi: r.chassi || r.extra?.chassi || "",
+      categoria: "",
+      marca: r.MARCA || "",
+      modelo: r.MODELO || "",
+      versao: r.VERSAO || r.SUBMODELO || "",
+      motor: "",
+      origem: r.extra?.nacionalidade || "",
+      localFabricacao: "",
+      tipoCarroceria: r.extra?.carroceria || "",
+      anoModelo: r.anoModelo || r.ano || "",
+      anoFabricacao: r.ano || "",
+      codigoRetorno: "0",
+      mensagemRetorno: "Identificado via wdapi2 (fallback).",
+      fipe,
+    },
+  };
+}
+
+/**
  * Combustível do padrão FIPE/decodificador para as opções do <select> do
  * formulário ("Flex" | "Gasolina" | "Álcool" | "Diesel" | "Elétrico").
  * Devolve "" quando não há correspondência — o campo fica como estava.
