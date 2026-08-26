@@ -11,6 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import { normalizePlaca } from "@/lib/masks";
 import {
   parseDecodificadorXml,
+  parseWdapi2Json,
   type PlacaDecodificada,
   type PlacaParcial,
   type ResultadoConsultaPlaca,
@@ -178,9 +179,52 @@ export async function executarConsultaPlaca(
     erroTransporte = e instanceof Error ? e.message : "Falha de conexão";
   }
 
-  const resultado: ResultadoConsultaPlaca = erroTransporte
+  let resultado: ResultadoConsultaPlaca = erroTransporte
     ? { ok: false, codigo: null, mensagem: erroTransporte }
     : parseDecodificadorXml(xml);
+
+  // ---- Fallback: wdapi2, só quando a principal falhou de vez (erro de
+  // transporte ou "não identificado" sem nem dado parcial). Se a
+  // sisconsulta trouxe algo parcial, mantém o comportamento atual em vez
+  // de gastar uma segunda chamada paga.
+  let fonte: "sisconsulta" | "wdapi2" = "sisconsulta";
+  const precisaFallback = erroTransporte || (!resultado.ok && !resultado.parcial);
+  const backupUrl = process.env.SELF_PLACA_API_BACKUP_URL;
+  const backupToken = process.env.SELF_PLACA_API_BACKUP_TOKEN;
+  if (precisaFallback) {
+    // Resposta da sisconsulta que motivou o fallback — só interessa logar
+    // quando ela de fato disparou uma segunda chamada.
+    console.log("[placa] sisconsulta não resolveu, tentando fallback:", {
+      placa,
+      erroTransporte,
+      resultado,
+    });
+  }
+  if (precisaFallback && backupUrl && backupToken) {
+    let corpoWdapi2: unknown = null;
+    try {
+      const res = await fetch(`${backupUrl.replace(/\/$/, "")}/${placa}/${backupToken}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      corpoWdapi2 = await res.json().catch(() => null);
+      console.log("[placa] resposta wdapi2:", { placa, status: res.status, corpo: corpoWdapi2 });
+      const resultadoBackup = parseWdapi2Json(corpoWdapi2);
+      if (resultadoBackup.ok) {
+        resultado = resultadoBackup;
+        erroTransporte = null;
+        fonte = "wdapi2";
+      }
+      // Se o fallback também não identificou, mantém o `resultado`/erro da
+      // sisconsulta — é a mensagem original que o usuário já esperava ver.
+    } catch (e) {
+      console.error(
+        "[placa] falha no fallback wdapi2:",
+        e instanceof Error ? e.message : "erro desconhecido",
+      );
+    }
+  }
 
   // ---- Registro (sempre, sucesso ou falha) ----
   const linha = {
@@ -188,8 +232,10 @@ export async function executarConsultaPlaca(
     cotacao_id: cotacaoId,
     empresa_id: empresaId,
     consultado_por: userId,
-    // O XML cru fica limitado pelo check da coluna (200k).
-    raw_xml: xml ? xml.slice(0, 200000) : null,
+    fonte,
+    // O XML cru fica limitado pelo check da coluna (200k); no fallback
+    // (JSON, não XML) não faz sentido gravar aqui — só o `payload`.
+    raw_xml: fonte === "sisconsulta" && xml ? xml.slice(0, 200000) : null,
     ...colunasDecodificadas(resultado.ok ? resultado.dados : null),
     sucesso: resultado.ok,
     codigo_retorno: resultado.ok
