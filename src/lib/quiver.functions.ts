@@ -38,6 +38,7 @@ async function assertDonoCotacao(
   if (cotErr) throw new Error(cotErr.message);
   if (!cot) throw new Error("Cotação não encontrada.");
   if (cot.responsavel_id !== userData.user.id) throw new Error("Permissão negada.");
+  return userData.user.id;
 }
 
 const onlyDigits = (v: string | null | undefined) => (v ?? "").replace(/\D/g, "");
@@ -589,7 +590,17 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const admin = getAdmin();
-    await assertDonoCotacao(admin, data.caller_token, data.cotacaoId);
+    const userId = await assertDonoCotacao(admin, data.caller_token, data.cotacaoId);
+
+    const { data: perfil, error: perfilErr } = await admin
+      .from("profiles")
+      .select("pode_transmitir")
+      .eq("id", userId)
+      .maybeSingle();
+    if (perfilErr) throw new Error(perfilErr.message);
+    if (perfil && perfil.pode_transmitir === false) {
+      throw new Error("Sua permissão de transmissão está desativada. Fale com a Matriz.");
+    }
 
     const apiUrl = process.env.SELF_QUIVER_API_URL;
     if (!apiUrl) throw new Error("SELF_QUIVER_API_URL não configurada.");
