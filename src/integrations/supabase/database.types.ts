@@ -2693,6 +2693,53 @@ export type Database = {
           },
         ]
       }
+      lembretes: {
+        Row: {
+          criado_em: string
+          data: string
+          done: boolean
+          hora: string | null
+          id: string
+          lead_id: string | null
+          nota: string | null
+          tipo: string
+          titulo: string
+          vendedor_id: string
+        }
+        Insert: {
+          criado_em?: string
+          data: string
+          done?: boolean
+          hora?: string | null
+          id?: string
+          lead_id?: string | null
+          nota?: string | null
+          tipo: string
+          titulo: string
+          vendedor_id: string
+        }
+        Update: {
+          criado_em?: string
+          data?: string
+          done?: boolean
+          hora?: string | null
+          id?: string
+          lead_id?: string | null
+          nota?: string | null
+          tipo?: string
+          titulo?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lembretes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       login_audit: {
         Row: {
           created_at: string
