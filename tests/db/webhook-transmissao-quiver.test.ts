@@ -8,10 +8,24 @@ import { admin, anonClient, criarEmpresa, criarPersonaComEmpresa, uniq } from ".
  * via service_role — não exposta a `authenticated`).
  */
 describe("webhook transmissão Quiver — Onda 1 (banco)", () => {
-  async function criarCotacao(empresaId: string, responsavelId?: string) {
+  async function criarCotacao(
+    empresaId: string,
+    responsavelId?: string,
+    overrides?: Record<string, unknown>,
+  ) {
     const { data, error } = await admin
       .from("cotacoes")
-      .insert({ empresa_id: empresaId, responsavel_id: responsavelId })
+      .insert({ empresa_id: empresaId, responsavel_id: responsavelId, ...overrides })
+      .select("id")
+      .single();
+    if (error) throw error;
+    return data.id as string;
+  }
+
+  async function criarLead(empresaId: string, origem?: string) {
+    const { data, error } = await admin
+      .from("leads")
+      .insert({ empresa_id: empresaId, origem })
       .select("id")
       .single();
     if (error) throw error;
@@ -64,6 +78,103 @@ describe("webhook transmissão Quiver — Onda 1 (banco)", () => {
     expect(prop?.status).toBe("transmitida");
     expect(prop?.transmissao_status).toBe("transmitida");
     expect(prop?.cotacao_id).toBe(cotacaoId);
+  });
+
+  it("sucesso + lead de renovação: marca tipo_venda='renovacao' na proposta (G6)", async () => {
+    const empresa = await criarEmpresa({ nome: uniq("Empresa Transmissao Renovacao") });
+    const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: empresa.id });
+    const leadId = await criarLead(empresa.id, "renovacao");
+    const cotacaoId = await criarCotacao(empresa.id, vendedor.userId, { lead_id: leadId });
+    const tentativaId = await criarTentativa(cotacaoId);
+
+    const { error } = await admin.rpc("registrar_resultado_transmissao_quiver", {
+      p_tentativa_id: tentativaId,
+      p_transmitido: true,
+    });
+    if (error) throw error;
+
+    const { data: tent } = await admin
+      .from("cotacao_transmissoes")
+      .select("proposta_id")
+      .eq("id", tentativaId)
+      .single();
+
+    const { data: prop } = await admin
+      .from("propostas")
+      .select("tipo_venda")
+      .eq("id", tent!.proposta_id!)
+      .single();
+    expect(prop?.tipo_venda).toBe("renovacao");
+  });
+
+  it("sucesso + lead sem origem de renovação: não marca tipo_venda (regressão)", async () => {
+    const empresa = await criarEmpresa({ nome: uniq("Empresa Transmissao Nao Renovacao") });
+    const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: empresa.id });
+    const leadId = await criarLead(empresa.id, "site");
+    const cotacaoId = await criarCotacao(empresa.id, vendedor.userId, { lead_id: leadId });
+    const tentativaId = await criarTentativa(cotacaoId);
+
+    const { error } = await admin.rpc("registrar_resultado_transmissao_quiver", {
+      p_tentativa_id: tentativaId,
+      p_transmitido: true,
+    });
+    if (error) throw error;
+
+    const { data: tent } = await admin
+      .from("cotacao_transmissoes")
+      .select("proposta_id")
+      .eq("id", tentativaId)
+      .single();
+
+    const { data: prop } = await admin
+      .from("propostas")
+      .select("tipo_venda")
+      .eq("id", tent!.proposta_id!)
+      .single();
+    expect(prop?.tipo_venda).toBeNull();
+  });
+
+  it("sucesso + lead de renovação não sobrescreve tipo_venda já setado manualmente", async () => {
+    const empresa = await criarEmpresa({ nome: uniq("Empresa Transmissao Renovacao Manual") });
+    const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: empresa.id });
+    const leadId = await criarLead(empresa.id, "renovacao");
+    const cotacaoId = await criarCotacao(empresa.id, vendedor.userId, { lead_id: leadId });
+
+    // Tentativa anterior falhou e criou a proposta 'gerada' — alguém marcou
+    // tipo_venda='novo' manualmente antes da retransmissão ter sucesso.
+    const tentativaFalha = await criarTentativa(cotacaoId);
+    const { error: eFalha } = await admin.rpc("registrar_resultado_transmissao_quiver", {
+      p_tentativa_id: tentativaFalha,
+      p_transmitido: false,
+      p_motivo: "ERRO_INESPERADO",
+    });
+    if (eFalha) throw eFalha;
+
+    const { data: propFalha } = await admin
+      .from("cotacao_transmissoes")
+      .select("proposta_id")
+      .eq("id", tentativaFalha)
+      .single();
+    const { error: eManual } = await admin
+      .from("propostas")
+      .update({ tipo_venda: "novo" })
+      .eq("id", propFalha!.proposta_id!);
+    if (eManual) throw eManual;
+
+    // Retransmissão com sucesso — não deve sobrescrever o tipo_venda='novo'.
+    const tentativaOk = await criarTentativa(cotacaoId);
+    const { error: eOk } = await admin.rpc("registrar_resultado_transmissao_quiver", {
+      p_tentativa_id: tentativaOk,
+      p_transmitido: true,
+    });
+    if (eOk) throw eOk;
+
+    const { data: prop } = await admin
+      .from("propostas")
+      .select("tipo_venda")
+      .eq("cotacao_id", cotacaoId)
+      .single();
+    expect(prop?.tipo_venda).toBe("novo");
   });
 
   it("falha: transmitido=false cria proposta 'gerada' com transmissao_status='falha'", async () => {
