@@ -1,0 +1,18 @@
+-- ============================================================
+-- Revoga acesso de `authenticated` à RPC legada `transmitir_proposta`
+-- ============================================================
+-- `transmitir_proposta(uuid, text)` (20240101000009_venda_real.sql)
+-- implementava o fluxo antigo de transmissão manual/síncrona de proposta
+-- (marcar como 'transmitida' direto, sem falar com o robô/Quiver).
+--
+-- Esse fluxo foi substituído de vez pela Etapa 7 (wizard assíncrono via
+-- Quiver, 20260908152312_etapa7_transmissao_dados_complementares.sql e
+-- 20260908160000_fix_etapa7_gaps_rls_supervisor.sql). O front-end não
+-- chama mais essa RPC (aceite.tsx/propostas.tsx foram removidos e
+-- substituídos por em-finalizacao.tsx/emissao.tsx).
+--
+-- Não apagamos a função (fica como histórico/auditoria do fluxo antigo),
+-- só tiramos o acesso de `authenticated` pra ninguém conseguir chamá-la
+-- mais pelo client. Nunca existiu grant explícito pra `service_role`
+-- (nenhuma migration concedeu); não há nada a preservar ali.
+revoke execute on function public.transmitir_proposta(uuid, text) from authenticated;
