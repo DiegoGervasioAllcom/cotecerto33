@@ -99,7 +99,7 @@ export function TransmissaoDadosComplementares({
   );
 
   return (
-    <div className="acc-sol">
+    <>
       <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <div>
           <h2 style={{ margin: 0 }}>Dados complementares</h2>
@@ -111,8 +111,8 @@ export function TransmissaoDadosComplementares({
         <span className="chip chip-yellow">{subPassoLabel}</span>
       </div>
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="row" style={{ gap: 28, flexWrap: "wrap" }}>
+      <div className="acc-sol" style={{ marginBottom: 16 }}>
+        <div className="row" style={{ gap: 28, flexWrap: "wrap", alignItems: "center" }}>
           <div>
             <span className="muted small">Cotação</span>
             <br />
@@ -138,6 +138,14 @@ export function TransmissaoDadosComplementares({
             <br />
             <strong>
               {f.vigIni || "—"} a {f.vigFim || "—"}
+            </strong>
+          </div>
+          <div>
+            <span className="muted small">Modalidade</span>
+            <br />
+            <strong>
+              {f.modalidade || "—"}
+              {f.percentualAjuste ? ` · ${f.percentualAjuste}% FIPE` : ""}
             </strong>
           </div>
         </div>
@@ -171,14 +179,20 @@ export function TransmissaoDadosComplementares({
         </div>
         {field("numeroEndereco", "Número")}
       </div>
-      <label className="row" style={{ gap: 8, margin: "12px 0 20px", cursor: "pointer" }}>
-        <input
-          type="checkbox"
-          checked={dados.mesmoEnderecoCorrespondencia}
-          onChange={(e) => up("mesmoEnderecoCorrespondencia", e.target.checked as true)}
-        />
-        Endereço de correspondência é o mesmo
-      </label>
+      <div className="acc-pills" style={{ margin: "10px 0 20px" }}>
+        <button
+          type="button"
+          className={"acc-pill" + (dados.mesmoEnderecoCorrespondencia ? " on" : "")}
+          onClick={() =>
+            up("mesmoEnderecoCorrespondencia", !dados.mesmoEnderecoCorrespondencia as true)
+          }
+        >
+          <svg width="13" height="13" style={{ marginRight: 4, verticalAlign: -2 }}>
+            <use href={dados.mesmoEnderecoCorrespondencia ? "#i-check" : "#i-x"} />
+          </svg>
+          Endereço de correspondência é o mesmo
+        </button>
+      </div>
       {erros.mesmoEnderecoCorrespondencia && (
         <div className="small" style={{ color: "var(--alert)" }}>
           {erros.mesmoEnderecoCorrespondencia}
@@ -238,14 +252,15 @@ export function TransmissaoDadosComplementares({
         </div>
       </div>
 
-      <div className="row" style={{ justifyContent: "space-between", marginTop: 24 }}>
+      <div className="wizard-foot">
         <button className="btn btn-ghost" type="button" onClick={onVoltar}>
           Voltar ao cálculo
         </button>
+        <span className="spacer" />
         <button className="btn btn-yellow" type="button" onClick={confirmar}>
           Continuar
         </button>
       </div>
-    </div>
+    </>
   );
 }
