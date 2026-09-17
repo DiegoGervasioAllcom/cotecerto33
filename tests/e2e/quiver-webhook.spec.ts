@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginAs } from "./helpers";
+import { confirmarDadosComplementaresTransmissao, loginAs } from "./helpers";
 import {
   criarCotacaoQuiverFixture,
   limparCotacaoQuiverFixture,
@@ -252,11 +252,14 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
       await route.continue();
     });
     await cardCompleto.getByRole("button", { name: "Gerar proposta (Seguradora Alfa)" }).click();
+    await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
+    await confirmarDadosComplementaresTransmissao(page);
     await expect.poll(() => requisicaoTransmissao).not.toBe("");
     expect(requisicaoTransmissao).toContain("Débito em conta");
     expect(requisicaoTransmissao).toContain("1x de R$ 2.300,00");
     expect(requisicaoTransmissao).not.toContain("valorParcela");
     expect(requisicaoTransmissao).not.toContain('"calculo"');
+    await page.getByRole("button", { name: "Voltar ao cálculo" }).click();
 
     // Trocar a condição dentro da mesma forma atualiza o mesmo card. A opção
     // real à vista tem parcelas vazio e deve continuar selecionável/transmissível.
@@ -274,6 +277,8 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await expect(botaoTransmitir).toBeEnabled();
     requisicaoTransmissao = "";
     await botaoTransmitir.click();
+    await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
+    await confirmarDadosComplementaresTransmissao(page);
     await expect.poll(() => requisicaoTransmissao).not.toBe("");
     const corpoSerializado = JSON.parse(requisicaoTransmissao) as {
       t: { p: { v: Array<{ p: { k: string[]; v: Array<{ t: number; s?: string }> } }> } };
@@ -283,6 +288,7 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     expect(indiceParcelas).toBeGreaterThanOrEqual(0);
     expect(objetoData.v[indiceParcelas]).toEqual({ t: 1, s: "" });
     expect(requisicaoTransmissao).not.toContain("À vista");
+    await page.getByRole("button", { name: "Voltar ao cálculo" }).click();
     await page.unroute("**/*");
 
     await page.getByRole("link", { name: "Comparativo lado a lado" }).click();

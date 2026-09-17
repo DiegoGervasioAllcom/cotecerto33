@@ -1,0 +1,254 @@
+import { useMemo, useState } from "react";
+import type { Form } from "@/components/venda/novo-lead/types";
+import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import {
+  dadosComplementaresTransmissaoSchema,
+  type DadosComplementaresTransmissao,
+} from "./TransmissaoDadosComplementares.schema";
+
+export type { DadosComplementaresTransmissao } from "./TransmissaoDadosComplementares.schema";
+
+type Props = {
+  f: Form;
+  resultado: ResultadoCalculo;
+  formaPagamento: string;
+  parcelas: string;
+  enviando: boolean;
+  erroEnvio: string | null;
+  onVoltar: () => void;
+  onConfirmar: (dados: DadosComplementaresTransmissao) => void;
+};
+
+type Erros = Partial<Record<keyof DadosComplementaresTransmissao, string>>;
+
+export function TransmissaoDadosComplementares({
+  f,
+  resultado,
+  formaPagamento,
+  parcelas,
+  enviando,
+  erroEnvio,
+  onVoltar,
+  onConfirmar,
+}: Props) {
+  const [dados, setDados] = useState<DadosComplementaresTransmissao>({
+    rg: "",
+    dataEmissaoRg: "",
+    orgaoEmissorRg: "",
+    cepResidencial: f.cep,
+    numeroEndereco: f.numero,
+    mesmoEnderecoCorrespondencia: true,
+    renavam: f.renavam.replace(/\D/g, ""),
+    corVeiculo: f.cor,
+    diaVencimentoDemaisParcelas: "",
+    desejaReceberPropostaPorEmail: "Não",
+  });
+  const [erros, setErros] = useState<Erros>({});
+  const endereco = useMemo(
+    () =>
+      [f.logradouro, f.bairro, f.cidade && f.uf ? `${f.cidade}/${f.uf}` : f.cidade || f.uf]
+        .filter(Boolean)
+        .join(" · "),
+    [f.logradouro, f.bairro, f.cidade, f.uf],
+  );
+
+  function up<K extends keyof DadosComplementaresTransmissao>(
+    key: K,
+    value: DadosComplementaresTransmissao[K],
+  ) {
+    setDados((atual) => ({ ...atual, [key]: value }));
+    setErros((atual) => ({ ...atual, [key]: undefined }));
+  }
+
+  function confirmar() {
+    const validacao = dadosComplementaresTransmissaoSchema.safeParse(dados);
+    if (!validacao.success) {
+      const proximos: Erros = {};
+      for (const issue of validacao.error.issues) {
+        const key = issue.path[0] as keyof DadosComplementaresTransmissao;
+        if (!proximos[key]) proximos[key] = issue.message;
+      }
+      setErros(proximos);
+      return;
+    }
+    onConfirmar(validacao.data);
+  }
+
+  const field = (
+    key: keyof DadosComplementaresTransmissao,
+    label: string,
+    placeholder = "",
+    inputMode?: "numeric",
+  ) => (
+    <div className="field-group">
+      <label htmlFor={`transmissao-${key}`}>{label}</label>
+      <input
+        id={`transmissao-${key}`}
+        className="input"
+        value={String(dados[key])}
+        placeholder={placeholder}
+        inputMode={inputMode}
+        aria-invalid={Boolean(erros[key])}
+        onChange={(e) => up(key, e.target.value as never)}
+      />
+      {erros[key] && (
+        <span className="small" style={{ color: "var(--alert)" }}>
+          {erros[key]}
+        </span>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="acc-sol">
+      <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Dados complementares</h2>
+          <div className="sub" style={{ margin: "4px 0 0" }}>
+            Confira apenas os dados exigidos para transmitir a proposta à seguradora.
+          </div>
+        </div>
+        <span className="spacer" />
+        <span className="chip chip-yellow">1 de 2 · Confirmação</span>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="row" style={{ gap: 28, flexWrap: "wrap" }}>
+          <div>
+            <span className="muted small">Cotação</span>
+            <br />
+            <strong>{f.nome || "—"}</strong>
+          </div>
+          <div>
+            <span className="muted small">Seguradora</span>
+            <br />
+            <strong>{resultado.seguradora}</strong>
+          </div>
+          <div>
+            <span className="muted small">Pagamento</span>
+            <br />
+            <strong>
+              {formaPagamento} · {parcelas || "À vista"}
+            </strong>
+          </div>
+          <div>
+            <span className="muted small">Vigência</span>
+            <br />
+            <strong>
+              {f.vigIni || "—"} a {f.vigFim || "—"}
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="acc-sec-t">Dados básicos do segurado</div>
+      <div className="wizard-grid cols-3">
+        <div className="field-group">
+          <label>CPF</label>
+          <input className="input" value={f.cpf} disabled />
+        </div>
+        <div className="field-group">
+          <label>Nome do segurado</label>
+          <input className="input" value={f.nome} disabled />
+        </div>
+        {field("rg", "RG", "00.000.000-0")}
+        {field("dataEmissaoRg", "Data de emissão", "dd/mm/aaaa", "numeric")}
+        {field("orgaoEmissorRg", "Órgão emissor", "SSP")}
+        <div className="field-group">
+          <label>E-mail</label>
+          <input className="input" value={f.email} disabled />
+        </div>
+      </div>
+
+      <div className="acc-sec-t">Endereço residencial</div>
+      <div className="wizard-grid cols-3">
+        {field("cepResidencial", "CEP", "00000-000", "numeric")}
+        <div className="field-group" style={{ gridColumn: "span 2" }}>
+          <label>Endereço</label>
+          <input className="input" value={endereco} disabled />
+        </div>
+        {field("numeroEndereco", "Número")}
+      </div>
+      <label className="row" style={{ gap: 8, margin: "12px 0 20px", cursor: "pointer" }}>
+        <input
+          type="checkbox"
+          checked={dados.mesmoEnderecoCorrespondencia}
+          onChange={(e) => up("mesmoEnderecoCorrespondencia", e.target.checked as true)}
+        />
+        Endereço de correspondência é o mesmo
+      </label>
+      {erros.mesmoEnderecoCorrespondencia && (
+        <div className="small" style={{ color: "var(--alert)" }}>
+          {erros.mesmoEnderecoCorrespondencia}
+        </div>
+      )}
+
+      <div className="acc-sec-t">Dados complementares do veículo</div>
+      <div className="wizard-grid cols-3">
+        <div className="field-group" style={{ gridColumn: "span 3" }}>
+          <label>Modelo</label>
+          <input
+            className="input"
+            value={[f.marca, f.modelo, f.anoModelo].filter(Boolean).join(" ")}
+            disabled
+          />
+        </div>
+        <div className="field-group">
+          <label>Placa</label>
+          <input className="input" value={f.placa} disabled />
+        </div>
+        {field("renavam", "Renavam", "11 dígitos", "numeric")}
+        {field("corVeiculo", "Cor", "Ex.: Branco")}
+      </div>
+
+      <div className="acc-sec-t">Transmissão e envio</div>
+      <div className="wizard-grid cols-3">
+        <div className="field-group">
+          <label htmlFor="transmissao-dia-vencimento">Dia de vencimento das demais parcelas</label>
+          <select
+            id="transmissao-dia-vencimento"
+            className="input"
+            value={dados.diaVencimentoDemaisParcelas}
+            onChange={(e) => up("diaVencimentoDemaisParcelas", e.target.value)}
+          >
+            <option value="">Selecione</option>
+            {Array.from({ length: 30 }, (_, i) => String(i + 1)).map((dia) => (
+              <option key={dia}>{dia}</option>
+            ))}
+          </select>
+          {erros.diaVencimentoDemaisParcelas && (
+            <span className="small" style={{ color: "var(--alert)" }}>
+              {erros.diaVencimentoDemaisParcelas}
+            </span>
+          )}
+        </div>
+        <div className="field-group">
+          <label htmlFor="transmissao-email">Receber proposta/boleto por e-mail?</label>
+          <select
+            id="transmissao-email"
+            className="input"
+            value={dados.desejaReceberPropostaPorEmail}
+            onChange={(e) => up("desejaReceberPropostaPorEmail", e.target.value as "Sim" | "Não")}
+          >
+            <option>Não</option>
+            <option>Sim</option>
+          </select>
+        </div>
+      </div>
+
+      {erroEnvio && (
+        <div className="clt-note" style={{ marginTop: 14 }}>
+          {erroEnvio}
+        </div>
+      )}
+      <div className="row" style={{ justifyContent: "space-between", marginTop: 24 }}>
+        <button className="btn btn-ghost" type="button" onClick={onVoltar} disabled={enviando}>
+          Voltar ao cálculo
+        </button>
+        <button className="btn btn-yellow" type="button" onClick={confirmar} disabled={enviando}>
+          {enviando ? "Transmitindo…" : "Confirmar e transmitir"}
+        </button>
+      </div>
+    </div>
+  );
+}

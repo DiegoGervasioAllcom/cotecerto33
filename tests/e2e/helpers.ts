@@ -31,3 +31,18 @@ export async function loginAs(
     }
   }
 }
+
+/** Preenche a confirmação obrigatória exibida antes de transmitir a proposta. */
+export async function confirmarDadosComplementaresTransmissao(page: Page) {
+  await page.getByLabel("RG", { exact: true }).fill("123456789");
+  await page.getByLabel("Data de emissão", { exact: true }).fill("13/05/2020");
+  await page.getByLabel("Órgão emissor", { exact: true }).fill("SSP");
+  await page.getByLabel("CEP", { exact: true }).fill("04567-090");
+  await page.getByLabel("Número", { exact: true }).fill("123");
+  await page.getByLabel("Renavam", { exact: true }).fill("12345678901");
+  await page.getByLabel("Cor", { exact: true }).fill("Branco");
+  await page
+    .getByLabel("Dia de vencimento das demais parcelas", { exact: true })
+    .selectOption("10");
+  await page.getByRole("button", { name: "Confirmar e transmitir" }).click();
+}

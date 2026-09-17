@@ -98,8 +98,10 @@ test.describe("integração de placa — passo Veículo", () => {
 
     // O Valor FIPE fecha o ciclo: só preenche se o código de ano/combustível
     // for o que a FIPE devolve (flex é "-5"; montar "-1" à mão deixava vazio).
+    // O preço nominal varia na fonte externa; o contrato estável aqui é haver
+    // um valor monetário positivo após a escolha da versão.
     await expect(page.locator('input[placeholder="Preenche via FIPE"]')).toHaveValue(
-      /R\$\s*43\.399/,
+      /R\$\s*[1-9]\d{0,2}(?:\.\d{3})*,\d{2}/,
       { timeout: 30_000 },
     );
   });

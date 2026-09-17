@@ -527,6 +527,115 @@ export type Database = {
         };
         Relationships: [];
       };
+      consultas_cpf: {
+        Row: {
+          celular: string | null;
+          codigo_retorno: string | null;
+          consultado_por: string | null;
+          cotacao_id: string | null;
+          cpf: string;
+          criado_em: string;
+          data_nascimento: string | null;
+          email: string | null;
+          empresa_id: string | null;
+          endereco_bairro: string | null;
+          endereco_cep: string | null;
+          endereco_cidade: string | null;
+          endereco_complemento: string | null;
+          endereco_logradouro: string | null;
+          endereco_numero: string | null;
+          endereco_uf: string | null;
+          erro: string | null;
+          estado_civil: string | null;
+          id: string;
+          mensagem_retorno: string | null;
+          nome: string | null;
+          nome_mae: string | null;
+          payload: Json | null;
+          raw_xml: string | null;
+          sexo: string | null;
+          sucesso: boolean;
+        };
+        Insert: {
+          celular?: string | null;
+          codigo_retorno?: string | null;
+          consultado_por?: string | null;
+          cotacao_id?: string | null;
+          cpf: string;
+          criado_em?: string;
+          data_nascimento?: string | null;
+          email?: string | null;
+          empresa_id?: string | null;
+          endereco_bairro?: string | null;
+          endereco_cep?: string | null;
+          endereco_cidade?: string | null;
+          endereco_complemento?: string | null;
+          endereco_logradouro?: string | null;
+          endereco_numero?: string | null;
+          endereco_uf?: string | null;
+          erro?: string | null;
+          estado_civil?: string | null;
+          id?: string;
+          mensagem_retorno?: string | null;
+          nome?: string | null;
+          nome_mae?: string | null;
+          payload?: Json | null;
+          raw_xml?: string | null;
+          sexo?: string | null;
+          sucesso?: boolean;
+        };
+        Update: {
+          celular?: string | null;
+          codigo_retorno?: string | null;
+          consultado_por?: string | null;
+          cotacao_id?: string | null;
+          cpf?: string;
+          criado_em?: string;
+          data_nascimento?: string | null;
+          email?: string | null;
+          empresa_id?: string | null;
+          endereco_bairro?: string | null;
+          endereco_cep?: string | null;
+          endereco_cidade?: string | null;
+          endereco_complemento?: string | null;
+          endereco_logradouro?: string | null;
+          endereco_numero?: string | null;
+          endereco_uf?: string | null;
+          erro?: string | null;
+          estado_civil?: string | null;
+          id?: string;
+          mensagem_retorno?: string | null;
+          nome?: string | null;
+          nome_mae?: string | null;
+          payload?: Json | null;
+          raw_xml?: string | null;
+          sexo?: string | null;
+          sucesso?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "consultas_cpf_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "cotacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "consultas_cpf_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "consultas_cpf_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
       consultas_placa: {
         Row: {
           ano_fabricacao: string | null;
@@ -542,6 +651,7 @@ export type Database = {
           erro: string | null;
           fipe_codigo: string | null;
           fipe_valor: number | null;
+          fonte: string;
           id: string;
           local_fabricacao: string | null;
           marca: string | null;
@@ -570,6 +680,7 @@ export type Database = {
           erro?: string | null;
           fipe_codigo?: string | null;
           fipe_valor?: number | null;
+          fonte?: string;
           id?: string;
           local_fabricacao?: string | null;
           marca?: string | null;
@@ -598,6 +709,7 @@ export type Database = {
           erro?: string | null;
           fipe_codigo?: string | null;
           fipe_valor?: number | null;
+          fonte?: string;
           id?: string;
           local_fabricacao?: string | null;
           marca?: string | null;
@@ -3526,6 +3638,7 @@ export type Database = {
           performance_status: string | null;
           periodo_fim: string | null;
           periodo_inicio: string | null;
+          pode_transmitir: boolean;
           royalties: number | null;
           salario_base: number | null;
           sexo: string | null;
@@ -3571,6 +3684,7 @@ export type Database = {
           performance_status?: string | null;
           periodo_fim?: string | null;
           periodo_inicio?: string | null;
+          pode_transmitir?: boolean;
           royalties?: number | null;
           salario_base?: number | null;
           sexo?: string | null;
@@ -3616,6 +3730,7 @@ export type Database = {
           performance_status?: string | null;
           periodo_fim?: string | null;
           periodo_inicio?: string | null;
+          pode_transmitir?: boolean;
           royalties?: number | null;
           salario_base?: number | null;
           sexo?: string | null;
@@ -3678,6 +3793,112 @@ export type Database = {
           },
         ];
       };
+      proposta_boletos: {
+        Row: {
+          criado_em: string;
+          enviado_em: string | null;
+          id: string;
+          linha_digitavel: string | null;
+          parcela_numero: number;
+          proposta_id: string;
+          status: string;
+          valor: number;
+          vencimento: string;
+        };
+        Insert: {
+          criado_em?: string;
+          enviado_em?: string | null;
+          id?: string;
+          linha_digitavel?: string | null;
+          parcela_numero: number;
+          proposta_id: string;
+          status?: string;
+          valor: number;
+          vencimento: string;
+        };
+        Update: {
+          criado_em?: string;
+          enviado_em?: string | null;
+          id?: string;
+          linha_digitavel?: string | null;
+          parcela_numero?: number;
+          proposta_id?: string;
+          status?: string;
+          valor?: number;
+          vencimento?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "proposta_boletos_proposta_id_fkey";
+            columns: ["proposta_id"];
+            isOneToOne: false;
+            referencedRelation: "propostas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      proposta_dados_complementares: {
+        Row: {
+          atividade_profissao: string | null;
+          atualizado_em: string;
+          criado_em: string;
+          endereco_corresp_bairro: string | null;
+          endereco_corresp_cep: string | null;
+          endereco_corresp_cidade: string | null;
+          endereco_corresp_igual_residencial: boolean;
+          endereco_corresp_logradouro: string | null;
+          endereco_corresp_numero: string | null;
+          endereco_corresp_uf: string | null;
+          orgao_emissor: string | null;
+          pessoa_exposta_politicamente: boolean;
+          proposta_id: string;
+          renda_mensal: number | null;
+          rg: string | null;
+        };
+        Insert: {
+          atividade_profissao?: string | null;
+          atualizado_em?: string;
+          criado_em?: string;
+          endereco_corresp_bairro?: string | null;
+          endereco_corresp_cep?: string | null;
+          endereco_corresp_cidade?: string | null;
+          endereco_corresp_igual_residencial?: boolean;
+          endereco_corresp_logradouro?: string | null;
+          endereco_corresp_numero?: string | null;
+          endereco_corresp_uf?: string | null;
+          orgao_emissor?: string | null;
+          pessoa_exposta_politicamente?: boolean;
+          proposta_id: string;
+          renda_mensal?: number | null;
+          rg?: string | null;
+        };
+        Update: {
+          atividade_profissao?: string | null;
+          atualizado_em?: string;
+          criado_em?: string;
+          endereco_corresp_bairro?: string | null;
+          endereco_corresp_cep?: string | null;
+          endereco_corresp_cidade?: string | null;
+          endereco_corresp_igual_residencial?: boolean;
+          endereco_corresp_logradouro?: string | null;
+          endereco_corresp_numero?: string | null;
+          endereco_corresp_uf?: string | null;
+          orgao_emissor?: string | null;
+          pessoa_exposta_politicamente?: boolean;
+          proposta_id?: string;
+          renda_mensal?: number | null;
+          rg?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "proposta_dados_complementares_proposta_id_fkey";
+            columns: ["proposta_id"];
+            isOneToOne: true;
+            referencedRelation: "propostas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       proposta_versoes: {
         Row: {
           criado_em: string;
@@ -3734,6 +3955,7 @@ export type Database = {
           comissao_valor: number | null;
           cotacao_id: string | null;
           criado_em: string;
+          dia_vencimento: number | null;
           emitida_em: string | null;
           empresa_id: string;
           forma_pagamento: string | null;
@@ -3742,9 +3964,12 @@ export type Database = {
           negociacao_status: string;
           numero: string | null;
           oportunidade_id: string | null;
+          orcamento_cia: string | null;
           pago_em: string | null;
+          parcelas: number | null;
           prazo_resposta: string | null;
           premio: number | null;
+          protocolo_seguradora: string | null;
           responsavel_id: string | null;
           seguradora: string | null;
           status: string;
@@ -3755,7 +3980,11 @@ export type Database = {
           transmissao_status: string | null;
           transmitida_em: string | null;
           valor: number | null;
+          valor_parcela: number | null;
           vencimento: string | null;
+          vigencia_aceita: string | null;
+          vigencia_fim: string | null;
+          vigencia_inicio: string | null;
         };
         Insert: {
           aceita_em?: string | null;
@@ -3768,6 +3997,7 @@ export type Database = {
           comissao_valor?: number | null;
           cotacao_id?: string | null;
           criado_em?: string;
+          dia_vencimento?: number | null;
           emitida_em?: string | null;
           empresa_id: string;
           forma_pagamento?: string | null;
@@ -3776,9 +4006,12 @@ export type Database = {
           negociacao_status?: string;
           numero?: string | null;
           oportunidade_id?: string | null;
+          orcamento_cia?: string | null;
           pago_em?: string | null;
+          parcelas?: number | null;
           prazo_resposta?: string | null;
           premio?: number | null;
+          protocolo_seguradora?: string | null;
           responsavel_id?: string | null;
           seguradora?: string | null;
           status?: string;
@@ -3789,7 +4022,11 @@ export type Database = {
           transmissao_status?: string | null;
           transmitida_em?: string | null;
           valor?: number | null;
+          valor_parcela?: number | null;
           vencimento?: string | null;
+          vigencia_aceita?: string | null;
+          vigencia_fim?: string | null;
+          vigencia_inicio?: string | null;
         };
         Update: {
           aceita_em?: string | null;
@@ -3802,6 +4039,7 @@ export type Database = {
           comissao_valor?: number | null;
           cotacao_id?: string | null;
           criado_em?: string;
+          dia_vencimento?: number | null;
           emitida_em?: string | null;
           empresa_id?: string;
           forma_pagamento?: string | null;
@@ -3810,9 +4048,12 @@ export type Database = {
           negociacao_status?: string;
           numero?: string | null;
           oportunidade_id?: string | null;
+          orcamento_cia?: string | null;
           pago_em?: string | null;
+          parcelas?: number | null;
           prazo_resposta?: string | null;
           premio?: number | null;
+          protocolo_seguradora?: string | null;
           responsavel_id?: string | null;
           seguradora?: string | null;
           status?: string;
@@ -3823,7 +4064,11 @@ export type Database = {
           transmissao_status?: string | null;
           transmitida_em?: string | null;
           valor?: number | null;
+          valor_parcela?: number | null;
           vencimento?: string | null;
+          vigencia_aceita?: string | null;
+          vigencia_fim?: string | null;
+          vigencia_inicio?: string | null;
         };
         Relationships: [
           {
@@ -4348,6 +4593,10 @@ export type Database = {
           id: string;
           negociacao_status: string;
         }[];
+      };
+      definir_pode_transmitir: {
+        Args: { p_profile_id: string; p_valor: boolean };
+        Returns: undefined;
       };
       definir_prazo_resposta: {
         Args: { p_prazo?: string; p_proposta_id: string };
@@ -4880,6 +5129,10 @@ export type Database = {
       obter_contrato_link_acesso: {
         Args: { p_lease_token: string; p_outbox_id: string };
         Returns: Json;
+      };
+      pode_editar_dados_complementares: {
+        Args: { _proposta_id: string };
+        Returns: boolean;
       };
       presence_set: {
         Args: { p_status: string; p_user_agent?: string };
