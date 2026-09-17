@@ -3,6 +3,8 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home,
   PlayCircle,
+  Calendar,
+  History,
   GitBranch,
   UserPlus,
   FileText,
@@ -64,17 +66,24 @@ type Group = {
   items: Item[];
 };
 
-/** Vendedor e Franquia Individual — 9 itens (nav de venda). */
+/**
+ * Vendedor e Franquia Individual — 11 itens (nav de venda), ordem do menu do
+ * protótipo V12. Frente 9 dividiu a antiga "Cotações" em 3 estágios (Em
+ * cotação/negociação/finalização), trocou "Propostas" por "Emissão &
+ * histórico" e acrescentou "Minha agenda".
+ */
 const VENDA_GROUP: Group = {
   label: "VENDA",
   items: [
     { to: "/inicio", label: "Início", icon: Home },
     { to: "/venda/atender", label: "Atender agora", icon: PlayCircle },
+    { to: "/venda/agenda", label: "Minha agenda", icon: Calendar },
     { to: "/venda/pipeline", label: "Pipeline", icon: GitBranch },
     { to: "/venda/novo-lead", label: "Lead Manual", icon: UserPlus },
-    { to: "/venda/cotacoes", label: "Cotações", icon: FileText },
-    { to: "/venda/propostas", label: "Propostas", icon: Send },
-    { to: "/venda/aceite", label: "Aceite & transmissão", icon: CheckSquare },
+    { to: "/venda/em-cotacao", label: "Em cotação", icon: FileText },
+    { to: "/venda/em-negociacao", label: "Em negociação", icon: Send },
+    { to: "/venda/em-finalizacao", label: "Em finalização", icon: CheckSquare },
+    { to: "/venda/emissao", label: "Emissão & histórico", icon: History },
     { to: "/venda/extrato", label: "Extrato de vendas", icon: Receipt },
     { to: "/venda/mensagens-prontas", label: "Mensagens prontas", icon: MessageSquare },
   ],
@@ -259,15 +268,23 @@ export function AppShell({
 
   const { temArea, cargoNome, loading: areasLoading } = useAreas();
 
-  const { leadsPendentes, aprovacoesPendentes, leadMaisAntigoElapsed, atenderAgora } = useNavBadges(
-    {
-      isMatriz,
-      verLeads: temArea("mleads"),
-      verAprovacoes: temArea("maprov") || grpLike || fullLike,
-      verAtenderAgora: venLike,
-      userId: session?.user.id ?? null,
-    },
-  );
+  const {
+    leadsPendentes,
+    aprovacoesPendentes,
+    leadMaisAntigoElapsed,
+    atenderAgora,
+    agendaPendentes,
+    emCotacaoPendentes,
+    emNegociacaoPendentes,
+    emFinalizacaoPendentes,
+  } = useNavBadges({
+    isMatriz,
+    verLeads: temArea("mleads"),
+    verAprovacoes: temArea("maprov") || grpLike || fullLike,
+    verAtenderAgora: venLike,
+    verVenda: venLike,
+    userId: session?.user.id ?? null,
+  });
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (!venLike || !atenderAgora?.length) return;
@@ -328,7 +345,15 @@ export function AppShell({
                       ? atenderAgora?.length
                       : item.to === "/operacao/aprovacoes"
                         ? aprovacoesPendentes
-                        : null;
+                        : item.to === "/venda/agenda"
+                          ? agendaPendentes
+                          : item.to === "/venda/em-cotacao"
+                            ? emCotacaoPendentes
+                            : item.to === "/venda/em-negociacao"
+                              ? emNegociacaoPendentes
+                              : item.to === "/venda/em-finalizacao"
+                                ? emFinalizacaoPendentes
+                                : null;
                 return (
                   <Link
                     key={item.to}
