@@ -562,6 +562,17 @@ type TransmitirPropostaPayload = {
    * histórico em `cotacao_transmissoes` (T.9), não é enviado ao robô.
    */
   premio?: number;
+  dadosComplementares?: {
+    rg: string;
+    dataEmissaoRg: string;
+    orgaoEmissorRg: string;
+    cepResidencial: string;
+    numeroEndereco: string;
+    renavam: string;
+    corVeiculo: string;
+    diaVencimentoDemaisParcelas: string;
+    desejaReceberPropostaPorEmail: "Sim" | "Não";
+  };
 };
 
 /**
@@ -659,19 +670,24 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       produto: data.produto,
       formaPagamento: data.formaPagamento,
       parcelas: data.parcelas,
-      // Campos opcionais do formulário de efetivação — enviamos só o que o
-      // CoteCerto já tem cadastrado.
-      renavam: veiculo?.renavam ?? undefined,
-      corVeiculo: veiculo?.cor ?? undefined,
+      // Campos do formulário de efetivação — priorizamos os dados confirmados
+      // pelo vendedor e usamos o cadastro da cotação como fallback.
+      rg: data.dadosComplementares?.rg,
+      dataEmissaoRg: data.dadosComplementares?.dataEmissaoRg,
+      orgaoEmissorRg: data.dadosComplementares?.orgaoEmissorRg,
+      renavam: data.dadosComplementares?.renavam || veiculo?.renavam || undefined,
+      corVeiculo: data.dadosComplementares?.corVeiculo || veiculo?.cor || undefined,
       chassiRemarcado:
         veiculo?.chassi_remarcado === null || veiculo?.chassi_remarcado === undefined
           ? undefined
           : veiculo.chassi_remarcado
             ? "Sim"
             : "Não",
-      cepResidencial: segurado?.cep ?? undefined,
-      numeroEndereco: segurado?.numero ?? undefined,
+      cepResidencial: data.dadosComplementares?.cepResidencial || segurado?.cep || undefined,
+      numeroEndereco: data.dadosComplementares?.numeroEndereco || segurado?.numero || undefined,
       dddCelular: celular.length >= 2 ? celular.slice(0, 2) : undefined,
+      diaVencimentoDemaisParcelas: data.dadosComplementares?.diaVencimentoDemaisParcelas,
+      desejaReceberPropostaPorEmail: data.dadosComplementares?.desejaReceberPropostaPorEmail,
     };
 
     // T.9: registra a tentativa ANTES de chamar o robô — é essa linha que o

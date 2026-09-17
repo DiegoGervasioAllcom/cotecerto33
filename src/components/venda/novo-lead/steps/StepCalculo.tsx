@@ -10,6 +10,10 @@ import {
   ordenarResultados,
   premioNumerico,
 } from "@/components/venda/cotacoes/quiver-resultado";
+import {
+  TransmissaoDadosComplementares,
+  type DadosComplementaresTransmissao,
+} from "./TransmissaoDadosComplementares";
 
 const POLL_TRANSMISSAO_MS = 4000;
 
@@ -21,6 +25,12 @@ type TransmissaoResultado = {
 };
 
 type EscolhaCard = { grupoId: string; opcaoId: string };
+type OfertaTransmissao = {
+  resultado: ResultadoCalculo;
+  formaPagamento: string;
+  parcelas: string;
+  premio: number | undefined;
+};
 
 type Props = {
   f: Form;
@@ -48,6 +58,7 @@ export function StepCalculo({
   const [escolhas, setEscolhas] = useState<Record<string, EscolhaCard>>({});
   const [transmitindoCardId, setTransmitindoCardId] = useState<string | null>(null);
   const [erroProposta, setErroProposta] = useState<string | null>(null);
+  const [ofertaTransmissao, setOfertaTransmissao] = useState<OfertaTransmissao | null>(null);
   // Onda 3 (T.10): enquanto uma transmissão está em andamento, escondemos os
   // demais cards e mostramos só o card escolhido com o resultado real do
   // robô (via polling em `cotacao_transmissoes`, mesmo padrão de
@@ -115,7 +126,7 @@ export function StepCalculo({
     setEscolhas((atual) => ({ ...atual, [cardId]: escolha }));
   }
 
-  async function gerarProposta(r: ResultadoCalculo) {
+  function abrirDadosTransmissao(r: ResultadoCalculo) {
     if (!cotacaoId) {
       setErroProposta("Salve a cotação antes de gerar a proposta.");
       return;
@@ -131,6 +142,17 @@ export function StepCalculo({
     }
 
     setErroProposta(null);
+    setOfertaTransmissao({
+      resultado: r,
+      formaPagamento: grupo.formaPagamento,
+      parcelas: opcao.parcelas || "À vista",
+      premio: premioNumerico(opcao),
+    });
+  }
+
+  async function gerarProposta(dadosComplementares: DadosComplementaresTransmissao) {
+    if (!cotacaoId || !ofertaTransmissao) return;
+    const { resultado: r, formaPagamento, parcelas, premio } = ofertaTransmissao;
     setResultadoTransmissao(null);
     setTransmitindoCardId(r.cardId);
     try {
@@ -142,9 +164,10 @@ export function StepCalculo({
           seguradora: r.seguradora,
           produtoId: r.produtoId,
           produto: r.produto || r.nome || undefined,
-          formaPagamento: grupo.formaPagamento,
-          parcelas: opcao.parcelas,
-          premio: premioNumerico(opcao),
+          formaPagamento,
+          parcelas,
+          premio,
+          dadosComplementares,
         },
       });
       // O 201 significa só que o robô aceitou a solicitação: o resultado real
@@ -157,6 +180,24 @@ export function StepCalculo({
     } finally {
       setTransmitindoCardId(null);
     }
+  }
+
+  if (ofertaTransmissao && !transmissaoEmAndamento) {
+    return (
+      <TransmissaoDadosComplementares
+        f={f}
+        resultado={ofertaTransmissao.resultado}
+        formaPagamento={ofertaTransmissao.formaPagamento}
+        parcelas={ofertaTransmissao.parcelas}
+        enviando={transmitindoCardId !== null}
+        erroEnvio={erroProposta}
+        onVoltar={() => {
+          setOfertaTransmissao(null);
+          setErroProposta(null);
+        }}
+        onConfirmar={(dados) => void gerarProposta(dados)}
+      />
+    );
   }
 
   return (
@@ -532,7 +573,7 @@ export function StepCalculo({
                         : "Salve a cotação antes de gerar a proposta"
                     }
                     disabled={!cotacaoId || !opcaoSelecionada || transmitindoCardId !== null}
-                    onClick={() => void gerarProposta(r)}
+                    onClick={() => abrirDadosTransmissao(r)}
                   >
                     <svg width="15" height="15">
                       <use href={transmitindoCardId === r.cardId ? "#i-clock" : "#i-check"} />
