@@ -403,7 +403,7 @@ export function ComparativoQuiver({
               </svg>
               <div style={{ marginTop: 8, fontWeight: 600 }}>Proposta transmitida com sucesso</div>
               <Link
-                to="/venda/propostas"
+                to="/venda/emissao"
                 search={
                   resultadoTransmissao.propostaId
                     ? { selected: resultadoTransmissao.propostaId }
@@ -412,7 +412,7 @@ export function ComparativoQuiver({
                 className="btn btn-yellow"
                 style={{ marginTop: 12 }}
               >
-                Ir para Propostas
+                Ir para Emissão
               </Link>
             </>
           )}
@@ -442,7 +442,7 @@ export function ComparativoQuiver({
                 {resultadoTransmissao.motivo === "RECUSADA_PELO_PORTAL" ? (
                   resultadoTransmissao.propostaId && (
                     <Link
-                      to="/venda/propostas"
+                      to="/venda/em-negociacao"
                       search={{ selected: resultadoTransmissao.propostaId }}
                       className="btn btn-slate"
                     >

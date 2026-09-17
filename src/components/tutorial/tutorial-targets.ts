@@ -46,7 +46,7 @@ const ROUTES: Record<TutorialPage, string> = {
   pipeline: "/venda/pipeline",
   lead: "/venda/novo-lead",
   compare: "/venda/em-negociacao",
-  proposal: "/venda/propostas",
+  proposal: "/venda/em-negociacao",
   aceite: "/venda/em-finalizacao",
   msgs: "/venda/mensagens-prontas",
   extrato: "/venda/extrato",

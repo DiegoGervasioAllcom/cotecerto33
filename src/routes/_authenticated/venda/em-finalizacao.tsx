@@ -329,13 +329,13 @@ function Page() {
         </svg>
         <div>
           Depois de transmitida com sucesso, a proposta sai desta lista e passa a viver em{" "}
-          <strong>Propostas</strong>, onde você acompanha até a apólice sair.
+          <strong>Emissão & histórico</strong>, onde você acompanha até a apólice sair.
         </div>
-        <Link to="/venda/propostas" className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }}>
+        <Link to="/venda/emissao" className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }}>
           <svg width={13} height={13}>
             <use href="#i-chevron-right" />
           </svg>{" "}
-          Ir para Propostas
+          Ir para Emissão
         </Link>
       </div>
     </AppShell>

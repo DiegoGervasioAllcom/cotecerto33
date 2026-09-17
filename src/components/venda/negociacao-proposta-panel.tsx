@@ -1,6 +1,10 @@
 // Painel de negociação de proposta (G7.2) — histórico de versões + registro de
 // nova versão (via RPC registrar_versao_proposta) + ações de status
-// (aceita/recusada) e prazo de resposta. Usado em src/routes/_authenticated/venda/propostas.tsx.
+// (aceita/recusada) e prazo de resposta. Desde a V12 (frente 9), usado em
+// src/routes/_authenticated/venda/em-negociacao.tsx — /venda/propostas foi
+// substituída por /venda/emissao (só propostas já transmitidas com sucesso),
+// e essa negociação pré-transmissão (proposta com transmissao_status !=
+// 'transmitida') mora junto da cotação que a gerou, em Em negociação.
 import { useEffect, useState } from "react";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import {

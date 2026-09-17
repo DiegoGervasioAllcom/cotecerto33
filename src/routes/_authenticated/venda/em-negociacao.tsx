@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import {
@@ -12,11 +12,33 @@ import {
   type Premio,
 } from "@/components/venda/cotacoes/lista-helpers";
 import { supabase } from "@/integrations/supabase/client";
+import { NegociacaoPropostaPanel } from "@/components/venda/negociacao-proposta-panel";
 
 export const Route = createFileRoute("/_authenticated/venda/em-negociacao")({
   head: () => ({ meta: [{ title: "Em negociação · CoteCerto" }] }),
+  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
+    selected: typeof s.selected === "string" ? s.selected : undefined,
+  }),
   component: Page,
 });
+
+// Assim que um prêmio é selecionado no comparativo, o trigger
+// _gerar_proposta_de_premio cria/atualiza uma `propostas` (status='gerada',
+// transmissao_status ainda null) e vira a cotação para status='proposta' —
+// ela continua aqui até a Etapa 7 transmitir com sucesso (ela não some desta
+// lista sozinha; ver nota em em-finalizacao.tsx sobre esse gap). Por isso a
+// negociação de versão/prazo/aceite da proposta (G7.2) mora aqui, e não em
+// Emissão & histórico (que só lista propostas já transmitidas).
+type PropostaLigada = {
+  id: string;
+  numero: string | null;
+  seguradora: string | null;
+  premio: number | null;
+  valor: number | null;
+  negociacao_status: string;
+  prazo_resposta: string | null;
+  transmissao_status: string | null;
+};
 
 type Row = {
   id: string;
@@ -32,6 +54,7 @@ type Row = {
     ano_modelo: string | null;
   } | null;
   premios: Premio[];
+  propostas: PropostaLigada[] | null;
 };
 
 function statusChip(s: string) {
@@ -42,31 +65,45 @@ function statusChip(s: string) {
 
 function Page() {
   const nav = useNavigate();
+  const navigate = useNavigate({ from: "/venda/em-negociacao" });
+  const { selected } = Route.useSearch();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [fSeguradora, setFSeguradora] = useState("");
   const [fFaixa, setFFaixa] = useState("");
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+
+  async function loadRows() {
+    const { data, error } = await supabase
+      .from("cotacoes")
+      .select(
+        "id,numero,status,ramo,criado_em,atualizado_em," +
+          "segurado:cotacao_segurado(nome)," +
+          "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
+          "premios:cotacao_premios(seguradora,premio)," +
+          "propostas(id,numero,seguradora,premio,valor,negociacao_status,prazo_resposta,transmissao_status)",
+      )
+      .in("status", ["calculada", "proposta"])
+      .order("atualizado_em", { ascending: false })
+      .limit(200);
+    if (error) setErr(error.message);
+    setRows((data ?? []) as unknown as Row[]);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase
-        .from("cotacoes")
-        .select(
-          "id,numero,status,ramo,criado_em,atualizado_em," +
-            "segurado:cotacao_segurado(nome)," +
-            "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
-            "premios:cotacao_premios(seguradora,premio)",
-        )
-        .in("status", ["calculada", "proposta"])
-        .order("atualizado_em", { ascending: false })
-        .limit(200);
-      if (error) setErr(error.message);
-      setRows((data ?? []) as unknown as Row[]);
-      setLoading(false);
-    })();
+    void loadRows();
   }, []);
+
+  useEffect(() => {
+    if (!selected || loading) return;
+    const row = rows.find((r) => r.propostas?.some((p) => p.id === selected));
+    if (!row) return;
+    const el = rowRefs.current[row.id];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selected, loading, rows]);
 
   const seguradoras = useMemo(
     () =>
@@ -140,6 +177,17 @@ function Page() {
   function abrirCalculo(id: string) {
     void nav({ to: "/venda/novo-lead", search: { id, step: 5 } });
   }
+
+  function negociarProposta(propostaId: string) {
+    void navigate({ search: (s) => ({ ...s, selected: propostaId }) });
+  }
+
+  const propostaSelecionada = selected
+    ? (rows.flatMap((r) => r.propostas ?? []).find((p) => p.id === selected) ?? null)
+    : null;
+  const seguradoDaSelecionada = selected
+    ? (rows.find((r) => r.propostas?.some((p) => p.id === selected))?.segurado?.nome ?? null)
+    : null;
 
   return (
     <AppShell title="Em negociação">
@@ -257,8 +305,26 @@ function Page() {
                 const veic = r.veiculo
                   ? `${r.veiculo.marca_nome ?? ""} ${r.veiculo.modelo_nome ?? ""} ${r.veiculo.ano_modelo ?? ""}`.trim()
                   : "—";
+                const propostaLigada = r.propostas?.find(
+                  (p) => p.transmissao_status !== "transmitida",
+                );
                 return (
-                  <tr key={r.id} onClick={() => abrirCalculo(r.id)} style={{ cursor: "pointer" }}>
+                  <tr
+                    key={r.id}
+                    ref={(el) => {
+                      rowRefs.current[r.id] = el;
+                    }}
+                    onClick={() => abrirCalculo(r.id)}
+                    style={{
+                      cursor: "pointer",
+                      ...(propostaLigada && selected === propostaLigada.id
+                        ? {
+                            outline: "2px solid var(--brand, #2563eb)",
+                            background: "rgba(37,99,235,.06)",
+                          }
+                        : {}),
+                    }}
+                  >
                     <td
                       className="small muted"
                       style={{ fontFamily: "ui-monospace,Menlo,monospace" }}
@@ -292,18 +358,31 @@ function Page() {
                     </td>
                     <td>{expiraChip(r.criado_em)}</td>
                     <td>
-                      <button
-                        className="btn btn-yellow btn-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          abrirCalculo(r.id);
-                        }}
-                      >
-                        <svg width={13} height={13}>
-                          <use href="#i-compare" />
-                        </svg>{" "}
-                        Abrir cálculo
-                      </button>
+                      <div className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
+                        {propostaLigada && (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              negociarProposta(propostaLigada.id);
+                            }}
+                          >
+                            Negociar
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-yellow btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirCalculo(r.id);
+                          }}
+                        >
+                          <svg width={13} height={13}>
+                            <use href="#i-compare" />
+                          </svg>{" "}
+                          Abrir cálculo
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -311,6 +390,22 @@ function Page() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {propostaSelecionada && (
+        <NegociacaoPropostaPanel
+          proposta={{
+            id: propostaSelecionada.id,
+            numero: propostaSelecionada.numero,
+            seguradora: propostaSelecionada.seguradora,
+            premio: propostaSelecionada.premio,
+            valor: propostaSelecionada.valor,
+            negociacao_status: propostaSelecionada.negociacao_status,
+            prazo_resposta: propostaSelecionada.prazo_resposta,
+            segurado: seguradoDaSelecionada,
+          }}
+          onChanged={() => void loadRows()}
+        />
       )}
     </AppShell>
   );

@@ -450,7 +450,7 @@ function Page() {
         });
       else if (destination.kind === "proposals")
         navigate({
-          to: "/venda/propostas",
+          to: "/venda/em-negociacao",
           search: destination.selected ? { selected: destination.selected } : {},
         });
       else if (destination.kind === "acceptance")

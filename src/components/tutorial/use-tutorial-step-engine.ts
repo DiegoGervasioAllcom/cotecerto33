@@ -114,7 +114,7 @@ export function useTutorialStepEngine({
         if (destination.kind === "cotacao") {
           await navigate({ to: "/venda/cotacoes/$id", params: { id: destination.id } });
         } else if (destination.kind === "proposta") {
-          await navigate({ to: "/venda/propostas", search: { selected: destination.id } });
+          await navigate({ to: "/venda/em-negociacao", search: { selected: destination.id } });
         } else if (destination.kind === "franquia") {
           await navigate({ to: "/operacao/franquias/$id", params: { id: destination.id } });
         } else if (destination.kind === "vendedor") {

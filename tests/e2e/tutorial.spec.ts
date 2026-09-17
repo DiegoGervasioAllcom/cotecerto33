@@ -307,7 +307,9 @@ test.describe("roteiro de vendas", () => {
 
     await posicionarTutorial(page, vendedor.userId, "sales", 4, 0);
     dialog = await esperarPasso(page, "A proposta da Azul", "1 / 6");
-    await expect(page).toHaveURL(new RegExp(`/venda/propostas\\?selected=${vendedor.propostaId}`));
+    await expect(page).toHaveURL(
+      new RegExp(`/venda/em-negociacao\\?selected=${vendedor.propostaId}`),
+    );
     const proposalTargets = [
       ['[data-tour="proposta-versao"]', "Ajuste fino de cobertura", "2 / 6"],
       ['[data-tour="proposta-pagamento"]', "Como o cliente vai pagar", "3 / 6"],

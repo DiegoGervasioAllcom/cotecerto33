@@ -19,11 +19,11 @@ import { Route as AuthEsqueciSenhaRouteImport } from './routes/auth.esqueci-senh
 import { Route as AuthCriarSenhaRouteImport } from './routes/auth.criar-senha'
 import { Route as AuthContatoRouteImport } from './routes/auth.contato'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
-import { Route as AuthenticatedVendaPropostasRouteImport } from './routes/_authenticated/venda/propostas'
 import { Route as AuthenticatedVendaPipelineRouteImport } from './routes/_authenticated/venda/pipeline'
 import { Route as AuthenticatedVendaNovoLeadRouteImport } from './routes/_authenticated/venda/novo-lead'
 import { Route as AuthenticatedVendaMensagensProntasRouteImport } from './routes/_authenticated/venda/mensagens-prontas'
 import { Route as AuthenticatedVendaExtratoRouteImport } from './routes/_authenticated/venda/extrato'
+import { Route as AuthenticatedVendaEmissaoRouteImport } from './routes/_authenticated/venda/emissao'
 import { Route as AuthenticatedVendaEmNegociacaoRouteImport } from './routes/_authenticated/venda/em-negociacao'
 import { Route as AuthenticatedVendaEmFinalizacaoRouteImport } from './routes/_authenticated/venda/em-finalizacao'
 import { Route as AuthenticatedVendaEmCotacaoRouteImport } from './routes/_authenticated/venda/em-cotacao'
@@ -100,12 +100,6 @@ const AuthenticatedInicioRoute = AuthenticatedInicioRouteImport.update({
   path: '/inicio',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedVendaPropostasRoute =
-  AuthenticatedVendaPropostasRouteImport.update({
-    id: '/venda/propostas',
-    path: '/venda/propostas',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedVendaPipelineRoute =
   AuthenticatedVendaPipelineRouteImport.update({
     id: '/venda/pipeline',
@@ -128,6 +122,12 @@ const AuthenticatedVendaExtratoRoute =
   AuthenticatedVendaExtratoRouteImport.update({
     id: '/venda/extrato',
     path: '/venda/extrato',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVendaEmissaoRoute =
+  AuthenticatedVendaEmissaoRouteImport.update({
+    id: '/venda/emissao',
+    path: '/venda/emissao',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedVendaEmNegociacaoRoute =
@@ -318,11 +318,11 @@ export interface FileRoutesByFullPath {
   '/venda/em-cotacao': typeof AuthenticatedVendaEmCotacaoRoute
   '/venda/em-finalizacao': typeof AuthenticatedVendaEmFinalizacaoRoute
   '/venda/em-negociacao': typeof AuthenticatedVendaEmNegociacaoRoute
+  '/venda/emissao': typeof AuthenticatedVendaEmissaoRoute
   '/venda/extrato': typeof AuthenticatedVendaExtratoRoute
   '/venda/mensagens-prontas': typeof AuthenticatedVendaMensagensProntasRoute
   '/venda/novo-lead': typeof AuthenticatedVendaNovoLeadRoute
   '/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
-  '/venda/propostas': typeof AuthenticatedVendaPropostasRoute
   '/operacao/franquias/$id': typeof AuthenticatedOperacaoFranquiasIdRoute
   '/operacao/vendedores/$id': typeof AuthenticatedOperacaoVendedoresIdRoute
   '/venda/cotacoes/$id': typeof AuthenticatedVendaCotacoesIdRoute
@@ -360,11 +360,11 @@ export interface FileRoutesByTo {
   '/venda/em-cotacao': typeof AuthenticatedVendaEmCotacaoRoute
   '/venda/em-finalizacao': typeof AuthenticatedVendaEmFinalizacaoRoute
   '/venda/em-negociacao': typeof AuthenticatedVendaEmNegociacaoRoute
+  '/venda/emissao': typeof AuthenticatedVendaEmissaoRoute
   '/venda/extrato': typeof AuthenticatedVendaExtratoRoute
   '/venda/mensagens-prontas': typeof AuthenticatedVendaMensagensProntasRoute
   '/venda/novo-lead': typeof AuthenticatedVendaNovoLeadRoute
   '/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
-  '/venda/propostas': typeof AuthenticatedVendaPropostasRoute
   '/operacao/franquias/$id': typeof AuthenticatedOperacaoFranquiasIdRoute
   '/operacao/vendedores/$id': typeof AuthenticatedOperacaoVendedoresIdRoute
   '/venda/cotacoes/$id': typeof AuthenticatedVendaCotacoesIdRoute
@@ -404,11 +404,11 @@ export interface FileRoutesById {
   '/_authenticated/venda/em-cotacao': typeof AuthenticatedVendaEmCotacaoRoute
   '/_authenticated/venda/em-finalizacao': typeof AuthenticatedVendaEmFinalizacaoRoute
   '/_authenticated/venda/em-negociacao': typeof AuthenticatedVendaEmNegociacaoRoute
+  '/_authenticated/venda/emissao': typeof AuthenticatedVendaEmissaoRoute
   '/_authenticated/venda/extrato': typeof AuthenticatedVendaExtratoRoute
   '/_authenticated/venda/mensagens-prontas': typeof AuthenticatedVendaMensagensProntasRoute
   '/_authenticated/venda/novo-lead': typeof AuthenticatedVendaNovoLeadRoute
   '/_authenticated/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
-  '/_authenticated/venda/propostas': typeof AuthenticatedVendaPropostasRoute
   '/_authenticated/operacao/franquias/$id': typeof AuthenticatedOperacaoFranquiasIdRoute
   '/_authenticated/operacao/vendedores/$id': typeof AuthenticatedOperacaoVendedoresIdRoute
   '/_authenticated/venda/cotacoes/$id': typeof AuthenticatedVendaCotacoesIdRoute
@@ -448,11 +448,11 @@ export interface FileRouteTypes {
     | '/venda/em-cotacao'
     | '/venda/em-finalizacao'
     | '/venda/em-negociacao'
+    | '/venda/emissao'
     | '/venda/extrato'
     | '/venda/mensagens-prontas'
     | '/venda/novo-lead'
     | '/venda/pipeline'
-    | '/venda/propostas'
     | '/operacao/franquias/$id'
     | '/operacao/vendedores/$id'
     | '/venda/cotacoes/$id'
@@ -490,11 +490,11 @@ export interface FileRouteTypes {
     | '/venda/em-cotacao'
     | '/venda/em-finalizacao'
     | '/venda/em-negociacao'
+    | '/venda/emissao'
     | '/venda/extrato'
     | '/venda/mensagens-prontas'
     | '/venda/novo-lead'
     | '/venda/pipeline'
-    | '/venda/propostas'
     | '/operacao/franquias/$id'
     | '/operacao/vendedores/$id'
     | '/venda/cotacoes/$id'
@@ -533,11 +533,11 @@ export interface FileRouteTypes {
     | '/_authenticated/venda/em-cotacao'
     | '/_authenticated/venda/em-finalizacao'
     | '/_authenticated/venda/em-negociacao'
+    | '/_authenticated/venda/emissao'
     | '/_authenticated/venda/extrato'
     | '/_authenticated/venda/mensagens-prontas'
     | '/_authenticated/venda/novo-lead'
     | '/_authenticated/venda/pipeline'
-    | '/_authenticated/venda/propostas'
     | '/_authenticated/operacao/franquias/$id'
     | '/_authenticated/operacao/vendedores/$id'
     | '/_authenticated/venda/cotacoes/$id'
@@ -629,13 +629,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInicioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/venda/propostas': {
-      id: '/_authenticated/venda/propostas'
-      path: '/venda/propostas'
-      fullPath: '/venda/propostas'
-      preLoaderRoute: typeof AuthenticatedVendaPropostasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/venda/pipeline': {
       id: '/_authenticated/venda/pipeline'
       path: '/venda/pipeline'
@@ -662,6 +655,13 @@ declare module '@tanstack/react-router' {
       path: '/venda/extrato'
       fullPath: '/venda/extrato'
       preLoaderRoute: typeof AuthenticatedVendaExtratoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/emissao': {
+      id: '/_authenticated/venda/emissao'
+      path: '/venda/emissao'
+      fullPath: '/venda/emissao'
+      preLoaderRoute: typeof AuthenticatedVendaEmissaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/venda/em-negociacao': {
@@ -872,11 +872,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedVendaEmCotacaoRoute: typeof AuthenticatedVendaEmCotacaoRoute
   AuthenticatedVendaEmFinalizacaoRoute: typeof AuthenticatedVendaEmFinalizacaoRoute
   AuthenticatedVendaEmNegociacaoRoute: typeof AuthenticatedVendaEmNegociacaoRoute
+  AuthenticatedVendaEmissaoRoute: typeof AuthenticatedVendaEmissaoRoute
   AuthenticatedVendaExtratoRoute: typeof AuthenticatedVendaExtratoRoute
   AuthenticatedVendaMensagensProntasRoute: typeof AuthenticatedVendaMensagensProntasRoute
   AuthenticatedVendaNovoLeadRoute: typeof AuthenticatedVendaNovoLeadRoute
   AuthenticatedVendaPipelineRoute: typeof AuthenticatedVendaPipelineRoute
-  AuthenticatedVendaPropostasRoute: typeof AuthenticatedVendaPropostasRoute
   AuthenticatedOperacaoFranquiasIdRoute: typeof AuthenticatedOperacaoFranquiasIdRoute
   AuthenticatedOperacaoVendedoresIdRoute: typeof AuthenticatedOperacaoVendedoresIdRoute
   AuthenticatedVendaCotacoesIdRoute: typeof AuthenticatedVendaCotacoesIdRoute
@@ -909,12 +909,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedVendaEmCotacaoRoute: AuthenticatedVendaEmCotacaoRoute,
   AuthenticatedVendaEmFinalizacaoRoute: AuthenticatedVendaEmFinalizacaoRoute,
   AuthenticatedVendaEmNegociacaoRoute: AuthenticatedVendaEmNegociacaoRoute,
+  AuthenticatedVendaEmissaoRoute: AuthenticatedVendaEmissaoRoute,
   AuthenticatedVendaExtratoRoute: AuthenticatedVendaExtratoRoute,
   AuthenticatedVendaMensagensProntasRoute:
     AuthenticatedVendaMensagensProntasRoute,
   AuthenticatedVendaNovoLeadRoute: AuthenticatedVendaNovoLeadRoute,
   AuthenticatedVendaPipelineRoute: AuthenticatedVendaPipelineRoute,
-  AuthenticatedVendaPropostasRoute: AuthenticatedVendaPropostasRoute,
   AuthenticatedOperacaoFranquiasIdRoute: AuthenticatedOperacaoFranquiasIdRoute,
   AuthenticatedOperacaoVendedoresIdRoute:
     AuthenticatedOperacaoVendedoresIdRoute,
