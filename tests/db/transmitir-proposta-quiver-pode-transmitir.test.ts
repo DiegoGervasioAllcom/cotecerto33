@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { admin, criarEmpresa, criarPersonaComEmpresa } from "../helpers/supabase";
 import { transmitirPropostaQuiver } from "../../src/lib/quiver.functions";
 
@@ -8,10 +8,9 @@ import { transmitirPropostaQuiver } from "../../src/lib/quiver.functions";
  * `assertDonoCotacao` — não há suíte prévia para esta server function,
  * então este arquivo é o único lugar que a testa.
  *
- * Não mocka a API do robô (SELF_QUIVER_API_URL): com `pode_transmitir=true`
- * o teste só precisa confirmar que a execução passa do check de permissão
- * (chega a um erro DIFERENTE, mais adiante no fluxo) — não precisa completar
- * a transmissão de verdade.
+ * Não chama a API do robô: com `pode_transmitir=true`, configura credenciais
+ * locais fictícias e usa uma cotação sem identificação. Assim a execução
+ * passa pelo check de permissão e para no guard seguinte, antes do `fetch`.
  */
 async function criarVendedorComToken() {
   const empresa = await criarEmpresa();
@@ -33,6 +32,8 @@ async function criarCotacaoSemDados(empresaId: string, responsavelId: string) {
 }
 
 describe("transmitirPropostaQuiver — pode_transmitir", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   it("NEGATIVO: pode_transmitir=false rejeita e não insere em cotacao_transmissoes nem chama o robô", async () => {
     const v = await criarVendedorComToken();
     const cotacaoId = await criarCotacaoSemDados(v.empresaId, v.userId);
@@ -57,6 +58,10 @@ describe("transmitirPropostaQuiver — pode_transmitir", () => {
   });
 
   it("POSITIVO: pode_transmitir=true (default) segue além do check de permissão", async () => {
+    vi.stubEnv("SELF_QUIVER_API_URL", "http://127.0.0.1:1");
+    vi.stubEnv("SELF_QUIVER_TRANSMISSAO_CLIENT_KEY", "teste-local");
+    vi.stubEnv("SELF_QUIVER_TRANSMISSAO_CLIENT_SECRET", "teste-local");
+
     const v = await criarVendedorComToken();
     // cotação sem segurado/nome — o próximo guard do fluxo ("sem número do
     // portal e sem nome do cliente") só é alcançado se o check de
