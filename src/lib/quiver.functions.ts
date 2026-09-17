@@ -568,6 +568,19 @@ type TransmitirPropostaPayload = {
     orgaoEmissorRg: string;
     cepResidencial: string;
     numeroEndereco: string;
+    mesmoEnderecoCorrespondencia: boolean;
+    // Só preenchido de verdade quando `mesmoEnderecoCorrespondencia` é false
+    // (schema em TransmissaoDadosComplementares.schema.ts). O mapeamento
+    // desses campos no robô/portal da seguradora ainda está pendente — por
+    // ora só repassamos os valores confirmados pelo vendedor.
+    enderecoCorrespondencia: {
+      cep: string;
+      logradouro: string;
+      numero: string;
+      bairro: string;
+      cidade: string;
+      uf: string;
+    };
     renavam: string;
     corVeiculo: string;
     diaVencimentoDemaisParcelas: string;
@@ -688,6 +701,27 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       dddCelular: celular.length >= 2 ? celular.slice(0, 2) : undefined,
       diaVencimentoDemaisParcelas: data.dadosComplementares?.diaVencimentoDemaisParcelas,
       desejaReceberPropostaPorEmail: data.dadosComplementares?.desejaReceberPropostaPorEmail,
+      // Endereço de correspondência — só preenchido quando o vendedor
+      // desmarca "é o mesmo"; mapeamento no portal da seguradora pendente.
+      mesmoEnderecoCorrespondencia: data.dadosComplementares?.mesmoEnderecoCorrespondencia,
+      cepCorrespondencia: data.dadosComplementares?.mesmoEnderecoCorrespondencia
+        ? undefined
+        : data.dadosComplementares?.enderecoCorrespondencia?.cep,
+      logradouroCorrespondencia: data.dadosComplementares?.mesmoEnderecoCorrespondencia
+        ? undefined
+        : data.dadosComplementares?.enderecoCorrespondencia?.logradouro,
+      numeroCorrespondencia: data.dadosComplementares?.mesmoEnderecoCorrespondencia
+        ? undefined
+        : data.dadosComplementares?.enderecoCorrespondencia?.numero,
+      bairroCorrespondencia: data.dadosComplementares?.mesmoEnderecoCorrespondencia
+        ? undefined
+        : data.dadosComplementares?.enderecoCorrespondencia?.bairro,
+      cidadeCorrespondencia: data.dadosComplementares?.mesmoEnderecoCorrespondencia
+        ? undefined
+        : data.dadosComplementares?.enderecoCorrespondencia?.cidade,
+      ufCorrespondencia: data.dadosComplementares?.mesmoEnderecoCorrespondencia
+        ? undefined
+        : data.dadosComplementares?.enderecoCorrespondencia?.uf,
     };
 
     // T.9: registra a tentativa ANTES de chamar o robô — é essa linha que o

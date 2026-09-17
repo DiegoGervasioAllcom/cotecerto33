@@ -8,10 +8,30 @@ const dadosValidos = {
   cepResidencial: "04567-090",
   numeroEndereco: "123",
   mesmoEnderecoCorrespondencia: true,
+  // Não exigido quando mesmoEnderecoCorrespondencia é true, mas o shape
+  // sempre existe (o form já inicializa assim, ver
+  // TransmissaoDadosComplementares.tsx).
+  enderecoCorrespondencia: {
+    cep: "",
+    logradouro: "",
+    numero: "",
+    bairro: "",
+    cidade: "",
+    uf: "",
+  },
   renavam: "12345678901",
   corVeiculo: "Branco",
   diaVencimentoDemaisParcelas: "15",
   desejaReceberPropostaPorEmail: "Não",
+} as const;
+
+const enderecoCorrespondenciaValido = {
+  cep: "01310-100",
+  logradouro: "Av. Paulista",
+  numero: "1000",
+  bairro: "Bela Vista",
+  cidade: "São Paulo",
+  uf: "SP",
 } as const;
 
 describe("dados complementares para transmissão Quiver", () => {
@@ -25,7 +45,6 @@ describe("dados complementares para transmissão Quiver", () => {
     ["orgaoEmissorRg", ""],
     ["cepResidencial", "1234"],
     ["numeroEndereco", ""],
-    ["mesmoEnderecoCorrespondencia", false],
     ["renavam", "12345678"],
     ["corVeiculo", ""],
     ["diaVencimentoDemaisParcelas", "31"],
@@ -52,5 +71,76 @@ describe("dados complementares para transmissão Quiver", () => {
     });
 
     expect(resultado.success).toBe(true);
+  });
+
+  describe("endereço de correspondência", () => {
+    it("mesmoEnderecoCorrespondencia=false com endereço completo é aceito", () => {
+      const resultado = dadosComplementaresTransmissaoSchema.safeParse({
+        ...dadosValidos,
+        mesmoEnderecoCorrespondencia: false,
+        enderecoCorrespondencia: enderecoCorrespondenciaValido,
+      });
+
+      expect(resultado.success).toBe(true);
+    });
+
+    it("mesmoEnderecoCorrespondencia=false sem endereço preenchido é rejeitado", () => {
+      const resultado = dadosComplementaresTransmissaoSchema.safeParse({
+        ...dadosValidos,
+        mesmoEnderecoCorrespondencia: false,
+      });
+
+      expect(resultado.success).toBe(false);
+      if (!resultado.success) {
+        const caminhos = resultado.error.issues.map((i) => i.path.join("."));
+        expect(caminhos).toEqual(
+          expect.arrayContaining([
+            "enderecoCorrespondencia.cep",
+            "enderecoCorrespondencia.logradouro",
+            "enderecoCorrespondencia.numero",
+            "enderecoCorrespondencia.bairro",
+            "enderecoCorrespondencia.cidade",
+            "enderecoCorrespondencia.uf",
+          ]),
+        );
+      }
+    });
+
+    it.each([
+      ["cep", "123", "enderecoCorrespondencia.cep"],
+      ["logradouro", "", "enderecoCorrespondencia.logradouro"],
+      ["numero", "", "enderecoCorrespondencia.numero"],
+      ["bairro", "", "enderecoCorrespondencia.bairro"],
+      ["cidade", "", "enderecoCorrespondencia.cidade"],
+      ["uf", "SPX", "enderecoCorrespondencia.uf"],
+    ])("rejeita %s inválido no endereço de correspondência", (campo, valor, caminhoEsperado) => {
+      const resultado = dadosComplementaresTransmissaoSchema.safeParse({
+        ...dadosValidos,
+        mesmoEnderecoCorrespondencia: false,
+        enderecoCorrespondencia: { ...enderecoCorrespondenciaValido, [campo]: valor },
+      });
+
+      expect(resultado.success).toBe(false);
+      if (!resultado.success) {
+        expect(resultado.error.issues.map((i) => i.path.join("."))).toContain(caminhoEsperado);
+      }
+    });
+
+    it("ignora um endereço de correspondência inválido quando mesmoEnderecoCorrespondencia é true", () => {
+      const resultado = dadosComplementaresTransmissaoSchema.safeParse({
+        ...dadosValidos,
+        mesmoEnderecoCorrespondencia: true,
+        enderecoCorrespondencia: {
+          cep: "",
+          logradouro: "",
+          numero: "",
+          bairro: "",
+          cidade: "",
+          uf: "",
+        },
+      });
+
+      expect(resultado.success).toBe(true);
+    });
   });
 });
