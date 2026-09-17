@@ -11,10 +11,12 @@ import {
 
 /**
  * E2E do webhook de resultado da transmissão automatizada (Onda 4 / T.12 do
- * `doc/PLANO_WEBHOOK_TRANSMISSAO.md`): confirma que o Passo 6 (Cálculo) do
- * wizard entra em modo "transmitindo" ao clicar em "gerar proposta", reage ao
- * webhook `POST /api/webhooks/quiver-transmissao` (sucesso e falha) via
- * polling, e que a tela de Aceite & Transmissão reflete uma falha automática.
+ * `doc/PLANO_WEBHOOK_TRANSMISSAO.md`): confirma que a Etapa 7 (Transmissão) do
+ * wizard — mini-wizard de sub-passos Dados complementares → Confirmação →
+ * Transmitida (`StepTransmissao.tsx`) — entra em modo "transmitindo" ao
+ * confirmar a transmissão, reage ao webhook `POST
+ * /api/webhooks/quiver-transmissao` (sucesso e falha) via polling, e que a
+ * tela de Aceite & Transmissão reflete uma falha automática.
  *
  * Decisão de escopo (mesma lógica de `quiver-webhook.spec.ts`/`venda.spec.ts`):
  * o robô real (`transmitirPropostaQuiver` → serviço `cotacao-api`, que abre um

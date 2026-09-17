@@ -1,10 +1,8 @@
 import { STEPS } from "@/components/venda/novo-lead/types";
-import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 
 type Props = {
   step: number;
   setStep: React.Dispatch<React.SetStateAction<number>>;
-  resultados: ResultadoCalculo[];
   validarEtapa: (atual: number) => boolean;
   podeCalcular: boolean;
   doSimularCalculo: () => void;
@@ -13,7 +11,6 @@ type Props = {
 export function WizardFooter({
   step,
   setStep,
-  resultados,
   validarEtapa,
   podeCalcular,
   doSimularCalculo,
@@ -29,12 +26,7 @@ export function WizardFooter({
             Voltar às coberturas
           </button>
           <span className="spacer" />
-          <button className="btn btn-yellow pulse" disabled={resultados.length === 0}>
-            <svg width="14" height="14">
-              <use href="#i-check" />
-            </svg>{" "}
-            Gerar proposta
-          </button>
+          <span className="muted small">Escolha a seguradora e clique em transmitir</span>
         </>
       ) : (
         <>
