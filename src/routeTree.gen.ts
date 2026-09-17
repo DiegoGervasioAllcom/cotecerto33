@@ -28,6 +28,7 @@ import { Route as AuthenticatedVendaEmNegociacaoRouteImport } from './routes/_au
 import { Route as AuthenticatedVendaEmFinalizacaoRouteImport } from './routes/_authenticated/venda/em-finalizacao'
 import { Route as AuthenticatedVendaEmCotacaoRouteImport } from './routes/_authenticated/venda/em-cotacao'
 import { Route as AuthenticatedVendaAtenderRouteImport } from './routes/_authenticated/venda/atender'
+import { Route as AuthenticatedVendaAgendaRouteImport } from './routes/_authenticated/venda/agenda'
 import { Route as AuthenticatedOperacaoXacessosRouteImport } from './routes/_authenticated/operacao/xacessos'
 import { Route as AuthenticatedOperacaoVendasRouteImport } from './routes/_authenticated/operacao/vendas'
 import { Route as AuthenticatedOperacaoSupervisaoRouteImport } from './routes/_authenticated/operacao/supervisao'
@@ -152,6 +153,12 @@ const AuthenticatedVendaAtenderRoute =
   AuthenticatedVendaAtenderRouteImport.update({
     id: '/venda/atender',
     path: '/venda/atender',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedVendaAgendaRoute =
+  AuthenticatedVendaAgendaRouteImport.update({
+    id: '/venda/agenda',
+    path: '/venda/agenda',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedOperacaoXacessosRoute =
@@ -314,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/operacao/supervisao': typeof AuthenticatedOperacaoSupervisaoRoute
   '/operacao/vendas': typeof AuthenticatedOperacaoVendasRoute
   '/operacao/xacessos': typeof AuthenticatedOperacaoXacessosRoute
+  '/venda/agenda': typeof AuthenticatedVendaAgendaRoute
   '/venda/atender': typeof AuthenticatedVendaAtenderRoute
   '/venda/em-cotacao': typeof AuthenticatedVendaEmCotacaoRoute
   '/venda/em-finalizacao': typeof AuthenticatedVendaEmFinalizacaoRoute
@@ -356,6 +364,7 @@ export interface FileRoutesByTo {
   '/operacao/supervisao': typeof AuthenticatedOperacaoSupervisaoRoute
   '/operacao/vendas': typeof AuthenticatedOperacaoVendasRoute
   '/operacao/xacessos': typeof AuthenticatedOperacaoXacessosRoute
+  '/venda/agenda': typeof AuthenticatedVendaAgendaRoute
   '/venda/atender': typeof AuthenticatedVendaAtenderRoute
   '/venda/em-cotacao': typeof AuthenticatedVendaEmCotacaoRoute
   '/venda/em-finalizacao': typeof AuthenticatedVendaEmFinalizacaoRoute
@@ -400,6 +409,7 @@ export interface FileRoutesById {
   '/_authenticated/operacao/supervisao': typeof AuthenticatedOperacaoSupervisaoRoute
   '/_authenticated/operacao/vendas': typeof AuthenticatedOperacaoVendasRoute
   '/_authenticated/operacao/xacessos': typeof AuthenticatedOperacaoXacessosRoute
+  '/_authenticated/venda/agenda': typeof AuthenticatedVendaAgendaRoute
   '/_authenticated/venda/atender': typeof AuthenticatedVendaAtenderRoute
   '/_authenticated/venda/em-cotacao': typeof AuthenticatedVendaEmCotacaoRoute
   '/_authenticated/venda/em-finalizacao': typeof AuthenticatedVendaEmFinalizacaoRoute
@@ -444,6 +454,7 @@ export interface FileRouteTypes {
     | '/operacao/supervisao'
     | '/operacao/vendas'
     | '/operacao/xacessos'
+    | '/venda/agenda'
     | '/venda/atender'
     | '/venda/em-cotacao'
     | '/venda/em-finalizacao'
@@ -486,6 +497,7 @@ export interface FileRouteTypes {
     | '/operacao/supervisao'
     | '/operacao/vendas'
     | '/operacao/xacessos'
+    | '/venda/agenda'
     | '/venda/atender'
     | '/venda/em-cotacao'
     | '/venda/em-finalizacao'
@@ -529,6 +541,7 @@ export interface FileRouteTypes {
     | '/_authenticated/operacao/supervisao'
     | '/_authenticated/operacao/vendas'
     | '/_authenticated/operacao/xacessos'
+    | '/_authenticated/venda/agenda'
     | '/_authenticated/venda/atender'
     | '/_authenticated/venda/em-cotacao'
     | '/_authenticated/venda/em-finalizacao'
@@ -690,6 +703,13 @@ declare module '@tanstack/react-router' {
       path: '/venda/atender'
       fullPath: '/venda/atender'
       preLoaderRoute: typeof AuthenticatedVendaAtenderRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/venda/agenda': {
+      id: '/_authenticated/venda/agenda'
+      path: '/venda/agenda'
+      fullPath: '/venda/agenda'
+      preLoaderRoute: typeof AuthenticatedVendaAgendaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/operacao/xacessos': {
@@ -868,6 +888,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOperacaoSupervisaoRoute: typeof AuthenticatedOperacaoSupervisaoRoute
   AuthenticatedOperacaoVendasRoute: typeof AuthenticatedOperacaoVendasRoute
   AuthenticatedOperacaoXacessosRoute: typeof AuthenticatedOperacaoXacessosRoute
+  AuthenticatedVendaAgendaRoute: typeof AuthenticatedVendaAgendaRoute
   AuthenticatedVendaAtenderRoute: typeof AuthenticatedVendaAtenderRoute
   AuthenticatedVendaEmCotacaoRoute: typeof AuthenticatedVendaEmCotacaoRoute
   AuthenticatedVendaEmFinalizacaoRoute: typeof AuthenticatedVendaEmFinalizacaoRoute
@@ -905,6 +926,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOperacaoSupervisaoRoute: AuthenticatedOperacaoSupervisaoRoute,
   AuthenticatedOperacaoVendasRoute: AuthenticatedOperacaoVendasRoute,
   AuthenticatedOperacaoXacessosRoute: AuthenticatedOperacaoXacessosRoute,
+  AuthenticatedVendaAgendaRoute: AuthenticatedVendaAgendaRoute,
   AuthenticatedVendaAtenderRoute: AuthenticatedVendaAtenderRoute,
   AuthenticatedVendaEmCotacaoRoute: AuthenticatedVendaEmCotacaoRoute,
   AuthenticatedVendaEmFinalizacaoRoute: AuthenticatedVendaEmFinalizacaoRoute,
