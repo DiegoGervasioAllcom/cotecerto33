@@ -43,8 +43,13 @@ export function TransmissaoResultado({ seguradora, resultado, tentarNovamente }:
             <use href="#i-check" />
           </svg>
           <div style={{ marginTop: 8, fontWeight: 600 }}>Proposta transmitida com sucesso</div>
-          <Link to="/venda/aceite" className="btn btn-yellow" style={{ marginTop: 12 }}>
-            Ir para Aceite &amp; Transmissão
+          <Link
+            to="/venda/propostas"
+            search={resultado.propostaId ? { selected: resultado.propostaId } : {}}
+            className="btn btn-yellow"
+            style={{ marginTop: 12 }}
+          >
+            Ir para Propostas
           </Link>
         </>
       )}
@@ -92,7 +97,7 @@ export function TransmissaoResultado({ seguradora, resultado, tentarNovamente }:
                 </button>
                 {resultado.propostaId && (
                   <Link
-                    to="/venda/aceite"
+                    to="/venda/em-finalizacao"
                     search={{ selected: resultado.propostaId }}
                     className="btn btn-slate"
                   >
