@@ -1,4 +1,5 @@
 import type { Form, BonusFieldKey } from "@/components/venda/novo-lead/types";
+import { SeguradoraTile } from "@/components/venda/novo-lead/SeguradoraBadge";
 
 export const ANOS_POR_TIPO_CALCULO: Record<string, number> = {
   Anual: 1,
@@ -37,35 +38,48 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
         <label>
           Seguradoras disponíveis <span className="hint">marque e desmarque para o cálculo</span>
         </label>
-        <div className="row" style={{ gap: 8, flexWrap: "wrap", paddingTop: 6 }}>
+        <div className="seg-pick">
           {SEG_HABILITADAS.map((s) => {
             const on = f.seguradorasSel.includes(s);
             return (
-              <span
+              <SeguradoraTile
                 key={s}
-                className={"chip " + (on ? "chip-yellow" : "chip-outline")}
-                style={{
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
+                nome={s}
+                on={on}
                 onClick={() =>
                   up(
                     "seguradorasSel",
                     on ? f.seguradorasSel.filter((x) => x !== s) : [...f.seguradorasSel, s],
                   )
                 }
-              >
-                {on && (
-                  <svg width="12" height="12">
-                    <use href="#i-check" />
-                  </svg>
-                )}
-                {s}
-              </span>
+              />
             );
           })}
+        </div>
+        <div className="seg-actions">
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => up("seguradorasSel", [...SEG_HABILITADAS])}
+          >
+            <svg width="13" height="13">
+              <use href="#i-check" />
+            </svg>{" "}
+            Marcar todas
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => up("seguradorasSel", [])}
+          >
+            <svg width="13" height="13">
+              <use href="#i-x" />
+            </svg>{" "}
+            Desmarcar todas
+          </button>
+          <span className="muted small">
+            {f.seguradorasSel.length} de {SEG_HABILITADAS.length} seguradoras no cálculo
+          </span>
         </div>
       </div>
 

@@ -20,6 +20,14 @@
   --info-soft: #e8effd;
   --border: #e8e3d4;
   --border-soft: #efead9;
+  --cream-hi: #fffdf5;
+  /* Escala de fonte usada pelos componentes portados do protótipo V12
+     (selo de seguradora / cards de plano) — não existia antes no proto.css,
+     que até aqui só usava px literais nos seletores. */
+  --fs-2xs: 10px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-lg: 15px;
   --radius: 14px;
   --radius-lg: 20px;
   --radius-sm: 10px;
@@ -4929,3 +4937,48 @@ body.hc {
   --offwhite: #ffffff;
   --soft-bg: #eceef0;
 }
+
+/* ===== Selo de seguradora (badge com wordmark) — espelha protótipo V12 ===== */
+.seg-pick{display:flex;flex-wrap:wrap;gap:14px;padding-top:10px}
+.seg-item{width:96px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;user-select:none}
+.seg-badge{width:62px;height:62px;flex:none;border-radius:50%;background:#fff;border:1.5px solid var(--border-soft);
+  display:inline-flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(18,28,36,.09);
+  padding:7px;box-sizing:border-box;overflow:hidden;transition:border-color .14s,box-shadow .14s,transform .1s;color:var(--muted)}
+.seg-badge .wm{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-align:center;font-size:var(--fs-sm);
+  white-space:normal;word-break:break-word;max-width:100%}
+.seg-badge .wm small{display:block;font-size:6.5px;font-weight:700;letter-spacing:.02em;opacity:.78;margin-top:2px;
+  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:clip;transform:scale(.94);transform-origin:center}
+.seg-badge.sm{width:50px;height:50px;padding:6px}
+.seg-badge.sm .wm{font-size:var(--fs-2xs)}
+.seg-badge.sm .wm small{font-size:5.5px}
+.seg-badge.xs{width:38px;height:38px;padding:4px}
+.seg-badge.xs .wm{font-size:8px}
+.seg-badge.xs .wm small{display:none}
+.seg-badge-wrap{position:relative;display:inline-flex}
+.seg-item:hover .seg-badge{transform:translateY(-2px);box-shadow:0 8px 18px rgba(18,28,36,.14)}
+.seg-item.off .seg-badge{filter:grayscale(1);opacity:.45}
+.seg-item.on .seg-badge{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,182,0,.22)}
+.seg-item .seg-nome{font-size:var(--fs-xs);font-weight:700;color:var(--slate);text-align:center;line-height:1.2}
+.seg-item.off .seg-nome{color:var(--muted);font-weight:600}
+.seg-item.t-sm{width:76px;gap:6px}
+.seg-item.t-sm .seg-nome{font-size:var(--fs-xs)}
+.seg-item.t-xs{width:58px;gap:5px}
+.seg-item.t-xs .seg-nome{font-size:var(--fs-2xs)}
+.seg-item.static{cursor:default}
+.seg-item.static:hover .seg-badge{transform:none;box-shadow:0 3px 10px rgba(18,28,36,.09)}
+.seg-item.on .seg-nome{color:var(--slate)}
+.seg-check{position:absolute;right:-3px;bottom:-1px;width:20px;height:20px;border-radius:50%;background:var(--yellow);
+  color:#2F3D48;display:flex;align-items:center;justify-content:center;border:2px solid #fff;z-index:2}
+.seg-actions{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+
+/* ===== Cards de Plano de Coberturas — espelha protótipo V12 ===== */
+.plano-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding-top:10px}
+.plano-card{position:relative;text-align:left;background:#fff;border:1.5px solid var(--border-soft);border-radius:14px;padding:14px 15px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:transform .12s,box-shadow .12s,border-color .12s}
+.plano-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(18,28,36,.1);border-color:#D9DEE3}
+.plano-card .pc-ic{color:var(--muted);display:flex}
+.plano-card .pc-nome{font-size:var(--fs-lg);font-weight:800;color:var(--slate);letter-spacing:-.01em}
+.plano-card .pc-desc{font-size:var(--fs-xs);color:var(--muted);line-height:1.4}
+.plano-card.on{border-color:var(--yellow);background:var(--cream-hi);box-shadow:0 0 0 3px rgba(255,182,0,.18)}
+.plano-card.on .pc-ic{color:var(--yellow)}
+.plano-card .pc-check{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:50%;background:var(--yellow);color:#2F3D48;display:flex;align-items:center;justify-content:center}
+@media (max-width:980px){.plano-pick{grid-template-columns:repeat(2,1fr)}}

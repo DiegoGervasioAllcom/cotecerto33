@@ -32,7 +32,18 @@ export async function loginAs(
   }
 }
 
-/** Preenche a confirmação obrigatória exibida antes de transmitir a proposta. */
+/**
+ * Preenche o sub-passo "Dados complementares" da Etapa 7 (Transmissão) e
+ * avança até confirmar a transmissão. Lida com os dois ramos da Confirmação
+ * (`StepTransmissao.tsx`/`ehCartaoCredito`) sem o chamador precisar saber de
+ * antemão qual é o caso:
+ * - forma de pagamento sem cartão → a Confirmação já mostra "Confirmar e
+ *   transmitir" direto;
+ * - forma de pagamento com cartão (`/cart/i`, ex.: "Cartão de crédito") → a
+ *   Confirmação mostra "Informar o pagamento", que leva ao sub-passo de
+ *   Pagamento (`TransmissaoPagamento.tsx`), onde "Efetivar proposta" é quem
+ *   de fato transmite.
+ */
 export async function confirmarDadosComplementaresTransmissao(page: Page) {
   await page.getByLabel("RG", { exact: true }).fill("123456789");
   await page.getByLabel("Data de emissão", { exact: true }).fill("13/05/2020");
@@ -44,5 +55,18 @@ export async function confirmarDadosComplementaresTransmissao(page: Page) {
   await page
     .getByLabel("Dia de vencimento das demais parcelas", { exact: true })
     .selectOption("10");
-  await page.getByRole("button", { name: "Confirmar e transmitir" }).click();
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByRole("heading", { name: "Confirmação" }).waitFor();
+
+  const botaoConfirmarOuPagamento = page.getByRole("button", {
+    name: /Confirmar e transmitir|Informar o pagamento/,
+  });
+  await botaoConfirmarOuPagamento.waitFor();
+  if (await page.getByRole("button", { name: "Informar o pagamento" }).isVisible()) {
+    await page.getByRole("button", { name: "Informar o pagamento" }).click();
+    await page.getByRole("heading", { name: "Pagamento" }).waitFor();
+    await page.getByRole("button", { name: "Efetivar proposta" }).click();
+  } else {
+    await page.getByRole("button", { name: "Confirmar e transmitir" }).click();
+  }
 }

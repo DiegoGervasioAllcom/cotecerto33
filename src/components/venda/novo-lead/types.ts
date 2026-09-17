@@ -194,5 +194,13 @@ export type BonusFieldKey =
   | "bonusBradesco"
   | "bonusYelumAliroIndiana";
 
-export const STEPS = ["Segurado", "Seguro", "Veículo", "Perfil", "Coberturas", "Cálculo"];
+export const STEPS = [
+  "Segurado",
+  "Seguro",
+  "Veículo",
+  "Perfil",
+  "Coberturas",
+  "Cálculo",
+  "Transmissão",
+];
 export const SEGURADORAS = ["Porto Seguro", "Azul Seguros", "Bradesco Auto", "HDI", "Allianz"];

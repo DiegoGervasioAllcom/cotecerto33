@@ -259,7 +259,13 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     expect(requisicaoTransmissao).toContain("1x de R$ 2.300,00");
     expect(requisicaoTransmissao).not.toContain("valorParcela");
     expect(requisicaoTransmissao).not.toContain('"calculo"');
-    await page.getByRole("button", { name: "Voltar ao cálculo" }).click();
+    // "Voltar ao cálculo" some depois que a transmissão é confirmada (Etapa 7
+    // é intencionalmente sem volta — "depois disso a seguradora assume o
+    // processo"); reabrir o Passo Cálculo direto pela URL é só o mecanismo de
+    // reset do teste para tentar um segundo payload no mesmo card, igual à
+    // abertura inicial (linha ~184).
+    await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
+    await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
 
     // Trocar a condição dentro da mesma forma atualiza o mesmo card. A opção
     // real à vista tem parcelas vazio e deve continuar selecionável/transmissível.
@@ -288,7 +294,10 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     expect(indiceParcelas).toBeGreaterThanOrEqual(0);
     expect(objetoData.v[indiceParcelas]).toEqual({ t: 1, s: "" });
     expect(requisicaoTransmissao).not.toContain("À vista");
-    await page.getByRole("button", { name: "Voltar ao cálculo" }).click();
+    // Mesmo motivo do reset acima: reabre o Passo Cálculo pela URL em vez de
+    // depender de um "Voltar ao cálculo" que não existe mais após confirmar.
+    await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
+    await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
     await page.unroute("**/*");
 
     await page.getByRole("link", { name: "Comparativo lado a lado" }).click();

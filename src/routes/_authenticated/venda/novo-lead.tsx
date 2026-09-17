@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { useClassificarPerda } from "@/components/venda/novo-lead/hooks/useClassificarPerda";
 import { useCepLookup } from "@/components/venda/novo-lead/hooks/useCepLookup";
@@ -19,7 +20,13 @@ import { StepSeguro, vigenciaAPartirDeHoje } from "@/components/venda/novo-lead/
 import { StepVeiculo } from "@/components/venda/novo-lead/steps/StepVeiculo";
 import { StepPerfil } from "@/components/venda/novo-lead/steps/StepPerfil";
 import { StepCoberturas } from "@/components/venda/novo-lead/steps/StepCoberturas";
-import { StepCalculo } from "@/components/venda/novo-lead/steps/StepCalculo";
+import {
+  StepCalculo,
+  type OfertaTransmissao,
+} from "@/components/venda/novo-lead/steps/StepCalculo";
+import { StepTransmissao } from "@/components/venda/novo-lead/steps/transmissao/StepTransmissao";
+import type { DadosComplementaresTransmissao } from "@/components/venda/novo-lead/steps/transmissao/TransmissaoDadosComplementares";
+import type { ResultadoTransmissaoEstado } from "@/components/venda/novo-lead/steps/transmissao/TransmissaoResultado";
 import { Stepper } from "@/components/venda/novo-lead/Stepper";
 import { WizardFooter } from "@/components/venda/novo-lead/WizardFooter";
 import { ResumoCotacao } from "@/components/venda/novo-lead/ResumoCotacao";
@@ -310,6 +317,110 @@ function Page() {
     void simularCalculo();
   }
 
+  // Etapa 7 (Transmissão) — subiu de StepCalculo.tsx pra cá porque a oferta
+  // escolhida precisa sobreviver à troca de passo do wizard (setVisibleStep).
+  const POLL_TRANSMISSAO_MS = 4000;
+  const [oferta, setOferta] = useState<OfertaTransmissao | null>(null);
+  const [enviandoProposta, setEnviandoProposta] = useState(false);
+  const [erroProposta, setErroProposta] = useState<string | null>(null);
+  // Onda 3 (T.10): enquanto uma transmissão está em andamento, a Etapa 7
+  // mostra só o resultado (via polling em `cotacao_transmissoes`, mesmo
+  // padrão de `useSimulacaoCalculo`).
+  const [transmissaoEmAndamento, setTransmissaoEmAndamento] = useState<{
+    tentativaId: string;
+  } | null>(null);
+  const [resultadoTransmissao, setResultadoTransmissao] =
+    useState<ResultadoTransmissaoEstado | null>(null);
+  const pollTransmissaoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function pararPollingTransmissao() {
+    if (pollTransmissaoTimer.current) {
+      clearInterval(pollTransmissaoTimer.current);
+      pollTransmissaoTimer.current = null;
+    }
+  }
+
+  useEffect(() => {
+    return () => pararPollingTransmissao();
+  }, []);
+
+  function iniciarPollingTransmissao(tentativaId: string) {
+    pararPollingTransmissao();
+    pollTransmissaoTimer.current = setInterval(() => {
+      void (async () => {
+        const { data, error } = await supabase
+          .from("cotacao_transmissoes")
+          .select("status,motivo,mensagem,proposta_id")
+          .eq("id", tentativaId)
+          .maybeSingle();
+        if (error || !data) return;
+        if (data.status !== "enviada") {
+          pararPollingTransmissao();
+          setResultadoTransmissao({
+            status: data.status as ResultadoTransmissaoEstado["status"],
+            motivo: data.motivo,
+            mensagem: data.mensagem,
+            propostaId: data.proposta_id,
+          });
+        }
+      })();
+    }, POLL_TRANSMISSAO_MS);
+  }
+
+  function tentarNovamenteTransmissao() {
+    pararPollingTransmissao();
+    setTransmissaoEmAndamento(null);
+    setResultadoTransmissao(null);
+  }
+
+  function onEscolherOferta(escolha: OfertaTransmissao) {
+    setOferta(escolha);
+    setErroProposta(null);
+    setVisibleStep(6);
+  }
+
+  // Etapa 7 só existe depois de escolher uma oferta no Cálculo (é estado local,
+  // não persiste no rascunho). Sem isso, reabrir uma cotação salva com
+  // `step_atual = 6` (autosave) ou clicar direto em "Transmissão" no Stepper
+  // deixaria o wizard-card em branco (nem StepTransmissao nem WizardFooter
+  // renderizam para visibleStep === 6 sem oferta).
+  useEffect(() => {
+    if (visibleStep === 6 && !oferta) setVisibleStep(5);
+  }, [visibleStep, oferta, setVisibleStep]);
+
+  async function onTransmitir(dadosComplementares: DadosComplementaresTransmissao) {
+    if (!cotacaoId || !oferta) return;
+    const { resultado: r, formaPagamento, parcelas, premio } = oferta;
+    setResultadoTransmissao(null);
+    setErroProposta(null);
+    setEnviandoProposta(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const resposta = await transmitirPropostaQuiver({
+        data: {
+          cotacaoId,
+          caller_token: sess.session?.access_token ?? "",
+          seguradora: r.seguradora,
+          produtoId: r.produtoId,
+          produto: r.produto || r.nome || undefined,
+          formaPagamento,
+          parcelas,
+          premio,
+          dadosComplementares,
+        },
+      });
+      // O 201 significa só que o robô aceitou a solicitação: o resultado real
+      // (transmitido / recusado pelo portal) chega depois, pelo webhook —
+      // entramos em modo "transmitindo" e fazemos polling da tentativa.
+      setTransmissaoEmAndamento({ tentativaId: resposta.tentativaId });
+      iniciarPollingTransmissao(resposta.tentativaId);
+    } catch (e) {
+      setErroProposta(e instanceof Error ? e.message : "Falha ao gerar a proposta.");
+    } finally {
+      setEnviandoProposta(false);
+    }
+  }
+
   if (leadManualGateAtivo) {
     return (
       <AppShell title="Lead Manual">
@@ -343,7 +454,12 @@ function Page() {
 
       <Stepper
         step={visibleStep}
-        setStep={setVisibleStep}
+        setStep={(i) => {
+          // Sem oferta escolhida ainda, a Etapa 7 não tem o que mostrar —
+          // não deixa clicar direto nela pelo Stepper (ver useEffect acima).
+          if (i === 6 && !oferta) return;
+          setVisibleStep(i);
+        }}
         podeCalcular={podeCalcular || showTutorialReady}
       />
 
@@ -396,17 +512,37 @@ function Page() {
               camposFaltantes={camposFaltantes}
               cotacaoId={cotacaoId}
               doSimularCalculo={doSimularCalculo}
+              onEscolherOferta={onEscolherOferta}
             />
           )}
 
-          <WizardFooter
-            step={visibleStep}
-            setStep={setVisibleStep}
-            resultados={resultados}
-            validarEtapa={validarEtapa}
-            podeCalcular={podeCalcular}
-            doSimularCalculo={doSimularCalculo}
-          />
+          {visibleStep === 6 && oferta && (
+            <StepTransmissao
+              f={f}
+              oferta={oferta}
+              enviando={enviandoProposta}
+              erroEnvio={erroProposta}
+              transmissaoEmAndamento={transmissaoEmAndamento !== null}
+              resultadoTransmissao={resultadoTransmissao}
+              onTransmitir={(dados) => void onTransmitir(dados)}
+              onVoltarCalculo={() => {
+                setOferta(null);
+                setErroProposta(null);
+                setVisibleStep(5);
+              }}
+              onTentarNovamente={tentarNovamenteTransmissao}
+            />
+          )}
+
+          {visibleStep <= 5 && (
+            <WizardFooter
+              step={visibleStep}
+              setStep={setVisibleStep}
+              validarEtapa={validarEtapa}
+              podeCalcular={podeCalcular}
+              doSimularCalculo={doSimularCalculo}
+            />
+          )}
         </div>
 
         {visibleStep !== 5 && (

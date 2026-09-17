@@ -1,20 +1,20 @@
 import { useMemo, useState } from "react";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import {
   dadosComplementaresTransmissaoSchema,
   type DadosComplementaresTransmissao,
-} from "./TransmissaoDadosComplementares.schema";
+} from "../TransmissaoDadosComplementares.schema";
 
-export type { DadosComplementaresTransmissao } from "./TransmissaoDadosComplementares.schema";
+export type { DadosComplementaresTransmissao } from "../TransmissaoDadosComplementares.schema";
 
 type Props = {
   f: Form;
   resultado: ResultadoCalculo;
   formaPagamento: string;
   parcelas: string;
-  enviando: boolean;
-  erroEnvio: string | null;
+  subPassoLabel: string;
   onVoltar: () => void;
   onConfirmar: (dados: DadosComplementaresTransmissao) => void;
 };
@@ -26,8 +26,7 @@ export function TransmissaoDadosComplementares({
   resultado,
   formaPagamento,
   parcelas,
-  enviando,
-  erroEnvio,
+  subPassoLabel,
   onVoltar,
   onConfirmar,
 }: Props) {
@@ -109,7 +108,7 @@ export function TransmissaoDadosComplementares({
           </div>
         </div>
         <span className="spacer" />
-        <span className="chip chip-yellow">1 de 2 · Confirmação</span>
+        <span className="chip chip-yellow">{subPassoLabel}</span>
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
@@ -122,7 +121,10 @@ export function TransmissaoDadosComplementares({
           <div>
             <span className="muted small">Seguradora</span>
             <br />
-            <strong>{resultado.seguradora}</strong>
+            <strong style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <SeguradoraBadge nome={resultado.seguradora} tam="xs" />
+              {resultado.seguradora}
+            </strong>
           </div>
           <div>
             <span className="muted small">Pagamento</span>
@@ -236,17 +238,12 @@ export function TransmissaoDadosComplementares({
         </div>
       </div>
 
-      {erroEnvio && (
-        <div className="clt-note" style={{ marginTop: 14 }}>
-          {erroEnvio}
-        </div>
-      )}
       <div className="row" style={{ justifyContent: "space-between", marginTop: 24 }}>
-        <button className="btn btn-ghost" type="button" onClick={onVoltar} disabled={enviando}>
+        <button className="btn btn-ghost" type="button" onClick={onVoltar}>
           Voltar ao cálculo
         </button>
-        <button className="btn btn-yellow" type="button" onClick={confirmar} disabled={enviando}>
-          {enviando ? "Transmitindo…" : "Confirmar e transmitir"}
+        <button className="btn btn-yellow" type="button" onClick={confirmar}>
+          Continuar
         </button>
       </div>
     </div>

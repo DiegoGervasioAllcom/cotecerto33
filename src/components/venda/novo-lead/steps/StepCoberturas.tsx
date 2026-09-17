@@ -16,6 +16,20 @@ type Props = {
   erros: Record<string, string>;
 };
 
+const PLANO_ICONE: Record<(typeof PLANO_COBERTURA)[number], string> = {
+  Fácil: "i-shield",
+  Pleno: "i-layers",
+  Total: "i-award",
+  Personalizado: "i-settings",
+};
+
+const PLANO_DESCRICAO: Record<(typeof PLANO_COBERTURA)[number], string> = {
+  Fácil: "Essencial: casco, terceiros e assistência",
+  Pleno: "Fácil + vidros, carro reserva e APP",
+  Total: "Cobertura ampla, franquia reduzida",
+  Personalizado: "Você monta item a item abaixo",
+};
+
 function money(v: number) {
   return v.toLocaleString("pt-BR", {
     style: "currency",
@@ -90,31 +104,47 @@ export function StepCoberturas({ f, up, erros }: Props) {
 
       <div className="field-group full">
         <label>Plano de Coberturas</label>
-        <div className="row" style={{ gap: 10, paddingTop: 4, flexWrap: "wrap" }}>
-          {PLANO_COBERTURA.map((t) => (
-            <span
-              key={t}
-              className={"chip " + (f.tipoCobertura === t ? "chip-yellow" : "chip-outline")}
-              style={{ cursor: "pointer" }}
-              onClick={() => {
-                up("tipoCobertura", t);
-                if (t === "Personalizado") return;
-                const preset = PLANO_PRESETS[t];
-                up("modalidade", preset.modalidade);
-                up("percentualAjuste", preset.percentualAjuste);
-                up("franquiaPrimeiraOpcao", preset.franquiaPrimeiraOpcao);
-                up("franquiaSegundaOpcao", preset.franquiaSegundaOpcao);
-                up("rcfDm", preset.rcfDm);
-                up("rcfDc", preset.rcfDc);
-                up("appMorte", preset.appMorte);
-                up("appInval", preset.appInval);
-                up("danosMorais", preset.danosMorais);
-                up("despesasExtras", preset.despesasExtras);
-              }}
-            >
-              {t}
-            </span>
-          ))}
+        <div className="plano-pick">
+          {PLANO_COBERTURA.map((t) => {
+            const on = f.tipoCobertura === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                className={"plano-card " + (on ? "on" : "")}
+                onClick={() => {
+                  up("tipoCobertura", t);
+                  if (t === "Personalizado") return;
+                  const preset = PLANO_PRESETS[t];
+                  up("modalidade", preset.modalidade);
+                  up("percentualAjuste", preset.percentualAjuste);
+                  up("franquiaPrimeiraOpcao", preset.franquiaPrimeiraOpcao);
+                  up("franquiaSegundaOpcao", preset.franquiaSegundaOpcao);
+                  up("rcfDm", preset.rcfDm);
+                  up("rcfDc", preset.rcfDc);
+                  up("appMorte", preset.appMorte);
+                  up("appInval", preset.appInval);
+                  up("danosMorais", preset.danosMorais);
+                  up("despesasExtras", preset.despesasExtras);
+                }}
+              >
+                <span className="pc-ic">
+                  <svg width="20" height="20">
+                    <use href={`#${PLANO_ICONE[t]}`} />
+                  </svg>
+                </span>
+                <span className="pc-nome">{t}</span>
+                <span className="pc-desc">{PLANO_DESCRICAO[t]}</span>
+                {on && (
+                  <span className="pc-check">
+                    <svg width="12" height="12">
+                      <use href="#i-check" />
+                    </svg>
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
