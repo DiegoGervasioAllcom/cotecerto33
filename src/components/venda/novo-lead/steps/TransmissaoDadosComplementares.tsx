@@ -128,7 +128,7 @@ export function TransmissaoDadosComplementares({
             <span className="muted small">Pagamento</span>
             <br />
             <strong>
-              {formaPagamento} · {parcelas}
+              {formaPagamento} · {parcelas || "À vista"}
             </strong>
           </div>
           <div>

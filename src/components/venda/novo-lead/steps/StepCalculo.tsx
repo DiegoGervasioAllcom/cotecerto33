@@ -145,7 +145,7 @@ export function StepCalculo({
     setOfertaTransmissao({
       resultado: r,
       formaPagamento: grupo.formaPagamento,
-      parcelas: opcao.parcelas || "À vista",
+      parcelas: opcao.parcelas ?? "",
       premio: premioNumerico(opcao),
     });
   }

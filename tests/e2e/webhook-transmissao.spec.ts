@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { loginAs } from "./helpers";
+import { confirmarDadosComplementaresTransmissao, loginAs } from "./helpers";
 import {
   criarCotacaoTransmissaoFixture,
   limparCotacaoTransmissaoFixture,
@@ -119,6 +119,8 @@ async function gerarPropostaComTentativaReal(page: Page, fixture: CotacaoQuiverF
   const cardBeta = page.locator(".calc-card").filter({ hasText: CARD_BETA.seguradora });
   await expect(cardBeta).toBeVisible();
   await cardAlfa.getByRole("button", { name: `Gerar proposta (${CARD_ALFA.seguradora})` }).click();
+  await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
+  await confirmarDadosComplementaresTransmissao(page);
 
   // Modo "transmitindo": os demais cards somem, só sobra o painel de espera.
   await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible();
@@ -231,6 +233,8 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
 
       // Esse motivo é corrigível pelo vendedor — mantém "Tentar novamente".
       await page.getByRole("button", { name: "Tentar novamente" }).click();
+      await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
+      await page.getByRole("button", { name: "Voltar ao cálculo" }).click();
       await expect(
         page.locator(".calc-card").filter({ hasText: CARD_ALFA.seguradora }),
       ).toBeVisible();
