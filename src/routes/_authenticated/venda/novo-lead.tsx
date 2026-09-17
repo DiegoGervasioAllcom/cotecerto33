@@ -460,7 +460,9 @@ function Page() {
           if (i === 6 && !oferta) return;
           setVisibleStep(i);
         }}
-        podeCalcular={podeCalcular || showTutorialReady}
+        // Na Etapa 7 a cotação já foi calculada e está em transmissão — o
+        // aviso "Pronto para cotar" não faz mais sentido ali.
+        podeCalcular={(podeCalcular || showTutorialReady) && visibleStep !== 6}
       />
 
       <div className="lead-shell" style={visibleStep === 5 ? { display: "block" } : undefined}>

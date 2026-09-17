@@ -56,7 +56,7 @@ export function TransmissaoConfirmacao({
   onConfirmarTransmitir,
 }: Props) {
   return (
-    <div className="acc-sol">
+    <>
       <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <div>
           <h2 style={{ margin: 0 }}>Confirmação</h2>
@@ -68,8 +68,8 @@ export function TransmissaoConfirmacao({
         <span className="chip chip-yellow">{subPassoLabel}</span>
       </div>
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="row" style={{ gap: 28, flexWrap: "wrap" }}>
+      <div className="acc-sol" style={{ marginBottom: 16 }}>
+        <div className="row" style={{ gap: 28, flexWrap: "wrap", alignItems: "center" }}>
           <div>
             <span className="muted small">Cotação</span>
             <br />
@@ -95,6 +95,14 @@ export function TransmissaoConfirmacao({
             <br />
             <strong>
               {f.vigIni || "—"} a {f.vigFim || "—"}
+            </strong>
+          </div>
+          <div>
+            <span className="muted small">Modalidade</span>
+            <br />
+            <strong>
+              {f.modalidade || "—"}
+              {f.percentualAjuste ? ` · ${f.percentualAjuste}% FIPE` : ""}
             </strong>
           </div>
         </div>
@@ -133,10 +141,11 @@ export function TransmissaoConfirmacao({
         </div>
       )}
 
-      <div className="row" style={{ justifyContent: "space-between", marginTop: 24 }}>
+      <div className="wizard-foot">
         <button className="btn btn-ghost" type="button" onClick={onVoltar} disabled={enviando}>
           Voltar
         </button>
+        <span className="spacer" />
         {ehCartao ? (
           <button
             className="btn btn-yellow"
@@ -157,6 +166,6 @@ export function TransmissaoConfirmacao({
           </button>
         )}
       </div>
-    </div>
+    </>
   );
 }

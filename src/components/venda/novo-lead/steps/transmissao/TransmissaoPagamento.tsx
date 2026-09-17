@@ -17,7 +17,7 @@ export function TransmissaoPagamento({
   onEfetivar,
 }: Props) {
   return (
-    <div className="acc-sol">
+    <>
       <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <div>
           <h2 style={{ margin: 0 }}>Pagamento</h2>
@@ -64,14 +64,15 @@ export function TransmissaoPagamento({
         </div>
       )}
 
-      <div className="row" style={{ justifyContent: "space-between", marginTop: 24 }}>
+      <div className="wizard-foot">
         <button className="btn btn-ghost" type="button" onClick={onVoltar} disabled={enviando}>
           Voltar
         </button>
+        <span className="spacer" />
         <button className="btn btn-yellow" type="button" onClick={onEfetivar} disabled={enviando}>
           {enviando ? "Transmitindo…" : "Efetivar proposta"}
         </button>
       </div>
-    </div>
+    </>
   );
 }
