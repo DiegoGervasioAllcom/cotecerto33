@@ -55,7 +55,7 @@ export async function confirmarDadosComplementaresTransmissao(page: Page) {
   await page
     .getByLabel("Dia de vencimento das demais parcelas", { exact: true })
     .selectOption("10");
-  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByRole("button", { name: "Efetivar" }).click();
   await page.getByRole("heading", { name: "Confirmação" }).waitFor();
 
   const botaoConfirmarOuPagamento = page.getByRole("button", {

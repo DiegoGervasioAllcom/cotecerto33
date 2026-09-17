@@ -47,49 +47,75 @@ export function StepTransmissao({
     useState<DadosComplementaresTransmissao | null>(null);
 
   const ehCartao = ehCartaoCredito(oferta.formaPagamento);
-  const labels = ehCartao
-    ? ["Dados complementares", "Confirmação", "Pagamento", "Transmitida"]
-    : ["Dados complementares", "Confirmação", "Transmitida"];
-  const indices: Record<Fase, number> = ehCartao
-    ? { dados: 0, confirmacao: 1, pagamento: 2, resultado: 3 }
-    : { dados: 0, confirmacao: 1, pagamento: 1, resultado: 2 };
+  const subs: { fase: Fase; l: string }[] = ehCartao
+    ? [
+        { fase: "dados", l: "Dados complementares" },
+        { fase: "confirmacao", l: "Confirmação" },
+        { fase: "pagamento", l: "Pagamento" },
+        { fase: "resultado", l: "Transmitida" },
+      ]
+    : [
+        { fase: "dados", l: "Dados complementares" },
+        { fase: "confirmacao", l: "Confirmação" },
+        { fase: "resultado", l: "Transmitida" },
+      ];
+  const indices: Record<Fase, number> = Object.fromEntries(
+    subs.map((s, i) => [s.fase, i]),
+  ) as Record<Fase, number>;
 
   // Enquanto a transmissão de verdade está em andamento (resposta do robô
   // pendente via polling), a tela sempre mostra o resultado — independente
   // de qual sub-passo o vendedor estava vendo antes de confirmar.
   const faseAtual: Fase = transmissaoEmAndamento ? "resultado" : fase;
-  const subPassoLabel = `Passo ${indices[faseAtual] + 1} de ${labels.length} · ${labels[indices[faseAtual]]}`;
+  const indiceAtual = indices[faseAtual];
 
   function tentarNovamente() {
     onTentarNovamente();
     setFase("dados");
   }
 
-  if (faseAtual === "resultado") {
-    return (
-      <>
-        <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
-          <span className="spacer" />
-          <span className="chip chip-yellow">{subPassoLabel}</span>
-        </div>
-        <TransmissaoResultado
-          seguradora={oferta.resultado.seguradora}
-          resultado={resultadoTransmissao}
-          tentarNovamente={tentarNovamente}
-        />
-      </>
-    );
+  // Só deixa voltar para um sub-passo já visitado (protótipo V12,
+  // `transmBody`: `x.n<=T.sub`) — nunca pula pra frente, e nada de navegar
+  // pelo submenu depois que a transmissão de verdade já começou.
+  function irPara(fase: Fase) {
+    if (transmissaoEmAndamento || fase === "resultado") return;
+    if (indices[fase] > indiceAtual) return;
+    setFase(fase);
   }
 
-  if (faseAtual === "confirmacao") {
-    return (
+  const nav = (
+    <div className="toggle toggle-sub" style={{ marginBottom: 16 }}>
+      {subs.map((s, i) => (
+        <button
+          key={s.fase}
+          type="button"
+          className={indices[s.fase] === indiceAtual ? "on" : ""}
+          disabled={indices[s.fase] > indiceAtual}
+          onClick={() => irPara(s.fase)}
+        >
+          {i + 1}. {s.l}
+        </button>
+      ))}
+    </div>
+  );
+
+  let body: React.ReactNode;
+  if (faseAtual === "resultado") {
+    body = (
+      <TransmissaoResultado
+        seguradora={oferta.resultado.seguradora}
+        resultado={resultadoTransmissao}
+        tentarNovamente={tentarNovamente}
+      />
+    );
+  } else if (faseAtual === "confirmacao") {
+    body = (
       <TransmissaoConfirmacao
         f={f}
         resultado={oferta.resultado}
         formaPagamento={oferta.formaPagamento}
         parcelas={oferta.parcelas}
         premio={oferta.premio}
-        subPassoLabel={subPassoLabel}
         ehCartao={ehCartao}
         enviando={enviando}
         erroEnvio={erroEnvio}
@@ -98,32 +124,35 @@ export function StepTransmissao({
         onConfirmarTransmitir={() => dadosComplementares && onTransmitir(dadosComplementares)}
       />
     );
-  }
-
-  if (faseAtual === "pagamento") {
-    return (
+  } else if (faseAtual === "pagamento") {
+    body = (
       <TransmissaoPagamento
-        subPassoLabel={subPassoLabel}
         enviando={enviando}
         erroEnvio={erroEnvio}
         onVoltar={() => setFase("confirmacao")}
         onEfetivar={() => dadosComplementares && onTransmitir(dadosComplementares)}
       />
     );
+  } else {
+    body = (
+      <TransmissaoDadosComplementares
+        f={f}
+        resultado={oferta.resultado}
+        formaPagamento={oferta.formaPagamento}
+        parcelas={oferta.parcelas}
+        onVoltar={onVoltarCalculo}
+        onConfirmar={(dados) => {
+          setDadosComplementares(dados);
+          setFase("confirmacao");
+        }}
+      />
+    );
   }
 
   return (
-    <TransmissaoDadosComplementares
-      f={f}
-      resultado={oferta.resultado}
-      formaPagamento={oferta.formaPagamento}
-      parcelas={oferta.parcelas}
-      subPassoLabel={subPassoLabel}
-      onVoltar={onVoltarCalculo}
-      onConfirmar={(dados) => {
-        setDadosComplementares(dados);
-        setFase("confirmacao");
-      }}
-    />
+    <>
+      {nav}
+      {body}
+    </>
   );
 }

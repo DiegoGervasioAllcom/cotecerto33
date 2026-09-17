@@ -1,5 +1,4 @@
 type Props = {
-  subPassoLabel: string;
   enviando: boolean;
   erroEnvio: string | null;
   onVoltar: () => void;
@@ -9,24 +8,14 @@ type Props = {
 // Campos puramente ilustrativos (protótipo V12, `transmPagamento`) — nunca
 // viram estado real nem são enviados a lugar nenhum. No sistema real os
 // dados de cartão vão direto para a seguradora (ambiente PCI).
-export function TransmissaoPagamento({
-  subPassoLabel,
-  enviando,
-  erroEnvio,
-  onVoltar,
-  onEfetivar,
-}: Props) {
+export function TransmissaoPagamento({ enviando, erroEnvio, onVoltar, onEfetivar }: Props) {
   return (
     <>
-      <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Pagamento</h2>
-          <div className="sub" style={{ margin: "4px 0 0" }}>
-            Cartão de crédito · dados coletados diretamente pela seguradora.
-          </div>
+      <div style={{ marginBottom: 18 }}>
+        <h2 style={{ margin: 0 }}>Pagamento</h2>
+        <div className="sub" style={{ margin: "4px 0 0" }}>
+          Cartão de crédito · dados coletados diretamente pela seguradora.
         </div>
-        <span className="spacer" />
-        <span className="chip chip-yellow">{subPassoLabel}</span>
       </div>
 
       <div className="wizard-grid cols-3">
@@ -66,10 +55,16 @@ export function TransmissaoPagamento({
 
       <div className="wizard-foot">
         <button className="btn btn-ghost" type="button" onClick={onVoltar} disabled={enviando}>
+          <svg width="14" height="14">
+            <use href="#i-chevron-left" />
+          </svg>{" "}
           Voltar
         </button>
         <span className="spacer" />
         <button className="btn btn-yellow" type="button" onClick={onEfetivar} disabled={enviando}>
+          <svg width="14" height="14">
+            <use href="#i-check" />
+          </svg>{" "}
           {enviando ? "Transmitindo…" : "Efetivar proposta"}
         </button>
       </div>

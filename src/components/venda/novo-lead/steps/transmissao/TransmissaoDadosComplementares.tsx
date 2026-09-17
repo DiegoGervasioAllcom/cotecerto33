@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
@@ -14,19 +14,24 @@ type Props = {
   resultado: ResultadoCalculo;
   formaPagamento: string;
   parcelas: string;
-  subPassoLabel: string;
   onVoltar: () => void;
   onConfirmar: (dados: DadosComplementaresTransmissao) => void;
 };
 
-type Erros = Partial<Record<keyof DadosComplementaresTransmissao, string>>;
+type ErrosEndereco = Partial<
+  Record<keyof DadosComplementaresTransmissao["enderecoCorrespondencia"], string>
+>;
+type Erros = Partial<
+  Record<keyof Omit<DadosComplementaresTransmissao, "enderecoCorrespondencia">, string>
+> & {
+  enderecoCorrespondencia?: ErrosEndereco;
+};
 
 export function TransmissaoDadosComplementares({
   f,
   resultado,
   formaPagamento,
   parcelas,
-  subPassoLabel,
   onVoltar,
   onConfirmar,
 }: Props) {
@@ -37,6 +42,14 @@ export function TransmissaoDadosComplementares({
     cepResidencial: f.cep,
     numeroEndereco: f.numero,
     mesmoEnderecoCorrespondencia: true,
+    enderecoCorrespondencia: {
+      cep: "",
+      logradouro: "",
+      numero: "",
+      bairro: "",
+      cidade: "",
+      uf: "",
+    },
     renavam: f.renavam.replace(/\D/g, ""),
     corVeiculo: f.cor,
     diaVencimentoDemaisParcelas: "",
@@ -59,13 +72,35 @@ export function TransmissaoDadosComplementares({
     setErros((atual) => ({ ...atual, [key]: undefined }));
   }
 
+  function upCorresp<K extends keyof DadosComplementaresTransmissao["enderecoCorrespondencia"]>(
+    key: K,
+    value: DadosComplementaresTransmissao["enderecoCorrespondencia"][K],
+  ) {
+    setDados((atual) => ({
+      ...atual,
+      enderecoCorrespondencia: { ...atual.enderecoCorrespondencia, [key]: value },
+    }));
+    setErros((atual) => ({
+      ...atual,
+      enderecoCorrespondencia: { ...(atual.enderecoCorrespondencia ?? {}), [key]: undefined },
+    }));
+  }
+
   function confirmar() {
     const validacao = dadosComplementaresTransmissaoSchema.safeParse(dados);
     if (!validacao.success) {
       const proximos: Erros = {};
       for (const issue of validacao.error.issues) {
+        if (issue.path[0] === "enderecoCorrespondencia") {
+          const chave = issue.path[1] as keyof ErrosEndereco;
+          proximos.enderecoCorrespondencia = {
+            ...(proximos.enderecoCorrespondencia ?? {}),
+            [chave]: proximos.enderecoCorrespondencia?.[chave] ?? issue.message,
+          };
+          continue;
+        }
         const key = issue.path[0] as keyof DadosComplementaresTransmissao;
-        if (!proximos[key]) proximos[key] = issue.message;
+        if (!proximos[key]) proximos[key] = issue.message as never;
       }
       setErros(proximos);
       return;
@@ -74,7 +109,10 @@ export function TransmissaoDadosComplementares({
   }
 
   const field = (
-    key: keyof DadosComplementaresTransmissao,
+    key: keyof Omit<
+      DadosComplementaresTransmissao,
+      "enderecoCorrespondencia" | "mesmoEnderecoCorrespondencia"
+    >,
     label: string,
     placeholder = "",
     inputMode?: "numeric",
@@ -98,17 +136,37 @@ export function TransmissaoDadosComplementares({
     </div>
   );
 
+  const fieldCorresp = (
+    key: keyof DadosComplementaresTransmissao["enderecoCorrespondencia"],
+    label: string,
+    placeholder = "",
+    style?: CSSProperties,
+  ) => (
+    <div className="field-group" style={style}>
+      <label htmlFor={`transmissao-corresp-${key}`}>{label}</label>
+      <input
+        id={`transmissao-corresp-${key}`}
+        className="input"
+        value={dados.enderecoCorrespondencia[key]}
+        placeholder={placeholder}
+        aria-invalid={Boolean(erros.enderecoCorrespondencia?.[key])}
+        onChange={(e) => upCorresp(key, e.target.value)}
+      />
+      {erros.enderecoCorrespondencia?.[key] && (
+        <span className="small" style={{ color: "var(--alert)" }}>
+          {erros.enderecoCorrespondencia[key]}
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <>
-      <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Dados complementares</h2>
-          <div className="sub" style={{ margin: "4px 0 0" }}>
-            Confira apenas os dados exigidos para transmitir a proposta à seguradora.
-          </div>
+      <div style={{ marginBottom: 18 }}>
+        <h2 style={{ margin: 0 }}>Dados complementares</h2>
+        <div className="sub" style={{ margin: "4px 0 0" }}>
+          Confira apenas os dados exigidos para transmitir a proposta à seguradora.
         </div>
-        <span className="spacer" />
-        <span className="chip chip-yellow">{subPassoLabel}</span>
       </div>
 
       <div className="acc-sol" style={{ marginBottom: 16 }}>
@@ -183,9 +241,7 @@ export function TransmissaoDadosComplementares({
         <button
           type="button"
           className={"acc-pill" + (dados.mesmoEnderecoCorrespondencia ? " on" : "")}
-          onClick={() =>
-            up("mesmoEnderecoCorrespondencia", !dados.mesmoEnderecoCorrespondencia as true)
-          }
+          onClick={() => up("mesmoEnderecoCorrespondencia", !dados.mesmoEnderecoCorrespondencia)}
         >
           <svg width="13" height="13" style={{ marginRight: 4, verticalAlign: -2 }}>
             <use href={dados.mesmoEnderecoCorrespondencia ? "#i-check" : "#i-x"} />
@@ -193,10 +249,27 @@ export function TransmissaoDadosComplementares({
           Endereço de correspondência é o mesmo
         </button>
       </div>
-      {erros.mesmoEnderecoCorrespondencia && (
-        <div className="small" style={{ color: "var(--alert)" }}>
-          {erros.mesmoEnderecoCorrespondencia}
+      {dados.mesmoEnderecoCorrespondencia ? (
+        <div className="clt-note" style={{ marginBottom: 4 }}>
+          <svg width="15" height="15">
+            <use href="#i-info" />
+          </svg>
+          <div>
+            A proposta e o boleto vão para o <strong>endereço residencial</strong> acima.
+          </div>
         </div>
+      ) : (
+        <>
+          <div className="acc-sec-t">Endereço de correspondência</div>
+          <div className="wizard-grid cols-3">
+            {fieldCorresp("cep", "CEP", "00000-000")}
+            {fieldCorresp("logradouro", "Endereço", "Rua, avenida…", { gridColumn: "span 2" })}
+            {fieldCorresp("numero", "Número")}
+            {fieldCorresp("bairro", "Bairro")}
+            {fieldCorresp("cidade", "Cidade")}
+            {fieldCorresp("uf", "Estado", "UF")}
+          </div>
+        </>
       )}
 
       <div className="acc-sec-t">Dados complementares do veículo</div>
@@ -254,11 +327,17 @@ export function TransmissaoDadosComplementares({
 
       <div className="wizard-foot">
         <button className="btn btn-ghost" type="button" onClick={onVoltar}>
+          <svg width="14" height="14">
+            <use href="#i-chevron-left" />
+          </svg>{" "}
           Voltar ao cálculo
         </button>
         <span className="spacer" />
         <button className="btn btn-yellow" type="button" onClick={confirmar}>
-          Continuar
+          <svg width="14" height="14">
+            <use href="#i-check" />
+          </svg>{" "}
+          Efetivar
         </button>
       </div>
     </>

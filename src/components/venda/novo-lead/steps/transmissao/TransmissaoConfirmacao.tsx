@@ -9,7 +9,6 @@ type Props = {
   formaPagamento: string;
   parcelas: string;
   premio: number | undefined;
-  subPassoLabel: string;
   ehCartao: boolean;
   enviando: boolean;
   erroEnvio: string | null;
@@ -47,7 +46,6 @@ export function TransmissaoConfirmacao({
   formaPagamento,
   parcelas,
   premio,
-  subPassoLabel,
   ehCartao,
   enviando,
   erroEnvio,
@@ -57,15 +55,11 @@ export function TransmissaoConfirmacao({
 }: Props) {
   return (
     <>
-      <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
-        <div>
-          <h2 style={{ margin: 0 }}>Confirmação</h2>
-          <div className="sub" style={{ margin: "4px 0 0" }}>
-            Confira antes de transmitir — depois disso a seguradora assume o processo.
-          </div>
+      <div style={{ marginBottom: 18 }}>
+        <h2 style={{ margin: 0 }}>Confirmação</h2>
+        <div className="sub" style={{ margin: "4px 0 0" }}>
+          Confira antes de transmitir — depois disso a seguradora assume o processo.
         </div>
-        <span className="spacer" />
-        <span className="chip chip-yellow">{subPassoLabel}</span>
       </div>
 
       <div className="acc-sol" style={{ marginBottom: 16 }}>
@@ -143,6 +137,9 @@ export function TransmissaoConfirmacao({
 
       <div className="wizard-foot">
         <button className="btn btn-ghost" type="button" onClick={onVoltar} disabled={enviando}>
+          <svg width="14" height="14">
+            <use href="#i-chevron-left" />
+          </svg>{" "}
           Voltar
         </button>
         <span className="spacer" />
@@ -153,7 +150,10 @@ export function TransmissaoConfirmacao({
             onClick={onAvancarPagamento}
             disabled={enviando}
           >
-            Informar o pagamento
+            Informar o pagamento{" "}
+            <svg width="14" height="14">
+              <use href="#i-chevron-right" />
+            </svg>
           </button>
         ) : (
           <button
@@ -162,6 +162,9 @@ export function TransmissaoConfirmacao({
             onClick={onConfirmarTransmitir}
             disabled={enviando}
           >
+            <svg width="14" height="14">
+              <use href="#i-send" />
+            </svg>{" "}
             {enviando ? "Transmitindo…" : "Confirmar e transmitir"}
           </button>
         )}
