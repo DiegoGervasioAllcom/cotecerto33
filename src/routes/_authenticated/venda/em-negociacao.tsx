@@ -2,14 +2,22 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import {
+  cotNum,
+  diasParaExpirar,
+  expiraChip,
+  FAIXAS,
+  melhorPreco,
+  money,
+  type Premio,
+} from "@/components/venda/cotacoes/lista-helpers";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_authenticated/venda/cotacoes/")({
-  head: () => ({ meta: [{ title: "Cotações · CoteCerto" }] }),
+export const Route = createFileRoute("/_authenticated/venda/em-negociacao")({
+  head: () => ({ meta: [{ title: "Em negociação · CoteCerto" }] }),
   component: Page,
 });
 
-type Premio = { seguradora: string; premio: number };
 type Row = {
   id: string;
   numero: number;
@@ -26,63 +34,10 @@ type Row = {
   premios: Premio[];
 };
 
-const money = (n: number) =>
-  Number(n || 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  });
-
-const pad = (n: number) => String(n).padStart(5, "0");
-const cotNum = (numero: number) => `COT-${new Date().getFullYear()}-${pad(numero)}`;
-
 function statusChip(s: string) {
   const label = s === "calculada" ? "Aberta" : s === "proposta" ? "Em ajuste" : s;
   const cls = s === "calculada" ? "chip-info" : s === "proposta" ? "chip-yellow" : "chip-outline";
   return <span className={`chip chip-status ${cls}`}>{label}</span>;
-}
-function diasParaExpirar(criadoEm: string) {
-  const created = new Date(criadoEm).getTime();
-  const exp = created + 5 * 24 * 60 * 60 * 1000;
-  return Math.ceil((exp - Date.now()) / (24 * 60 * 60 * 1000));
-}
-
-function expiraChip(criadoEm: string) {
-  const d = diasParaExpirar(criadoEm);
-  if (d <= 0)
-    return (
-      <span className="chip chip-alert" style={{ minWidth: 72 }}>
-        Hoje
-      </span>
-    );
-  if (d <= 3)
-    return (
-      <span className="chip chip-alert" style={{ minWidth: 72 }}>
-        {d}d
-      </span>
-    );
-  if (d <= 5)
-    return (
-      <span className="chip chip-yellow" style={{ minWidth: 72 }}>
-        {d}d
-      </span>
-    );
-  return (
-    <span className="chip chip-outline" style={{ minWidth: 72 }}>
-      {d}d
-    </span>
-  );
-}
-
-const FAIXAS = [
-  { label: "Até R$ 2.500", min: 0, max: 2500 },
-  { label: "R$ 2.501 – R$ 5.000", min: 2501, max: 5000 },
-  { label: "Acima de R$ 5.000", min: 5001, max: Infinity },
-];
-
-function melhorPreco(r: Row): number | null {
-  if (!r.premios?.length) return null;
-  return Math.min(...r.premios.map((p) => Number(p.premio) || 0));
 }
 
 function Page() {
@@ -128,7 +83,7 @@ function Page() {
         if (fSeguradora && !r.premios?.some((p) => p.seguradora === fSeguradora)) return false;
         if (fFaixa) {
           const faixa = FAIXAS.find((f) => f.label === fFaixa);
-          const preco = melhorPreco(r);
+          const preco = melhorPreco(r.premios);
           if (!faixa || preco == null || preco < faixa.min || preco > faixa.max) return false;
         }
         return true;
@@ -136,7 +91,7 @@ function Page() {
     [rows, q, fSeguradora, fFaixa],
   );
 
-  const totVal = filtered.reduce((a, r) => a + (melhorPreco(r) ?? 0), 0);
+  const totVal = filtered.reduce((a, r) => a + (melhorPreco(r.premios) ?? 0), 0);
 
   function exportar() {
     const head = [
@@ -177,35 +132,39 @@ function Page() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "cotacoes.csv";
+    a.download = "em-negociacao.csv";
     a.click();
     URL.revokeObjectURL(url);
   }
 
+  function abrirCalculo(id: string) {
+    void nav({ to: "/venda/novo-lead", search: { id, step: 5 } });
+  }
+
   return (
-    <AppShell title="Cotações">
+    <AppShell title="Em negociação">
       <ProtoIcons />
       <div className="page-head">
         <div>
-          <h1>Cotações</h1>
+          <h1>Em negociação</h1>
           <div className="sub">
-            {filtered.length} cotações ativas · valor total estimado{" "}
-            <strong>{money(totVal)}/ano</strong>
+            {filtered.length} cotações já calculadas · ajustando coberturas e preço com o cliente ·
+            valor total estimado <strong>{money(totVal)}/ano</strong>
           </div>
         </div>
         <div className="tools">
+          <Link to="/venda/pipeline" className="btn btn-ghost">
+            <svg width={14} height={14}>
+              <use href="#i-kanban" />
+            </svg>{" "}
+            Ver no pipeline
+          </Link>
           <button className="btn btn-ghost" onClick={exportar}>
             <svg width="14" height="14">
               <use href="#i-download"></use>
             </svg>{" "}
             Exportar
           </button>
-          <Link to="/venda/novo-lead" className="btn btn-yellow">
-            <svg width={14} height={14}>
-              <use href="#i-plus" />
-            </svg>{" "}
-            Nova cotação
-          </Link>
         </div>
       </div>
 
@@ -263,15 +222,19 @@ function Page() {
       {loading && <div className="muted">Carregando…</div>}
 
       {!loading && filtered.length === 0 && (
-        <div className="card" data-tour="cotacoes-lista">
+        <div className="card" data-tour="em-negociacao-lista">
           <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
-            Nenhuma cotação ativa. Cotações aparecem aqui depois que o cálculo é solicitado.
+            Nenhuma cotação calculada aguardando ajuste.
           </div>
         </div>
       )}
 
       {filtered.length > 0 && (
-        <div className="card" data-tour="cotacoes-lista" style={{ padding: 0, overflow: "hidden" }}>
+        <div
+          className="card"
+          data-tour="em-negociacao-lista"
+          style={{ padding: 0, overflow: "hidden" }}
+        >
           <table className="table-pipe">
             <thead>
               <tr>
@@ -295,11 +258,7 @@ function Page() {
                   ? `${r.veiculo.marca_nome ?? ""} ${r.veiculo.modelo_nome ?? ""} ${r.veiculo.ano_modelo ?? ""}`.trim()
                   : "—";
                 return (
-                  <tr
-                    key={r.id}
-                    onClick={() => nav({ to: "/venda/novo-lead", search: { id: r.id, step: 5 } })}
-                    style={{ cursor: "pointer" }}
-                  >
+                  <tr key={r.id} onClick={() => abrirCalculo(r.id)} style={{ cursor: "pointer" }}>
                     <td
                       className="small muted"
                       style={{ fontFamily: "ui-monospace,Menlo,monospace" }}
@@ -332,7 +291,20 @@ function Page() {
                       })}
                     </td>
                     <td>{expiraChip(r.criado_em)}</td>
-                    <td>›</td>
+                    <td>
+                      <button
+                        className="btn btn-yellow btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          abrirCalculo(r.id);
+                        }}
+                      >
+                        <svg width={13} height={13}>
+                          <use href="#i-compare" />
+                        </svg>{" "}
+                        Abrir cálculo
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
