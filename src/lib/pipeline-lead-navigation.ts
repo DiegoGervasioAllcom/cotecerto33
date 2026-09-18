@@ -5,6 +5,9 @@ const PROPOSAL_STATUSES = new Set(["proposta", "negociacao", "ganho"]);
 
 export type ExistingLeadDestination =
   | { kind: "wizard"; id: string; step: number }
+  // "proposals": lead ainda em proposta/negociação (pré-transmissão) — os
+  // consumidores navegam para /venda/em-negociacao, onde mora a negociação
+  // da proposta gerada (G7.2). Nome do kind mantido por compatibilidade.
   | { kind: "proposals"; selected?: string }
   | { kind: "acceptance"; selected?: string }
   | { kind: "unavailable"; message: string };

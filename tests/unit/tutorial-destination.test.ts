@@ -64,8 +64,8 @@ const CASES = [
     resolved: { kind: "cotacao", id: "cotacao-1", target: "[data-tour=alvo]" },
     fallback: {
       kind: "static",
-      route: "/venda/cotacoes",
-      target: '[data-tour="cotacoes-lista"]',
+      route: "/venda/em-negociacao",
+      target: '[data-tour="em-negociacao-lista"]',
     },
   },
   {
@@ -75,8 +75,8 @@ const CASES = [
     resolved: { kind: "proposta", id: "proposta-1", target: "[data-tour=alvo]" },
     fallback: {
       kind: "static",
-      route: "/venda/propostas",
-      target: '[data-tour="propostas-lista"]',
+      route: "/venda/em-negociacao",
+      target: '[data-tour="em-negociacao-lista"]',
     },
   },
   {

@@ -1,15 +1,45 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import {
+  cotNum,
+  diasParaExpirar,
+  expiraChip,
+  FAIXAS,
+  melhorPreco,
+  money,
+  type Premio,
+} from "@/components/venda/cotacoes/lista-helpers";
 import { supabase } from "@/integrations/supabase/client";
+import { NegociacaoPropostaPanel } from "@/components/venda/negociacao-proposta-panel";
 
-export const Route = createFileRoute("/_authenticated/venda/cotacoes/")({
-  head: () => ({ meta: [{ title: "Cotações · CoteCerto" }] }),
+export const Route = createFileRoute("/_authenticated/venda/em-negociacao")({
+  head: () => ({ meta: [{ title: "Em negociação · CoteCerto" }] }),
+  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
+    selected: typeof s.selected === "string" ? s.selected : undefined,
+  }),
   component: Page,
 });
 
-type Premio = { seguradora: string; premio: number };
+// Assim que um prêmio é selecionado no comparativo, o trigger
+// _gerar_proposta_de_premio cria/atualiza uma `propostas` (status='gerada',
+// transmissao_status ainda null) e vira a cotação para status='proposta' —
+// ela continua aqui até a Etapa 7 transmitir com sucesso (ela não some desta
+// lista sozinha; ver nota em em-finalizacao.tsx sobre esse gap). Por isso a
+// negociação de versão/prazo/aceite da proposta (G7.2) mora aqui, e não em
+// Emissão & histórico (que só lista propostas já transmitidas).
+type PropostaLigada = {
+  id: string;
+  numero: string | null;
+  seguradora: string | null;
+  premio: number | null;
+  valor: number | null;
+  negociacao_status: string;
+  prazo_resposta: string | null;
+  transmissao_status: string | null;
+};
+
 type Row = {
   id: string;
   numero: number;
@@ -24,94 +54,56 @@ type Row = {
     ano_modelo: string | null;
   } | null;
   premios: Premio[];
+  propostas: PropostaLigada[] | null;
 };
-
-const money = (n: number) =>
-  Number(n || 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  });
-
-const pad = (n: number) => String(n).padStart(5, "0");
-const cotNum = (numero: number) => `COT-${new Date().getFullYear()}-${pad(numero)}`;
 
 function statusChip(s: string) {
   const label = s === "calculada" ? "Aberta" : s === "proposta" ? "Em ajuste" : s;
   const cls = s === "calculada" ? "chip-info" : s === "proposta" ? "chip-yellow" : "chip-outline";
   return <span className={`chip chip-status ${cls}`}>{label}</span>;
 }
-function diasParaExpirar(criadoEm: string) {
-  const created = new Date(criadoEm).getTime();
-  const exp = created + 5 * 24 * 60 * 60 * 1000;
-  return Math.ceil((exp - Date.now()) / (24 * 60 * 60 * 1000));
-}
-
-function expiraChip(criadoEm: string) {
-  const d = diasParaExpirar(criadoEm);
-  if (d <= 0)
-    return (
-      <span className="chip chip-alert" style={{ minWidth: 72 }}>
-        Hoje
-      </span>
-    );
-  if (d <= 3)
-    return (
-      <span className="chip chip-alert" style={{ minWidth: 72 }}>
-        {d}d
-      </span>
-    );
-  if (d <= 5)
-    return (
-      <span className="chip chip-yellow" style={{ minWidth: 72 }}>
-        {d}d
-      </span>
-    );
-  return (
-    <span className="chip chip-outline" style={{ minWidth: 72 }}>
-      {d}d
-    </span>
-  );
-}
-
-const FAIXAS = [
-  { label: "Até R$ 2.500", min: 0, max: 2500 },
-  { label: "R$ 2.501 – R$ 5.000", min: 2501, max: 5000 },
-  { label: "Acima de R$ 5.000", min: 5001, max: Infinity },
-];
-
-function melhorPreco(r: Row): number | null {
-  if (!r.premios?.length) return null;
-  return Math.min(...r.premios.map((p) => Number(p.premio) || 0));
-}
 
 function Page() {
   const nav = useNavigate();
+  const navigate = useNavigate({ from: "/venda/em-negociacao" });
+  const { selected } = Route.useSearch();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [fSeguradora, setFSeguradora] = useState("");
   const [fFaixa, setFFaixa] = useState("");
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+
+  async function loadRows() {
+    const { data, error } = await supabase
+      .from("cotacoes")
+      .select(
+        "id,numero,status,ramo,criado_em,atualizado_em," +
+          "segurado:cotacao_segurado(nome)," +
+          "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
+          "premios:cotacao_premios(seguradora,premio)," +
+          "propostas(id,numero,seguradora,premio,valor,negociacao_status,prazo_resposta,transmissao_status)",
+      )
+      .in("status", ["calculada", "proposta"])
+      .order("atualizado_em", { ascending: false })
+      .limit(200);
+    if (error) setErr(error.message);
+    setRows((data ?? []) as unknown as Row[]);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase
-        .from("cotacoes")
-        .select(
-          "id,numero,status,ramo,criado_em,atualizado_em," +
-            "segurado:cotacao_segurado(nome)," +
-            "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
-            "premios:cotacao_premios(seguradora,premio)",
-        )
-        .in("status", ["calculada", "proposta"])
-        .order("atualizado_em", { ascending: false })
-        .limit(200);
-      if (error) setErr(error.message);
-      setRows((data ?? []) as unknown as Row[]);
-      setLoading(false);
-    })();
+    void loadRows();
   }, []);
+
+  useEffect(() => {
+    if (!selected || loading) return;
+    const row = rows.find((r) => r.propostas?.some((p) => p.id === selected));
+    if (!row) return;
+    const el = rowRefs.current[row.id];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selected, loading, rows]);
 
   const seguradoras = useMemo(
     () =>
@@ -128,7 +120,7 @@ function Page() {
         if (fSeguradora && !r.premios?.some((p) => p.seguradora === fSeguradora)) return false;
         if (fFaixa) {
           const faixa = FAIXAS.find((f) => f.label === fFaixa);
-          const preco = melhorPreco(r);
+          const preco = melhorPreco(r.premios);
           if (!faixa || preco == null || preco < faixa.min || preco > faixa.max) return false;
         }
         return true;
@@ -136,7 +128,7 @@ function Page() {
     [rows, q, fSeguradora, fFaixa],
   );
 
-  const totVal = filtered.reduce((a, r) => a + (melhorPreco(r) ?? 0), 0);
+  const totVal = filtered.reduce((a, r) => a + (melhorPreco(r.premios) ?? 0), 0);
 
   function exportar() {
     const head = [
@@ -177,35 +169,50 @@ function Page() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "cotacoes.csv";
+    a.download = "em-negociacao.csv";
     a.click();
     URL.revokeObjectURL(url);
   }
 
+  function abrirCalculo(id: string) {
+    void nav({ to: "/venda/novo-lead", search: { id, step: 5 } });
+  }
+
+  function negociarProposta(propostaId: string) {
+    void navigate({ search: (s) => ({ ...s, selected: propostaId }) });
+  }
+
+  const propostaSelecionada = selected
+    ? (rows.flatMap((r) => r.propostas ?? []).find((p) => p.id === selected) ?? null)
+    : null;
+  const seguradoDaSelecionada = selected
+    ? (rows.find((r) => r.propostas?.some((p) => p.id === selected))?.segurado?.nome ?? null)
+    : null;
+
   return (
-    <AppShell title="Cotações">
+    <AppShell title="Em negociação">
       <ProtoIcons />
       <div className="page-head">
         <div>
-          <h1>Cotações</h1>
+          <h1>Em negociação</h1>
           <div className="sub">
-            {filtered.length} cotações ativas · valor total estimado{" "}
-            <strong>{money(totVal)}/ano</strong>
+            {filtered.length} cotações já calculadas · ajustando coberturas e preço com o cliente ·
+            valor total estimado <strong>{money(totVal)}/ano</strong>
           </div>
         </div>
         <div className="tools">
+          <Link to="/venda/pipeline" className="btn btn-ghost">
+            <svg width={14} height={14}>
+              <use href="#i-kanban" />
+            </svg>{" "}
+            Ver no pipeline
+          </Link>
           <button className="btn btn-ghost" onClick={exportar}>
             <svg width="14" height="14">
               <use href="#i-download"></use>
             </svg>{" "}
             Exportar
           </button>
-          <Link to="/venda/novo-lead" className="btn btn-yellow">
-            <svg width={14} height={14}>
-              <use href="#i-plus" />
-            </svg>{" "}
-            Nova cotação
-          </Link>
         </div>
       </div>
 
@@ -263,15 +270,19 @@ function Page() {
       {loading && <div className="muted">Carregando…</div>}
 
       {!loading && filtered.length === 0 && (
-        <div className="card" data-tour="cotacoes-lista">
+        <div className="card" data-tour="em-negociacao-lista">
           <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
-            Nenhuma cotação ativa. Cotações aparecem aqui depois que o cálculo é solicitado.
+            Nenhuma cotação calculada aguardando ajuste.
           </div>
         </div>
       )}
 
       {filtered.length > 0 && (
-        <div className="card" data-tour="cotacoes-lista" style={{ padding: 0, overflow: "hidden" }}>
+        <div
+          className="card"
+          data-tour="em-negociacao-lista"
+          style={{ padding: 0, overflow: "hidden" }}
+        >
           <table className="table-pipe">
             <thead>
               <tr>
@@ -294,11 +305,25 @@ function Page() {
                 const veic = r.veiculo
                   ? `${r.veiculo.marca_nome ?? ""} ${r.veiculo.modelo_nome ?? ""} ${r.veiculo.ano_modelo ?? ""}`.trim()
                   : "—";
+                const propostaLigada = r.propostas?.find(
+                  (p) => p.transmissao_status !== "transmitida",
+                );
                 return (
                   <tr
                     key={r.id}
-                    onClick={() => nav({ to: "/venda/novo-lead", search: { id: r.id, step: 5 } })}
-                    style={{ cursor: "pointer" }}
+                    ref={(el) => {
+                      rowRefs.current[r.id] = el;
+                    }}
+                    onClick={() => abrirCalculo(r.id)}
+                    style={{
+                      cursor: "pointer",
+                      ...(propostaLigada && selected === propostaLigada.id
+                        ? {
+                            outline: "2px solid var(--brand, #2563eb)",
+                            background: "rgba(37,99,235,.06)",
+                          }
+                        : {}),
+                    }}
                   >
                     <td
                       className="small muted"
@@ -332,13 +357,55 @@ function Page() {
                       })}
                     </td>
                     <td>{expiraChip(r.criado_em)}</td>
-                    <td>›</td>
+                    <td>
+                      <div className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
+                        {propostaLigada && (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              negociarProposta(propostaLigada.id);
+                            }}
+                          >
+                            Negociar
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-yellow btn-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirCalculo(r.id);
+                          }}
+                        >
+                          <svg width={13} height={13}>
+                            <use href="#i-compare" />
+                          </svg>{" "}
+                          Abrir cálculo
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+      )}
+
+      {propostaSelecionada && (
+        <NegociacaoPropostaPanel
+          proposta={{
+            id: propostaSelecionada.id,
+            numero: propostaSelecionada.numero,
+            seguradora: propostaSelecionada.seguradora,
+            premio: propostaSelecionada.premio,
+            valor: propostaSelecionada.valor,
+            negociacao_status: propostaSelecionada.negociacao_status,
+            prazo_resposta: propostaSelecionada.prazo_resposta,
+            segurado: seguradoDaSelecionada,
+          }}
+          onChanged={() => void loadRows()}
+        />
       )}
     </AppShell>
   );

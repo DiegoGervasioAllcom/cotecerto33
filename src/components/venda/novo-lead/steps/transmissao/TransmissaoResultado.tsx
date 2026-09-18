@@ -43,8 +43,13 @@ export function TransmissaoResultado({ seguradora, resultado, tentarNovamente }:
             <use href="#i-check" />
           </svg>
           <div style={{ marginTop: 8, fontWeight: 600 }}>Proposta transmitida com sucesso</div>
-          <Link to="/venda/aceite" className="btn btn-yellow" style={{ marginTop: 12 }}>
-            Ir para Aceite &amp; Transmissão
+          <Link
+            to="/venda/emissao"
+            search={resultado.propostaId ? { selected: resultado.propostaId } : {}}
+            className="btn btn-yellow"
+            style={{ marginTop: 12 }}
+          >
+            Ir para Emissão
           </Link>
         </>
       )}
@@ -73,12 +78,13 @@ export function TransmissaoResultado({ seguradora, resultado, tentarNovamente }:
             {/* RECUSADA_PELO_PORTAL é rejeição de regra de negócio do portal (ex.:
                 duplicidade) — reenviar os mesmos dados não muda o resultado, então
                 "Tentar novamente" não faz sentido aqui. A proposta já foi registrada
-                como negociação recusada (com o motivo no histórico de versão), então
-                o link certo é a tela de Propostas, não Aceite & Transmissão. */}
+                como negociação recusada (com o motivo no histórico de versão) — ela
+                nunca chegou a transmitir com sucesso, então continua em Em
+                negociação (não em Emissão, que só lista propostas transmitidas). */}
             {resultado.motivo === "RECUSADA_PELO_PORTAL" ? (
               resultado.propostaId && (
                 <Link
-                  to="/venda/propostas"
+                  to="/venda/em-negociacao"
                   search={{ selected: resultado.propostaId }}
                   className="btn btn-slate"
                 >
@@ -92,7 +98,7 @@ export function TransmissaoResultado({ seguradora, resultado, tentarNovamente }:
                 </button>
                 {resultado.propostaId && (
                   <Link
-                    to="/venda/aceite"
+                    to="/venda/em-finalizacao"
                     search={{ selected: resultado.propostaId }}
                     className="btn btn-slate"
                   >

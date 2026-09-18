@@ -89,8 +89,8 @@ export async function resolveTutorialDestination(
       ? { kind: "cotacao", id, target: step.target }
       : {
           kind: "static",
-          route: "/venda/cotacoes",
-          target: '[data-tour="cotacoes-lista"]',
+          route: "/venda/em-negociacao",
+          target: '[data-tour="em-negociacao-lista"]',
         };
   }
   if (step.destination === "proposta-selecionada") {
@@ -98,8 +98,8 @@ export async function resolveTutorialDestination(
       ? { kind: "proposta", id, target: step.target }
       : {
           kind: "static",
-          route: "/venda/propostas",
-          target: '[data-tour="propostas-lista"]',
+          route: "/venda/em-negociacao",
+          target: '[data-tour="em-negociacao-lista"]',
         };
   }
   if (step.destination === "franquia-detalhe") {

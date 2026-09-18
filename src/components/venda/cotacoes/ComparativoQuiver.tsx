@@ -402,8 +402,17 @@ export function ComparativoQuiver({
                 <use href="#i-check" />
               </svg>
               <div style={{ marginTop: 8, fontWeight: 600 }}>Proposta transmitida com sucesso</div>
-              <Link to="/venda/aceite" className="btn btn-yellow" style={{ marginTop: 12 }}>
-                Ir para Aceite &amp; Transmissão
+              <Link
+                to="/venda/emissao"
+                search={
+                  resultadoTransmissao.propostaId
+                    ? { selected: resultadoTransmissao.propostaId }
+                    : {}
+                }
+                className="btn btn-yellow"
+                style={{ marginTop: 12 }}
+              >
+                Ir para Emissão
               </Link>
             </>
           )}
@@ -433,7 +442,7 @@ export function ComparativoQuiver({
                 {resultadoTransmissao.motivo === "RECUSADA_PELO_PORTAL" ? (
                   resultadoTransmissao.propostaId && (
                     <Link
-                      to="/venda/propostas"
+                      to="/venda/em-negociacao"
                       search={{ selected: resultadoTransmissao.propostaId }}
                       className="btn btn-slate"
                     >
@@ -447,7 +456,7 @@ export function ComparativoQuiver({
                     </button>
                     {resultadoTransmissao.propostaId && (
                       <Link
-                        to="/venda/aceite"
+                        to="/venda/em-finalizacao"
                         search={{ selected: resultadoTransmissao.propostaId }}
                         className="btn btn-slate"
                       >

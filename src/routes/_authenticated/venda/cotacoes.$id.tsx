@@ -133,7 +133,7 @@ function Page() {
       <AppShell title="Comparativo">
         <ProtoIcons />
         <div className="alert alert-err">{erro || "Cotação não encontrada."}</div>
-        <Link to="/venda/cotacoes" className="btn">
+        <Link to="/venda/em-negociacao" className="btn">
           <svg width={14} height={14}>
             <use href="#i-chevron-left" />
           </svg>{" "}
@@ -165,7 +165,10 @@ function Page() {
           </div>
         </div>
         <div className="tools">
-          <button className="btn btn-ghost" onClick={() => navigate({ to: "/venda/cotacoes" })}>
+          <button
+            className="btn btn-ghost"
+            onClick={() => navigate({ to: "/venda/em-negociacao" })}
+          >
             <svg width={14} height={14}>
               <use href="#i-chevron-left" />
             </svg>{" "}

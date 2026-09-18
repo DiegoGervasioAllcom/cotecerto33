@@ -2,8 +2,13 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Perfil } from "@/integrations/supabase/client";
+import { limiteRiscoISO } from "@/lib/agenda";
 
 export const ATENDER_AGORA_QUERY_KEY = ["leads", "atender-agora"] as const;
+export const AGENDA_BADGE_QUERY_KEY = ["nav-badges", "agenda"] as const;
+export const EM_COTACAO_BADGE_QUERY_KEY = ["nav-badges", "em-cotacao"] as const;
+export const EM_NEGOCIACAO_BADGE_QUERY_KEY = ["nav-badges", "em-negociacao"] as const;
+export const EM_FINALIZACAO_BADGE_QUERY_KEY = ["nav-badges", "em-finalizacao"] as const;
 
 export type AtenderAgoraLead = {
   id: string;
@@ -84,6 +89,69 @@ async function countAprovacoesPendentes(role: Perfil | null): Promise<number> {
   return count ?? 0;
 }
 
+/**
+ * Contagem de itens pendentes de "Minha agenda" (Frente 9 · V12): soma as 3
+ * fontes reais da tela (`src/lib/agenda.ts`) — retornos agendados, negócios
+ * em risco e lembretes pessoais — sem montar as linhas inteiras, só o total
+ * usado no badge do menu.
+ */
+async function countAgendaPendente(userId: string): Promise<number> {
+  const [retornos, risco, lembretes] = await Promise.all([
+    supabase
+      .from("lead_agendamentos")
+      .select("id", { count: "exact", head: true })
+      .eq("done", false)
+      .eq("criado_por", userId),
+    supabase
+      .from("cotacoes")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["calculada", "proposta"])
+      .lt("atualizado_em", limiteRiscoISO()),
+    supabase.from("lembretes").select("id", { count: "exact", head: true }).eq("done", false),
+  ]);
+  return (retornos.count ?? 0) + (risco.count ?? 0) + (lembretes.count ?? 0);
+}
+
+/** Contagem de cotações em preenchimento (mesmo filtro de em-cotacao.tsx). */
+async function countEmCotacaoPendente(): Promise<number> {
+  const { count } = await supabase
+    .from("cotacoes")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "rascunho");
+  return count ?? 0;
+}
+
+/** Contagem de cotações em negociação (mesmo filtro de em-negociacao.tsx). */
+async function countEmNegociacaoPendente(): Promise<number> {
+  const { count } = await supabase
+    .from("cotacoes")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["calculada", "proposta"]);
+  return count ?? 0;
+}
+
+/**
+ * Contagem de tentativas de transmissão em aberto (mesmo filtro de
+ * em-finalizacao.tsx), deduplicadas por `cotacao_id` — uma cotação pode ter
+ * várias tentativas por retransmissão após falha, só a mais recente conta.
+ * A dedupe acontece em memória sobre as últimas 500 tentativas (mesmo limite
+ * da tela); se algum dia existirem mais de 500 tentativas simultâneas em
+ * aberto, o número pode ficar levemente subcontado — limitação aceita, igual
+ * à da própria lista.
+ */
+async function countEmFinalizacaoPendente(): Promise<number> {
+  const { data, error } = await supabase
+    .from("cotacao_transmissoes")
+    .select("cotacao_id")
+    .in("status", ["enviada", "falha"])
+    .order("criado_em", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  const vistos = new Set<string>();
+  for (const t of data ?? []) vistos.add(t.cotacao_id);
+  return vistos.size;
+}
+
 /** Formata um intervalo em segundos como "Xh Ym" ou "Xm Ys". */
 export function formatElapsed(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
@@ -103,6 +171,11 @@ type NavBadges = {
   leadMaisAntigoElapsed: string | null;
   atenderAgora: AtenderAgoraLead[] | null;
   atenderAgoraErro: string | null;
+  /** Badges do menu de venda (V12 · Frente 9) — só populam com `verVenda`. */
+  agendaPendentes: number | null;
+  emCotacaoPendentes: number | null;
+  emNegociacaoPendentes: number | null;
+  emFinalizacaoPendentes: number | null;
 };
 
 /**
@@ -115,6 +188,7 @@ export function useNavBadges({
   verLeads,
   verAprovacoes,
   verAtenderAgora,
+  verVenda,
   userId,
 }: {
   /**
@@ -129,6 +203,12 @@ export function useNavBadges({
   verAprovacoes: boolean;
   /** Apenas vendedor e Franquia Individual. */
   verAtenderAgora: boolean;
+  /**
+   * Apenas vendedor e Franquia Individual (mesmo escopo de `verAtenderAgora`)
+   * — habilita os 4 badges do menu de venda (agenda, em cotação, em
+   * negociação, em finalização) criados na Frente 9 · V12.
+   */
+  verVenda: boolean;
   userId: string | null;
 }): NavBadges {
   const [leadsPendentes, setLeadsPendentes] = useState<number | null>(null);
@@ -140,6 +220,38 @@ export function useNavBadges({
     queryFn: () => fetchAtenderAgoraLeads(userId!),
     enabled: verAtenderAgora && !!userId,
     refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+  const agendaQuery = useQuery({
+    queryKey: [...AGENDA_BADGE_QUERY_KEY, userId],
+    queryFn: () => countAgendaPendente(userId!),
+    enabled: verVenda && !!userId,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+  const emCotacaoQuery = useQuery({
+    queryKey: EM_COTACAO_BADGE_QUERY_KEY,
+    queryFn: countEmCotacaoPendente,
+    enabled: verVenda,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+  const emNegociacaoQuery = useQuery({
+    queryKey: EM_NEGOCIACAO_BADGE_QUERY_KEY,
+    queryFn: countEmNegociacaoPendente,
+    enabled: verVenda,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+  });
+  const emFinalizacaoQuery = useQuery({
+    queryKey: EM_FINALIZACAO_BADGE_QUERY_KEY,
+    queryFn: countEmFinalizacaoPendente,
+    enabled: verVenda,
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
@@ -207,5 +319,9 @@ export function useNavBadges({
     leadMaisAntigoElapsed,
     atenderAgora: verAtenderAgora && userId ? (atenderQuery.data ?? null) : null,
     atenderAgoraErro: atenderQuery.error instanceof Error ? atenderQuery.error.message : null,
+    agendaPendentes: verVenda && userId ? (agendaQuery.data ?? null) : null,
+    emCotacaoPendentes: verVenda ? (emCotacaoQuery.data ?? null) : null,
+    emNegociacaoPendentes: verVenda ? (emNegociacaoQuery.data ?? null) : null,
+    emFinalizacaoPendentes: verVenda ? (emFinalizacaoQuery.data ?? null) : null,
   };
 }
