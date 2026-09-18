@@ -16,7 +16,7 @@ import {
  * Transmitida (`StepTransmissao.tsx`) — entra em modo "transmitindo" ao
  * confirmar a transmissão, reage ao webhook `POST
  * /api/webhooks/quiver-transmissao` (sucesso e falha) via polling, e que a
- * tela de Aceite & Transmissão reflete uma falha automática.
+ * tela de Em finalização reflete uma falha automática.
  *
  * Decisão de escopo (mesma lógica de `quiver-webhook.spec.ts`/`venda.spec.ts`):
  * o robô real (`transmitirPropostaQuiver` → serviço `cotacao-api`, que abre um
@@ -133,7 +133,7 @@ async function gerarPropostaComTentativaReal(page: Page, fixture: CotacaoQuiverF
 }
 
 test.describe("Webhook de transmissão — StepCalculo reage ao resultado do robô", () => {
-  test("sucesso: webhook transmitido=true → UI mostra confirmação e link para Aceite", async ({
+  test("sucesso: webhook transmitido=true → UI mostra confirmação e link para Emissão", async ({
     page,
   }) => {
     const fixture = await prepararCotacaoCalculada(page);
@@ -155,13 +155,13 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       await expect(page.getByText("Proposta transmitida com sucesso")).toBeVisible({
         timeout: 15_000,
       });
-      await expect(page.getByRole("link", { name: "Ir para Aceite & Transmissão" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Ir para Emissão" })).toBeVisible();
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
     }
   });
 
-  test("falha por RECUSADA_PELO_PORTAL → sem 'Tentar novamente', 'Ver proposta' leva pra Propostas com negociação recusada", async ({
+  test("falha por RECUSADA_PELO_PORTAL → sem 'Tentar novamente', 'Ver proposta' leva pra Em negociação com negociação recusada", async ({
     page,
   }) => {
     const fixture = await prepararCotacaoCalculada(page);
@@ -190,10 +190,10 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       // dados não resolve, então não há "Tentar novamente" pra esse motivo.
       await expect(page.getByRole("button", { name: "Tentar novamente" })).toHaveCount(0);
 
-      // "Ver proposta" leva pra Propostas (não Aceite & Transmissão) — a
+      // "Ver proposta" leva pra Em negociação (não Em finalização) — a
       // negociação já foi marcada como recusada, com o motivo no histórico.
       await page.getByRole("link", { name: "Ver proposta" }).click();
-      await expect(page).toHaveURL(/\/venda\/propostas\?/);
+      await expect(page).toHaveURL(/\/venda\/em-negociacao\?/);
 
       // Escopado no painel da proposta aberta (data-tour="proposta-painel"),
       // não na tabela inteira — em CI (fullyParallel) outra proposta rodando
@@ -210,7 +210,7 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
     }
   });
 
-  test("falha por CAMPOS_PENDENTES → mantém 'Tentar novamente' e link pra Aceite & Transmissão", async ({
+  test("falha por CAMPOS_PENDENTES → mantém 'Tentar novamente' e link pra Em finalização", async ({
     page,
   }) => {
     const fixture = await prepararCotacaoCalculada(page);

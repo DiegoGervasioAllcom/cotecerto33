@@ -1,11 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import {
-  admin,
-  criarPersonaComEmpresa,
-  loginMatriz,
-  uniq,
-  type Db,
-} from "../helpers/supabase";
+import { admin, criarPersonaComEmpresa, loginMatriz, uniq, type Db } from "../helpers/supabase";
 
 /**
  * RLS de `lead_agendamentos` (retorno/lembrete de lead — base da futura tela

@@ -1,11 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import {
-  admin,
-  criarPersonaComEmpresa,
-  loginMatriz,
-  uniq,
-  type Db,
-} from "../helpers/supabase";
+import { admin, criarPersonaComEmpresa, loginMatriz, uniq, type Db } from "../helpers/supabase";
 
 /**
  * RLS de `lembretes` (anotação pessoal do vendedor — tarefa/ligação/reunião/
@@ -164,10 +158,7 @@ describe("RLS lembretes — 100% privado ao vendedor, mesmo vinculado a lead de 
     expect(eDel).toBeNull();
     expect(apagado ?? []).toHaveLength(1);
 
-    const { data: aindaExiste } = await admin
-      .from("lembretes")
-      .select("id")
-      .eq("id", novo!.id);
+    const { data: aindaExiste } = await admin.from("lembretes").select("id").eq("id", novo!.id);
     expect(aindaExiste).toHaveLength(0);
   });
 
@@ -181,10 +172,7 @@ describe("RLS lembretes — 100% privado ao vendedor, mesmo vinculado a lead de 
   });
 
   it("NEGATIVO: matriz NÃO vê o lembrete alheio (diferente de lead_agendamentos)", async () => {
-    const { data, error } = await matriz
-      .from("lembretes")
-      .select("id")
-      .eq("id", lembreteVendedor1);
+    const { data, error } = await matriz.from("lembretes").select("id").eq("id", lembreteVendedor1);
     expect(error).toBeNull();
     expect(data ?? []).toHaveLength(0);
   });
