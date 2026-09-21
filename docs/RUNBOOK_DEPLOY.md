@@ -422,6 +422,24 @@ descrito na §8 (DDL das duas primeiras + função completa da última), sem
 do app (tag `sha-3c8b23a`, PR #214) e smoke test da §6.5 ainda pendentes de
 confirmação nesta rodada.
 
+**19/09/2026 — migrations `20260917000000`/`20260917010000`/`20260917020000`/
+`20260917030000` aplicadas (PR #233, Frente 9 · menu Vendedor V12):** produção
+já estava com a Etapa 7 (PRs #229-232) publicada em rodada anterior não
+registrada nesta seção. Aplicadas as 4 migrations novas via `psql` direto
+(uma por vez, cada uma isolada, sem script combinado — não havia gotcha de
+ordem desta vez), sem `ERROR` em nenhuma; histórico confirmado com as 4
+versões no topo. `supabase-rest` reiniciado para recarregar o schema (tabelas
+novas `lead_agendamentos`/`lembretes`); esse serviço não tem `HEALTHCHECK`
+configurado no compose, então `docker inspect .State.Health.Status` não se
+aplica a ele (comportamento esperado, não é falha). Imagem do app publicada
+via `deploy.sh` (tag `sha-9f4c7f8`) — health check do próprio script OK
+(HTTP 200); `curl` externo em `https://cote-certo.sandboxallcom.com/` também
+retornou HTTP 200. `cotecerto-app` (que tem `HEALTHCHECK`) estava em
+`starting` no instante checado, transitório esperado logo após recriar o
+container. Smoke test manual da §6.5 (login como vendedor real, conferir os
+11 itens do menu, testar uma transmissão real pela Etapa 7 — primeira vez
+em produção) ainda pendente de confirmação nesta rodada.
+
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
