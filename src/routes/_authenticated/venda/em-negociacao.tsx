@@ -13,6 +13,7 @@ import {
 } from "@/components/venda/cotacoes/lista-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { NegociacaoPropostaPanel } from "@/components/venda/negociacao-proposta-panel";
+import { EM_NEGOCIACAO_STATUSES } from "@/lib/lead-etapa";
 
 export const Route = createFileRoute("/_authenticated/venda/em-negociacao")({
   head: () => ({ meta: [{ title: "Em negociação · CoteCerto" }] }),
@@ -63,6 +64,22 @@ function statusChip(s: string) {
   return <span className={`chip chip-status ${cls}`}>{label}</span>;
 }
 
+/** Consulta as cotações em negociação (status "calculada" ou "proposta") exibidas nesta tela. */
+export function fetchEmNegociacaoRows() {
+  return supabase
+    .from("cotacoes")
+    .select(
+      "id,numero,status,ramo,criado_em,atualizado_em," +
+        "segurado:cotacao_segurado(nome)," +
+        "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
+        "premios:cotacao_premios(seguradora,premio)," +
+        "propostas(id,numero,seguradora,premio,valor,negociacao_status,prazo_resposta,transmissao_status)",
+    )
+    .in("status", EM_NEGOCIACAO_STATUSES)
+    .order("atualizado_em", { ascending: false })
+    .limit(200);
+}
+
 function Page() {
   const nav = useNavigate();
   const navigate = useNavigate({ from: "/venda/em-negociacao" });
@@ -76,18 +93,7 @@ function Page() {
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
   async function loadRows() {
-    const { data, error } = await supabase
-      .from("cotacoes")
-      .select(
-        "id,numero,status,ramo,criado_em,atualizado_em," +
-          "segurado:cotacao_segurado(nome)," +
-          "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
-          "premios:cotacao_premios(seguradora,premio)," +
-          "propostas(id,numero,seguradora,premio,valor,negociacao_status,prazo_resposta,transmissao_status)",
-      )
-      .in("status", ["calculada", "proposta"])
-      .order("atualizado_em", { ascending: false })
-      .limit(200);
+    const { data, error } = await fetchEmNegociacaoRows();
     if (error) setErr(error.message);
     setRows((data ?? []) as unknown as Row[]);
     setLoading(false);

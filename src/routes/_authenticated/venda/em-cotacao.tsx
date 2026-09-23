@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { cotNum } from "@/components/venda/cotacoes/lista-helpers";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { EM_COTACAO_STATUSES } from "@/lib/lead-etapa";
 
 export const Route = createFileRoute("/_authenticated/venda/em-cotacao")({
   head: () => ({ meta: [{ title: "Em cotação · CoteCerto" }] }),
@@ -24,6 +25,20 @@ type Row = {
   } | null;
 };
 
+/** Consulta as cotações em preenchimento (status "rascunho") exibidas nesta tela. */
+export function fetchEmCotacaoRows() {
+  return supabase
+    .from("cotacoes")
+    .select(
+      "id,numero,ramo,criado_em,atualizado_em," +
+        "segurado:cotacao_segurado(nome)," +
+        "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)",
+    )
+    .in("status", EM_COTACAO_STATUSES)
+    .order("atualizado_em", { ascending: false })
+    .limit(200);
+}
+
 function Page() {
   const nav = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
@@ -33,16 +48,7 @@ function Page() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("cotacoes")
-        .select(
-          "id,numero,ramo,criado_em,atualizado_em," +
-            "segurado:cotacao_segurado(nome)," +
-            "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)",
-        )
-        .eq("status", "rascunho")
-        .order("atualizado_em", { ascending: false })
-        .limit(200);
+      const { data, error } = await fetchEmCotacaoRows();
       if (error) setErr(error.message);
       setRows((data ?? []) as unknown as Row[]);
       setLoading(false);

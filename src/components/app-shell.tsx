@@ -37,7 +37,7 @@ import logoUrl from "@/assets/cotecerto-logo.png";
 import { useAuth } from "@/lib/auth";
 import { usePresence } from "@/lib/use-presence";
 import { useGroupScope } from "@/lib/group-scope";
-import { useNavBadges } from "@/lib/nav-badges";
+import { atenderAgoraRestanteMs, formatRemaining, useNavBadges } from "@/lib/nav-badges";
 import { useAreas, ehPerfilInterno, type AreaChave } from "@/lib/use-areas";
 import { resolveNavExperiencia, ehAreaDaFull } from "@/lib/nav-experience";
 import type { Perfil } from "@/integrations/supabase/client";
@@ -222,11 +222,6 @@ const BRAND_LABEL: Record<Perfil, string> = {
   vendedor: "VENDEDOR",
 };
 
-function formatRemaining(milliseconds: number): string {
-  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
-  return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
-}
-
 export function AppShell({
   title,
   crumbs,
@@ -292,8 +287,7 @@ export function AppShell({
     return () => window.clearInterval(timer);
   }, [atenderAgora?.length, venLike]);
   const atenderMaisUrgente = atenderAgora?.reduce<number | null>((menor, lead) => {
-    const inicio = new Date(lead.distribuido_em ?? lead.criado_em).getTime();
-    const restante = Math.max(0, 3 * 60 * 1000 - (now - inicio));
+    const restante = atenderAgoraRestanteMs(lead, now);
     return menor === null || restante < menor ? restante : menor;
   }, null);
   const atenderTempo =

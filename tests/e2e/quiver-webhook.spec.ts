@@ -27,7 +27,7 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     if (fixture) await limparCotacaoQuiverFixture(fixture);
   });
 
-  test("calculada: webhook mostra os cards e move o lead relacionado para Cotação", async ({
+  test("calculada: webhook mostra os cards e move o lead relacionado para Em negociação", async ({
     page,
   }) => {
     fixture = await criarCotacaoQuiverFixture();
@@ -463,10 +463,15 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await popup.close();
 
     await page.goto("/venda/pipeline");
-    // O status canônico é `cotacao`; a coluna correspondente ainda é rotulada
-    // "Cotando" na UI atual.
-    const colunaCotacao = page.locator('.kcol[data-stage="Cotando"]');
-    await expect(colunaCotacao.getByText(fixture.leadNome, { exact: true })).toBeVisible({
+    // O funil automático (V12) deriva o estágio de `cotacoes.status`, não mais
+    // de `leads.status_pipeline` (que a migration 20260813030000 avança pra
+    // "cotacao" nesse mesmo instante, mas esse campo não é mais a fonte do
+    // Kanban). Como o webhook já grava `cotacoes.status='calculada'`
+    // (registrar_premios_quiver), e EM_NEGOCIACAO_STATUSES inclui "calculada"
+    // (mesma regra já usada por em-negociacao.tsx), o lead cai direto em
+    // "Em negociação" — sem depender do arrasto manual que existia antes.
+    const colunaNegociacao = page.locator('.kcol[data-stage="negociacao"]');
+    await expect(colunaNegociacao.getByText(fixture.leadNome, { exact: true })).toBeVisible({
       timeout: 10_000,
     });
   });

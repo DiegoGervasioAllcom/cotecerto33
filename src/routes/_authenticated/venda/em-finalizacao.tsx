@@ -6,6 +6,7 @@ import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-conte
 import { AceiteTutorialPreview } from "@/components/venda/aceite-tutorial-preview";
 import { cotNum, money } from "@/components/venda/cotacoes/lista-helpers";
 import { supabase } from "@/integrations/supabase/client";
+import { primeiraOcorrenciaPorChave, TRANSMISSAO_EM_ABERTO_STATUSES } from "@/lib/lead-etapa";
 
 export const Route = createFileRoute("/_authenticated/venda/em-finalizacao")({
   head: () => ({ meta: [{ title: "Em finalização · CoteCerto" }] }),
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/venda/em-finalizacao")({
 // quando a tentativa vira 'transmitida' é que a cotação sai desta lista —
 // nesse ponto ela já vive em Propostas/Emissão. Cada linha é a ÚLTIMA
 // tentativa por cotação (mais recente primeiro, deduplicada em memória).
-type TentativaRow = {
+export type TentativaRow = {
   id: string;
   cotacao_id: string;
   status: string;
@@ -47,7 +48,7 @@ type TentativaRow = {
   } | null;
 };
 
-type Row = {
+export type Row = {
   tentativaId: string;
   cotacaoId: string;
   numero: number;
@@ -69,6 +70,49 @@ function tempoDesde(iso: string): string {
   const horas = Math.floor(min / 60);
   if (horas < 24) return `${horas}h`;
   return `${Math.floor(horas / 24)}d`;
+}
+
+/** Consulta as tentativas de transmissão em aberto (status "enviada" ou "falha") exibidas nesta tela. */
+export function fetchEmFinalizacaoRows() {
+  return supabase
+    .from("cotacao_transmissoes")
+    .select(
+      "id,cotacao_id,status,motivo,mensagem,seguradora,premio,forma_pagamento,criado_em,proposta_id," +
+        "cotacoes(numero,segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))",
+    )
+    .in("status", TRANSMISSAO_EM_ABERTO_STATUSES)
+    .order("criado_em", { ascending: false })
+    .limit(500);
+}
+
+/**
+ * Uma cotação pode ter várias tentativas (retransmissão após falha) — só a
+ * mais recente importa. Assume que `data` já vem ordenada por criado_em desc
+ * (responsabilidade de `fetchEmFinalizacaoRows`).
+ */
+export function dedupTentativas(data: readonly TentativaRow[] | null): Row[] {
+  return primeiraOcorrenciaPorChave(data ?? [], (t) => t.cotacao_id).map((t) => {
+    const c = t.cotacoes;
+    const veiculo = c?.veiculo?.[0];
+    return {
+      tentativaId: t.id,
+      cotacaoId: t.cotacao_id,
+      numero: c?.numero ?? 0,
+      status: t.status,
+      motivo: t.motivo,
+      mensagem: t.mensagem,
+      seguradora: t.seguradora,
+      premio: t.premio,
+      formaPagamento: t.forma_pagamento,
+      criadoEm: t.criado_em,
+      propostaId: t.proposta_id,
+      segurado: c?.segurado?.[0]?.nome || "—",
+      veiculo: veiculo
+        ? [veiculo.marca_nome, veiculo.modelo_nome, veiculo.ano_modelo].filter(Boolean).join(" ") +
+          (veiculo.placa ? ` · ${veiculo.placa}` : "")
+        : "—",
+    };
+  });
 }
 
 function statusChip(r: Row) {
@@ -103,50 +147,13 @@ function Page() {
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("cotacao_transmissoes")
-      .select(
-        "id,cotacao_id,status,motivo,mensagem,seguradora,premio,forma_pagamento,criado_em,proposta_id," +
-          "cotacoes(numero,segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))",
-      )
-      .in("status", ["enviada", "falha"])
-      .order("criado_em", { ascending: false })
-      .limit(500);
+    const { data, error } = await fetchEmFinalizacaoRows();
     if (error) {
       setErr(error.message);
       setLoading(false);
       return;
     }
-    // Uma cotação pode ter várias tentativas (retransmissão após falha) — só a
-    // mais recente importa, e a lista já vem ordenada por criado_em desc.
-    const vistos = new Set<string>();
-    const dedup: Row[] = [];
-    for (const t of (data ?? []) as unknown as TentativaRow[]) {
-      if (vistos.has(t.cotacao_id)) continue;
-      vistos.add(t.cotacao_id);
-      const c = t.cotacoes;
-      const veiculo = c?.veiculo?.[0];
-      dedup.push({
-        tentativaId: t.id,
-        cotacaoId: t.cotacao_id,
-        numero: c?.numero ?? 0,
-        status: t.status,
-        motivo: t.motivo,
-        mensagem: t.mensagem,
-        seguradora: t.seguradora,
-        premio: t.premio,
-        formaPagamento: t.forma_pagamento,
-        criadoEm: t.criado_em,
-        propostaId: t.proposta_id,
-        segurado: c?.segurado?.[0]?.nome || "—",
-        veiculo: veiculo
-          ? [veiculo.marca_nome, veiculo.modelo_nome, veiculo.ano_modelo]
-              .filter(Boolean)
-              .join(" ") + (veiculo.placa ? ` · ${veiculo.placa}` : "")
-          : "—",
-      });
-    }
-    setRows(dedup);
+    setRows(dedupTentativas(data as unknown as TentativaRow[]));
     setLoading(false);
   }
 

@@ -3,6 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Perfil } from "@/integrations/supabase/client";
 import { limiteRiscoISO } from "@/lib/agenda";
+import {
+  EM_COTACAO_STATUSES,
+  EM_NEGOCIACAO_STATUSES,
+  TRANSMISSAO_EM_ABERTO_STATUSES,
+  primeiraOcorrenciaPorChave,
+} from "@/lib/lead-etapa";
 
 export const ATENDER_AGORA_QUERY_KEY = ["leads", "atender-agora"] as const;
 export const AGENDA_BADGE_QUERY_KEY = ["nav-badges", "agenda"] as const;
@@ -117,7 +123,7 @@ async function countEmCotacaoPendente(): Promise<number> {
   const { count } = await supabase
     .from("cotacoes")
     .select("id", { count: "exact", head: true })
-    .eq("status", "rascunho");
+    .in("status", EM_COTACAO_STATUSES);
   return count ?? 0;
 }
 
@@ -126,7 +132,7 @@ async function countEmNegociacaoPendente(): Promise<number> {
   const { count } = await supabase
     .from("cotacoes")
     .select("id", { count: "exact", head: true })
-    .in("status", ["calculada", "proposta"]);
+    .in("status", EM_NEGOCIACAO_STATUSES);
   return count ?? 0;
 }
 
@@ -143,13 +149,35 @@ async function countEmFinalizacaoPendente(): Promise<number> {
   const { data, error } = await supabase
     .from("cotacao_transmissoes")
     .select("cotacao_id")
-    .in("status", ["enviada", "falha"])
+    .in("status", TRANSMISSAO_EM_ABERTO_STATUSES)
     .order("criado_em", { ascending: false })
     .limit(500);
   if (error) throw error;
-  const vistos = new Set<string>();
-  for (const t of data ?? []) vistos.add(t.cotacao_id);
-  return vistos.size;
+  return primeiraOcorrenciaPorChave(data ?? [], (t) => t.cotacao_id).length;
+}
+
+/**
+ * Tempo (ms) que um lead "novo" tem, a partir de `distribuido_em` (ou
+ * `criado_em`, se ainda não distribuído), antes de voltar pra fila da Matriz
+ * e ser redistribuído. Fonte única desta regra — usada pelo "Atender agora"
+ * do topbar (`AppShell`) e pelo timer do card do Pipeline (T9); não duplicar
+ * o `3 * 60 * 1000` em outro lugar.
+ */
+export const ATENDER_AGORA_LIMITE_MS = 3 * 60 * 1000;
+
+/** ms restantes até o lead voltar pra fila da Matriz — nunca negativo. */
+export function atenderAgoraRestanteMs(
+  lead: Pick<AtenderAgoraLead, "distribuido_em" | "criado_em">,
+  now: number,
+): number {
+  const inicio = new Date(lead.distribuido_em ?? lead.criado_em).getTime();
+  return Math.max(0, ATENDER_AGORA_LIMITE_MS - (now - inicio));
+}
+
+/** Formata um intervalo em milissegundos como "Xm Ys" (contagem regressiva). */
+export function formatRemaining(milliseconds: number): string {
+  const seconds = Math.max(0, Math.floor(milliseconds / 1000));
+  return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
 }
 
 /** Formata um intervalo em segundos como "Xh Ym" ou "Xm Ys". */
