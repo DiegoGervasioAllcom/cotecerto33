@@ -1,103 +1,89 @@
+// Pipeline de leads — Kanban/Tabela do funil automático (Pipeline V12, T9).
+// A coluna não é mais arrastada manualmente: o estágio de cada lead é
+// consequência do progresso real (`fetchPipelineLeads` / `leadEtapaBucket`,
+// `@/lib/pipeline-data` e `@/lib/lead-etapa` — T8). Decisão já aprovada: sem
+// drag-and-drop nesta tela a partir de agora.
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/database.types";
-import { pipelineColumnKey, resolveExistingLeadDestination } from "@/lib/pipeline-lead-navigation";
+import { PipelineCard } from "@/components/venda/pipeline/pipeline-card";
+import {
+  ageDays,
+  ETAPAS_ATIVAS,
+  ETAPA_LABEL,
+  money,
+  pipelineHeaderResumo,
+  pontoExato,
+  veiculoResumo,
+} from "@/components/venda/pipeline/pipeline-format";
+import { useAuth } from "@/lib/auth";
+import type { LeadEtapaBucket } from "@/lib/lead-etapa";
+import {
+  atenderAgoraRestanteMs,
+  fetchAtenderAgoraLeads,
+  type AtenderAgoraLead,
+} from "@/lib/nav-badges";
+import {
+  fetchPipelineLeads,
+  fetchRetornosPendentesPorLead,
+  type PipelineLeadRow,
+  type PipelineRetornoPendente,
+} from "@/lib/pipeline-data";
+import { resolveExistingLeadDestination } from "@/lib/pipeline-lead-navigation";
 
 export const Route = createFileRoute("/_authenticated/venda/pipeline")({
   head: () => ({ meta: [{ title: "Pipeline · CoteCerto" }] }),
   component: Page,
 });
 
-type Stage = { id: string; ordem: number; nome: string; cor: string | null };
-type Lead = {
-  id: string;
-  nome: string;
-  contato: string | null;
-  status_pipeline: string;
-  valor: number | null;
-  criado_em: string;
-  origem: string | null;
-  motivo_perda: string | null;
-  bloqueado: boolean | null;
-  em_avaliacao_matriz: boolean | null;
-};
+type EtapaFiltro = "todas" | LeadEtapaBucket;
+type ParadoFiltro = "todos" | "3" | "7";
+type StatusFiltro = "todos" | "ativos" | "perdidos";
 
-const STAGE_KEY: Record<string, string> = {
-  Novo: "novo",
-  Qualificando: "contato",
-  Cotando: "cotacao",
-  "Proposta enviada": "proposta",
-  "Em negociação": "negociacao",
-  Fechado: "ganho",
-};
-
-const PERIOD_OPTIONS = [
-  { value: "todos", label: "Período · todos" },
-  { value: "mes_atual", label: "Mês atual" },
-  { value: "mes_passado", label: "Mês passado" },
-  { value: "90dias", label: "Últimos 90 dias" },
-] as const;
-
-function money(v: number | null) {
-  return v
-    ? Number(v).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-        maximumFractionDigits: 0,
-      })
-    : "—";
-}
-
-function ageDays(iso: string) {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-}
-
-function matchesPeriod(iso: string, period: string) {
-  if (period === "todos") return true;
-  const d = new Date(iso);
-  const now = new Date();
-  if (period === "90dias") {
-    return now.getTime() - d.getTime() <= 90 * 24 * 60 * 60 * 1000;
-  }
-  if (period === "mes_atual") {
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-  }
-  if (period === "mes_passado") {
-    const ref = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
-  }
-  return true;
+function matchesParado(criadoEm: string, parado: ParadoFiltro): boolean {
+  if (parado === "todos") return true;
+  return ageDays(criadoEm) >= Number(parado);
 }
 
 function Page() {
   const navigate = useNavigate();
-  const [stages, setStages] = useState<Stage[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const { session } = useAuth();
+  const uid = session?.user.id ?? null;
+
+  const [leads, setLeads] = useState<PipelineLeadRow[]>([]);
+  const [retornoPorLead, setRetornoPorLead] = useState<Map<string, PipelineRetornoPendente>>(
+    new Map(),
+  );
+  const [atenderAgora, setAtenderAgora] = useState<AtenderAgoraLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const openingRef = useRef(false);
   const [view, setView] = useState<"kanban" | "tabela">("kanban");
+  const [now, setNow] = useState(Date.now());
 
-  const [fPeriod, setFPeriod] = useState<string>("todos");
+  const [fEtapa, setFEtapa] = useState<EtapaFiltro>("todas");
+  const [fRamo, setFRamo] = useState<string>("todas");
   const [fOrigem, setFOrigem] = useState<string>("todas");
-  const [fEtapa, setFEtapa] = useState<string>("todas");
+  const [fParado, setFParado] = useState<ParadoFiltro>("todos");
+  // Status (ativos/perdidos) e Motivo de perda divergem do protótipo V12 de
+  // propósito: lá, lead perdido sai do Pipeline por completo (Carteira de
+  // Recuperação). Essa tela ainda não existe no nosso produto, então o
+  // perdido continua visível aqui — só que via filtro, não como coluna fixa.
+  const [fStatus, setFStatus] = useState<StatusFiltro>("todos");
   const [fMotivo, setFMotivo] = useState<string>("todos");
-  const [fStatus, setFStatus] = useState<"todos" | "ativos" | "perdidos">("todos");
 
   function clearFilters() {
-    setFPeriod("todos");
-    setFOrigem("todas");
     setFEtapa("todas");
-    setFMotivo("todos");
+    setFRamo("todas");
+    setFOrigem("todas");
+    setFParado("todos");
     setFStatus("todos");
+    setFMotivo("todos");
   }
 
-  async function openLead(l: Lead) {
+  async function openLead(l: PipelineLeadRow) {
     if (openingRef.current) return;
     openingRef.current = true;
     setOpening(l.id);
@@ -134,28 +120,59 @@ function Page() {
 
   async function load() {
     setLoading(true);
-    const [{ data: st }, { data: lds, error }] = await Promise.all([
-      supabase.from("pipeline_stages").select("*").order("ordem"),
-      supabase
-        .from("leads")
-        .select(
-          "id,nome,contato,status_pipeline,valor,criado_em,origem,motivo_perda,bloqueado,em_avaliacao_matriz",
-        )
-        .order("atualizado_em", { ascending: false })
-        .limit(500),
+    setErr(null);
+    const { leads: rows, error } = await fetchPipelineLeads();
+    if (error) {
+      setErr(error);
+      setLeads([]);
+      setLoading(false);
+      return;
+    }
+    setLeads(rows);
+    const ids = rows.map((r) => r.id);
+    const [retornos, atender] = await Promise.all([
+      fetchRetornosPendentesPorLead(ids).catch((e: unknown) => {
+        setErr(e instanceof Error ? e.message : "Falha ao buscar retornos agendados.");
+        return new Map<string, PipelineRetornoPendente>();
+      }),
+      uid
+        ? fetchAtenderAgoraLeads(uid).catch((e: unknown) => {
+            setErr(
+              e instanceof Error ? e.message : "Falha ao buscar leads aguardando atendimento.",
+            );
+            return [] as AtenderAgoraLead[];
+          })
+        : Promise.resolve([] as AtenderAgoraLead[]),
     ]);
-    if (error) setErr(error.message);
-    setStages((st ?? []) as Stage[]);
-    setLeads((lds ?? []) as Lead[]);
+    setRetornoPorLead(retornos);
+    setAtenderAgora(atender);
     setLoading(false);
   }
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid]);
+
+  const atenderPorLead = useMemo(() => new Map(atenderAgora.map((l) => [l.id, l])), [atenderAgora]);
+  const temTimerAtivo = useMemo(
+    () => leads.some((l) => l.etapa === "novo" && atenderPorLead.has(l.id)),
+    [leads, atenderPorLead],
+  );
+  useEffect(() => {
+    if (!temTimerAtivo) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [temTimerAtivo]);
 
   const origens = useMemo(() => {
     const set = new Set<string>();
     for (const l of leads) if (l.origem) set.add(l.origem);
+    return [...set].sort();
+  }, [leads]);
+
+  const ramos = useMemo(() => {
+    const set = new Set<string>();
+    for (const l of leads) if (l.cotacao?.ramo) set.add(l.cotacao.ramo);
     return [...set].sort();
   }, [leads]);
 
@@ -167,118 +184,42 @@ function Page() {
 
   const filtered = useMemo(() => {
     return leads.filter((l) => {
-      if (!matchesPeriod(l.criado_em, fPeriod)) return false;
+      if (fEtapa !== "todas" && l.etapa !== fEtapa) return false;
+      if (fRamo !== "todas" && (l.cotacao?.ramo ?? null) !== fRamo) return false;
       if (fOrigem !== "todas" && l.origem !== fOrigem) return false;
-      if (fEtapa !== "todas" && pipelineColumnKey(l.status_pipeline) !== fEtapa) return false;
+      if (!matchesParado(l.criado_em, fParado)) return false;
       if (fMotivo !== "todos" && l.motivo_perda !== fMotivo) return false;
-      if (fStatus === "ativos" && l.status_pipeline === "perdido") return false;
-      if (fStatus === "perdidos" && l.status_pipeline !== "perdido") return false;
+      if (fStatus === "ativos" && l.etapa === "perdido") return false;
+      if (fStatus === "perdidos" && l.etapa !== "perdido") return false;
       return true;
     });
-  }, [leads, fPeriod, fOrigem, fEtapa, fMotivo, fStatus]);
+  }, [leads, fEtapa, fRamo, fOrigem, fParado, fMotivo, fStatus]);
 
   const grouped = useMemo(() => {
-    const m: Record<string, Lead[]> = {};
-    for (const s of stages) m[STAGE_KEY[s.nome] ?? s.nome.toLowerCase()] = [];
+    const m = new Map<LeadEtapaBucket, PipelineLeadRow[]>();
+    for (const info of ETAPAS_ATIVAS) m.set(info.key, []);
     for (const l of filtered) {
-      (m[pipelineColumnKey(l.status_pipeline)] ??= []).push(l);
+      if (l.etapa === "perdido") continue;
+      m.get(l.etapa)?.push(l);
     }
     return m;
-  }, [stages, filtered]);
+  }, [filtered]);
 
-  const perdidos = grouped.perdido ?? [];
+  const perdidos = useMemo(() => filtered.filter((l) => l.etapa === "perdido"), [filtered]);
 
-  const headerStats = useMemo(() => {
-    const ativos = leads.filter(
-      (l) => l.status_pipeline !== "ganho" && l.status_pipeline !== "perdido",
-    );
-    const total = ativos.reduce((a, b) => a + Number(b.valor ?? 0), 0);
-    return { count: ativos.length, total };
-  }, [leads]);
+  const headerResumo = useMemo(() => pipelineHeaderResumo(leads, filtered), [leads, filtered]);
 
-  async function move(lead: Lead, novo: string) {
-    setLeads((prev) => prev.map((x) => (x.id === lead.id ? { ...x, status_pipeline: novo } : x)));
-    const { error } = await supabase
-      .from("leads")
-      .update({
-        status_pipeline: novo as Database["public"]["Enums"]["lead_status"],
-        atualizado_em: new Date().toISOString(),
-      })
-      .eq("id", lead.id);
-    if (error) {
-      setErr(error.message);
-      load();
-    }
-  }
-
-  function renderCard(l: Lead, stageNome: string) {
-    const isPerdido = stageNome === "Perdido" || l.status_pipeline === "perdido";
+  function renderCard(l: PipelineLeadRow) {
+    const atenderLead = l.etapa === "novo" ? atenderPorLead.get(l.id) : undefined;
     return (
-      <div
+      <PipelineCard
         key={l.id}
-        className="kcard"
-        draggable
-        role="button"
-        tabIndex={opening ? -1 : 0}
-        aria-disabled={opening !== null}
-        onDragStart={(e) => e.dataTransfer.setData("text/lead", l.id)}
-        onClick={() => void openLead(l)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            void openLead(l);
-          }
-        }}
-        style={{
-          opacity: opening ? 0.6 : isPerdido ? 0.85 : 1,
-          cursor: opening ? "wait" : "grab",
-        }}
-      >
-        {isPerdido && l.motivo_perda && (
-          <div className="kcard-sub">
-            <span
-              className="chip chip-alert"
-              style={{ fontSize: 9.5, padding: "2px 8px", width: "100%" }}
-            >
-              {l.motivo_perda}
-            </span>
-          </div>
-        )}
-        {l.em_avaliacao_matriz && (
-          <div className="kcard-matrix" title="Aguardando avaliação da Matriz">
-            <div className="kcard-matrix-info">
-              <svg width={10} height={10}>
-                <use href="#i-clock" />
-              </svg>
-              <span style={{ fontWeight: 700 }}>Aguardando Matriz</span>
-            </div>
-          </div>
-        )}
-        <div className="top">
-          <span className="name">{l.nome || "Sem nome"}</span>
-          {l.bloqueado && (
-            <span title="Lead bloqueado">
-              <svg width={13} height={13}>
-                <use href="#i-lock" />
-              </svg>
-            </span>
-          )}
-        </div>
-        <div className="small muted">{l.contato || "—"}</div>
-        {l.origem && (
-          <div style={{ marginTop: 4 }}>
-            <span className="chip chip-slate" style={{ fontSize: 10 }}>
-              {l.origem}
-            </span>
-          </div>
-        )}
-        <div className="footer">
-          <span className="val">{money(l.valor)}</span>
-          <span className={`age ${ageDays(l.criado_em) >= 7 ? "warn" : ""}`}>
-            {ageDays(l.criado_em)}d
-          </span>
-        </div>
-      </div>
+        lead={l}
+        opening={opening !== null}
+        retorno={retornoPorLead.get(l.id) ?? null}
+        atenderRestanteMs={atenderLead ? atenderAgoraRestanteMs(atenderLead, now) : null}
+        onOpen={() => void openLead(l)}
+      />
     );
   }
 
@@ -288,9 +229,7 @@ function Page() {
       <div className="page-head">
         <div>
           <h1>Pipeline de leads</h1>
-          <div className="sub">
-            {headerStats.count} leads ativos · valor estimado {money(headerStats.total)}
-          </div>
+          <div className="sub">{headerResumo}</div>
         </div>
         <div className="tools">
           <div className="toggle">
@@ -320,12 +259,21 @@ function Page() {
         <span className="label">FILTROS</span>
         <select
           className="select-mini"
-          value={fPeriod}
-          onChange={(e) => setFPeriod(e.target.value)}
+          value={fEtapa}
+          onChange={(e) => setFEtapa(e.target.value as EtapaFiltro)}
         >
-          {PERIOD_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
+          <option value="todas">Estágio · todos</option>
+          {ETAPAS_ATIVAS.map((info) => (
+            <option key={info.key} value={info.key}>
+              {info.label} ({leads.filter((l) => l.etapa === info.key).length})
+            </option>
+          ))}
+        </select>
+        <select className="select-mini" value={fRamo} onChange={(e) => setFRamo(e.target.value)}>
+          <option value="todas">Tipo de seguro · todos</option>
+          {ramos.map((r) => (
+            <option key={r} value={r} style={{ textTransform: "capitalize" }}>
+              {r}
             </option>
           ))}
         </select>
@@ -341,18 +289,19 @@ function Page() {
             </option>
           ))}
         </select>
-        <select className="select-mini" value={fEtapa} onChange={(e) => setFEtapa(e.target.value)}>
-          <option value="todas">Etapa · todas</option>
-          {stages.map((s) => (
-            <option key={s.id} value={STAGE_KEY[s.nome] ?? s.nome.toLowerCase()}>
-              {s.nome}
-            </option>
-          ))}
+        <select
+          className="select-mini"
+          value={fParado}
+          onChange={(e) => setFParado(e.target.value as ParadoFiltro)}
+        >
+          <option value="todos">Parado há · qualquer tempo</option>
+          <option value="3">3 dias ou mais</option>
+          <option value="7">7 dias ou mais</option>
         </select>
         <select
           className="select-mini"
           value={fStatus}
-          onChange={(e) => setFStatus(e.target.value as typeof fStatus)}
+          onChange={(e) => setFStatus(e.target.value as StatusFiltro)}
         >
           <option value="todos">Status · todos</option>
           <option value="ativos">Ativos</option>
@@ -381,43 +330,23 @@ function Page() {
 
       {view === "kanban" ? (
         <div className="kanban">
-          {stages.map((s) => {
-            const key = STAGE_KEY[s.nome] ?? s.nome.toLowerCase();
-            const list = grouped[key] ?? [];
+          {ETAPAS_ATIVAS.map((info) => {
+            const list = grouped.get(info.key) ?? [];
             const totalVal = list.reduce((a, b) => a + Number(b.valor ?? 0), 0);
             return (
-              <div
-                key={s.id}
-                className="kcol"
-                data-stage={s.nome}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  const id = e.dataTransfer.getData("text/lead");
-                  const lead = leads.find((l) => l.id === id);
-                  if (lead && lead.status_pipeline !== key) move(lead, key);
-                }}
-              >
-                <div className="kcol-h" style={{ borderTop: `3px solid ${s.cor || "#5C6F80"}` }}>
-                  <span className="name">{s.nome}</span>
+              <div key={info.key} className="kcol" data-stage={info.key}>
+                <div className="kcol-h" style={{ borderTop: `3px solid ${info.cor}` }}>
+                  <span className="name">{info.label}</span>
                   <span className="count">{list.length}</span>
                   <span className="value">{money(totalVal)}</span>
                 </div>
                 {list.length === 0 && <div className="small muted">Vazio</div>}
-                {list.map((l) => renderCard(l, s.nome))}
+                {list.map((l) => renderCard(l))}
               </div>
             );
           })}
           {fStatus !== "ativos" && (
-            <div
-              className="kcol"
-              data-stage="Perdido"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                const id = e.dataTransfer.getData("text/lead");
-                const lead = leads.find((l) => l.id === id);
-                if (lead && lead.status_pipeline !== "perdido") move(lead, "perdido");
-              }}
-            >
+            <div className="kcol" data-stage="perdido">
               <div className="kcol-h" style={{ borderTop: "3px solid var(--alert, #dc2626)" }}>
                 <span className="name">Perdido</span>
                 <span className="count">{perdidos.length}</span>
@@ -426,7 +355,7 @@ function Page() {
                 </span>
               </div>
               {perdidos.length === 0 && <div className="small muted">Vazio</div>}
-              {perdidos.map((l) => renderCard(l, "Perdido"))}
+              {perdidos.map((l) => renderCard(l))}
             </div>
           )}
         </div>
@@ -436,21 +365,19 @@ function Page() {
             <thead>
               <tr>
                 <th>Lead</th>
-                <th>Contato</th>
+                <th>Produto</th>
+                <th>Veículo</th>
+                <th>Estágio</th>
+                <th>Dias</th>
                 <th>Origem</th>
-                <th>Etapa</th>
-                <th>Idade</th>
                 <th>Valor</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {filtered.map((l) => {
-                const stage = stages.find(
-                  (s) =>
-                    (STAGE_KEY[s.nome] ?? s.nome.toLowerCase()) ===
-                    pipelineColumnKey(l.status_pipeline),
-                );
+                const veiculo = veiculoResumo(l.cotacao?.veiculo);
+                const ponto = l.etapa === "perdido" ? l.motivo_perda : pontoExato(l.etapa);
                 return (
                   <tr
                     key={l.id}
@@ -465,17 +392,37 @@ function Page() {
                     <td>
                       <strong>{l.nome || "Sem nome"}</strong>
                     </td>
-                    <td>{l.contato || "—"}</td>
                     <td>
-                      <span className="muted small">{l.origem || "—"}</span>
+                      <span className="muted small" style={{ textTransform: "capitalize" }}>
+                        {l.cotacao?.ramo ?? "—"}
+                      </span>
                     </td>
+                    <td>{veiculo ?? "—"}</td>
                     <td>
-                      <span className="chip chip-slate">{stage?.nome ?? l.status_pipeline}</span>
+                      <span
+                        className={`chip ${
+                          l.etapa === "fechamento"
+                            ? "chip-ok"
+                            : l.etapa === "perdido"
+                              ? "chip-alert"
+                              : "chip-slate"
+                        }`}
+                      >
+                        {ETAPA_LABEL[l.etapa]}
+                      </span>
+                      {ponto && (
+                        <div className="small muted" style={{ marginTop: 2 }}>
+                          {ponto}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <span className={`age ${ageDays(l.criado_em) >= 7 ? "warn" : ""}`}>
                         {ageDays(l.criado_em)}d
                       </span>
+                    </td>
+                    <td>
+                      <span className="muted small">{l.origem || "—"}</span>
                     </td>
                     <td>
                       <strong>{money(l.valor)}</strong>
@@ -490,7 +437,7 @@ function Page() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="muted small">
+                  <td colSpan={8} className="muted small">
                     Nenhum lead encontrado com os filtros atuais.
                   </td>
                 </tr>
