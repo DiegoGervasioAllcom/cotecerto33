@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { PROPOSTA_TRANSMITIDA_STATUS } from "@/lib/lead-etapa";
 
 export const Route = createFileRoute("/_authenticated/venda/emissao")({
   head: () => ({ meta: [{ title: "Emissão & histórico · CoteCerto" }] }),
@@ -28,6 +29,19 @@ type Row = {
 const fmtBRL = (n: number | null) =>
   n ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
 
+/** Consulta as propostas já transmitidas com sucesso exibidas nesta tela. */
+export function fetchEmissaoRows() {
+  return supabase
+    .from("propostas")
+    .select(
+      "id,numero,apolice_numero,seguradora,premio,valor,criado_em,transmitida_em,cotacao_id," +
+        "cotacoes(segurado:cotacao_segurado(nome))",
+    )
+    .eq("transmissao_status", PROPOSTA_TRANSMITIDA_STATUS)
+    .order("transmitida_em", { ascending: false })
+    .limit(200);
+}
+
 function Page() {
   const { selected } = Route.useSearch();
   const [rows, setRows] = useState<Row[]>([]);
@@ -39,15 +53,7 @@ function Page() {
 
   async function loadRows() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("propostas")
-      .select(
-        "id,numero,apolice_numero,seguradora,premio,valor,criado_em,transmitida_em,cotacao_id," +
-          "cotacoes(segurado:cotacao_segurado(nome))",
-      )
-      .eq("transmissao_status", "transmitida")
-      .order("transmitida_em", { ascending: false })
-      .limit(200);
+    const { data, error } = await fetchEmissaoRows();
     if (error) setErr(error.message);
     setRows((data ?? []) as unknown as Row[]);
     setLoading(false);
