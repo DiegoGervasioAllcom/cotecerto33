@@ -38,6 +38,7 @@ import {
   PROPOSTA_TRANSMITIDA_STATUS,
   TRANSMISSAO_EM_ABERTO_STATUSES,
   type LeadEtapaBucket,
+  type TransmissaoEmAbertoStatus,
 } from "@/lib/lead-etapa";
 
 export type PipelineLead = {
@@ -59,6 +60,9 @@ export type PipelineCotacao = {
   status: string;
   ramo: string;
   atualizado_em: string;
+  /** Passo atual do wizard (`novo-lead.tsx`) — `6` é o passo de Transmissão. */
+  step_atual: number;
+  transmissao_fase: string | null;
   segurado: { nome: string | null } | null;
   veiculo: {
     marca_nome: string | null;
@@ -67,14 +71,37 @@ export type PipelineCotacao = {
   } | null;
 };
 
+/** Dados da proposta transmitida (`PROPOSTA_TRANSMITIDA_STATUS`) de um lead, para o card do bucket "fechamento" (T6). */
+export type PipelinePropostaTransmitida = {
+  numero: string | null;
+  transmissao_status: string | null;
+};
+
 type TransmissaoRow = { id: string; cotacao_id: string; status: string; criado_em: string };
-type PropostaLeadRow = { lead_id: string | null };
+type PropostaTransmitidaRow = {
+  lead_id: string | null;
+  numero: string | null;
+  transmissao_status: string | null;
+};
 
 export type PipelineLeadRow = PipelineLead & {
   /** Etapa calculada do funil automático (`leadEtapaBucket`) — não é `status_pipeline`. */
   etapa: LeadEtapaBucket;
   /** Cotação mais recente do lead (por `atualizado_em`), ou `null` se ainda não tem nenhuma. */
   cotacao: PipelineCotacao | null;
+  /** Proposta transmitida do lead (`PROPOSTA_TRANSMITIDA_STATUS`), ou `null` se ainda não tem nenhuma. */
+  propostaTransmitida: PipelinePropostaTransmitida | null;
+  /**
+   * Status (`cotacao_transmissoes.status`) da tentativa de transmissão em
+   * aberto mais recente da cotação do lead (T6b) — `null` se não há nenhuma
+   * tentativa em aberto (`TRANSMISSAO_EM_ABERTO_STATUSES`). Campo novo (em
+   * vez de reaproveitar algum existente): antes só o booleano
+   * `transmissaoEmAberto` chegava ao `leadEtapaBucket`, e o status real ficava
+   * preso dentro de `fetchPipelineLeads` — expõe aqui pra `pontoExato`/
+   * `proximaAcao` (`pipeline-format.ts`) diferenciarem "enviada" (aguardando
+   * o robô) de "falha" (precisa reenviar) dentro do bucket "finalizacao".
+   */
+  transmissaoAbertaStatus: TransmissaoEmAbertoStatus | null;
 };
 
 export type PipelineLeadsResult = { leads: PipelineLeadRow[]; error: string | null };
@@ -95,7 +122,7 @@ function fetchCotacoes(leadIds: string[]) {
   return supabase
     .from("cotacoes")
     .select(
-      "id,lead_id,status,ramo,atualizado_em," +
+      "id,lead_id,status,ramo,atualizado_em,step_atual,transmissao_fase," +
         "segurado:cotacao_segurado(nome)," +
         "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)",
     )
@@ -113,11 +140,15 @@ function fetchTransmissoesEmAberto(cotacaoIds: string[]) {
     .order("criado_em", { ascending: false });
 }
 
-/** Propostas já transmitidas (`PROPOSTA_TRANSMITIDA_STATUS`) dos leads em `leadIds`. */
+/**
+ * Propostas já transmitidas (`PROPOSTA_TRANSMITIDA_STATUS`) dos leads em
+ * `leadIds`. `numero`/`transmissao_status` são consumidos pela T6 (bucket
+ * "fechamento" mais granular) — hoje só passam adiante em `PipelineLeadRow`.
+ */
 function fetchPropostasTransmitidas(leadIds: string[]) {
   return supabase
     .from("propostas")
-    .select("lead_id")
+    .select("lead_id,numero,transmissao_status")
     .in("lead_id", leadIds)
     .eq("transmissao_status", PROPOSTA_TRANSMITIDA_STATUS);
 }
@@ -147,7 +178,10 @@ export async function fetchPipelineLeads(): Promise<PipelineLeadsResult> {
   const cotacaoPorLead = pickMaisRecentePorLead(cotacoes);
   const cotacaoIds = [...cotacaoPorLead.values()].map((c) => c.id);
 
-  let transmissaoAbertaPorCotacao = new Set<string>();
+  // Guarda o status (não só a presença) da tentativa em aberto mais recente
+  // por cotação — dedup por `criado_em desc` (query já ordenada assim), igual
+  // ao Set antigo, mas propagando `status` pra `PipelineLeadRow` (T6b).
+  let transmissaoAbertaPorCotacao = new Map<string, TransmissaoEmAbertoStatus>();
   if (cotacaoIds.length > 0) {
     const { data: transmissoesData, error: transmissoesError } =
       await fetchTransmissoesEmAberto(cotacaoIds);
@@ -156,24 +190,34 @@ export async function fetchPipelineLeads(): Promise<PipelineLeadsResult> {
       (transmissoesData ?? []) as TransmissaoRow[],
       (t) => t.cotacao_id,
     );
-    transmissaoAbertaPorCotacao = new Set(dedup.map((t) => t.cotacao_id));
+    transmissaoAbertaPorCotacao = new Map(
+      dedup.map((t) => [t.cotacao_id, t.status as TransmissaoEmAbertoStatus]),
+    );
   }
 
-  const leadsComPropostaTransmitida = new Set(
-    ((propostasData ?? []) as PropostaLeadRow[])
-      .map((p) => p.lead_id)
-      .filter((leadId): leadId is string => leadId !== null),
-  );
+  const propostaTransmitidaPorLead = new Map<string, PipelinePropostaTransmitida>();
+  for (const p of (propostasData ?? []) as PropostaTransmitidaRow[]) {
+    if (p.lead_id === null) continue;
+    propostaTransmitidaPorLead.set(p.lead_id, {
+      numero: p.numero,
+      transmissao_status: p.transmissao_status,
+    });
+  }
 
   const rows: PipelineLeadRow[] = leads.map((lead) => {
     const cotacao = cotacaoPorLead.get(lead.id) ?? null;
+    const propostaTransmitida = propostaTransmitidaPorLead.get(lead.id) ?? null;
+    const transmissaoAbertaStatus = cotacao
+      ? (transmissaoAbertaPorCotacao.get(cotacao.id) ?? null)
+      : null;
     const etapa = leadEtapaBucket({
       statusPipeline: lead.status_pipeline,
       cotacaoStatus: cotacao?.status ?? null,
-      transmissaoEmAberto: cotacao ? transmissaoAbertaPorCotacao.has(cotacao.id) : false,
-      propostaTransmitida: leadsComPropostaTransmitida.has(lead.id),
+      transmissaoEmAberto: transmissaoAbertaStatus !== null,
+      propostaTransmitida: propostaTransmitida !== null,
+      emEtapaTransmissao: cotacao !== null && cotacao.status !== null && cotacao.step_atual === 6,
     });
-    return { ...lead, etapa, cotacao };
+    return { ...lead, etapa, cotacao, propostaTransmitida, transmissaoAbertaStatus };
   });
 
   return { leads: rows, error: null };
