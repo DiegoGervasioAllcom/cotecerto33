@@ -1488,6 +1488,7 @@ export type Database = {
           status: Database["public"]["Enums"]["cotacao_status"];
           step_atual: number;
           submotivo_perda: string | null;
+          transmissao_fase: string | null;
         };
         Insert: {
           atualizado_em?: string;
@@ -1509,6 +1510,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["cotacao_status"];
           step_atual?: number;
           submotivo_perda?: string | null;
+          transmissao_fase?: string | null;
         };
         Update: {
           atualizado_em?: string;
@@ -1530,6 +1532,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["cotacao_status"];
           step_atual?: number;
           submotivo_perda?: string | null;
+          transmissao_fase?: string | null;
         };
         Relationships: [
           {
