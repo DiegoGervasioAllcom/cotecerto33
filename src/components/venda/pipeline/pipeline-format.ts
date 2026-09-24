@@ -3,11 +3,8 @@
 // o arquivo da rota crescer) e fáceis de testar isoladamente.
 import { classificarUrgencia } from "@/lib/agenda";
 import type { LeadEtapaBucket } from "@/lib/lead-etapa";
-import type {
-  PipelineCotacao,
-  PipelineLeadRow,
-  PipelineRetornoPendente,
-} from "@/lib/pipeline-data";
+import type { PipelineLeadRow, PipelineRetornoPendente } from "@/lib/pipeline-data";
+import type { PipelineResumoEtapa } from "@/lib/pipeline-query";
 import { STEPS } from "@/components/venda/novo-lead/types";
 
 export function money(v: number | null): string {
@@ -20,7 +17,14 @@ export function money(v: number | null): string {
     : "—";
 }
 
-export function ageDays(iso: string): number {
+/**
+ * `iso` é `string | null` porque `pipeline_leads_etapa` (view) declara toda
+ * coluna nullable no schema gerado — `leads.criado_em` é `not null` na
+ * tabela de origem, então `null` não deveria acontecer na prática; o
+ * fallback pra 0 é só uma guarda de tipo.
+ */
+export function ageDays(iso: string | null): number {
+  if (!iso) return 0;
   const diffMs = Date.now() - new Date(iso).getTime();
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 }
@@ -41,9 +45,14 @@ export function diasLabel(dias: number): { texto: string; titulo: string } {
  * mesmo padrão de exibição já usado em em-cotacao.tsx/em-negociacao.tsx/
  * em-finalizacao.tsx. `null` quando a cotação ainda não tem veículo (ou o
  * lead ainda não tem cotação).
+ *
+ * Pipeline V12, T8: `pipeline_leads_etapa` traz `marca_nome`/`modelo_nome`/
+ * `ano_modelo` soltos na própria linha do lead (não mais um objeto
+ * `cotacao.veiculo` aninhado) — os chamadores passam o lead inteiro (ou um
+ * recorte dele), que já satisfaz este `Pick`.
  */
 export function veiculoResumo(
-  veiculo: PipelineCotacao["veiculo"] | null | undefined,
+  veiculo: Pick<PipelineLeadRow, "marca_nome" | "modelo_nome" | "ano_modelo"> | null | undefined,
 ): string | null {
   if (!veiculo) return null;
   const texto = [veiculo.marca_nome, veiculo.modelo_nome, veiculo.ano_modelo]
@@ -86,10 +95,16 @@ export const ETAPA_DESCRICAO: Record<LeadEtapaBucket, string> = {
   perdido: "devolvidos ou descartados, com o motivo",
 };
 
-/** Campos do lead necessários pra `pontoExato`/`proximaAcao` (T6). */
+/** Campos do lead necessários pra `pontoExato` (T6/T8). */
 export type PontoExatoLead = Pick<
   PipelineLeadRow,
-  "etapa" | "cotacao" | "propostaTransmitida" | "transmissaoAbertaStatus"
+  | "etapa"
+  | "cotacao_status"
+  | "step_atual"
+  | "transmissao_fase"
+  | "transmissao_aberta_status"
+  | "proposta_numero"
+  | "proposta_transmissao_status"
 >;
 
 /**
@@ -105,19 +120,23 @@ function transmissaoStatusLabel(status: string | null): string {
 /**
  * "Ponto exato" onde o lead está — espelha `leadPonto()` do protótipo V12
  * (`cotecerto_prototipo_v12.html`, por volta da linha 2917), com a
- * granularidade real por bucket (T6, antes um texto fixo por bucket — T9):
- * - `cotacao`: o passo do wizard (`cotacao.step_atual` → `STEPS`,
+ * granularidade real por bucket (T6, antes um texto fixo por bucket — T9).
+ * Desde T8, os campos vêm soltos na própria linha da view
+ * `pipeline_leads_etapa` (`@/lib/pipeline-query`), não mais aninhados em
+ * `cotacao`/`propostaTransmitida`:
+ * - `cotacao`: o passo do wizard (`step_atual` → `STEPS`,
  *   `@/components/venda/novo-lead/types`).
- * - `finalizacao`: o sub-passo pré-envio da Etapa 7
- *   (`cotacao.transmissao_fase`, gravado por `StepTransmissao.tsx` via T5) e,
- *   quando não há sub-passo pré-envio, o status real da tentativa em aberto
- *   (`transmissaoAbertaStatus`, T6b) — "enviada" (transmitindo) vs "falha".
- * - `fechamento`: número e status da proposta (`propostaTransmitida`).
+ * - `finalizacao`: o sub-passo pré-envio da Etapa 7 (`transmissao_fase`,
+ *   gravado por `StepTransmissao.tsx` via T5) e, quando não há sub-passo
+ *   pré-envio, o status real da tentativa em aberto
+ *   (`transmissao_aberta_status`, T6b) — "enviada" (transmitindo) vs "falha".
+ * - `fechamento`: número e status da proposta (`proposta_numero`/
+ *   `proposta_transmissao_status`).
  *
  * `transmissao_fase` nunca é limpo depois que a transmissão de verdade é
  * disparada (só é gravado enquanto o vendedor navega pelos sub-passos
  * "dados"/"confirmação"/"pagamento" — `StepTransmissao.tsx`/`novo-lead.tsx`),
- * então continua tendo prioridade quando presente; `transmissaoAbertaStatus`
+ * então continua tendo prioridade quando presente; `transmissao_aberta_status`
  * (T6b) só entra no fallback genérico (fase ausente/desconhecida), pra
  * diferenciar "enviada" de "falha" onde antes o texto era fixo.
  *
@@ -129,34 +148,33 @@ export function pontoExato(lead: PontoExatoLead): string | null {
     case "novo":
       return "aguardando o primeiro contato";
     case "cotacao": {
-      const passo = lead.cotacao ? STEPS[lead.cotacao.step_atual] : undefined;
+      const passo = lead.step_atual != null ? STEPS[lead.step_atual] : undefined;
       return passo ? `parou em ${passo}` : "preenchendo a cotação";
     }
     case "negociacao":
       return "no cálculo — comparando seguradoras";
     case "finalizacao": {
-      const fase = lead.cotacao?.transmissao_fase ?? null;
+      const fase = lead.transmissao_fase ?? null;
       if (fase === "dados") return "transmissão · dados complementares";
       if (fase === "confirmacao") return "transmissão · confirmação";
       if (fase === "pagamento") return "transmissão · pagamento";
-      if (!lead.cotacao) return "transmissão em andamento";
-      if (lead.transmissaoAbertaStatus === "falha") return "transmissão · falhou";
+      if (lead.cotacao_status == null) return "transmissão em andamento";
+      if (lead.transmissao_aberta_status === "falha") return "transmissão · falhou";
       return "transmissão · transmitindo";
     }
     case "fechamento": {
-      const proposta = lead.propostaTransmitida;
-      if (!proposta || !proposta.numero) return "aguardando a seguradora";
-      return `proposta ${proposta.numero} · ${transmissaoStatusLabel(proposta.transmissao_status)}`;
+      if (!lead.proposta_numero) return "aguardando a seguradora";
+      return `proposta ${lead.proposta_numero} · ${transmissaoStatusLabel(lead.proposta_transmissao_status)}`;
     }
     case "perdido":
       return null;
   }
 }
 
-/** Campos do lead necessários pra `proximaAcao` (T6). */
+/** Campos do lead necessários pra `proximaAcao` (T6/T8). */
 export type ProximaAcaoLead = Pick<
   PipelineLeadRow,
-  "etapa" | "cotacao" | "propostaTransmitida" | "motivo_perda" | "transmissaoAbertaStatus"
+  "etapa" | "step_atual" | "transmissao_fase" | "transmissao_aberta_status" | "motivo_perda"
 >;
 
 /**
@@ -167,16 +185,16 @@ export type ProximaAcaoLead = Pick<
  *
  * Dentro de `finalizacao`, o sub-passo pré-envio (`transmissao_fase`) segue
  * tendo prioridade; só quando ele não está presente (T6b) é que
- * `transmissaoAbertaStatus` distingue "enviada" (ainda transmitindo, aguarda
- * o robô) de "falha" (a tentativa não foi pra frente, precisa revisar e
- * reenviar).
+ * `transmissao_aberta_status` distingue "enviada" (ainda transmitindo,
+ * aguarda o robô) de "falha" (a tentativa não foi pra frente, precisa revisar
+ * e reenviar).
  */
 export function proximaAcao(lead: ProximaAcaoLead): string | null {
   switch (lead.etapa) {
     case "novo":
       return "Fazer o primeiro contato";
     case "cotacao": {
-      const passo = lead.cotacao?.step_atual ?? 0;
+      const passo = lead.step_atual ?? 0;
       if (passo <= 1) return "Completar os dados do segurado";
       if (passo <= 3) return "Completar os dados do veículo";
       return "Ajustar coberturas e rodar o cálculo";
@@ -184,11 +202,11 @@ export function proximaAcao(lead: ProximaAcaoLead): string | null {
     case "negociacao":
       return "Comparar seguradoras e enviar a proposta";
     case "finalizacao": {
-      const fase = lead.cotacao?.transmissao_fase ?? null;
+      const fase = lead.transmissao_fase ?? null;
       if (fase === "dados" || fase === "confirmacao" || fase === "pagamento") {
         return "Completar os dados que a seguradora pede";
       }
-      if (lead.transmissaoAbertaStatus === "falha") return "Revisar e reenviar a transmissão";
+      if (lead.transmissao_aberta_status === "falha") return "Revisar e reenviar a transmissão";
       return "Aguardar o retorno do robô da seguradora";
     }
     case "fechamento":
@@ -207,17 +225,34 @@ export function retornoLabel(retorno: PipelineRetornoPendente): string {
 /**
  * Texto do cabeçalho — espelha o header de `render_pipeline()` do protótipo
  * V12: "X de Y leads em andamento · Z em negociação · W em fechamento".
- * `todos` é a base completa (sem filtro) usada para os totais de negociação/
- * fechamento e para o denominador; `filtrados` já passou pelos filtros da
- * tela e é o numerador ("X de Y").
+ *
+ * Pipeline V12, T8: com a paginação por coluna, a tela não tem mais a lista
+ * completa de leads em memória para contar — `resumo` vem de
+ * `fetchPipelineResumoEtapas(filtrosComuns)` (`@/lib/pipeline-query`), que já
+ * agrega `etapa → total` no banco respeitando os filtros "granulares"
+ * (ramo/origem/parado/motivo — os únicos que fazem parte de
+ * `PipelineFiltrosResumo`). `Y` (denominador) e os totais de
+ * negociação/fechamento vêm direto desse agregado; `X` (numerador) aplica
+ * por cima, em memória, os dois filtros que não fazem parte da query
+ * agregada — Estágio (`etapaFiltro`) e Status (`statusFiltro`), que na tela
+ * decidem quais colunas são buscadas, não uma cláusula WHERE própria.
  */
 export function pipelineHeaderResumo(
-  todos: readonly Pick<PipelineLeadRow, "etapa">[],
-  filtrados: readonly Pick<PipelineLeadRow, "etapa">[],
+  resumo: readonly PipelineResumoEtapa[],
+  etapaFiltro: LeadEtapaBucket | "todas",
+  statusFiltro: "todos" | "ativos" | "perdidos",
 ): string {
-  const ativos = todos.filter((l) => l.etapa !== "perdido").length;
-  const filtradosAtivos = filtrados.filter((l) => l.etapa !== "perdido").length;
-  const negociacao = todos.filter((l) => l.etapa === "negociacao").length;
-  const fechamento = todos.filter((l) => l.etapa === "fechamento").length;
+  const porEtapa = new Map(resumo.map((r) => [r.etapa, r.total]));
+  const ativos = resumo.filter((r) => r.etapa !== "perdido").reduce((acc, r) => acc + r.total, 0);
+  const negociacao = porEtapa.get("negociacao") ?? 0;
+  const fechamento = porEtapa.get("fechamento") ?? 0;
+
+  const filtradosAtivos =
+    statusFiltro === "perdidos" || etapaFiltro === "perdido"
+      ? 0
+      : etapaFiltro === "todas"
+        ? ativos
+        : (porEtapa.get(etapaFiltro) ?? 0);
+
   return `${filtradosAtivos} de ${ativos} leads em andamento · ${negociacao} em negociação · ${fechamento} em fechamento`;
 }

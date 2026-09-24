@@ -274,6 +274,88 @@ export async function limparLeadE2E(leadId: string): Promise<void> {
   await admin.from("leads").delete().eq("id", leadId);
 }
 
+export type VendedorComVariosLeads = VendedorComLead & { leadIds: string[] };
+
+/**
+ * Cria um vendedor com `total` leads, todos no bucket "Lead novo" (mesmo
+ * shape de `distribuirLeadE2E`: `status_pipeline='novo'`, sem cotação) —
+ * usado pelos testes de paginação server-side do Kanban (Pipeline V12,
+ * T10), que precisam passar da carga inicial (5) pra exercitar "carregar
+ * mais"/scroll infinito de verdade. Reaproveita `criarVendedorComLead` (1º
+ * lead) + `distribuirLeadE2E` (os demais) em vez de duplicar o insert.
+ */
+export async function criarVendedorComVariosLeads(total: number): Promise<VendedorComVariosLeads> {
+  const base = await criarVendedorComLead();
+  const leadIds = [base.leadId];
+  for (let i = 1; i < total; i += 1) {
+    leadIds.push(await distribuirLeadE2E(base.userId, base.empresaId));
+  }
+  return { ...base, leadIds };
+}
+
+/** Remove os dados criados por `criarVendedorComVariosLeads` (best-effort; `db reset` também resolve). */
+export async function limparVendedorComVariosLeads(v: VendedorComVariosLeads): Promise<void> {
+  await admin.from("leads").delete().in("id", v.leadIds);
+  await admin.from("user_roles").delete().eq("user_id", v.userId);
+  await admin.auth.admin.deleteUser(v.userId);
+  await admin.from("empresas").delete().eq("id", v.empresaId);
+}
+
+export type VendedorComLeadEmCotacao = VendedorComLead & {
+  leadCotacaoId: string;
+  cotacaoId: string;
+};
+
+/**
+ * Além do lead "Lead novo" de `criarVendedorComLead`, cria um segundo lead
+ * com uma cotação em `status='rascunho'` vinculada (`cotacoes.lead_id`) —
+ * cai no bucket "Em cotação" (`EM_COTACAO_STATUSES`, `@/lib/lead-etapa`).
+ * Usado pelo teste do filtro Estágio do Kanban paginado (Pipeline V12,
+ * T10), que precisa de mais de um bucket populado pra confirmar que só a
+ * coluna filtrada é buscada/exibida.
+ */
+export async function criarVendedorComLeadEmCotacao(): Promise<VendedorComLeadEmCotacao> {
+  const vendedor = await criarVendedorComLead();
+
+  const { data: leadCotacao, error: eLead } = await admin
+    .from("leads")
+    .insert({
+      nome: uniq("Cliente Em Cotação E2E"),
+      contato: "(11) 97777-0000",
+      origem: "teste-e2e",
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      status_pipeline: "qualificado",
+      distribuido_em: new Date().toISOString(),
+      dados: {},
+    })
+    .select("id")
+    .single();
+  if (eLead || !leadCotacao) throw new Error(`criar lead em cotação E2E: ${eLead?.message}`);
+
+  const { data: cotacao, error: eCotacao } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      lead_id: leadCotacao.id,
+      status: "rascunho",
+      step_atual: 1,
+    })
+    .select("id")
+    .single();
+  if (eCotacao || !cotacao) throw new Error(`criar cotação rascunho E2E: ${eCotacao?.message}`);
+
+  return { ...vendedor, leadCotacaoId: leadCotacao.id, cotacaoId: cotacao.id };
+}
+
+/** Remove os dados criados por `criarVendedorComLeadEmCotacao` (best-effort; `db reset` também resolve). */
+export async function limparVendedorComLeadEmCotacao(v: VendedorComLeadEmCotacao): Promise<void> {
+  await admin.from("cotacoes").delete().eq("id", v.cotacaoId);
+  await admin.from("leads").delete().eq("id", v.leadCotacaoId);
+  await limparVendedorComLead(v);
+}
+
 /**
  * Acrescenta ao vendedor uma cotação calculada e uma proposta selecionada.
  * A fixture permite validar os destinos read-only do tutorial sem clicar em

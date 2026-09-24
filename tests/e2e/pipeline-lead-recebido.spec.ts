@@ -48,7 +48,14 @@ test.describe("pipeline — lead externo recebido", () => {
 
     await page.getByRole("button", { name: "Tabela" }).click();
     const linha = page.locator("tbody tr", { hasText: "Cliente E2E" }).first();
-    await expect(linha).toBeVisible();
+    // Pipeline V12 (T10): a carga inicial agora dispara ~10 requisições
+    // paralelas por coluna (paginação server-side + resumo + opções de
+    // filtro) em vez de 1 fetch único — sob execução paralela do Playwright
+    // (múltiplas páginas/testes concorrentes contra o Supabase local), isso
+    // passa fácil dos 5000ms padrão do `expect`. Timeout maior só na
+    // primeira visibilidade pós-`goto`; as demais reaproveitam esse estado
+    // já carregado.
+    await expect(linha).toBeVisible({ timeout: 15_000 });
     await expect(linha.getByText("Lead novo", { exact: true })).toBeVisible();
     await expect(linha.getByText("aguardando o primeiro contato")).toBeVisible();
     await linha.click();
@@ -66,7 +73,8 @@ test.describe("pipeline — lead externo recebido", () => {
 
     const colunaLeadNovo = page.locator('.kcol[data-stage="novo"]');
     const card = colunaLeadNovo.getByText("Cliente E2E", { exact: false });
-    await expect(card).toBeVisible();
+    // Ver comentário do timeout maior no teste da tabela acima.
+    await expect(card).toBeVisible({ timeout: 15_000 });
     await expect(colunaLeadNovo.getByText("aguardando o primeiro contato")).toBeVisible();
 
     // Não existe mais coluna "Qualificando" separada.
@@ -86,7 +94,8 @@ test.describe("pipeline — lead externo recebido", () => {
     await page.goto("/venda/pipeline");
 
     const cardTexto = page.getByText("Cliente E2E", { exact: false });
-    await expect(cardTexto).toBeVisible();
+    // Ver comentário do timeout maior no teste da tabela acima.
+    await expect(cardTexto).toBeVisible({ timeout: 15_000 });
 
     const filtroEstagio = page
       .locator("select")
@@ -112,7 +121,8 @@ test.describe("pipeline — lead externo recebido", () => {
     await page.goto("/venda/pipeline");
 
     const cardTexto = page.getByText("Cliente E2E", { exact: false });
-    await expect(cardTexto).toBeVisible();
+    // Ver comentário do timeout maior no teste da tabela acima.
+    await expect(cardTexto).toBeVisible({ timeout: 15_000 });
 
     const colunaPerdido = page.locator('.kcol[data-stage="perdido"]');
     // Default (Status · todos): coluna Perdido existe (vazia, sem lead perdido nesta fixture).
