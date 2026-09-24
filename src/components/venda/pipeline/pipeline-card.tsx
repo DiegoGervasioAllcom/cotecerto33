@@ -38,8 +38,8 @@ export function PipelineCard({
   const isPerdido = lead.etapa === "perdido";
   const ponto = pontoExato(lead);
   const acao = proximaAcao(lead);
-  const veiculo = veiculoResumo(lead.cotacao?.veiculo);
-  const ramo = lead.cotacao?.ramo ?? null;
+  const veiculo = veiculoResumo(lead);
+  const ramo = lead.ramo;
   const dias = ageDays(lead.criado_em);
   const { texto: diasTexto, titulo: diasTitulo } = diasLabel(dias);
 

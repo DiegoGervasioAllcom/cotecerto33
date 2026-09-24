@@ -10,13 +10,9 @@ import {
   type ProximaAcaoLead,
 } from "@/components/venda/pipeline/pipeline-format";
 import type { LeadEtapaBucket } from "@/lib/lead-etapa";
-import type {
-  PipelineCotacao,
-  PipelineLeadRow,
-  PipelinePropostaTransmitida,
-} from "@/lib/pipeline-data";
+import type { PipelineResumoEtapa } from "@/lib/pipeline-query";
 
-// Lógica pura do card/header do Pipeline (Kanban/Tabela) — T6/T9. Roda offline.
+// Lógica pura do card/header do Pipeline (Kanban/Tabela) — T6/T8/T9. Roda offline.
 
 describe("veiculoResumo", () => {
   it("junta marca, modelo e ano quando existem", () => {
@@ -35,38 +31,26 @@ describe("veiculoResumo", () => {
   });
 });
 
-/** Cotação mínima válida (`PipelineCotacao`) — sobrescreve só o que o caso de teste precisa. */
-function cotacao(overrides: Partial<PipelineCotacao> = {}): PipelineCotacao {
-  return {
-    id: "c1",
-    lead_id: "l1",
-    status: "rascunho",
-    ramo: "auto",
-    atualizado_em: "2026-09-01T00:00:00.000Z",
-    step_atual: 0,
-    transmissao_fase: null,
-    segurado: null,
-    veiculo: null,
-    ...overrides,
-  };
-}
-
-/** Lead mínimo (`PontoExatoLead`/`ProximaAcaoLead`) — sobrescreve só o que o caso de teste precisa. */
+/**
+ * Lead mínimo (`PontoExatoLead & ProximaAcaoLead`) — sobrescreve só o que o
+ * caso de teste precisa. Pipeline V12, T8/T9: os campos vêm soltos na linha
+ * da view `pipeline_leads_etapa` (não mais aninhados em
+ * `cotacao`/`propostaTransmitida`).
+ */
 function lead(
   etapa: LeadEtapaBucket,
-  overrides: {
-    cotacao?: PipelineCotacao | null;
-    propostaTransmitida?: PipelinePropostaTransmitida | null;
-    motivo_perda?: string | null;
-    transmissaoAbertaStatus?: "enviada" | "falha" | null;
-  } = {},
+  overrides: Partial<PontoExatoLead & ProximaAcaoLead> = {},
 ): PontoExatoLead & ProximaAcaoLead {
   return {
     etapa,
-    cotacao: overrides.cotacao ?? null,
-    propostaTransmitida: overrides.propostaTransmitida ?? null,
-    motivo_perda: overrides.motivo_perda ?? null,
-    transmissaoAbertaStatus: overrides.transmissaoAbertaStatus ?? null,
+    cotacao_status: null,
+    step_atual: null,
+    transmissao_fase: null,
+    transmissao_aberta_status: null,
+    proposta_numero: null,
+    proposta_transmissao_status: null,
+    motivo_perda: null,
+    ...overrides,
   };
 }
 
@@ -76,16 +60,12 @@ describe("pontoExato", () => {
   });
 
   it("cotacao -> usa o rótulo real do passo do wizard (STEPS[step_atual])", () => {
-    expect(pontoExato(lead("cotacao", { cotacao: cotacao({ step_atual: 0 }) }))).toBe(
-      "parou em Segurado",
-    );
-    expect(pontoExato(lead("cotacao", { cotacao: cotacao({ step_atual: 4 }) }))).toBe(
-      "parou em Coberturas",
-    );
+    expect(pontoExato(lead("cotacao", { step_atual: 0 }))).toBe("parou em Segurado");
+    expect(pontoExato(lead("cotacao", { step_atual: 4 }))).toBe("parou em Coberturas");
   });
 
-  it("cotacao sem cotação resolvida cai no fallback genérico", () => {
-    expect(pontoExato(lead("cotacao", { cotacao: null }))).toBe("preenchendo a cotação");
+  it("cotacao sem passo resolvido cai no fallback genérico", () => {
+    expect(pontoExato(lead("cotacao", { step_atual: null }))).toBe("preenchendo a cotação");
   });
 
   it("negociacao -> texto fixo", () => {
@@ -93,23 +73,24 @@ describe("pontoExato", () => {
   });
 
   it("finalizacao com sub-passo pré-envio (transmissao_fase) -> um texto por fase", () => {
-    expect(
-      pontoExato(lead("finalizacao", { cotacao: cotacao({ transmissao_fase: "dados" }) })),
-    ).toBe("transmissão · dados complementares");
-    expect(
-      pontoExato(lead("finalizacao", { cotacao: cotacao({ transmissao_fase: "confirmacao" }) })),
-    ).toBe("transmissão · confirmação");
-    expect(
-      pontoExato(lead("finalizacao", { cotacao: cotacao({ transmissao_fase: "pagamento" }) })),
-    ).toBe("transmissão · pagamento");
+    expect(pontoExato(lead("finalizacao", { transmissao_fase: "dados" }))).toBe(
+      "transmissão · dados complementares",
+    );
+    expect(pontoExato(lead("finalizacao", { transmissao_fase: "confirmacao" }))).toBe(
+      "transmissão · confirmação",
+    );
+    expect(pontoExato(lead("finalizacao", { transmissao_fase: "pagamento" }))).toBe(
+      "transmissão · pagamento",
+    );
   });
 
   it("finalizacao sem sub-passo pré-envio, tentativa 'enviada' -> transmitindo", () => {
     expect(
       pontoExato(
         lead("finalizacao", {
-          cotacao: cotacao({ transmissao_fase: null }),
-          transmissaoAbertaStatus: "enviada",
+          transmissao_fase: null,
+          cotacao_status: "calculada",
+          transmissao_aberta_status: "enviada",
         }),
       ),
     ).toBe("transmissão · transmitindo");
@@ -119,29 +100,33 @@ describe("pontoExato", () => {
     expect(
       pontoExato(
         lead("finalizacao", {
-          cotacao: cotacao({ transmissao_fase: null }),
-          transmissaoAbertaStatus: "falha",
+          transmissao_fase: null,
+          cotacao_status: "calculada",
+          transmissao_aberta_status: "falha",
         }),
       ),
     ).toBe("transmissão · falhou");
   });
 
-  it("finalizacao sem cotação resolvida cai no fallback genérico", () => {
-    expect(pontoExato(lead("finalizacao", { cotacao: null }))).toBe("transmissão em andamento");
+  it("finalizacao sem cotação resolvida (cotacao_status null) cai no fallback genérico", () => {
+    expect(pontoExato(lead("finalizacao", { transmissao_fase: null, cotacao_status: null }))).toBe(
+      "transmissão em andamento",
+    );
   });
 
   it("fechamento com proposta transmitida -> número + status legível", () => {
     expect(
       pontoExato(
         lead("fechamento", {
-          propostaTransmitida: { numero: "123456", transmissao_status: "transmitida" },
+          proposta_numero: "123456",
+          proposta_transmissao_status: "transmitida",
         }),
       ),
     ).toBe("proposta 123456 · transmitida");
   });
 
   it("fechamento sem proposta transmitida cai no fallback fixo", () => {
-    expect(pontoExato(lead("fechamento", { propostaTransmitida: null }))).toBe(
+    expect(pontoExato(lead("fechamento", { proposta_numero: null }))).toBe(
       "aguardando a seguradora",
     );
   });
@@ -157,25 +142,17 @@ describe("proximaAcao", () => {
   });
 
   it("cotacao — Segurado/Seguro (passos 0 e 1)", () => {
-    expect(proximaAcao(lead("cotacao", { cotacao: cotacao({ step_atual: 0 }) }))).toBe(
-      "Completar os dados do segurado",
-    );
-    expect(proximaAcao(lead("cotacao", { cotacao: cotacao({ step_atual: 1 }) }))).toBe(
-      "Completar os dados do segurado",
-    );
+    expect(proximaAcao(lead("cotacao", { step_atual: 0 }))).toBe("Completar os dados do segurado");
+    expect(proximaAcao(lead("cotacao", { step_atual: 1 }))).toBe("Completar os dados do segurado");
   });
 
   it("cotacao — Veículo/Perfil (passos 2 e 3)", () => {
-    expect(proximaAcao(lead("cotacao", { cotacao: cotacao({ step_atual: 2 }) }))).toBe(
-      "Completar os dados do veículo",
-    );
-    expect(proximaAcao(lead("cotacao", { cotacao: cotacao({ step_atual: 3 }) }))).toBe(
-      "Completar os dados do veículo",
-    );
+    expect(proximaAcao(lead("cotacao", { step_atual: 2 }))).toBe("Completar os dados do veículo");
+    expect(proximaAcao(lead("cotacao", { step_atual: 3 }))).toBe("Completar os dados do veículo");
   });
 
   it("cotacao — Coberturas (passo 4, último antes do cálculo)", () => {
-    expect(proximaAcao(lead("cotacao", { cotacao: cotacao({ step_atual: 4 }) }))).toBe(
+    expect(proximaAcao(lead("cotacao", { step_atual: 4 }))).toBe(
       "Ajustar coberturas e rodar o cálculo",
     );
   });
@@ -186,19 +163,16 @@ describe("proximaAcao", () => {
 
   it("finalizacao sem tentativa ainda (sub-passo pré-envio)", () => {
     for (const fase of ["dados", "confirmacao", "pagamento"] as const) {
-      expect(
-        proximaAcao(lead("finalizacao", { cotacao: cotacao({ transmissao_fase: fase }) })),
-      ).toBe("Completar os dados que a seguradora pede");
+      expect(proximaAcao(lead("finalizacao", { transmissao_fase: fase }))).toBe(
+        "Completar os dados que a seguradora pede",
+      );
     }
   });
 
   it("finalizacao com tentativa real 'enviada' (ainda transmitindo)", () => {
     expect(
       proximaAcao(
-        lead("finalizacao", {
-          cotacao: cotacao({ transmissao_fase: null }),
-          transmissaoAbertaStatus: "enviada",
-        }),
+        lead("finalizacao", { transmissao_fase: null, transmissao_aberta_status: "enviada" }),
       ),
     ).toBe("Aguardar o retorno do robô da seguradora");
   });
@@ -206,10 +180,7 @@ describe("proximaAcao", () => {
   it("finalizacao com tentativa real 'falha' (precisa reenviar)", () => {
     expect(
       proximaAcao(
-        lead("finalizacao", {
-          cotacao: cotacao({ transmissao_fase: null }),
-          transmissaoAbertaStatus: "falha",
-        }),
+        lead("finalizacao", { transmissao_fase: null, transmissao_aberta_status: "falha" }),
       ),
     ).toBe("Revisar e reenviar a transmissão");
   });
@@ -255,22 +226,53 @@ describe("diasLabel", () => {
 });
 
 describe("pipelineHeaderResumo", () => {
-  function leadHeader(etapa: LeadEtapaBucket): Pick<PipelineLeadRow, "etapa"> {
-    return { etapa };
+  /**
+   * Pipeline V12, T8: `pipelineHeaderResumo` deixou de receber a lista
+   * completa de leads (não existe mais em memória com a paginação por
+   * coluna) — passa a receber o agregado `etapa -> total` já pronto
+   * (`PipelineResumoEtapa[]`, de `fetchPipelineResumoEtapas`) mais os dois
+   * filtros que decidem o numerador (`etapaFiltro`/`statusFiltro`).
+   */
+  function resumo(etapa: LeadEtapaBucket, total: number): PipelineResumoEtapa {
+    return { etapa, total, valorTotal: 0 };
   }
 
-  it("conta ativos, negociação e fechamento — perdido não entra nos totais", () => {
-    const todos = [
-      leadHeader("novo"),
-      leadHeader("cotacao"),
-      leadHeader("negociacao"),
-      leadHeader("negociacao"),
-      leadHeader("fechamento"),
-      leadHeader("perdido"),
-    ];
-    const filtrados = [leadHeader("novo"), leadHeader("negociacao")];
-    expect(pipelineHeaderResumo(todos, filtrados)).toBe(
+  const AGREGADO: PipelineResumoEtapa[] = [
+    resumo("novo", 1),
+    resumo("cotacao", 1),
+    resumo("negociacao", 2),
+    resumo("fechamento", 1),
+    resumo("perdido", 3),
+  ];
+
+  it("com etapaFiltro='todas' e statusFiltro='todos', numerador = total de ativos", () => {
+    expect(pipelineHeaderResumo(AGREGADO, "todas", "todos")).toBe(
+      "5 de 5 leads em andamento · 2 em negociação · 1 em fechamento",
+    );
+  });
+
+  it("com etapaFiltro numa etapa específica, numerador = total só dessa etapa", () => {
+    expect(pipelineHeaderResumo(AGREGADO, "negociacao", "todos")).toBe(
       "2 de 5 leads em andamento · 2 em negociação · 1 em fechamento",
+    );
+  });
+
+  it("com statusFiltro='perdidos', numerador zera (perdido não entra nos ativos)", () => {
+    expect(pipelineHeaderResumo(AGREGADO, "todas", "perdidos")).toBe(
+      "0 de 5 leads em andamento · 2 em negociação · 1 em fechamento",
+    );
+  });
+
+  it("com etapaFiltro='perdido', numerador zera mesmo com statusFiltro='todos'", () => {
+    expect(pipelineHeaderResumo(AGREGADO, "perdido", "todos")).toBe(
+      "0 de 5 leads em andamento · 2 em negociação · 1 em fechamento",
+    );
+  });
+
+  it("etapa sem linha no agregado conta como 0, não quebra", () => {
+    const semFinalizacao = [resumo("novo", 2)];
+    expect(pipelineHeaderResumo(semFinalizacao, "todas", "todos")).toBe(
+      "2 de 2 leads em andamento · 0 em negociação · 0 em fechamento",
     );
   });
 });
