@@ -454,6 +454,266 @@ export async function limparVendedorComFilaDia(v: VendedorComFilaDia): Promise<v
   await limparVendedorComLead(v);
 }
 
+export type ColegaComAgendaCompleta = {
+  userId: string;
+  email: string;
+  senha: string;
+  cotacaoRiscoId: string;
+  cotacaoPropostaFalhaId: string;
+  propostaFalhaId: string;
+  cotacaoAprovacaoId: string;
+  descontoSolicitacaoId: string;
+};
+
+/**
+ * Colega de trabalho na MESMA empresa de `empresaId`, com as 3 fontes que
+ * dependem de `responsavel_id`/`solicitante_id` populadas: negócio em risco,
+ * proposta bloqueada (seguradora) e desconto pendente (aprovação). Usado
+ * pelo teste de não-vazamento entre colegas — RLS de `cotacoes`/`propostas`
+ * libera SELECT pra empresa inteira, então só o filtro em `fetchRiscoAgenda`/
+ * `fetchSeguradoraAgenda`/`fetchAprovacoesAgenda` (por uid) impede um
+ * vendedor de ver a agenda do colega.
+ */
+export async function criarColegaComAgendaCompleta(
+  empresaId: string,
+): Promise<ColegaComAgendaCompleta> {
+  const senha = "Teste@123!";
+  const email = `${uniq("colega-e2e")}@teste.local`;
+
+  const { data: userData, error: eUser } = await admin.auth.admin.createUser({
+    email,
+    password: senha,
+    email_confirm: true,
+  });
+  if (eUser || !userData.user) throw new Error(`criar usuário colega E2E: ${eUser?.message}`);
+  const userId = userData.user.id;
+
+  const { error: eProfile } = await admin
+    .from("profiles")
+    .update({ empresa_id: empresaId, status: "aprovada" })
+    .eq("id", userId);
+  if (eProfile) throw new Error(`atualizar profile colega E2E: ${eProfile.message}`);
+
+  const { error: eRole } = await admin
+    .from("user_roles")
+    .insert({ user_id: userId, role: "vendedor" });
+  if (eRole) throw new Error(`inserir role colega E2E: ${eRole.message}`);
+
+  // --- fonte "risco" --------------------------------------------------------
+  const atualizadoEmRisco = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: cotacaoRisco, error: eCotacaoRisco } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: empresaId,
+      responsavel_id: userId,
+      status: "calculada",
+      atualizado_em: atualizadoEmRisco,
+    })
+    .select("id")
+    .single();
+  if (eCotacaoRisco || !cotacaoRisco)
+    throw new Error(`criar cotação em risco do colega E2E: ${eCotacaoRisco?.message}`);
+  const { error: eSeguradoRisco } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: cotacaoRisco.id, nome: "Cliente Em Risco Colega E2E" });
+  if (eSeguradoRisco)
+    throw new Error(`criar segurado do risco do colega E2E: ${eSeguradoRisco.message}`);
+
+  // --- fonte "seguradora" ----------------------------------------------------
+  const atualizadoEmFalha = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: cotacaoFalha, error: eCotacaoFalha } = await admin
+    .from("cotacoes")
+    .insert({ empresa_id: empresaId, responsavel_id: userId, status: "proposta" })
+    .select("id")
+    .single();
+  if (eCotacaoFalha || !cotacaoFalha)
+    throw new Error(`criar cotação da proposta em falha do colega E2E: ${eCotacaoFalha?.message}`);
+  const { error: eSeguradoFalha } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: cotacaoFalha.id, nome: "Cliente Pendência Seguradora Colega E2E" });
+  if (eSeguradoFalha)
+    throw new Error(`criar segurado da falha do colega E2E: ${eSeguradoFalha.message}`);
+
+  const { data: propostaFalha, error: ePropostaFalha } = await admin
+    .from("propostas")
+    .insert({
+      empresa_id: empresaId,
+      responsavel_id: userId,
+      cotacao_id: cotacaoFalha.id,
+      numero: "PRP-E2E-FALHA-COLEGA",
+      transmissao_status: "falha",
+      transmissao_motivo: "documento_pendente",
+      transmissao_mensagem: "Falta o CRLV do veículo do colega E2E",
+      atualizado_em: atualizadoEmFalha,
+    })
+    .select("id")
+    .single();
+  if (ePropostaFalha || !propostaFalha)
+    throw new Error(`criar proposta em falha do colega E2E: ${ePropostaFalha?.message}`);
+
+  // --- fonte "aprovacao" -----------------------------------------------------
+  const { data: cotacaoAprovacao, error: eCotacaoAprovacao } = await admin
+    .from("cotacoes")
+    .insert({ empresa_id: empresaId, responsavel_id: userId, status: "calculada" })
+    .select("id")
+    .single();
+  if (eCotacaoAprovacao || !cotacaoAprovacao)
+    throw new Error(`criar cotação da aprovação do colega E2E: ${eCotacaoAprovacao?.message}`);
+
+  const { data: seguradora, error: eSeguradora } = await admin
+    .from("seguradoras")
+    .select("id")
+    .limit(1)
+    .single();
+  if (eSeguradora || !seguradora)
+    throw new Error(`buscar seguradora para aprovação do colega E2E: ${eSeguradora?.message}`);
+
+  const { data: descontoSolicitacao, error: eDesconto } = await admin
+    .from("desconto_solicitacoes")
+    .insert({
+      cotacao_id: cotacaoAprovacao.id,
+      solicitante_id: userId,
+      nivel_atual: userId,
+      seguradora_id: seguradora.id,
+      pct_pedido: 30,
+      status: "pendente",
+    })
+    .select("id")
+    .single();
+  if (eDesconto || !descontoSolicitacao)
+    throw new Error(`criar solicitação de desconto do colega E2E: ${eDesconto?.message}`);
+
+  return {
+    userId,
+    email,
+    senha,
+    cotacaoRiscoId: cotacaoRisco.id,
+    cotacaoPropostaFalhaId: cotacaoFalha.id,
+    propostaFalhaId: propostaFalha.id,
+    cotacaoAprovacaoId: cotacaoAprovacao.id,
+    descontoSolicitacaoId: descontoSolicitacao.id,
+  };
+}
+
+/** Remove os dados criados por `criarColegaComAgendaCompleta` (best-effort; `db reset` também resolve). */
+export async function limparColegaComAgendaCompleta(c: ColegaComAgendaCompleta): Promise<void> {
+  await admin.from("desconto_solicitacoes").delete().eq("id", c.descontoSolicitacaoId);
+  await admin.from("cotacoes").delete().eq("id", c.cotacaoAprovacaoId);
+  await admin.from("propostas").delete().eq("id", c.propostaFalhaId);
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", c.cotacaoPropostaFalhaId);
+  await admin.from("cotacoes").delete().eq("id", c.cotacaoPropostaFalhaId);
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", c.cotacaoRiscoId);
+  await admin.from("cotacoes").delete().eq("id", c.cotacaoRiscoId);
+  await admin.from("user_roles").delete().eq("user_id", c.userId);
+  await admin.auth.admin.deleteUser(c.userId);
+}
+
+export type VendedorComAgendaCompleta = VendedorComFilaDia & {
+  cotacaoPropostaFalhaId: string;
+  propostaFalhaId: string;
+  cotacaoAprovacaoId: string;
+  descontoSolicitacaoId: string;
+};
+
+/**
+ * Estende `criarVendedorComFilaDia` com as 2 fontes acrescentadas em
+ * V12.3.2: uma proposta com `transmissao_status='falha'` (pendência da
+ * seguradora) e uma `desconto_solicitacoes` pendente do próprio vendedor
+ * (aprovação que ele pediu) — usadas por `tests/e2e/agenda.spec.ts`.
+ * Isolado do resto: cada fonte extra ganha sua própria cotação, sem tocar
+ * na cotação de risco nem no lead das 3 fontes originais.
+ */
+export async function criarVendedorComAgendaCompleta(): Promise<VendedorComAgendaCompleta> {
+  const base = await criarVendedorComFilaDia();
+
+  // --- fonte "seguradora": proposta bloqueada ------------------------------
+  const atualizadoEmFalha = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: cotacaoFalha, error: eCotacaoFalha } = await admin
+    .from("cotacoes")
+    .insert({ empresa_id: base.empresaId, responsavel_id: base.userId, status: "proposta" })
+    .select("id")
+    .single();
+  if (eCotacaoFalha || !cotacaoFalha)
+    throw new Error(`criar cotação da proposta em falha E2E: ${eCotacaoFalha?.message}`);
+  const { error: eSeguradoFalha } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: cotacaoFalha.id, nome: "Cliente Pendência Seguradora E2E" });
+  if (eSeguradoFalha)
+    throw new Error(`criar segurado da cotação em falha E2E: ${eSeguradoFalha.message}`);
+
+  const { data: propostaFalha, error: ePropostaFalha } = await admin
+    .from("propostas")
+    .insert({
+      empresa_id: base.empresaId,
+      responsavel_id: base.userId,
+      cotacao_id: cotacaoFalha.id,
+      numero: "PRP-E2E-FALHA",
+      transmissao_status: "falha",
+      transmissao_motivo: "documento_pendente",
+      transmissao_mensagem: "Falta o CRLV do veículo E2E",
+      atualizado_em: atualizadoEmFalha,
+    })
+    .select("id")
+    .single();
+  if (ePropostaFalha || !propostaFalha)
+    throw new Error(`criar proposta em falha E2E: ${ePropostaFalha?.message}`);
+
+  // --- fonte "aprovacao": desconto pendente do próprio vendedor ------------
+  const { data: cotacaoAprovacao, error: eCotacaoAprovacao } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: base.empresaId,
+      responsavel_id: base.userId,
+      lead_id: base.leadId,
+      status: "calculada",
+    })
+    .select("id")
+    .single();
+  if (eCotacaoAprovacao || !cotacaoAprovacao)
+    throw new Error(`criar cotação da aprovação E2E: ${eCotacaoAprovacao?.message}`);
+
+  const { data: seguradora, error: eSeguradora } = await admin
+    .from("seguradoras")
+    .select("id")
+    .limit(1)
+    .single();
+  if (eSeguradora || !seguradora)
+    throw new Error(`buscar seguradora para aprovação E2E: ${eSeguradora?.message}`);
+
+  const { data: descontoSolicitacao, error: eDesconto } = await admin
+    .from("desconto_solicitacoes")
+    .insert({
+      cotacao_id: cotacaoAprovacao.id,
+      solicitante_id: base.userId,
+      nivel_atual: base.userId,
+      seguradora_id: seguradora.id,
+      pct_pedido: 12,
+      status: "pendente",
+    })
+    .select("id")
+    .single();
+  if (eDesconto || !descontoSolicitacao)
+    throw new Error(`criar solicitação de desconto E2E: ${eDesconto?.message}`);
+
+  return {
+    ...base,
+    cotacaoPropostaFalhaId: cotacaoFalha.id,
+    propostaFalhaId: propostaFalha.id,
+    cotacaoAprovacaoId: cotacaoAprovacao.id,
+    descontoSolicitacaoId: descontoSolicitacao.id,
+  };
+}
+
+/** Remove os dados criados por `criarVendedorComAgendaCompleta` (best-effort; `db reset` também resolve). */
+export async function limparVendedorComAgendaCompleta(v: VendedorComAgendaCompleta): Promise<void> {
+  await admin.from("desconto_solicitacoes").delete().eq("id", v.descontoSolicitacaoId);
+  await admin.from("cotacoes").delete().eq("id", v.cotacaoAprovacaoId);
+  await admin.from("propostas").delete().eq("id", v.propostaFalhaId);
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", v.cotacaoPropostaFalhaId);
+  await admin.from("cotacoes").delete().eq("id", v.cotacaoPropostaFalhaId);
+  await limparVendedorComFilaDia(v);
+}
+
 /**
  * Acrescenta ao vendedor uma cotação calculada e uma proposta selecionada.
  * A fixture permite validar os destinos read-only do tutorial sem clicar em

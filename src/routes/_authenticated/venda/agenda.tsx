@@ -1,16 +1,22 @@
 // "Minha agenda" (Frente 9 · V12) — lista única de pendências do vendedor,
-// juntando 3 fontes reais (retornos agendados, negócios em risco e
-// lembretes pessoais), ordenada por urgência (atrasado > hoje > amanhã >
-// resto). Espelha render_agenda() do protótipo v12, mas sem "pendência da
-// seguradora"/"aprovações" (fora do escopo v1 — decisão do usuário).
+// juntando 5 fontes reais (retornos agendados, negócios em risco, pendência
+// da seguradora, aprovações pedidas e lembretes pessoais), ordenada por
+// urgência (atrasado > hoje > amanhã > resto). Espelha render_agenda() do
+// protótipo v12, com os chips de filtro por tipo (agFiltro/agSetFiltro).
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { AgendaFiltroChips } from "@/components/venda/agenda/agenda-filtro-chips";
 import { AgendaItemRow } from "@/components/venda/agenda/agenda-item-row";
 import { NovoLembreteModal } from "@/components/venda/agenda/novo-lembrete-modal";
 import { useAuth } from "@/lib/auth";
-import { classificarUrgencia } from "@/lib/agenda";
+import {
+  classificarUrgencia,
+  contarPorFonte,
+  filtrarPorFonte,
+  type FonteAgenda,
+} from "@/lib/agenda";
 import { useAgendaItens } from "@/lib/use-agenda-itens";
 
 export const Route = createFileRoute("/_authenticated/venda/agenda")({
@@ -23,10 +29,13 @@ function Page() {
   const uid = session?.user.id ?? null;
 
   const [novoLembreteOpen, setNovoLembreteOpen] = useState(false);
+  const [filtro, setFiltro] = useState<FonteAgenda | "todos">("todos");
   const { itens, loading, err, busyId, marcarFeito, abrirItem, invalidarTudo } = useAgendaItens();
 
   const atrasados = itens.filter((i) => classificarUrgencia(i.data).ord === 0).length;
   const hoje = itens.filter((i) => classificarUrgencia(i.data).ord === 1).length;
+  const contagem = useMemo(() => contarPorFonte(itens), [itens]);
+  const itensFiltrados = useMemo(() => filtrarPorFonte(itens, filtro), [itens, filtro]);
 
   return (
     <AppShell title="Minha agenda">
@@ -35,11 +44,17 @@ function Page() {
         <div>
           <h1>Minha agenda</h1>
           <div className="sub">
-            Tudo que espera por você — retornos agendados, negócios em risco e os seus lembretes
+            Tudo que espera por você — retornos, negócios em risco, seguradora, aprovações e os seus
+            lembretes
           </div>
         </div>
         <div className="tools">
-          <button className="btn btn-yellow" onClick={() => setNovoLembreteOpen(true)}>
+          <button
+            id="btnNovoLembrete"
+            data-tour="agenda-novo-lembrete"
+            className="btn btn-yellow"
+            onClick={() => setNovoLembreteOpen(true)}
+          >
             <svg width={14} height={14} aria-hidden="true">
               <use href="#i-plus" />
             </svg>{" "}
@@ -48,7 +63,7 @@ function Page() {
         </div>
       </div>
 
-      <div className="summary-chips">
+      <div className="summary-chips" data-tour="agenda-resumo">
         <div className={`sum-chip${atrasados ? " alert" : ""}`}>
           <span className="sc-val">{atrasados}</span>
           <span className="sc-lbl">Atrasados</span>
@@ -62,6 +77,8 @@ function Page() {
           <span className="sc-lbl">No total</span>
         </div>
       </div>
+
+      <AgendaFiltroChips contagem={contagem} filtro={filtro} onFiltrar={setFiltro} />
 
       {err && (
         <div className="alert alert-err" style={{ marginBottom: 12 }}>
@@ -77,12 +94,39 @@ function Page() {
             </svg>{" "}
             Pendências{" "}
             <span className="muted small" style={{ fontWeight: 500 }}>
-              — {itens.length}
+              {filtro === "todos"
+                ? `— ${itens.length}`
+                : `— ${itensFiltrados.length} de ${itens.length}`}
             </span>
           </h3>
         </div>
-        <div className="card-b" style={{ padding: loading || itens.length ? "14px 16px" : 0 }}>
+        <div
+          className="card-b"
+          style={{ padding: loading || itensFiltrados.length ? "14px 16px" : 0 }}
+        >
           {loading && <div className="muted">Carregando…</div>}
+
+          {!loading && itensFiltrados.length === 0 && itens.length > 0 && (
+            <div className="empty-state">
+              <div className="ico">
+                <svg width={28} height={28} aria-hidden="true">
+                  <use href="#i-check-circle" />
+                </svg>
+              </div>
+              <h3>Nada pendente nesse filtro</h3>
+              <p>Limpe o filtro para ver todas as pendências.</p>
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 12 }}
+                onClick={() => setFiltro("todos")}
+              >
+                <svg width={13} height={13} aria-hidden="true">
+                  <use href="#i-x" />
+                </svg>{" "}
+                Limpar filtro
+              </button>
+            </div>
+          )}
 
           {!loading && itens.length === 0 && (
             <div className="empty-state">
@@ -93,8 +137,8 @@ function Page() {
               </div>
               <h3>Nada pendente por aqui</h3>
               <p>
-                Quando você agendar um retorno, criar um lembrete ou uma negociação ficar parada,
-                aparece nesta lista.
+                Quando você agendar um retorno, criar um lembrete ou a seguradora devolver uma
+                pendência, aparece nesta lista.
               </p>
               <button
                 className="btn btn-ghost btn-sm"
@@ -110,13 +154,17 @@ function Page() {
           )}
 
           {!loading &&
-            itens.map((item) => (
+            itensFiltrados.map((item) => (
               <AgendaItemRow
                 key={item.id}
                 item={item}
                 busy={busyId === item.id}
                 onOpen={() => void abrirItem(item)}
-                onConcluir={item.fonte !== "risco" ? () => void marcarFeito(item) : undefined}
+                onConcluir={
+                  item.fonte === "retorno" || item.fonte === "lembrete"
+                    ? () => void marcarFeito(item)
+                    : undefined
+                }
               />
             ))}
         </div>

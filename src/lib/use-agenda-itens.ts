@@ -1,5 +1,6 @@
-// Hook compartilhado das 3 fontes da agenda unificada (Frente 9/V12):
-// retornos agendados, negócios em risco e lembretes pessoais.
+// Hook compartilhado das 5 fontes da agenda unificada (Frente 9/V12):
+// retornos agendados, negócios em risco, pendência da seguradora, aprovações
+// pedidas e lembretes pessoais.
 // Extraído de `venda/agenda.tsx` (V12.3.1) para ser reutilizado também pelo
 // cartão "O que fazer agora" do Início (`selecionarFilaHome` em
 // `@/lib/agenda`) — mesma query, mesmas ações (marcar feito / abrir item).
@@ -9,9 +10,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
+  fetchAprovacoesAgenda,
   fetchLembretesAgenda,
   fetchRetornosAgenda,
   fetchRiscoAgenda,
+  fetchSeguradoraAgenda,
   montarAgenda,
   type AgendaItem,
 } from "@/lib/agenda";
@@ -19,6 +22,8 @@ import { resolveExistingLeadDestination } from "@/lib/pipeline-lead-navigation";
 
 const QK_RETORNOS = ["agenda", "retornos"] as const;
 const QK_RISCO = ["agenda", "risco"] as const;
+const QK_SEGURADORA = ["agenda", "seguradora"] as const;
+const QK_APROVACOES = ["agenda", "aprovacoes"] as const;
 const QK_LEMBRETES = ["agenda", "lembretes"] as const;
 
 export function useAgendaItens() {
@@ -36,19 +41,53 @@ export function useAgendaItens() {
     queryFn: () => fetchRetornosAgenda(uid!),
     enabled: !!uid,
   });
-  const riscoQuery = useQuery({ queryKey: QK_RISCO, queryFn: () => fetchRiscoAgenda() });
+  const riscoQuery = useQuery({
+    queryKey: [...QK_RISCO, uid],
+    queryFn: () => fetchRiscoAgenda(uid!),
+    enabled: !!uid,
+  });
+  const seguradoraQuery = useQuery({
+    queryKey: [...QK_SEGURADORA, uid],
+    queryFn: () => fetchSeguradoraAgenda(uid!),
+    enabled: !!uid,
+  });
+  const aprovacoesQuery = useQuery({
+    queryKey: [...QK_APROVACOES, uid],
+    queryFn: () => fetchAprovacoesAgenda(uid!),
+    enabled: !!uid,
+  });
   const lembretesQuery = useQuery({ queryKey: QK_LEMBRETES, queryFn: fetchLembretesAgenda });
 
   const loading =
-    !uid || retornosQuery.isPending || riscoQuery.isPending || lembretesQuery.isPending;
+    !uid ||
+    retornosQuery.isPending ||
+    riscoQuery.isPending ||
+    seguradoraQuery.isPending ||
+    aprovacoesQuery.isPending ||
+    lembretesQuery.isPending;
   const queryErr =
     (retornosQuery.error instanceof Error ? retornosQuery.error.message : null) ??
     (riscoQuery.error instanceof Error ? riscoQuery.error.message : null) ??
+    (seguradoraQuery.error instanceof Error ? seguradoraQuery.error.message : null) ??
+    (aprovacoesQuery.error instanceof Error ? aprovacoesQuery.error.message : null) ??
     (lembretesQuery.error instanceof Error ? lembretesQuery.error.message : null);
 
   const itens = useMemo(
-    () => montarAgenda(retornosQuery.data ?? [], riscoQuery.data ?? [], lembretesQuery.data ?? []),
-    [retornosQuery.data, riscoQuery.data, lembretesQuery.data],
+    () =>
+      montarAgenda(
+        retornosQuery.data ?? [],
+        riscoQuery.data ?? [],
+        seguradoraQuery.data ?? [],
+        aprovacoesQuery.data ?? [],
+        lembretesQuery.data ?? [],
+      ),
+    [
+      retornosQuery.data,
+      riscoQuery.data,
+      seguradoraQuery.data,
+      aprovacoesQuery.data,
+      lembretesQuery.data,
+    ],
   );
 
   function invalidarTudo() {
@@ -79,6 +118,13 @@ export function useAgendaItens() {
         void navigate({ to: "/venda/novo-lead", search: { id: item.cotacaoId, step: 5 } });
       return;
     }
+    if (item.fonte === "seguradora") {
+      if (item.propostaId)
+        void navigate({ to: "/venda/emissao", search: { selected: item.propostaId } });
+      return;
+    }
+    // "aprovacao": só é clicável quando existe lead de origem (VIP de carteira
+    // sem lead, como no protótipo, fica sem ação — comentário no fetcher).
     if (!item.leadId || !item.statusPipeline) return;
     setAbrindo(true);
     try {

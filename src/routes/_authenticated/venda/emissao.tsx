@@ -22,6 +22,9 @@ type Row = {
   valor: number | null;
   criado_em: string;
   transmitida_em: string | null;
+  transmissao_status: string | null;
+  transmissao_motivo: string | null;
+  transmissao_mensagem: string | null;
   cotacao_id: string | null;
   cotacoes: { segurado: { nome: string | null }[] | null } | null;
 };
@@ -29,15 +32,18 @@ type Row = {
 const fmtBRL = (n: number | null) =>
   n ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
 
-/** Consulta as propostas já transmitidas com sucesso exibidas nesta tela. */
+/** Consulta as propostas transmitidas com sucesso E as que a seguradora
+ * recusou (transmissao_status='falha') — a pendência entra na lista com um
+ * chip de situação em vez de sumir da tela até alguém reenviar. */
 export function fetchEmissaoRows() {
   return supabase
     .from("propostas")
     .select(
-      "id,numero,apolice_numero,seguradora,premio,valor,criado_em,transmitida_em,cotacao_id," +
+      "id,numero,apolice_numero,seguradora,premio,valor,criado_em,transmitida_em," +
+        "transmissao_status,transmissao_motivo,transmissao_mensagem,cotacao_id," +
         "cotacoes(segurado:cotacao_segurado(nome))",
     )
-    .eq("transmissao_status", PROPOSTA_TRANSMITIDA_STATUS)
+    .in("transmissao_status", [PROPOSTA_TRANSMITIDA_STATUS, "falha"])
     .order("transmitida_em", { ascending: false })
     .limit(200);
 }
@@ -92,7 +98,7 @@ function Page() {
   const ticketMedio = filtered.length ? totalValor / filtered.length : 0;
 
   function exportar() {
-    const head = ["Nº", "Segurado", "Seguradora", "Prêmio", "Gerada em", "Transmitida"];
+    const head = ["Nº", "Segurado", "Seguradora", "Prêmio", "Gerada em", "Transmitida", "Situação"];
     const lines = filtered.map((r) =>
       [
         r.apolice_numero || r.numero || "",
@@ -101,6 +107,7 @@ function Page() {
         fmtBRL(r.premio ?? r.valor),
         new Date(r.criado_em).toLocaleDateString("pt-BR"),
         r.transmitida_em ? new Date(r.transmitida_em).toLocaleString("pt-BR") : "",
+        r.transmissao_status === "falha" ? "Pendência da seguradora" : "Transmitida",
       ]
         .map((v) => `"${String(v).replaceAll('"', '""')}"`)
         .join(","),
@@ -122,9 +129,8 @@ function Page() {
         <div>
           <h1>Emissão & histórico</h1>
           <div className="sub">
-            {filtered.length} proposta{filtered.length !== 1 ? "s" : ""} transmitida
-            {filtered.length !== 1 ? "s" : ""} · valor total {fmtBRL(totalValor)} · ticket médio{" "}
-            {fmtBRL(ticketMedio)}
+            {filtered.length} proposta{filtered.length !== 1 ? "s" : ""} · valor total{" "}
+            {fmtBRL(totalValor)} · ticket médio {fmtBRL(ticketMedio)}
           </div>
         </div>
         <div className="tools">
@@ -185,7 +191,7 @@ function Page() {
             style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
           >
             {rows.length === 0
-              ? "Nenhuma proposta transmitida ainda. Assim que a seguradora confirmar o recebimento na Etapa 7, ela aparece aqui."
+              ? "Nenhuma proposta por aqui ainda. Assim que a Etapa 7 transmitir uma proposta — com sucesso ou com pendência da seguradora —, ela aparece aqui."
               : "Nenhuma proposta encontrada com os filtros atuais."}
           </div>
         </div>
@@ -206,6 +212,7 @@ function Page() {
                 <th style={{ textAlign: "right" }}>Prêmio</th>
                 <th>Gerada em</th>
                 <th>Transmitida</th>
+                <th>Situação</th>
               </tr>
             </thead>
             <tbody>
@@ -233,6 +240,22 @@ function Page() {
                   <td>{new Date(r.criado_em).toLocaleDateString("pt-BR")}</td>
                   <td>
                     {r.transmitida_em ? new Date(r.transmitida_em).toLocaleString("pt-BR") : "—"}
+                  </td>
+                  <td>
+                    {r.transmissao_status === "falha" ? (
+                      <span
+                        className="chip chip-alert"
+                        title={
+                          [r.transmissao_motivo, r.transmissao_mensagem]
+                            .filter(Boolean)
+                            .join(" — ") || "A seguradora recusou a transmissão"
+                        }
+                      >
+                        Pendência da seguradora
+                      </span>
+                    ) : (
+                      <span className="chip chip-ok">Transmitida</span>
+                    )}
                   </td>
                 </tr>
               ))}
