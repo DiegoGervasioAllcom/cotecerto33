@@ -373,6 +373,22 @@ function Page() {
     setResultadoTransmissao(null);
   }
 
+  // Best-effort: só granularidade pro Pipeline (`cotacoes.transmissao_fase`),
+  // nunca deve bloquear ou interromper o wizard — falha aqui não pode
+  // interferir no fluxo real de transmissão (que roda via cotacao_transmissoes).
+  function onFaseTransmissaoChange(faseTransmissao: "dados" | "confirmacao" | "pagamento") {
+    if (!cotacaoId) return;
+    void supabase
+      .from("cotacoes")
+      .update({ transmissao_fase: faseTransmissao })
+      .eq("id", cotacaoId)
+      .then(({ error }) => {
+        if (error && import.meta.env.DEV) {
+          console.error("Falha ao gravar transmissao_fase (best-effort):", error);
+        }
+      });
+  }
+
   function onEscolherOferta(escolha: OfertaTransmissao) {
     setOferta(escolha);
     setErroProposta(null);
@@ -533,6 +549,7 @@ function Page() {
                 setVisibleStep(5);
               }}
               onTentarNovamente={tentarNovamenteTransmissao}
+              onFaseChange={onFaseTransmissaoChange}
             />
           )}
 
