@@ -847,6 +847,26 @@ export async function tentativaTransmissaoMaisRecente(cotacaoId: string) {
 }
 
 /**
+ * Lê `cotacoes.transmissao_fase` direto do banco (via admin — não usar em
+ * asserts de RLS). `StepTransmissao.tsx`/`novo-lead.tsx` gravam esse campo
+ * fire-and-forget (best-effort, T5/T6, de propósito sem `await` bloqueante no
+ * app): esperar SÓ a resposta de rede do PATCH que a UI dispara não garante
+ * que ele foi o ÚLTIMO a chegar no servidor (o PATCH da fase anterior, também
+ * fire-and-forget, pode terminar depois — corrida real, vista em execuções
+ * paralelas do E2E). Ler a linha direto no Postgres depois é a única forma de
+ * confirmar o valor que de fato ficou persistido.
+ */
+export async function lerTransmissaoFaseCotacao(cotacaoId: string): Promise<string | null> {
+  const { data, error } = await admin
+    .from("cotacoes")
+    .select("transmissao_fase")
+    .eq("id", cotacaoId)
+    .maybeSingle();
+  if (error) throw new Error(`ler transmissao_fase: ${error.message}`);
+  return data?.transmissao_fase ?? null;
+}
+
+/**
  * Cria diretamente (via admin) a linha em `cotacao_transmissoes` que
  * `transmitirPropostaQuiver` (`quiver.functions.ts`) inserta antes de chamar
  * o robô externo, com `status='enviada'`. Usado pelo E2E de webhook de
