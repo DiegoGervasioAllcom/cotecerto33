@@ -122,12 +122,25 @@ export type LeadEtapaBucket =
  *   para a cotação do lead (sem sucesso ainda).
  * - `propostaTransmitida`: `true` se existe uma `propostas.transmissao_status
  *   === PROPOSTA_TRANSMITIDA_STATUS` para o lead.
+ * - `emEtapaTransmissao`: `true` se `cotacoes.step_atual` da cotação atual do
+ *   lead é `6` — o passo de Transmissão do wizard (`novo-lead.tsx`, Etapa 7:
+ *   dados complementares/confirmação/pagamento) —, independente de já existir
+ *   ou não uma linha em `cotacao_transmissoes` para essa cotação. Cobre o
+ *   intervalo entre "escolheu a oferta no Cálculo" e "clicou em Transmitir".
+ *
+ * Divergência conhecida e aceita por ora: `em-negociacao.tsx` e
+ * `nav-badges.ts` ainda NÃO consideram `emEtapaTransmissao` — filtram só por
+ * `cotacoes.status`. Um lead que já entrou na Etapa 7 mas cuja cotação segue
+ * com `status = 'calculada'` aparece como "negociação" nessas telas e como
+ * "finalização" no Pipeline. Migrar essas telas para o novo sinal está fora
+ * do escopo desta frente.
  */
 export type LeadEtapaInput = {
   statusPipeline: LeadStatusPipeline | string;
   cotacaoStatus: CotacaoStatus | string | null;
   transmissaoEmAberto: boolean;
   propostaTransmitida: boolean;
+  emEtapaTransmissao: boolean;
 };
 
 /**
@@ -135,12 +148,12 @@ export type LeadEtapaInput = {
  * `leadEtapa()` do protótipo V12. Ordem de decisão (da mais definitiva
  * para o fallback):
  *   perdido > fechamento (proposta transmitida) > finalização (transmissão
- *   em aberto) > negociação > cotação > novo.
+ *   em aberto OU já dentro da Etapa 7) > negociação > cotação > novo.
  */
 export function leadEtapaBucket(input: LeadEtapaInput): LeadEtapaBucket {
   if (input.statusPipeline === "perdido") return "perdido";
   if (input.propostaTransmitida) return "fechamento";
-  if (input.transmissaoEmAberto) return "finalizacao";
+  if (input.transmissaoEmAberto || input.emEtapaTransmissao) return "finalizacao";
   if (
     input.cotacaoStatus !== null &&
     (EM_NEGOCIACAO_STATUSES as readonly string[]).includes(input.cotacaoStatus)
