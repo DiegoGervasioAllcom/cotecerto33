@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { OfertaTransmissao } from "@/components/venda/novo-lead/steps/StepCalculo";
 import {
@@ -29,6 +29,10 @@ type Props = {
   onTransmitir: (dados: DadosComplementaresTransmissao) => void;
   onVoltarCalculo: () => void;
   onTentarNovamente: () => void;
+  // Best-effort: só pra granularidade do Pipeline (`cotacoes.transmissao_fase`).
+  // Nunca disparado para "resultado" — nesse ponto a transmissão de verdade já
+  // tem sua própria linha em `cotacao_transmissoes`.
+  onFaseChange?: (fase: "dados" | "confirmacao" | "pagamento") => void;
 };
 
 export function StepTransmissao({
@@ -41,10 +45,17 @@ export function StepTransmissao({
   onTransmitir,
   onVoltarCalculo,
   onTentarNovamente,
+  onFaseChange,
 }: Props) {
   const [fase, setFase] = useState<Fase>("dados");
   const [dadosComplementares, setDadosComplementares] =
     useState<DadosComplementaresTransmissao | null>(null);
+
+  useEffect(() => {
+    if (fase === "resultado") return;
+    onFaseChange?.(fase);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase]);
 
   const ehCartao = ehCartaoCredito(oferta.formaPagamento);
   const subs: { fase: Fase; l: string }[] = ehCartao

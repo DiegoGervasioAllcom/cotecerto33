@@ -91,7 +91,12 @@ describe("fetchPipelineLeads", () => {
 
     expect(error).toBeNull();
     expect(leads).toHaveLength(1);
-    expect(leads[0]).toMatchObject({ id: "lead-novo", etapa: "novo", cotacao: null });
+    expect(leads[0]).toMatchObject({
+      id: "lead-novo",
+      etapa: "novo",
+      cotacao: null,
+      transmissaoAbertaStatus: null,
+    });
   });
 
   it("lead com cotação em rascunho cai no bucket 'cotacao'", async () => {
@@ -118,7 +123,7 @@ describe("fetchPipelineLeads", () => {
     expect(leads[0].cotacao?.id).toBe("cot-1");
   });
 
-  it("lead com tentativa de transmissão em aberto cai no bucket 'finalizacao'", async () => {
+  it("lead com tentativa de transmissão em aberto cai no bucket 'finalizacao' e expõe transmissaoAbertaStatus='enviada'", async () => {
     mock.resultsByTable.leads = { data: [lead({ id: "lead-final" })], error: null };
     mock.resultsByTable.cotacoes = {
       data: [
@@ -128,6 +133,8 @@ describe("fetchPipelineLeads", () => {
           status: "calculada",
           ramo: "auto",
           atualizado_em: "2026-01-02T00:00:00.000Z",
+          step_atual: 5,
+          transmissao_fase: null,
           segurado: { nome: "Fulano" },
           veiculo: null,
         },
@@ -150,9 +157,73 @@ describe("fetchPipelineLeads", () => {
 
     expect(error).toBeNull();
     expect(leads[0].etapa).toBe("finalizacao");
+    expect(leads[0].transmissaoAbertaStatus).toBe("enviada");
   });
 
-  it("lead com proposta transmitida cai no bucket 'fechamento', mesmo com cotação em negociação", async () => {
+  it("lead com tentativa de transmissão com falha cai no bucket 'finalizacao' e expõe transmissaoAbertaStatus='falha'", async () => {
+    mock.resultsByTable.leads = { data: [lead({ id: "lead-falha" })], error: null };
+    mock.resultsByTable.cotacoes = {
+      data: [
+        {
+          id: "cot-falha",
+          lead_id: "lead-falha",
+          status: "calculada",
+          ramo: "auto",
+          atualizado_em: "2026-01-02T00:00:00.000Z",
+          step_atual: 5,
+          transmissao_fase: null,
+          segurado: { nome: "Fulano" },
+          veiculo: null,
+        },
+      ],
+      error: null,
+    };
+    mock.resultsByTable.cotacao_transmissoes = {
+      data: [
+        {
+          id: "tent-2",
+          cotacao_id: "cot-falha",
+          status: "falha",
+          criado_em: "2026-01-03T00:00:00.000Z",
+        },
+      ],
+      error: null,
+    };
+
+    const { leads, error } = await fetchPipelineLeads();
+
+    expect(error).toBeNull();
+    expect(leads[0].etapa).toBe("finalizacao");
+    expect(leads[0].transmissaoAbertaStatus).toBe("falha");
+  });
+
+  it("lead cuja cotação está no passo de Transmissão (step_atual=6) cai no bucket 'finalizacao', mesmo sem tentativa/proposta ainda", async () => {
+    mock.resultsByTable.leads = { data: [lead({ id: "lead-step6" })], error: null };
+    mock.resultsByTable.cotacoes = {
+      data: [
+        {
+          id: "cot-step6",
+          lead_id: "lead-step6",
+          status: "calculada",
+          ramo: "auto",
+          atualizado_em: "2026-01-02T00:00:00.000Z",
+          step_atual: 6,
+          transmissao_fase: null,
+          segurado: { nome: "Fulano" },
+          veiculo: null,
+        },
+      ],
+      error: null,
+    };
+
+    const { leads, error } = await fetchPipelineLeads();
+
+    expect(error).toBeNull();
+    expect(leads[0].etapa).toBe("finalizacao");
+    expect(leads[0].cotacao?.step_atual).toBe(6);
+  });
+
+  it("lead com proposta transmitida cai no bucket 'fechamento', mesmo com cotação em negociação, e expõe numero/transmissao_status", async () => {
     mock.resultsByTable.leads = { data: [lead({ id: "lead-fecha" })], error: null };
     mock.resultsByTable.cotacoes = {
       data: [
@@ -162,18 +233,27 @@ describe("fetchPipelineLeads", () => {
           status: "proposta",
           ramo: "auto",
           atualizado_em: "2026-01-02T00:00:00.000Z",
+          step_atual: 6,
+          transmissao_fase: null,
           segurado: { nome: "Fulano" },
           veiculo: null,
         },
       ],
       error: null,
     };
-    mock.resultsByTable.propostas = { data: [{ lead_id: "lead-fecha" }], error: null };
+    mock.resultsByTable.propostas = {
+      data: [{ lead_id: "lead-fecha", numero: "PR-123", transmissao_status: "transmitida" }],
+      error: null,
+    };
 
     const { leads, error } = await fetchPipelineLeads();
 
     expect(error).toBeNull();
     expect(leads[0].etapa).toBe("fechamento");
+    expect(leads[0].propostaTransmitida).toEqual({
+      numero: "PR-123",
+      transmissao_status: "transmitida",
+    });
   });
 
   it("lead perdido cai no bucket 'perdido', mesmo com proposta transmitida (perdido vence tudo)", async () => {
@@ -181,7 +261,10 @@ describe("fetchPipelineLeads", () => {
       data: [lead({ id: "lead-perdido", status_pipeline: "perdido", motivo_perda: "preco" })],
       error: null,
     };
-    mock.resultsByTable.propostas = { data: [{ lead_id: "lead-perdido" }], error: null };
+    mock.resultsByTable.propostas = {
+      data: [{ lead_id: "lead-perdido", numero: "PR-999", transmissao_status: "transmitida" }],
+      error: null,
+    };
 
     const { leads, error } = await fetchPipelineLeads();
 

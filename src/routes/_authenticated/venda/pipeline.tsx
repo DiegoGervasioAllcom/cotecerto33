@@ -11,10 +11,12 @@ import { PipelineCard } from "@/components/venda/pipeline/pipeline-card";
 import {
   ageDays,
   ETAPAS_ATIVAS,
+  ETAPA_DESCRICAO,
   ETAPA_LABEL,
   money,
   pipelineHeaderResumo,
   pontoExato,
+  proximaAcao,
   veiculoResumo,
 } from "@/components/venda/pipeline/pipeline-format";
 import { useAuth } from "@/lib/auth";
@@ -209,6 +211,14 @@ function Page() {
 
   const headerResumo = useMemo(() => pipelineHeaderResumo(leads, filtered), [leads, filtered]);
 
+  const temFiltroAtivo =
+    fEtapa !== "todas" ||
+    fRamo !== "todas" ||
+    fOrigem !== "todas" ||
+    fParado !== "todos" ||
+    fStatus !== "todos" ||
+    fMotivo !== "todos";
+
   function renderCard(l: PipelineLeadRow) {
     const atenderLead = l.etapa === "novo" ? atenderPorLead.get(l.id) : undefined;
     return (
@@ -224,7 +234,10 @@ function Page() {
   }
 
   return (
-    <AppShell title="Pipeline">
+    <AppShell
+      title="Pipeline"
+      crumbs="Pipeline de leads · Acompanhe e mova os leads pelo funil da venda"
+    >
       <ProtoIcons />
       <div className="page-head">
         <div>
@@ -273,7 +286,7 @@ function Page() {
           <option value="todas">Tipo de seguro · todos</option>
           {ramos.map((r) => (
             <option key={r} value={r} style={{ textTransform: "capitalize" }}>
-              {r}
+              {r} ({leads.filter((l) => l.cotacao?.ramo === r).length})
             </option>
           ))}
         </select>
@@ -319,9 +332,15 @@ function Page() {
             </option>
           ))}
         </select>
-        <button className="btn-link btn-sm" onClick={clearFilters}>
-          Limpar
-        </button>
+        {temFiltroAtivo ? (
+          <button className="btn-link btn-sm" onClick={clearFilters}>
+            Limpar
+          </button>
+        ) : (
+          <span className="small muted">
+            {filtered.length} leads em andamento · nenhum filtro ativo
+          </span>
+        )}
         {/* TODO Q3: filtro por seguradora depende de join com cotações/propostas (sem cobertura barata no schema atual) */}
       </div>
 
@@ -340,7 +359,8 @@ function Page() {
                   <span className="count">{list.length}</span>
                   <span className="value">{money(totalVal)}</span>
                 </div>
-                {list.length === 0 && <div className="small muted">Vazio</div>}
+                <div className="kcol-d">{ETAPA_DESCRICAO[info.key]}</div>
+                {list.length === 0 && <div className="kcol-vazio">nenhum lead aqui</div>}
                 {list.map((l) => renderCard(l))}
               </div>
             );
@@ -354,7 +374,8 @@ function Page() {
                   {money(perdidos.reduce((a, b) => a + Number(b.valor ?? 0), 0))}
                 </span>
               </div>
-              {perdidos.length === 0 && <div className="small muted">Vazio</div>}
+              <div className="kcol-d">{ETAPA_DESCRICAO.perdido}</div>
+              {perdidos.length === 0 && <div className="kcol-vazio">nenhum lead aqui</div>}
               {perdidos.map((l) => renderCard(l))}
             </div>
           )}
@@ -370,14 +391,14 @@ function Page() {
                 <th>Estágio</th>
                 <th>Dias</th>
                 <th>Origem</th>
-                <th>Valor</th>
+                <th>Próx. ação</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {filtered.map((l) => {
                 const veiculo = veiculoResumo(l.cotacao?.veiculo);
-                const ponto = l.etapa === "perdido" ? l.motivo_perda : pontoExato(l.etapa);
+                const ponto = l.etapa === "perdido" ? l.motivo_perda : pontoExato(l);
                 return (
                   <tr
                     key={l.id}
@@ -425,7 +446,7 @@ function Page() {
                       <span className="muted small">{l.origem || "—"}</span>
                     </td>
                     <td>
-                      <strong>{money(l.valor)}</strong>
+                      <span className="muted small">{proximaAcao(l) ?? "—"}</span>
                     </td>
                     <td>
                       <svg width={14} height={14}>

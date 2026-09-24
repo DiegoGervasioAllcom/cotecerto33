@@ -8,6 +8,7 @@ import type {
   PipelineLeadRow,
   PipelineRetornoPendente,
 } from "@/lib/pipeline-data";
+import { STEPS } from "@/components/venda/novo-lead/types";
 
 export function money(v: number | null): string {
   return v
@@ -22,6 +23,17 @@ export function money(v: number | null): string {
 export function ageDays(iso: string): number {
   const diffMs = Date.now() - new Date(iso).getTime();
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
+
+/**
+ * Texto + tooltip de `.kcard-dias` — espelha `leadPonto`/o trecho do card do
+ * protótipo V12 (`cotecerto_prototipo_v12 - cópia.html`, por volta da linha
+ * 3364): `${l.age===0?'hoje':'há '+l.age+'d'}` com
+ * `title="Parado há ${l.age===0?'menos de um dia':l.age+' dia(s)'}"`.
+ */
+export function diasLabel(dias: number): { texto: string; titulo: string } {
+  if (dias === 0) return { texto: "hoje", titulo: "Parado há menos de um dia" };
+  return { texto: `há ${dias}d`, titulo: `Parado há ${dias} dia(s)` };
 }
 
 /**
@@ -64,31 +76,125 @@ export const ETAPA_LABEL: Record<LeadEtapaBucket, string> = {
   perdido: "Perdido",
 };
 
+/** Descrição curta de cada coluna do Kanban — espelha `ETAPAS[].d` do protótipo V12. */
+export const ETAPA_DESCRICAO: Record<LeadEtapaBucket, string> = {
+  novo: "chegaram para atendimento e ninguém abriu ainda",
+  cotacao: "preenchendo segurado, seguro, veículo, perfil e coberturas",
+  negociacao: "já calcularam — ajustando coberturas e preço com o cliente",
+  finalizacao: "na transmissão: dados, confirmação, pagamento",
+  fechamento: "transmitida — aguardando vistoria, pagamento ou emissão",
+  perdido: "devolvidos ou descartados, com o motivo",
+};
+
+/** Campos do lead necessários pra `pontoExato`/`proximaAcao` (T6). */
+export type PontoExatoLead = Pick<
+  PipelineLeadRow,
+  "etapa" | "cotacao" | "propostaTransmitida" | "transmissaoAbertaStatus"
+>;
+
+/**
+ * Rótulo legível de `propostas.transmissao_status`. Hoje só existe
+ * `PROPOSTA_TRANSMITIDA_STATUS` ("transmitida") — a coluna é `string | null`
+ * livre no banco, então tratamos genericamente (fallback pro próprio valor).
+ */
+function transmissaoStatusLabel(status: string | null): string {
+  if (status === "transmitida") return "transmitida";
+  return status ?? "transmitida";
+}
+
 /**
  * "Ponto exato" onde o lead está — espelha `leadPonto()` do protótipo V12
- * (`cotecerto_prototipo_v12.html`, por volta da linha 2917), simplificado:
- * o protótipo detalha o passo exato do wizard (ex. "parou em Coberturas") e
- * o sub-status da transmissão porque guarda esse progresso em memória; o
- * nosso `PipelineCotacao` (pipeline-data.ts) não expõe esse nível de detalhe
- * — não tem `step_atual` nem o sub-passo da transmissão —, então aqui é um
- * texto fixo por bucket. Simplificação documentada e aceita pela task (T9).
+ * (`cotecerto_prototipo_v12.html`, por volta da linha 2917), com a
+ * granularidade real por bucket (T6, antes um texto fixo por bucket — T9):
+ * - `cotacao`: o passo do wizard (`cotacao.step_atual` → `STEPS`,
+ *   `@/components/venda/novo-lead/types`).
+ * - `finalizacao`: o sub-passo pré-envio da Etapa 7
+ *   (`cotacao.transmissao_fase`, gravado por `StepTransmissao.tsx` via T5) e,
+ *   quando não há sub-passo pré-envio, o status real da tentativa em aberto
+ *   (`transmissaoAbertaStatus`, T6b) — "enviada" (transmitindo) vs "falha".
+ * - `fechamento`: número e status da proposta (`propostaTransmitida`).
+ *
+ * `transmissao_fase` nunca é limpo depois que a transmissão de verdade é
+ * disparada (só é gravado enquanto o vendedor navega pelos sub-passos
+ * "dados"/"confirmação"/"pagamento" — `StepTransmissao.tsx`/`novo-lead.tsx`),
+ * então continua tendo prioridade quando presente; `transmissaoAbertaStatus`
+ * (T6b) só entra no fallback genérico (fase ausente/desconhecida), pra
+ * diferenciar "enviada" de "falha" onde antes o texto era fixo.
+ *
  * Não cobre `'perdido'`: nesse bucket o card já mostra o chip de motivo de
  * perda, que cumpre o mesmo papel.
  */
-export function pontoExato(etapa: LeadEtapaBucket): string | null {
-  switch (etapa) {
+export function pontoExato(lead: PontoExatoLead): string | null {
+  switch (lead.etapa) {
     case "novo":
       return "aguardando o primeiro contato";
-    case "cotacao":
-      return "preenchendo a cotação";
+    case "cotacao": {
+      const passo = lead.cotacao ? STEPS[lead.cotacao.step_atual] : undefined;
+      return passo ? `parou em ${passo}` : "preenchendo a cotação";
+    }
     case "negociacao":
       return "no cálculo — comparando seguradoras";
-    case "finalizacao":
-      return "transmissão em andamento";
-    case "fechamento":
-      return "aguardando a seguradora";
+    case "finalizacao": {
+      const fase = lead.cotacao?.transmissao_fase ?? null;
+      if (fase === "dados") return "transmissão · dados complementares";
+      if (fase === "confirmacao") return "transmissão · confirmação";
+      if (fase === "pagamento") return "transmissão · pagamento";
+      if (!lead.cotacao) return "transmissão em andamento";
+      if (lead.transmissaoAbertaStatus === "falha") return "transmissão · falhou";
+      return "transmissão · transmitindo";
+    }
+    case "fechamento": {
+      const proposta = lead.propostaTransmitida;
+      if (!proposta || !proposta.numero) return "aguardando a seguradora";
+      return `proposta ${proposta.numero} · ${transmissaoStatusLabel(proposta.transmissao_status)}`;
+    }
     case "perdido":
       return null;
+  }
+}
+
+/** Campos do lead necessários pra `proximaAcao` (T6). */
+export type ProximaAcaoLead = Pick<
+  PipelineLeadRow,
+  "etapa" | "cotacao" | "propostaTransmitida" | "motivo_perda" | "transmissaoAbertaStatus"
+>;
+
+/**
+ * Próxima ação recomendada pro vendedor — textos aprovados (T6). Dentro de
+ * `cotacao`, segue os 3 grupos de passos do wizard (`STEPS`): Segurado/Seguro
+ * → Veículo/Perfil → Coberturas (e além, ainda em rascunho, ex. voltou pro
+ * Cálculo sem ter recalculado).
+ *
+ * Dentro de `finalizacao`, o sub-passo pré-envio (`transmissao_fase`) segue
+ * tendo prioridade; só quando ele não está presente (T6b) é que
+ * `transmissaoAbertaStatus` distingue "enviada" (ainda transmitindo, aguarda
+ * o robô) de "falha" (a tentativa não foi pra frente, precisa revisar e
+ * reenviar).
+ */
+export function proximaAcao(lead: ProximaAcaoLead): string | null {
+  switch (lead.etapa) {
+    case "novo":
+      return "Fazer o primeiro contato";
+    case "cotacao": {
+      const passo = lead.cotacao?.step_atual ?? 0;
+      if (passo <= 1) return "Completar os dados do segurado";
+      if (passo <= 3) return "Completar os dados do veículo";
+      return "Ajustar coberturas e rodar o cálculo";
+    }
+    case "negociacao":
+      return "Comparar seguradoras e enviar a proposta";
+    case "finalizacao": {
+      const fase = lead.cotacao?.transmissao_fase ?? null;
+      if (fase === "dados" || fase === "confirmacao" || fase === "pagamento") {
+        return "Completar os dados que a seguradora pede";
+      }
+      if (lead.transmissaoAbertaStatus === "falha") return "Revisar e reenviar a transmissão";
+      return "Aguardar o retorno do robô da seguradora";
+    }
+    case "fechamento":
+      return "Acompanhar a emissão da apólice";
+    case "perdido":
+      return lead.motivo_perda;
   }
 }
 

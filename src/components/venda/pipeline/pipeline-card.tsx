@@ -5,7 +5,14 @@
 // volta pra Matriz, bloqueio e motivo de perda).
 import { ATENDER_AGORA_LIMITE_MS, formatRemaining } from "@/lib/nav-badges";
 import type { PipelineLeadRow, PipelineRetornoPendente } from "@/lib/pipeline-data";
-import { ageDays, money, pontoExato, retornoLabel, veiculoResumo } from "./pipeline-format";
+import {
+  ageDays,
+  diasLabel,
+  pontoExato,
+  proximaAcao,
+  retornoLabel,
+  veiculoResumo,
+} from "./pipeline-format";
 
 export function PipelineCard({
   lead,
@@ -29,10 +36,12 @@ export function PipelineCard({
   onOpen: () => void;
 }) {
   const isPerdido = lead.etapa === "perdido";
-  const ponto = pontoExato(lead.etapa);
+  const ponto = pontoExato(lead);
+  const acao = proximaAcao(lead);
   const veiculo = veiculoResumo(lead.cotacao?.veiculo);
   const ramo = lead.cotacao?.ramo ?? null;
   const dias = ageDays(lead.criado_em);
+  const { texto: diasTexto, titulo: diasTitulo } = diasLabel(dias);
 
   return (
     <div
@@ -116,6 +125,14 @@ export function PipelineCard({
           </div>
         </div>
       )}
+      {ponto && (
+        <div className="kcard-estado">
+          <span className="kcard-ponto">{ponto}</span>
+          <span className="kcard-dias" title={diasTitulo}>
+            {diasTexto}
+          </span>
+        </div>
+      )}
       <div className="top">
         <span className="name">{lead.nome || "Sem nome"}</span>
         {ramo && (
@@ -143,11 +160,7 @@ export function PipelineCard({
           {veiculo}
         </div>
       )}
-      {ponto && <div className="next">{ponto}</div>}
-      <div className="footer">
-        <span className="val">{money(lead.valor)}</span>
-        <span className={`age ${dias >= 7 ? "warn" : ""}`}>{dias}d</span>
-      </div>
+      {acao && <div className="next">{acao}</div>}
     </div>
   );
 }

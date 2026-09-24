@@ -34,17 +34,12 @@ export async function loginAs(
 
 /**
  * Preenche o sub-passo "Dados complementares" da Etapa 7 (Transmissão) e
- * avança até confirmar a transmissão. Lida com os dois ramos da Confirmação
- * (`StepTransmissao.tsx`/`ehCartaoCredito`) sem o chamador precisar saber de
- * antemão qual é o caso:
- * - forma de pagamento sem cartão → a Confirmação já mostra "Confirmar e
- *   transmitir" direto;
- * - forma de pagamento com cartão (`/cart/i`, ex.: "Cartão de crédito") → a
- *   Confirmação mostra "Informar o pagamento", que leva ao sub-passo de
- *   Pagamento (`TransmissaoPagamento.tsx`), onde "Efetivar proposta" é quem
- *   de fato transmite.
+ * avança até o sub-passo "Confirmação" (heading visível) — mas SEM clicar em
+ * "Confirmar e transmitir"/"Efetivar proposta". Usada por quem precisa
+ * parar antes de disparar a transmissão de verdade (ex.: teste de Pipeline
+ * que só confirma o `transmissao_fase` gravado nesse sub-passo — T14).
  */
-export async function confirmarDadosComplementaresTransmissao(page: Page) {
+export async function preencherDadosComplementaresAteConfirmacao(page: Page) {
   await page.getByLabel("RG", { exact: true }).fill("123456789");
   await page.getByLabel("Data de emissão", { exact: true }).fill("13/05/2020");
   await page.getByLabel("Órgão emissor", { exact: true }).fill("SSP");
@@ -57,6 +52,22 @@ export async function confirmarDadosComplementaresTransmissao(page: Page) {
     .selectOption("10");
   await page.getByRole("button", { name: "Efetivar" }).click();
   await page.getByRole("heading", { name: "Confirmação" }).waitFor();
+}
+
+/**
+ * Igual a `preencherDadosComplementaresAteConfirmacao`, e a partir daí avança
+ * até confirmar a transmissão. Lida com os dois ramos da Confirmação
+ * (`StepTransmissao.tsx`/`ehCartaoCredito`) sem o chamador precisar saber de
+ * antemão qual é o caso:
+ * - forma de pagamento sem cartão → a Confirmação já mostra "Confirmar e
+ *   transmitir" direto;
+ * - forma de pagamento com cartão (`/cart/i`, ex.: "Cartão de crédito") → a
+ *   Confirmação mostra "Informar o pagamento", que leva ao sub-passo de
+ *   Pagamento (`TransmissaoPagamento.tsx`), onde "Efetivar proposta" é quem
+ *   de fato transmite.
+ */
+export async function confirmarDadosComplementaresTransmissao(page: Page) {
+  await preencherDadosComplementaresAteConfirmacao(page);
 
   const botaoConfirmarOuPagamento = page.getByRole("button", {
     name: /Confirmar e transmitir|Informar o pagamento/,

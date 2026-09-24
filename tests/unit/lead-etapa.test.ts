@@ -13,6 +13,7 @@ const baseInput: LeadEtapaInput = {
   cotacaoStatus: null,
   transmissaoEmAberto: false,
   propostaTransmitida: false,
+  emEtapaTransmissao: false,
 };
 
 describe("leadEtapaBucket", () => {
@@ -26,6 +27,10 @@ describe("leadEtapaBucket", () => {
 
   it("transmissaoEmAberto true cai em finalizacao", () => {
     expect(leadEtapaBucket({ ...baseInput, transmissaoEmAberto: true })).toBe("finalizacao");
+  });
+
+  it("emEtapaTransmissao true (sem transmissaoEmAberto) também cai em finalizacao", () => {
+    expect(leadEtapaBucket({ ...baseInput, emEtapaTransmissao: true })).toBe("finalizacao");
   });
 
   it("cotacaoStatus em EM_NEGOCIACAO_STATUSES cai em negociacao", () => {
@@ -59,6 +64,7 @@ describe("leadEtapaBucket", () => {
         cotacaoStatus: "calculada",
         transmissaoEmAberto: true,
         propostaTransmitida: true,
+        emEtapaTransmissao: true,
       }),
     ).toBe("perdido");
   });
@@ -81,6 +87,36 @@ describe("leadEtapaBucket", () => {
         transmissaoEmAberto: true,
       }),
     ).toBe("finalizacao");
+  });
+
+  it("finalizacao (emEtapaTransmissao) ganha de negociacao mesmo com cotacaoStatus em negociação", () => {
+    expect(
+      leadEtapaBucket({
+        ...baseInput,
+        cotacaoStatus: "proposta",
+        emEtapaTransmissao: true,
+      }),
+    ).toBe("finalizacao");
+  });
+
+  it("fechamento (propostaTransmitida) ganha de finalizacao (emEtapaTransmissao) mesmo com ambos true", () => {
+    expect(
+      leadEtapaBucket({
+        ...baseInput,
+        emEtapaTransmissao: true,
+        propostaTransmitida: true,
+      }),
+    ).toBe("fechamento");
+  });
+
+  it("perdido ganha de emEtapaTransmissao mesmo com ambos true", () => {
+    expect(
+      leadEtapaBucket({
+        ...baseInput,
+        statusPipeline: "perdido",
+        emEtapaTransmissao: true,
+      }),
+    ).toBe("perdido");
   });
 
   it("negociacao ganha de cotacao quando o cotacaoStatus está em ambas as listas ao mesmo tempo (impossível no schema, mas prova a ordem de checagem)", () => {
