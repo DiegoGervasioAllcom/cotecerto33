@@ -21,12 +21,16 @@ import { admin, anonClient, criarPersonaComEmpresa, uniq, type Db } from "../hel
  * view não amplia nem restringe esse contrato — nem para leitura linha a
  * linha, nem para o agregado de `pipeline_resumo_etapas`.
  *
- * `anon`: `\dp public.pipeline_leads_etapa` no banco local mostra `anon` com
- * `arwdDxt` na view — default ACL do schema `public` (igual a `leads`/
- * `cotacoes`), não algo que esta migration abriu. Quem bloqueia `anon` é a
- * RLS de `leads`/`cotacoes` (`to authenticated`, sem `anon`), então a query
- * de `anon` roda mas devolve lista vazia (`error: null`) — não 42501. Ver
- * comentário no teste de grants abaixo.
+ * `anon`: sem grant nenhum, nem em `pipeline_leads_etapa`/`pipeline_resumo_etapas`
+ * (a migration só concede `select` pra `authenticated`/`service_role`) nem em
+ * `leads`/`cotacoes` por trás delas — confirmado via `psql` direto (`SET ROLE
+ * anon`) que `anon` recebe `permission denied` (42501) tanto nas views quanto
+ * em `leads`/`cotacoes`. É um erro de GRANT, não de RLS: `anon` nunca chega a
+ * ter linha nenhuma avaliada pela policy. (Uma versão anterior deste comentário
+ * dizia o contrário — lista vazia sem erro —, baseada num `\dp` rodado contra
+ * um Supabase CLI local desatualizado, que dá defaults de privilégio mais
+ * permissivos que o CLI real usado em CI/produção; corrigido depois de
+ * reproduzir o bug real no CI. Ver comentário no teste de grants abaixo.)
  */
 describe("RLS pipeline_leads_etapa / pipeline_resumo_etapas", () => {
   let empresaGestorA: string;
@@ -173,30 +177,26 @@ describe("RLS pipeline_leads_etapa / pipeline_resumo_etapas", () => {
     });
   });
 
-  it("NEGATIVO: anon não vê nenhuma linha em pipeline_leads_etapa nem pipeline_resumo_etapas", async () => {
-    // Verificado contra o banco local (`\dp public.pipeline_leads_etapa`): `anon` já
-    // tem `arwdDxt` na view (default ACL do schema `public`, igual a `leads`/`cotacoes`
-    // — não é algo que esta migration introduziu). O `grant select ... to authenticated`
-    // da migration é defensivo/redundante, não é o que bloqueia `anon` aqui.
-    //
-    // O bloqueio real vem de `leads_select`/`cot_select`, ambas `to authenticated`
-    // (sem `anon` no `to`): como as views são `security_invoker = true`, a policy é
-    // avaliada com o papel de quem chamou (`anon`), nenhuma linha casa, e o Postgres
-    // devolve lista vazia com `error: null` — não é "permission denied" (42501).
-    // Esse é o MESMO padrão de `leads`/`cotacoes` direto (confirmado manualmente:
-    // `anon.from("leads").select("id")` também retorna `data: []`, sem erro) — só as
-    // 3 tabelas de catálogo (`rls-catalogos-anon.test.ts`) tinham policy
-    // `to anon, authenticated using(true)` e por isso precisaram de `revoke` explícito
-    // pra virar 42501. As views desta migration não reabrem esse caso: não têm policy
-    // própria nenhuma, herdam só o que `leads`/`cotacoes` já expõem (nada) para `anon`.
+  it("NEGATIVO: anon não consegue nem ler pipeline_leads_etapa nem pipeline_resumo_etapas (permission denied)", async () => {
+    // CORREÇÃO (achado em CI, não no ambiente local): a versão anterior deste teste
+    // assumia que `anon` recebia lista vazia com `error: null` (RLS filtrando em
+    // silêncio), baseada num `\dp` rodado contra um Supabase CLI local desatualizado
+    // (2.117.0, que dá defaults de privilégio mais permissivos que o CLI real usado
+    // em CI/produção, pinado em 2.109.1 — ver .github/workflows/ci.yml). Com o CLI
+    // correto, `anon` NÃO tem grant nenhum nem em `leads`/`cotacoes` (confirmado:
+    // `anon.from("leads").select("id")` retorna 42501, não lista vazia) nem nas views
+    // novas — que só têm `grant select` explícito pra `authenticated`/`service_role`
+    // (migration desta frente). O resultado correto é "permission denied" (42501),
+    // um erro de GRANT, não de RLS — porque `anon` nunca chega a ter linha nenhuma
+    // avaliada pela policy, a permissão é negada antes disso.
+    // Regra prática: nunca valide grant/RLS de objeto novo só com `test:db` local
+    // sem antes confirmar que o Supabase CLI local bate com a versão pinada em CI.
     const anon = anonClient();
 
-    const { data: d1, error: e1 } = await anon.from("pipeline_leads_etapa").select("lead_id");
-    expect(e1).toBeNull();
-    expect(d1 ?? []).toHaveLength(0);
+    const { error: e1 } = await anon.from("pipeline_leads_etapa").select("lead_id");
+    expect(e1?.code).toBe("42501");
 
-    const { data: d2, error: e2 } = await anon.from("pipeline_resumo_etapas").select("etapa");
-    expect(e2).toBeNull();
-    expect(d2 ?? []).toHaveLength(0);
+    const { error: e2 } = await anon.from("pipeline_resumo_etapas").select("etapa");
+    expect(e2?.code).toBe("42501");
   });
 });

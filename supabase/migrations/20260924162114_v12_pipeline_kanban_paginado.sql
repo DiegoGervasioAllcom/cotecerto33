@@ -24,6 +24,15 @@
 -- Tipo de seguro do Kanban consulta
 -- `select ramo, count(*) from pipeline_leads_etapa where ramo is not
 -- null group by ramo` direto, sem view dedicada.
+--
+-- Grant explícito pra `service_role` também (não só `authenticated`):
+-- views não herdam grant de tabela, e views novas não têm nenhum default
+-- privilege implícito pra `service_role` — sem isso, os testes que leem
+-- a view via client admin (service_role), como o de equivalência acima,
+-- falham com "permission denied for view" (achado só em CI, porque o
+-- ambiente local de desenvolvimento tem defaults mais permissivos que
+-- mascaram a ausência do grant — não confie só em `test:db` local pra
+-- validar grant/RLS de objeto novo, sempre confira o resultado do CI).
 -- ============================================================
 
 create or replace view public.pipeline_leads_etapa
@@ -101,7 +110,7 @@ left join cotacao_recente cr on cr.lead_id = l.id
 left join transmissao_aberta ta on ta.cotacao_id = cr.cotacao_id
 left join proposta_transmitida pt on pt.lead_id = l.id;
 
-grant select on public.pipeline_leads_etapa to authenticated;
+grant select on public.pipeline_leads_etapa to authenticated, service_role;
 
 create or replace view public.pipeline_resumo_etapas
 with (security_invoker = true) as
@@ -112,7 +121,7 @@ select
 from public.pipeline_leads_etapa
 group by etapa;
 
-grant select on public.pipeline_resumo_etapas to authenticated;
+grant select on public.pipeline_resumo_etapas to authenticated, service_role;
 
 -- ---------- Índices de suporte ----------
 
