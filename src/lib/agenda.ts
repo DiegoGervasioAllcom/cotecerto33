@@ -257,3 +257,23 @@ export function montarAgenda(
   ];
   return ordenarAgenda(itens, agora);
 }
+
+// ---------------------------------------------------------------------------
+// A FILA DO INÍCIO — os seis itens que a agenda cobra primeiro (cartão "O que
+// fazer agora" da home). Espelha homeFila() do protótipo v12: a ordem já vem
+// de `montarAgenda` (atrasado, hoje, amanhã, depois); o único ajuste é
+// garantir que o compromisso pessoal do vendedor (retorno marcado com o
+// cliente, lembrete que ele mesmo criou) não seja empurrado para fora por uma
+// pilha de avisos do sistema (negócio em risco) — é dele que o cliente cobra.
+// ---------------------------------------------------------------------------
+export const HOME_FILA_N = 6;
+
+export function selecionarFilaHome(itens: AgendaItem[]): AgendaItem[] {
+  const fila = itens.slice(0, HOME_FILA_N);
+  const pessoal = (x: AgendaItem) => x.fonte === "retorno" || x.fonte === "lembrete";
+  if (!fila.some(pessoal)) {
+    const primeiro = itens.find(pessoal);
+    if (primeiro && fila.length > 0) fila[fila.length - 1] = primeiro;
+  }
+  return fila;
+}

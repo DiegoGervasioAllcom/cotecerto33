@@ -356,6 +356,104 @@ export async function limparVendedorComLeadEmCotacao(v: VendedorComLeadEmCotacao
   await limparVendedorComLead(v);
 }
 
+export type VendedorComFilaDia = VendedorComLead & {
+  retornoAtrasadoId: string;
+  retornoHojeId: string;
+  lembreteAtrasadoId: string;
+  cotacaoRiscoId: string;
+};
+
+/**
+ * Vendedor com as 3 fontes da agenda unificada populadas (V12.3.1/tests/e2e/
+ * inicio-fila-dia.spec.ts): um retorno atrasado, um retorno de hoje, um
+ * lembrete atrasado (usado no teste do "visto verde tira da lista") e um
+ * negócio em risco (cotação `calculada` parada há mais de `RISCO_DIAS_PARADO`
+ * dias — sem ação de "marcar como feito", só leitura). Mesmo lead de
+ * `criarVendedorComLead` recebe os 2 retornos; o risco é uma cotação à parte,
+ * sem lead — só precisa existir na mesma empresa para a RLS de `cotacoes`
+ * deixar o vendedor enxergar (`empresa_id in (profiles.empresa_id)`).
+ */
+export async function criarVendedorComFilaDia(): Promise<VendedorComFilaDia> {
+  const vendedor = await criarVendedorComLead();
+  const ontemISO = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const hojeISO = new Date().toISOString().slice(0, 10);
+
+  const { data: retornoAtrasado, error: eRetAtrasado } = await admin
+    .from("lead_agendamentos")
+    .insert({
+      lead_id: vendedor.leadId,
+      data: ontemISO,
+      hora: "09:00",
+      nota: "Retorno atrasado E2E",
+      criado_por: vendedor.userId,
+    })
+    .select("id")
+    .single();
+  if (eRetAtrasado || !retornoAtrasado)
+    throw new Error(`criar retorno atrasado E2E: ${eRetAtrasado?.message}`);
+
+  const { data: retornoHoje, error: eRetHoje } = await admin
+    .from("lead_agendamentos")
+    .insert({
+      lead_id: vendedor.leadId,
+      data: hojeISO,
+      hora: "15:00",
+      nota: "Retorno hoje E2E",
+      criado_por: vendedor.userId,
+    })
+    .select("id")
+    .single();
+  if (eRetHoje || !retornoHoje) throw new Error(`criar retorno hoje E2E: ${eRetHoje?.message}`);
+
+  const { data: lembrete, error: eLembrete } = await admin
+    .from("lembretes")
+    .insert({
+      vendedor_id: vendedor.userId,
+      tipo: "tarefa",
+      titulo: "Lembrete atrasado E2E",
+      data: ontemISO,
+      hora: "08:00",
+    })
+    .select("id")
+    .single();
+  if (eLembrete || !lembrete) throw new Error(`criar lembrete E2E: ${eLembrete?.message}`);
+
+  const atualizadoEmRisco = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: cotacao, error: eCotacao } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      status: "calculada",
+      step_atual: 5,
+      atualizado_em: atualizadoEmRisco,
+    })
+    .select("id")
+    .single();
+  if (eCotacao || !cotacao) throw new Error(`criar cotação em risco E2E: ${eCotacao?.message}`);
+  const { error: eSegurado } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: cotacao.id, nome: "Cliente Em Risco E2E" });
+  if (eSegurado) throw new Error(`criar segurado da cotação em risco E2E: ${eSegurado.message}`);
+
+  return {
+    ...vendedor,
+    retornoAtrasadoId: retornoAtrasado.id,
+    retornoHojeId: retornoHoje.id,
+    lembreteAtrasadoId: lembrete.id,
+    cotacaoRiscoId: cotacao.id,
+  };
+}
+
+/** Remove os dados criados por `criarVendedorComFilaDia` (best-effort; `db reset` também resolve). */
+export async function limparVendedorComFilaDia(v: VendedorComFilaDia): Promise<void> {
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", v.cotacaoRiscoId);
+  await admin.from("cotacoes").delete().eq("id", v.cotacaoRiscoId);
+  await admin.from("lembretes").delete().eq("id", v.lembreteAtrasadoId);
+  await admin.from("lead_agendamentos").delete().in("id", [v.retornoAtrasadoId, v.retornoHojeId]);
+  await limparVendedorComLead(v);
+}
+
 /**
  * Acrescenta ao vendedor uma cotação calculada e uma proposta selecionada.
  * A fixture permite validar os destinos read-only do tutorial sem clicar em

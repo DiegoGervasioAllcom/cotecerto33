@@ -126,6 +126,31 @@ Esta frente é um **radar**, não o detalhamento final — serve para a próxima
 
 ---
 
+## Frente 3 · Telas que o tutorial do vendedor V12 exige (levantamento de 24/09/2026)
+
+O tutorial do vendedor do protótipo V12 (`TOUR_CHAPTERS`, 10 capítulos / 5 módulos — o mesmo para todo vendedor, a persona Diego é só a de demonstração) aponta para telas que o app ainda não tem. **Decisão do usuário (24/09/2026):** construir essas telas primeiro e fazer o tutorial por último, com o texto literal do protótipo. Uma branch por frente, PR ao fechar cada uma.
+
+Falsos gaps (já existem, só o tutorial precisa mapear): Pipeline (`.kcol`/`.kcard`/filtros/toggle), `.seg-pick`, `.plano-pick`, `.hero-placar`, Histórico/Classificar perda, Mensagens prontas, Extrato inteiro, sub-passos 0–1 da Transmissão, desconto `%` no comparativo.
+
+| Ordem | Task | Tag | Descrição | Depende de |
+|---|---|---|---|---|
+| 1 | V12.3.1 | front | **Início — fila do dia unificada** (`.dia-fila`): cartão único "O que fazer agora" com até 6 itens (`HOME_FILA_N`), ordenados atrasado → hoje → resto, garantindo ao menos 1 retorno/lembrete; fontes: retorno agendado, negócio em risco e lembrete (pendência da seguradora e aprovação pedida entram com a V12.3.2); clique navega à origem (o destaque é a V12.3.11); visto verde risca retorno/lembrete na própria linha. Reaproveita `montarAgenda` (`src/lib/agenda.ts`). Substitui os blocos "Sua missão de hoje" e "O que fazer agora (com retorno)". | — |
+| 2 | V12.3.2 | front | **Agenda — filtros por tipo** (`.ag-filtros`, chips com contador) + fontes que faltam (pendência da seguradora, aprovações que você pediu — dado já existe no fluxo de desconto). Acrescentar `data-tour` em Novo lembrete, item e visto. | V12.3.1 (fontes compartilhadas) |
+| 3 | V12.1.25 / V12.1.26 | front | **Emissão & histórico** — já planejadas (seção 1.8): duas listas, coluna Situação, Documentos/Consultar. | V12.1.17, V12.1.20 |
+| 4 | V12.1.13 / V12.1.20 | front | **Transmitida** — já planejadas: lista de documentos originais (`.doc-li`) e separação "esta proposta" × "próximo passo" (`.atalhos`). | V12.1.16 |
+| 5 | V12.3.3 | front | **Pipeline — overflow por coluna**: confirmar se o "mais N ⌄" no pé da coluna e o último card desbotado já existem após a paginação (PR #237); só então estimar. | — |
+| 6 | V12.3.4 | front | **Em negociação — duas listas** ("Aguardando cotação" com "7 de 8" respondidas × "Cotação finalizada") + cartão persistente "COTAÇÃO FINALIZADA" (Abrir cálculo / Depois) + item do menu verde pulsando enquanto houver cotação não aberta. Avaliar realtime do Supabase em vez de polling. Wrapper `data-tour` nas ações por linha (`.fase-acoes`) de Em negociação e Em finalização. | — |
+| 7 | V12.1.31–37 | front/integracao | **Impressão configurável** — já planejada (seção 1.7), incluindo o bloqueio de vazamento de comissão V12.1.34. | — |
+| 8 | V12.3.5 | front | **Cálculo — lista comparativa como tela principal.** Decisão do usuário: o protótipo mantém as duas visões, mas a principal passou a ser a lista (seguradoras em colunas × coberturas em linhas); no app a principal ainda são os cards. Trocar a visão padrão do passo Cálculo para a lista comparativa e manter os cards como alternativa (`.calc-toolset` lista/cards), com barra de contexto (`.calc-ctx`: nº, cliente, plano, validade), setas com contador de seguradoras fora da tela (`.cl-nav`), filtro Compreensiva/Demais/Todas (`.cob-filtro`), faixa de preço e ordenação, botões de impressão (`.calc-bar-r`). | V12.1.31 (impressão) |
+| 9 | V12.3.6 | front | **Cálculo — ações por seguradora** (`.seg-acoes`): Mensagens (retorno da seguradora sobre o risco), `%` desconto (já existe), Engrenagem (análise do envio, prêmios por cobertura, personalizar) e Recalcular só daquela seguradora. Prêmio/VIP fica fora até a decisão pendente nº 2. | V12.3.5 |
+| 10 | V12.3.7 | front/banco | **Personalização por seguradora** (`.seg-perso` e modal da engrenagem): ajustar franquia/carro reserva/vidros de uma seguradora e recalcular só ela. Persistir o ajuste por seguradora na cotação (migration + RLS). | V12.3.6 |
+| 11 | V12.3.8 | front/banco | **Segurado — tipo de seguro por ícone** (`.tipo-item`, Auto/Moto/Vida): troca o tipo sem recomeçar o cadastro; só Auto tem jornada completa, os outros aparecem marcados como "em breve". Checar se a cotação já tem coluna de tipo. Mesma task cobre o agrupamento do perfil do condutor (`#swCond`: garagem, principal condutor, jovens). | — |
+| 11b | V12.3.11 | front | **Foco ao chegar** (`focoIr`/`.foco-barra`/`.em-foco` no protótipo): ao clicar num item da fila do dia ou da agenda, a tela de origem rola até o item, marca com contorno amarelo e mostra uma faixa "de onde você veio" com X para sair. Transversal (Pipeline, wizard, Em negociação, Em finalização); as classes não estão no `proto.css`. Na V12.3.1 o clique só navega, como a agenda já faz. | V12.3.1, V12.3.2 |
+| — | V12.3.9 | front/banco | **Cliente VIP** (botão Prêmio do `.seg-acoes`) — bloqueado pela decisão pendente nº 2; não entra na sequência. | Decisão pendente nº 2 |
+| 12 | V12.3.10 | front | **Tutorial do vendedor V12**: reescrever `src/components/tutorial/tutorial-content-sales.ts` com os 10 capítulos literais do protótipo, trocar a abertura em `tutorial-persona.ts` (CoteCerto · "TUTORIAL · O DIA A DIA DO VENDEDOR"), novas páginas em `tutorial-targets.ts` (agenda, em-cotação, em-negociação, em-finalização, emissão), novas preparações (Cálculo em lista, Transmissão sub-passos 0/1/3), e ajustar os testes unitários e E2E do tutorial. | V12.3.1–V12.3.8 |
+
+---
+
 ## Decisões pendentes que bloqueiam o início
 
 1. ~~Regra real do gate da Etapa 7~~ — **resolvido** (05/09/2026): sem gate, é para todo vendedor. Ver `docs/v12` memória do usuário / seção 1.2 acima.

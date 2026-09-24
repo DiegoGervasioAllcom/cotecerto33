@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   classificarUrgencia,
   diasParados,
+  HOME_FILA_N,
   lembreteParaItem,
   limiteRiscoISO,
   montarAgenda,
@@ -9,7 +10,9 @@ import {
   retornoParaItem,
   riscoParaItem,
   RISCO_DIAS_PARADO,
+  selecionarFilaHome,
   type AgendaItem,
+  type FonteAgenda,
   type LembreteRow,
   type RetornoRow,
   type RiscoRow,
@@ -180,5 +183,123 @@ describe("montarAgenda (unitário puro — junta as 3 fontes já ordenadas)", ()
     const item = riscoParaItem(parado10Dias, AGORA);
     expect(item.texto).toContain("10 dias");
     expect(classificarUrgencia(item.data, AGORA).ord).toBe(0);
+  });
+});
+
+describe("selecionarFilaHome (unitário puro — cartão 'O que fazer agora' do Início)", () => {
+  // Item sintético já em ordem de urgência crescente (não reordena — a
+  // função assume que `itens` já veio de `montarAgenda`/`ordenarAgenda`).
+  function item(fonte: FonteAgenda, id: string, ord: 0 | 1 | 2 | 3 = 0): AgendaItem {
+    const datas = ["2026-09-16", "2026-09-17", "2026-09-18", "2026-09-25"];
+    return {
+      id: `${fonte}:${id}`,
+      fonte,
+      data: datas[ord],
+      hora: null,
+      titulo: id,
+      texto: "",
+      leadId: null,
+      statusPipeline: null,
+      cotacaoId: fonte === "risco" ? id : null,
+      tipoLembrete: fonte === "lembrete" ? "tarefa" : null,
+    };
+  }
+
+  it(`corta a lista em HOME_FILA_N (${HOME_FILA_N}) mantendo a ordem de urgência`, () => {
+    const itens = [
+      item("retorno", "a", 0),
+      item("risco", "b", 0),
+      item("lembrete", "c", 1),
+      item("risco", "d", 1),
+      item("retorno", "e", 2),
+      item("risco", "f", 2),
+      item("lembrete", "g", 3), // 7º — deveria ficar de fora
+    ];
+    const fila = selecionarFilaHome(itens);
+    expect(fila).toHaveLength(HOME_FILA_N);
+    expect(fila.map((i) => i.id)).toEqual([
+      "retorno:a",
+      "risco:b",
+      "lembrete:c",
+      "risco:d",
+      "retorno:e",
+      "risco:f",
+    ]);
+  });
+
+  it("quando os 6 primeiros são só avisos do sistema (risco) e existe um item pessoal depois, ele substitui o último slot", () => {
+    const itens = [
+      item("risco", "r1", 0),
+      item("risco", "r2", 0),
+      item("risco", "r3", 1),
+      item("risco", "r4", 1),
+      item("risco", "r5", 2),
+      item("risco", "r6", 2),
+      item("retorno", "pessoal", 3), // 7º — só ele é pessoal
+    ];
+    const fila = selecionarFilaHome(itens);
+    expect(fila).toHaveLength(HOME_FILA_N);
+    // Os 5 primeiros riscos continuam intactos; só o último slot vira o item pessoal.
+    expect(fila.map((i) => i.id)).toEqual([
+      "risco:r1",
+      "risco:r2",
+      "risco:r3",
+      "risco:r4",
+      "risco:r5",
+      "retorno:pessoal",
+    ]);
+  });
+
+  it("já havendo um item pessoal (retorno ou lembrete) entre os 6 primeiros, não altera a fila", () => {
+    const itens = [
+      item("risco", "r1", 0),
+      item("lembrete", "pessoal-cedo", 0),
+      item("risco", "r2", 1),
+      item("risco", "r3", 1),
+      item("risco", "r4", 2),
+      item("risco", "r5", 2),
+      item("retorno", "pessoal-tarde", 3),
+    ];
+    const fila = selecionarFilaHome(itens);
+    expect(fila.map((i) => i.id)).toEqual([
+      "risco:r1",
+      "lembrete:pessoal-cedo",
+      "risco:r2",
+      "risco:r3",
+      "risco:r4",
+      "risco:r5",
+    ]);
+  });
+
+  it("sem nenhum item pessoal em toda a lista, não altera nada (não há o que substituir)", () => {
+    const itens = [
+      item("risco", "r1", 0),
+      item("risco", "r2", 0),
+      item("risco", "r3", 1),
+      item("risco", "r4", 1),
+      item("risco", "r5", 2),
+      item("risco", "r6", 2),
+      item("risco", "r7", 3),
+    ];
+    const fila = selecionarFilaHome(itens);
+    expect(fila.map((i) => i.id)).toEqual([
+      "risco:r1",
+      "risco:r2",
+      "risco:r3",
+      "risco:r4",
+      "risco:r5",
+      "risco:r6",
+    ]);
+  });
+
+  it("lista menor que HOME_FILA_N volta inteira, sem preencher nem estourar", () => {
+    const itens = [item("risco", "r1", 0), item("lembrete", "pessoal", 1)];
+    expect(selecionarFilaHome(itens)).toHaveLength(2);
+    expect(selecionarFilaHome(itens).map((i) => i.id)).toEqual(["risco:r1", "lembrete:pessoal"]);
+
+    const semPessoal = [item("risco", "r1", 0)];
+    expect(selecionarFilaHome(semPessoal)).toEqual(semPessoal);
+
+    expect(selecionarFilaHome([])).toEqual([]);
   });
 });
