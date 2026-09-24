@@ -621,6 +621,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "consultas_cpf_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
+          {
             foreignKeyName: "consultas_cpf_empresa_id_fkey";
             columns: ["empresa_id"];
             isOneToOne: false;
@@ -731,6 +738,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "cotacoes";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "consultas_placa_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
           },
           {
             foreignKeyName: "consultas_placa_empresa_id_fkey";
@@ -936,6 +950,13 @@ export type Database = {
             referencedRelation: "cotacoes";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "cotacao_coberturas_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: true;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
         ];
       };
       cotacao_perfil: {
@@ -1040,6 +1061,13 @@ export type Database = {
             referencedRelation: "cotacoes";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "cotacao_perfil_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: true;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
         ];
       };
       cotacao_premios: {
@@ -1077,6 +1105,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "cotacoes";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cotacao_premios_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
           },
         ];
       };
@@ -1148,6 +1183,13 @@ export type Database = {
             isOneToOne: true;
             referencedRelation: "cotacoes";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cotacao_segurado_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: true;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
           },
         ];
       };
@@ -1229,6 +1271,13 @@ export type Database = {
             referencedRelation: "cotacoes";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "cotacao_seguro_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: true;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
         ];
       };
       cotacao_transmissoes: {
@@ -1290,6 +1339,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "cotacoes";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cotacao_transmissoes_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
           },
           {
             foreignKeyName: "cotacao_transmissoes_proposta_id_fkey";
@@ -1465,6 +1521,13 @@ export type Database = {
             referencedRelation: "cotacoes";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "cotacao_veiculo_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: true;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
         ];
       };
       cotacoes: {
@@ -1556,6 +1619,13 @@ export type Database = {
             referencedRelation: "leads";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "cotacoes_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["lead_id"];
+          },
         ];
       };
       desconto_politicas: {
@@ -1637,6 +1707,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "cotacoes";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "desconto_solicitacoes_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
           },
           {
             foreignKeyName: "desconto_solicitacoes_nivel_atual_fkey";
@@ -2512,6 +2589,13 @@ export type Database = {
             referencedRelation: "leads";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "lead_agendamentos_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["lead_id"];
+          },
         ];
       };
       lead_eventos: {
@@ -2552,6 +2636,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "leads";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "lead_eventos_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["lead_id"];
           },
         ];
       };
@@ -2734,6 +2825,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "leads";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "lembretes_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["lead_id"];
           },
         ];
       };
@@ -3018,6 +3116,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "movida_distribuicao_auditoria_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["lead_id"];
+          },
+          {
             foreignKeyName: "movida_distribuicao_auditoria_loja_id_fkey";
             columns: ["loja_id"];
             isOneToOne: false;
@@ -3237,6 +3342,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "leads";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "oportunidades_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["lead_id"];
           },
         ];
       };
@@ -4170,6 +4282,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "propostas_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
+          {
             foreignKeyName: "propostas_empresa_id_fkey";
             columns: ["empresa_id"];
             isOneToOne: false;
@@ -4189,6 +4308,13 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "leads";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "propostas_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["lead_id"];
           },
           {
             foreignKeyName: "propostas_oportunidade_id_fkey";
@@ -4404,6 +4530,59 @@ export type Database = {
       };
     };
     Views: {
+      pipeline_leads_etapa: {
+        Row: {
+          ano_modelo: string | null;
+          atualizado_em: string | null;
+          bloqueado: boolean | null;
+          contato: string | null;
+          cotacao_id: string | null;
+          cotacao_status: Database["public"]["Enums"]["cotacao_status"] | null;
+          criado_em: string | null;
+          em_avaliacao_matriz: boolean | null;
+          empresa_id: string | null;
+          etapa: string | null;
+          lead_id: string | null;
+          marca_nome: string | null;
+          modelo_nome: string | null;
+          motivo_perda: string | null;
+          nome: string | null;
+          origem: string | null;
+          proposta_numero: string | null;
+          proposta_transmissao_status: string | null;
+          ramo: string | null;
+          responsavel_id: string | null;
+          status_pipeline: Database["public"]["Enums"]["lead_status"] | null;
+          step_atual: number | null;
+          transmissao_aberta_status: string | null;
+          transmissao_fase: string | null;
+          valor: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "leads_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "leads_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+        ];
+      };
+      pipeline_resumo_etapas: {
+        Row: {
+          etapa: string | null;
+          total: number | null;
+          valor_total: number | null;
+        };
+        Relationships: [];
+      };
       v_comissao_por_competencia: {
         Row: {
           beneficiario_id: string | null;
