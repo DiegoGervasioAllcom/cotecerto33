@@ -250,6 +250,186 @@ export async function limparVendedorComLead(v: VendedorComLead): Promise<void> {
   await admin.from("empresas").delete().eq("id", v.empresaId);
 }
 
+export type VendedorComPropostasEmissao = VendedorComLead & {
+  cotacaoTransmitidaId: string;
+  propostaTransmitidaId: string;
+  cotacaoFalhaId: string;
+  propostaFalhaId: string;
+};
+
+/**
+ * Vendedor com duas propostas já transmitidas (Frente 3, V12.1.25 parcial):
+ * uma `transmissao_status='transmitida'` sem nenhum dado pós-transmissão
+ * ainda (protocolo/apólice — a integração que os preenche não está ligada),
+ * e uma `'falha'` (pendência real da seguradora, mesmo shape de
+ * `criarVendedorComAgendaCompleta`). Usado por `emissao-transmitida.spec.ts`
+ * pra confirmar que `/venda/emissao` separa "Aguardando a seguradora"
+ * (as duas) de "Concluídas" (vazia — só `emitida` cai lá, e nada aqui simula
+ * esse status, V12.1.28).
+ */
+export async function criarVendedorComPropostasEmissao(): Promise<VendedorComPropostasEmissao> {
+  const vendedor = await criarVendedorComLead();
+
+  const { data: cotacaoTransmitida, error: eCotTransmitida } = await admin
+    .from("cotacoes")
+    .insert({ empresa_id: vendedor.empresaId, responsavel_id: vendedor.userId, status: "proposta" })
+    .select("id")
+    .single();
+  if (eCotTransmitida || !cotacaoTransmitida)
+    throw new Error(`criar cotação transmitida E2E: ${eCotTransmitida?.message}`);
+  const { error: eSeguradoTransmitida } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: cotacaoTransmitida.id, nome: "Cliente Transmitida Emissão E2E" });
+  if (eSeguradoTransmitida)
+    throw new Error(`criar segurado da cotação transmitida E2E: ${eSeguradoTransmitida.message}`);
+
+  const { data: propostaTransmitida, error: ePropostaTransmitida } = await admin
+    .from("propostas")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      cotacao_id: cotacaoTransmitida.id,
+      numero: "PRP-E2E-EMISSAO-TRANSMITIDA",
+      seguradora: "Seguradora Emissão E2E",
+      premio: 2500,
+      transmissao_status: "transmitida",
+      transmitida_em: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (ePropostaTransmitida || !propostaTransmitida)
+    throw new Error(`criar proposta transmitida E2E: ${ePropostaTransmitida?.message}`);
+
+  const { data: cotacaoFalha, error: eCotacaoFalha } = await admin
+    .from("cotacoes")
+    .insert({ empresa_id: vendedor.empresaId, responsavel_id: vendedor.userId, status: "proposta" })
+    .select("id")
+    .single();
+  if (eCotacaoFalha || !cotacaoFalha)
+    throw new Error(`criar cotação da proposta em falha E2E: ${eCotacaoFalha?.message}`);
+  const { error: eSeguradoFalha } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: cotacaoFalha.id, nome: "Cliente Falha Emissão E2E" });
+  if (eSeguradoFalha)
+    throw new Error(`criar segurado da cotação em falha E2E: ${eSeguradoFalha.message}`);
+
+  const { data: propostaFalha, error: ePropostaFalha } = await admin
+    .from("propostas")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      cotacao_id: cotacaoFalha.id,
+      numero: "PRP-E2E-EMISSAO-FALHA",
+      transmissao_status: "falha",
+      transmissao_motivo: "documento_pendente",
+      transmissao_mensagem: "Falta o CRLV do veículo E2E",
+    })
+    .select("id")
+    .single();
+  if (ePropostaFalha || !propostaFalha)
+    throw new Error(`criar proposta em falha E2E: ${ePropostaFalha?.message}`);
+
+  return {
+    ...vendedor,
+    cotacaoTransmitidaId: cotacaoTransmitida.id,
+    propostaTransmitidaId: propostaTransmitida.id,
+    cotacaoFalhaId: cotacaoFalha.id,
+    propostaFalhaId: propostaFalha.id,
+  };
+}
+
+/** Remove os dados criados por `criarVendedorComPropostasEmissao` (best-effort; `db reset` também resolve). */
+export async function limparVendedorComPropostasEmissao(
+  v: VendedorComPropostasEmissao,
+): Promise<void> {
+  await admin.from("propostas").delete().eq("id", v.propostaFalhaId);
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", v.cotacaoFalhaId);
+  await admin.from("cotacoes").delete().eq("id", v.cotacaoFalhaId);
+  await admin.from("propostas").delete().eq("id", v.propostaTransmitidaId);
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", v.cotacaoTransmitidaId);
+  await admin.from("cotacoes").delete().eq("id", v.cotacaoTransmitidaId);
+  await limparVendedorComLead(v);
+}
+
+/**
+ * Colega na MESMA empresa de `empresaId`, com uma proposta transmitida
+ * própria — usado pra confirmar que `/venda/emissao` é "minhas propostas"
+ * (decisão do usuário): a RLS de `propostas` libera SELECT pra empresa
+ * inteira (mesma regra já documentada em `criarColegaComAgendaCompleta`),
+ * mas `fetchEmissaoRows` filtra por `.eq("responsavel_id", uid)` — a
+ * proposta do colega NÃO aparece na lista do vendedor logado.
+ */
+export async function criarColegaComPropostaEmissao(empresaId: string): Promise<{
+  userId: string;
+  cotacaoId: string;
+  propostaId: string;
+}> {
+  const senha = "Teste@123!";
+  const email = `${uniq("colega-emissao-e2e")}@teste.local`;
+
+  const { data: userData, error: eUser } = await admin.auth.admin.createUser({
+    email,
+    password: senha,
+    email_confirm: true,
+  });
+  if (eUser || !userData.user)
+    throw new Error(`criar usuário colega emissão E2E: ${eUser?.message}`);
+  const userId = userData.user.id;
+
+  const { error: eProfile } = await admin
+    .from("profiles")
+    .update({ empresa_id: empresaId, status: "aprovada" })
+    .eq("id", userId);
+  if (eProfile) throw new Error(`atualizar profile colega emissão E2E: ${eProfile.message}`);
+
+  const { error: eRole } = await admin
+    .from("user_roles")
+    .insert({ user_id: userId, role: "vendedor" });
+  if (eRole) throw new Error(`inserir role colega emissão E2E: ${eRole.message}`);
+
+  const { data: cotacao, error: eCotacao } = await admin
+    .from("cotacoes")
+    .insert({ empresa_id: empresaId, responsavel_id: userId, status: "proposta" })
+    .select("id")
+    .single();
+  if (eCotacao || !cotacao)
+    throw new Error(`criar cotação do colega emissão E2E: ${eCotacao?.message}`);
+  const { error: eSegurado } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: cotacao.id, nome: "Cliente Colega Emissão E2E" });
+  if (eSegurado) throw new Error(`criar segurado do colega emissão E2E: ${eSegurado.message}`);
+
+  const { data: proposta, error: eProposta } = await admin
+    .from("propostas")
+    .insert({
+      empresa_id: empresaId,
+      responsavel_id: userId,
+      cotacao_id: cotacao.id,
+      numero: "PRP-E2E-EMISSAO-COLEGA",
+      transmissao_status: "transmitida",
+      transmitida_em: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (eProposta || !proposta)
+    throw new Error(`criar proposta do colega emissão E2E: ${eProposta?.message}`);
+
+  return { userId, cotacaoId: cotacao.id, propostaId: proposta.id };
+}
+
+/** Remove os dados criados por `criarColegaComPropostaEmissao` (best-effort; `db reset` também resolve). */
+export async function limparColegaComPropostaEmissao(colega: {
+  userId: string;
+  cotacaoId: string;
+  propostaId: string;
+}): Promise<void> {
+  await admin.from("propostas").delete().eq("id", colega.propostaId);
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", colega.cotacaoId);
+  await admin.from("cotacoes").delete().eq("id", colega.cotacaoId);
+  await admin.from("user_roles").delete().eq("user_id", colega.userId);
+  await admin.auth.admin.deleteUser(colega.userId);
+}
+
 /** Distribui outro lead para uma persona já autenticada, simulando chegada em tempo real. */
 export async function distribuirLeadE2E(userId: string, empresaId: string): Promise<string> {
   const { data, error } = await admin

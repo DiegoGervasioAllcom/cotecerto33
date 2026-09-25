@@ -169,7 +169,7 @@ export function TransmissaoDadosComplementares({
         </div>
       </div>
 
-      <div className="acc-sol" style={{ marginBottom: 16 }}>
+      <div className="acc-sol" data-tour="transmissao-resumo" style={{ marginBottom: 16 }}>
         <div className="row" style={{ gap: 28, flexWrap: "wrap", alignItems: "center" }}>
           <div>
             <span className="muted small">Cotação</span>
@@ -210,7 +210,7 @@ export function TransmissaoDadosComplementares({
       </div>
 
       <div className="acc-sec-t">Dados básicos do segurado</div>
-      <div className="wizard-grid cols-3">
+      <div className="wizard-grid cols-3" data-tour="transmissao-dados">
         <div className="field-group">
           <label>CPF</label>
           <input className="input" value={f.cpf} disabled />

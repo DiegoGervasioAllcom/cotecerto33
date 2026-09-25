@@ -133,7 +133,7 @@ async function gerarPropostaComTentativaReal(page: Page, fixture: CotacaoQuiverF
 }
 
 test.describe("Webhook de transmissão — StepCalculo reage ao resultado do robô", () => {
-  test("sucesso: webhook transmitido=true → UI mostra confirmação e link para Emissão", async ({
+  test("sucesso: webhook transmitido=true → sub-passo Transmitida mostra o card completo (Frente 3, V12.1.13 parcial)", async ({
     page,
   }) => {
     const fixture = await prepararCotacaoCalculada(page);
@@ -151,11 +151,24 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       });
       expect(res.ok()).toBeTruthy();
 
-      // O polling do front roda a cada 4s — margem generosa acima disso.
-      await expect(page.getByText("Proposta transmitida com sucesso")).toBeVisible({
-        timeout: 15_000,
-      });
-      await expect(page.getByRole("link", { name: "Ir para Emissão" })).toBeVisible();
+      // O polling do front roda a cada 4s — margem generosa acima disso. A
+      // proposta virou uma linha real (`registrar_resultado_transmissao_quiver`),
+      // então o ramo `transmitida` do resultado ganha o card completo de
+      // `TransmissaoTransmitidaCard` em vez do resumo antigo.
+      const acoes = page.locator('[data-tour="transmitida-acoes"]');
+      await expect(acoes).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText("Proposta transmitida com sucesso")).toHaveCount(0);
+
+      // Ações desabilitadas — dependem da integração que ainda não devolve
+      // protocolo/documentos (nunca simular, V12.1.28).
+      await expect(acoes.getByRole("button", { name: "Documentos e envio" })).toBeDisabled();
+      await expect(acoes.getByRole("button", { name: "Consultar protocolo" })).toBeDisabled();
+
+      // Campos que a integração futura preenche continuam "—" hoje.
+      await expect(page.getByRole("cell", { name: "Protocolo" })).toBeVisible();
+      const atalhos = page.locator('[data-tour="transmitida-atalhos"]');
+      await expect(atalhos.getByRole("link", { name: /Emissão & histórico/ })).toBeVisible();
+      await expect(atalhos.getByRole("link", { name: /Pipeline/ })).toBeVisible();
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
     }

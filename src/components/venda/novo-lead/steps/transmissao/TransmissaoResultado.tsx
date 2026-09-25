@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
+import type { Form } from "@/components/venda/novo-lead/types";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
+import { TransmissaoTransmitidaCard } from "./TransmissaoTransmitidaCard";
 
 export type ResultadoTransmissaoEstado = {
   status: "enviada" | "transmitida" | "falha";
@@ -12,13 +14,23 @@ type Props = {
   seguradora: string;
   resultado: ResultadoTransmissaoEstado | null;
   tentarNovamente: () => void;
+  f: Form;
 };
 
 // Onda 3 (T.10): o resultado real (transmitido / recusado pelo portal) só
 // chega depois, pelo webhook do robô — esta tela só reflete o polling de
 // `cotacao_transmissoes` (mesmo padrão de `useSimulacaoCalculo`). Movida de
 // `StepCalculo.tsx` quase sem mudança visual.
-export function TransmissaoResultado({ seguradora, resultado, tentarNovamente }: Props) {
+//
+// Frente 3 (V12.1.13 parcial): o ramo `transmitida` ganhou o card completo
+// de `transmResultado()` do protótipo (`TransmissaoTransmitidaCard`), com os
+// dados persistidos da proposta. Os ramos `aguardando`/`falha` continuam
+// como estavam — nada de simular status aqui (V12.1.28).
+export function TransmissaoResultado({ seguradora, resultado, tentarNovamente, f }: Props) {
+  if (resultado?.status === "transmitida" && resultado.propostaId) {
+    return <TransmissaoTransmitidaCard propostaId={resultado.propostaId} f={f} />;
+  }
+
   return (
     <div className="card" style={{ padding: 20, marginBottom: 12, textAlign: "center" }}>
       <div className="calc-ins" style={{ justifyContent: "center", marginBottom: 12 }}>
@@ -37,18 +49,13 @@ export function TransmissaoResultado({ seguradora, resultado, tentarNovamente }:
         </>
       )}
 
-      {resultado?.status === "transmitida" && (
+      {resultado?.status === "transmitida" && !resultado.propostaId && (
         <>
           <svg width="28" height="28" style={{ color: "var(--ok, #16a34a)" }}>
             <use href="#i-check" />
           </svg>
           <div style={{ marginTop: 8, fontWeight: 600 }}>Proposta transmitida com sucesso</div>
-          <Link
-            to="/venda/emissao"
-            search={resultado.propostaId ? { selected: resultado.propostaId } : {}}
-            className="btn btn-yellow"
-            style={{ marginTop: 12 }}
-          >
+          <Link to="/venda/emissao" className="btn btn-yellow" style={{ marginTop: 12 }}>
             Ir para Emissão
           </Link>
         </>

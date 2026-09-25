@@ -117,6 +117,7 @@ export function StepTransmissao({
         seguradora={oferta.resultado.seguradora}
         resultado={resultadoTransmissao}
         tentarNovamente={tentarNovamente}
+        f={f}
       />
     );
   } else if (faseAtual === "confirmacao") {
