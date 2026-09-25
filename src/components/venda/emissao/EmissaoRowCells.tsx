@@ -4,6 +4,7 @@ import {
   propostaSituacaoInfo,
   textoOuTraco,
 } from "@/lib/proposta-situacao";
+import { embed1a1 } from "@/lib/postgrest-embed";
 import type { PropostaEmissaoRow } from "./types";
 
 /** Células da tabela de `/venda/emissao` — uma por coluna que carrega mais
@@ -12,7 +13,7 @@ import type { PropostaEmissaoRow } from "./types";
 export function ClienteCotacaoCell({ row }: { row: PropostaEmissaoRow }) {
   return (
     <div className="mini-cell">
-      <strong>{row.cotacoes?.segurado?.[0]?.nome || "—"}</strong>
+      <strong>{embed1a1(row.cotacoes?.segurado)?.nome || "—"}</strong>
       <small>cotação {textoOuTraco(row.cotacoes?.numero ?? null)}</small>
     </div>
   );

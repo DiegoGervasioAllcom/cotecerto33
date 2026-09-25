@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Form } from "@/components/venda/novo-lead/types";
+import { embed1a1 } from "@/lib/postgrest-embed";
 import {
   AVISO_INTEGRACAO_PENDENTE,
   dataOuTraco,
@@ -49,7 +50,7 @@ export function TransmissaoTransmitidaCard({ propostaId, f }: Props) {
   }
 
   const st = propostaSituacaoInfo(proposta.transmissao_status);
-  const cliente = proposta.cotacoes?.segurado?.[0]?.nome || "—";
+  const cliente = embed1a1(proposta.cotacoes?.segurado)?.nome || "—";
 
   return (
     <div className="card" style={{ padding: 20, marginBottom: 12 }}>

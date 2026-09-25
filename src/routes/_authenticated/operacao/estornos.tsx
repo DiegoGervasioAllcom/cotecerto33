@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj } from "@/lib/masks";
+import { embed1a1 } from "@/lib/postgrest-embed";
 import { dashboardDestinationPeriodSchema } from "@/lib/dashboard-alerts";
 
 export const Route = createFileRoute("/_authenticated/operacao/estornos")({
@@ -24,8 +25,9 @@ type Estorno = {
   cancelamento_motivo: string | null;
   empresa_id: string | null;
   responsavel_id: string | null;
+  // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
   cotacoes: {
-    segurado: { nome: string | null; cpf_cnpj: string | null }[] | null;
+    segurado: { nome: string | null; cpf_cnpj: string | null } | null;
   } | null;
 };
 type Empresa = { id: string; nome: string };
@@ -146,7 +148,7 @@ function Page() {
     ];
     const lines = [headers.join(";")];
     for (const r of rows) {
-      const seg = r.cotacoes?.segurado?.[0];
+      const seg = embed1a1(r.cotacoes?.segurado);
       lines.push(
         [
           r.apolice_numero || r.numero || "",
@@ -285,7 +287,7 @@ function Page() {
               </tr>
             )}
             {rows.map((r) => {
-              const seg = r.cotacoes?.segurado?.[0];
+              const seg = embed1a1(r.cotacoes?.segurado);
               return (
                 <tr key={r.id}>
                   <td>

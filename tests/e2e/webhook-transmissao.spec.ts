@@ -166,6 +166,14 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
 
       // Campos que a integração futura preenche continuam "—" hoje.
       await expect(page.getByRole("cell", { name: "Protocolo" })).toBeVisible();
+      // Nome do segurado (embed 1:1 `cotacao_segurado` — `embed1a1` em
+      // `useProposta`/`TransmissaoTransmitidaCard`): confirma que o PostgREST
+      // devolve objeto (não array) e o card não trava em "—". Escopado em
+      // `transmitida-docs` — o mesmo nome aparece em mais lugares da tela
+      // (resumo, aviso de cotação finalizada), o que deixaria o locator
+      // ambíguo se não escopado.
+      const docs = page.locator('[data-tour="transmitida-docs"]');
+      await expect(docs.getByText("CLIENTE TRANSMISSÃO E2E")).toBeVisible();
       const atalhos = page.locator('[data-tour="transmitida-atalhos"]');
       await expect(atalhos.getByRole("link", { name: /Emissão & histórico/ })).toBeVisible();
       await expect(atalhos.getByRole("link", { name: /Pipeline/ })).toBeVisible();

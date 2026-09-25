@@ -21,7 +21,8 @@ export type PropostaCompleta = {
   cotacao_id: string | null;
   cotacoes: {
     numero: number | null;
-    segurado: { nome: string | null }[] | null;
+    // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
+    segurado: { nome: string | null } | null;
   } | null;
 };
 

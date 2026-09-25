@@ -1,12 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { AceiteTutorialPreview } from "@/components/venda/aceite-tutorial-preview";
 import { cotNum, money } from "@/components/venda/cotacoes/lista-helpers";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { primeiraOcorrenciaPorChave, TRANSMISSAO_EM_ABERTO_STATUSES } from "@/lib/lead-etapa";
+import { embed1a1 } from "@/lib/postgrest-embed";
 
 export const Route = createFileRoute("/_authenticated/venda/em-finalizacao")({
   head: () => ({ meta: [{ title: "Em finalização · CoteCerto" }] }),
@@ -36,15 +39,14 @@ export type TentativaRow = {
   proposta_id: string | null;
   cotacoes: {
     numero: number;
-    segurado: { nome: string | null }[] | null;
-    veiculo:
-      | {
-          marca_nome: string | null;
-          modelo_nome: string | null;
-          ano_modelo: string | null;
-          placa: string | null;
-        }[]
-      | null;
+    // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
+    segurado: { nome: string | null } | null;
+    veiculo: {
+      marca_nome: string | null;
+      modelo_nome: string | null;
+      ano_modelo: string | null;
+      placa: string | null;
+    } | null;
   } | null;
 };
 
@@ -72,14 +74,25 @@ function tempoDesde(iso: string): string {
   return `${Math.floor(horas / 24)}d`;
 }
 
-/** Consulta as tentativas de transmissão em aberto (status "enviada" ou "falha") exibidas nesta tela. */
-export function fetchEmFinalizacaoRows() {
+export const EM_FINALIZACAO_ROWS_QUERY_KEY = ["venda", "em-finalizacao", "rows"] as const;
+
+/**
+ * Consulta as tentativas de transmissão em aberto (`TRANSMISSAO_EM_ABERTO_STATUSES`)
+ * ligadas a cotações do PRÓPRIO vendedor — mesmo escopo do badge
+ * `countEmFinalizacaoPendente` (`src/lib/nav-badges.ts`): `cotacao_transmissoes`
+ * não tem `responsavel_id` direto, então o `cotacoes!inner(...)` traz a
+ * cotação ligada só para poder filtrar por `responsavel_id` (a RLS já libera
+ * a empresa toda; este filtro é a semântica da tela, "minhas propostas",
+ * igual à decisão já aplicada em `em-negociacao/queries.ts`).
+ */
+export function fetchEmFinalizacaoRows(uid: string) {
   return supabase
     .from("cotacao_transmissoes")
     .select(
       "id,cotacao_id,status,motivo,mensagem,seguradora,premio,forma_pagamento,criado_em,proposta_id," +
-        "cotacoes(numero,segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))",
+        "cotacoes!inner(numero,responsavel_id,segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))",
     )
+    .eq("cotacoes.responsavel_id", uid)
     .in("status", TRANSMISSAO_EM_ABERTO_STATUSES)
     .order("criado_em", { ascending: false })
     .limit(500);
@@ -93,7 +106,8 @@ export function fetchEmFinalizacaoRows() {
 export function dedupTentativas(data: readonly TentativaRow[] | null): Row[] {
   return primeiraOcorrenciaPorChave(data ?? [], (t) => t.cotacao_id).map((t) => {
     const c = t.cotacoes;
-    const veiculo = c?.veiculo?.[0];
+    const veiculo = embed1a1(c?.veiculo);
+    const segurado = embed1a1(c?.segurado);
     return {
       tentativaId: t.id,
       cotacaoId: t.cotacao_id,
@@ -106,7 +120,7 @@ export function dedupTentativas(data: readonly TentativaRow[] | null): Row[] {
       formaPagamento: t.forma_pagamento,
       criadoEm: t.criado_em,
       propostaId: t.proposta_id,
-      segurado: c?.segurado?.[0]?.nome || "—",
+      segurado: segurado?.nome || "—",
       veiculo: veiculo
         ? [veiculo.marca_nome, veiculo.modelo_nome, veiculo.ano_modelo].filter(Boolean).join(" ") +
           (veiculo.placa ? ` · ${veiculo.placa}` : "")
@@ -139,31 +153,30 @@ function Page() {
   const nav = useNavigate();
   const { selected } = Route.useSearch();
   const tutorialPreview = useTutorialPreview();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const { session } = useAuth();
+  const uid = session?.user.id ?? null;
   const [q, setQ] = useState("");
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
-  async function load() {
-    setLoading(true);
-    const { data, error } = await fetchEmFinalizacaoRows();
-    if (error) {
-      setErr(error.message);
-      setLoading(false);
-      return;
-    }
-    setRows(dedupTentativas(data as unknown as TentativaRow[]));
-    setLoading(false);
-  }
+  const tutorialAtivo =
+    tutorialPreview === "aceite-aceita" || tutorialPreview === "aceite-pendencia";
 
-  useEffect(() => {
-    if (tutorialPreview === "aceite-aceita" || tutorialPreview === "aceite-pendencia") {
-      setLoading(false);
-      return;
-    }
-    void load();
-  }, [tutorialPreview]);
+  const {
+    data: rowsData,
+    isLoading: queryLoading,
+    error,
+  } = useQuery({
+    queryKey: [...EM_FINALIZACAO_ROWS_QUERY_KEY, uid],
+    enabled: Boolean(uid) && !tutorialAtivo,
+    queryFn: async (): Promise<Row[]> => {
+      const { data, error } = await fetchEmFinalizacaoRows(uid as string);
+      if (error) throw error;
+      return dedupTentativas(data as unknown as TentativaRow[]);
+    },
+  });
+  const rows = useMemo(() => rowsData ?? [], [rowsData]);
+  const loading = tutorialAtivo ? false : queryLoading;
+  const err = tutorialAtivo ? null : error instanceof Error ? error.message : null;
 
   useEffect(() => {
     if (!selected || loading) return;

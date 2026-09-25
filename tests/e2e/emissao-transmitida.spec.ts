@@ -69,6 +69,12 @@ test.describe("Emissão & histórico — lista (V12.1.25 parcial)", () => {
     await expect(linhaTransmitida).toBeVisible();
     await expect(linhaFalha).toBeVisible();
 
+    // Nome do segurado (embed 1:1 `cotacao_segurado` — `embed1a1` em
+    // `EmissaoRowCells.tsx`/`ClienteCotacaoCell`): confirma que o PostgREST
+    // devolve objeto (não array) e a coluna não fica travada em "—".
+    await expect(linhaTransmitida.getByText("Cliente Transmitida Emissão E2E")).toBeVisible();
+    await expect(linhaFalha.getByText("Cliente Falha Emissão E2E")).toBeVisible();
+
     // "Concluídas" só recebe `emitida` — nada aqui simula esse status, então
     // a seção fica vazia com a frase de vazio (V12.1.28: nunca simular).
     await expect(concluidas.getByText("Assim que uma apólice for emitida")).toBeVisible();

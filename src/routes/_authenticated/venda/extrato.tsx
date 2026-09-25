@@ -7,6 +7,7 @@ import {
   ExtratoTutorialSalePreview,
 } from "@/components/venda/extrato-tutorial-preview";
 import { supabase } from "@/integrations/supabase/client";
+import { embed1a1 } from "@/lib/postgrest-embed";
 
 export const Route = createFileRoute("/_authenticated/venda/extrato")({
   head: () => ({ meta: [{ title: "Extrato de vendas · CoteCerto" }] }),
@@ -20,7 +21,8 @@ type Row = {
   premio: number | null;
   valor: number | null;
   transmitida_em: string | null;
-  cotacoes: { segurado: { nome: string | null }[] | null } | null;
+  // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
+  cotacoes: { segurado: { nome: string | null } | null } | null;
 };
 
 type Estorno = {
@@ -420,7 +422,7 @@ function Page() {
                   <td>
                     <strong>{r.numero}</strong>
                   </td>
-                  <td>{r.cotacoes?.segurado?.[0]?.nome || "—"}</td>
+                  <td>{embed1a1(r.cotacoes?.segurado)?.nome || "—"}</td>
                   <td>{r.seguradora || "—"}</td>
                   <td style={{ textAlign: "right" }}>{fmtBRL(Number(r.premio ?? r.valor ?? 0))}</td>
                 </tr>

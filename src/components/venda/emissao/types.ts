@@ -20,6 +20,7 @@ export type PropostaEmissaoRow = {
   cotacoes: {
     numero: number | null;
     ramo: string | null;
-    segurado: { nome: string | null }[] | null;
+    // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
+    segurado: { nome: string | null } | null;
   } | null;
 };

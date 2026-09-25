@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { cotNum } from "@/components/venda/cotacoes/lista-helpers";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { EM_COTACAO_STATUSES } from "@/lib/lead-etapa";
 
 export const Route = createFileRoute("/_authenticated/venda/em-cotacao")({
@@ -25,8 +27,17 @@ type Row = {
   } | null;
 };
 
-/** Consulta as cotações em preenchimento (status "rascunho") exibidas nesta tela. */
-export function fetchEmCotacaoRows() {
+export const EM_COTACAO_ROWS_QUERY_KEY = ["venda", "em-cotacao", "rows"] as const;
+
+/**
+ * Consulta as cotações em preenchimento (`EM_COTACAO_STATUSES`) do PRÓPRIO
+ * vendedor exibidas nesta tela — mesmo escopo do badge
+ * `countEmCotacaoPendente` (`src/lib/nav-badges.ts`): a RLS de `cotacoes` já
+ * libera a empresa toda pra quem tem esse escopo; o
+ * `.eq("responsavel_id", uid)` aqui é a semântica da tela, "minhas
+ * cotações", igual à decisão já aplicada em `em-negociacao/queries.ts`.
+ */
+export function fetchEmCotacaoRows(uid: string) {
   return supabase
     .from("cotacoes")
     .select(
@@ -34,6 +45,7 @@ export function fetchEmCotacaoRows() {
         "segurado:cotacao_segurado(nome)," +
         "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)",
     )
+    .eq("responsavel_id", uid)
     .in("status", EM_COTACAO_STATUSES)
     .order("atualizado_em", { ascending: false })
     .limit(200);
@@ -41,19 +53,25 @@ export function fetchEmCotacaoRows() {
 
 function Page() {
   const nav = useNavigate();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const { session } = useAuth();
+  const uid = session?.user.id ?? null;
   const [q, setQ] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      const { data, error } = await fetchEmCotacaoRows();
-      if (error) setErr(error.message);
-      setRows((data ?? []) as unknown as Row[]);
-      setLoading(false);
-    })();
-  }, []);
+  const {
+    data: rowsData,
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: [...EM_COTACAO_ROWS_QUERY_KEY, uid],
+    enabled: Boolean(uid),
+    queryFn: async (): Promise<Row[]> => {
+      const { data, error } = await fetchEmCotacaoRows(uid as string);
+      if (error) throw error;
+      return (data ?? []) as unknown as Row[];
+    },
+  });
+  const rows = useMemo(() => rowsData ?? [], [rowsData]);
+  const err = error instanceof Error ? error.message : null;
 
   const filtered = useMemo(
     () =>

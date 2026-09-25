@@ -58,10 +58,11 @@ describe("query de cotações em preenchimento (/venda/em-cotacao)", () => {
     mock.result = { data: [], error: null };
   });
 
-  it("filtra cotacoes pelos status de EM_COTACAO_STATUSES, ordenadas por atualizado_em desc, limitadas a 200", async () => {
-    await fetchEmCotacaoRows();
+  it("filtra cotacoes do PRÓPRIO vendedor pelos status de EM_COTACAO_STATUSES, ordenadas por atualizado_em desc, limitadas a 200", async () => {
+    await fetchEmCotacaoRows("vendedor-1");
 
     expect(mock.operations).toContainEqual(["from", "cotacoes"]);
+    expect(mock.operations).toContainEqual(["eq", "responsavel_id", "vendedor-1"]);
     expect(mock.operations).toContainEqual(["order", "atualizado_em", { ascending: false }]);
     expect(mock.operations).toContainEqual(["limit", 200]);
 
@@ -82,6 +83,6 @@ describe("query de cotações em preenchimento (/venda/em-cotacao)", () => {
   it("propaga o resultado (data/error) do Supabase sem transformação", async () => {
     mock.result = { data: [{ id: "cot-1" }], error: null };
 
-    await expect(fetchEmCotacaoRows()).resolves.toEqual(mock.result);
+    await expect(fetchEmCotacaoRows("vendedor-1")).resolves.toEqual(mock.result);
   });
 });

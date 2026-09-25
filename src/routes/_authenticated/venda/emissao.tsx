@@ -5,6 +5,7 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { PropostasSection } from "@/components/venda/emissao/PropostasSection";
 import { useEmissaoRows } from "@/components/venda/emissao/queries";
 import { useAuth } from "@/lib/auth";
+import { embed1a1 } from "@/lib/postgrest-embed";
 import {
   agruparPropostasPorSituacao,
   moedaOuTraco,
@@ -50,7 +51,7 @@ function Page() {
         if (fSeguradora && r.seguradora !== fSeguradora) return false;
         if (q) {
           const t = `${r.numero ?? ""} ${r.protocolo_seguradora ?? ""} ${r.apolice_numero ?? ""} ${
-            r.cotacoes?.segurado?.[0]?.nome ?? ""
+            embed1a1(r.cotacoes?.segurado)?.nome ?? ""
           }`.toLowerCase();
           if (!t.includes(q.toLowerCase())) return false;
         }
@@ -85,7 +86,7 @@ function Page() {
     const lines = filtered.map((r) => {
       const st = propostaSituacaoInfo(r.transmissao_status);
       return [
-        r.cotacoes?.segurado?.[0]?.nome ?? "",
+        embed1a1(r.cotacoes?.segurado)?.nome ?? "",
         r.cotacoes?.numero ?? "",
         r.seguradora ?? "",
         r.cotacoes?.ramo ?? "",

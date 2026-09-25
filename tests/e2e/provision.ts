@@ -1488,6 +1488,72 @@ export async function limparCotacaoEnviadaQuiverExtra(f: CotacaoEnviadaQuiverExt
   await admin.from("leads").delete().eq("id", f.leadId);
 }
 
+export type CotacaoStatusExtra = { leadId: string; cotacaoId: string };
+
+/**
+ * Generaliza `criarCotacaoEnviadaQuiverExtra` para qualquer `cotacao_status` —
+ * usado por `fases-por-vendedor.spec.ts` (follow-up V12.3.4) para popular
+ * `/venda/em-cotacao` (`rascunho`) e uma cotação "neutra" (`aceita`, fora das
+ * três telas de fase) para hospedar uma tentativa de transmissão sem
+ * contaminar a contagem de `/venda/em-negociacao`.
+ */
+export async function criarCotacaoComStatusExtra(
+  empresaId: string,
+  userId: string,
+  status: Database["public"]["Enums"]["cotacao_status"],
+  /**
+   * Campos extras do insert de `cotacoes` — usado por
+   * `fases-por-vendedor.spec.ts` para já gravar `calculo_visto_em` numa
+   * `calculada` de fixture, para ela não acionar o aviso global "COTAÇÃO
+   * FINALIZADA" (`useCotacoesNovas`) enquanto o teste navega por outras telas.
+   */
+  extra?: Partial<Database["public"]["Tables"]["cotacoes"]["Insert"]>,
+  /** Se informado, grava `cotacao_segurado.nome` — usado para diferenciar
+   * as linhas de dono/colega nas asserções por texto visível. */
+  seguradoNome?: string,
+): Promise<CotacaoStatusExtra> {
+  const leadNome = uniq(`Lead ${status} E2E`);
+  const { data: lead, error: eLead } = await admin
+    .from("leads")
+    .insert({
+      empresa_id: empresaId,
+      responsavel_id: userId,
+      nome: leadNome,
+      status_pipeline: "qualificando",
+    })
+    .select("id")
+    .single();
+  if (eLead || !lead) throw new Error(`criar lead extra (${status}): ${eLead?.message}`);
+
+  const { data: cot, error: eCot } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: empresaId,
+      responsavel_id: userId,
+      lead_id: lead.id,
+      status,
+      ...extra,
+    })
+    .select("id")
+    .single();
+  if (eCot || !cot) throw new Error(`criar cotação extra (${status}): ${eCot?.message}`);
+
+  if (seguradoNome) {
+    const { error: eSegurado } = await admin
+      .from("cotacao_segurado")
+      .insert({ cotacao_id: cot.id, nome: seguradoNome });
+    if (eSegurado) throw new Error(`criar segurado extra (${status}): ${eSegurado.message}`);
+  }
+
+  return { leadId: lead.id, cotacaoId: cot.id };
+}
+
+/** Remove os dados criados por `criarCotacaoComStatusExtra` (best-effort; `db reset` também resolve). */
+export async function limparCotacaoComStatusExtra(f: CotacaoStatusExtra): Promise<void> {
+  await admin.from("cotacoes").delete().eq("id", f.cotacaoId);
+  await admin.from("leads").delete().eq("id", f.leadId);
+}
+
 const QUIVER_TRANSMISSAO_WEBHOOK_KEY =
   env.SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_KEY ||
   process.env.SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_KEY ||
