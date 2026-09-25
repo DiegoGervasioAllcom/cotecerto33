@@ -78,7 +78,9 @@ test.describe("Imprimir cotação — modal comum aos 3 pontos de entrada", () =
     page,
   }) => {
     await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
-    await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+      timeout: 10_000,
+    });
 
     const botaoImprimir = page.locator('[data-tour="calc-imprimir"]');
     await expect(botaoImprimir).toBeVisible();

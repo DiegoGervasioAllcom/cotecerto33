@@ -7,6 +7,7 @@ import { fmtBRL } from "@/lib/print";
 import { useImprimirCotacaoModal } from "./ImprimirCotacaoModal";
 import { docDadosDoBanco, type DocDadosCabecalho } from "./doc-dados";
 import {
+  coberturaEntries,
   faixasComParcelas,
   formasPagamentoResultado,
   gruposOpcoesResultado,
@@ -79,13 +80,6 @@ const normalizar = (texto: string | null | undefined) =>
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLocaleLowerCase("pt-BR");
-
-function coberturaEntries(resultado: ResultadoCalculo) {
-  return [
-    ...Object.entries(resultado.coberturasBasicas ?? {}),
-    ...Object.entries(resultado.coberturasAdicionais ?? {}),
-  ];
-}
 
 const DETAIL_COLUMN_WIDTH = 190;
 const OFFER_COLUMN_WIDTH = 280;

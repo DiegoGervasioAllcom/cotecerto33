@@ -155,7 +155,9 @@ async function prepararCotacaoCalculada(page: Page): Promise<CotacaoQuiverFixtur
   await loginAs(page, fixture.email, fixture.senha);
   await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
   await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
-  await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+    timeout: 10_000,
+  });
 
   return fixture;
 }
@@ -186,8 +188,10 @@ async function gerarPropostaComTentativaReal(page: Page, fixture: CotacaoQuiverF
     await route.continue();
   });
 
-  const cardAlfa = page.locator(".calc-card").filter({ hasText: CARD_ALFA.seguradora });
-  await cardAlfa.getByRole("button", { name: `Gerar proposta (${CARD_ALFA.seguradora})` }).click();
+  // Contratar pela lista comparativa (visão padrão do passo Cálculo,
+  // V12.3.5) — `getByTitle` acha o botão certo em qualquer visão (mesma
+  // técnica de `webhook-transmissao.spec.ts`).
+  await page.getByTitle(`Gerar proposta (${CARD_ALFA.seguradora})`).click();
   await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
   await confirmarDadosComplementaresTransmissao(page);
   await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible();

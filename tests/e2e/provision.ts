@@ -1455,6 +1455,22 @@ export async function limparCotacaoTransmissaoFixture(f: CotacaoQuiverFixture): 
   await limparCotacaoQuiverFixture(f);
 }
 
+/**
+ * Grava `cotacao_seguro.seguradoras_sel` direto no banco — usado por
+ * `calculo-lista.spec.ts` para simular que o vendedor marcou, no passo
+ * Seguro, uma seguradora que o webhook da Quiver depois não retorna (coluna
+ * "Sem retorno" da lista comparativa, real, nunca inventada).
+ */
+export async function definirSeguradorasSelE2E(
+  cotacaoId: string,
+  seguradorasSel: string[],
+): Promise<void> {
+  const { error } = await admin
+    .from("cotacao_seguro")
+    .upsert({ cotacao_id: cotacaoId, seguradoras_sel: seguradorasSel });
+  if (error) throw new Error(`gravar seguradoras_sel: ${error.message}`);
+}
+
 export type CotacaoEnviadaQuiverExtra = { leadId: string; cotacaoId: string };
 
 /**

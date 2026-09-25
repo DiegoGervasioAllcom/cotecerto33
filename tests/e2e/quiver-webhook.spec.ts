@@ -182,20 +182,38 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
 
     await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
-    await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Os títulos e as coberturas básicas/adicionais aparecem em qualquer
+    // visão (a lista comparativa também usa `coberturaEntries`) — checa já
+    // na visão padrão (lista, V12.3.5).
     for (const valor of [
       "Auto Completo · Plano Premium",
       "Auto Essencial · Plano Econômico",
       "Auto Flex · Plano Flexível",
-      "Reduzida cartão · R$ 2.450,00",
-      "R$ 2.345,67",
-      "R$ 1.987,65",
-      "10x de R$ 251,90",
       "100% FIPE",
       "90% FIPE",
       "110% FIPE",
       "Completo",
       "Básico",
+    ]) {
+      await expect(page.getByText(valor, { exact: true }).first()).toBeVisible();
+    }
+
+    // Franquia e prêmio à vista (`t-fr`/preço do card) não têm equivalente na
+    // lista comparativa (que só mostra a parcela escolhida por célula) — a
+    // lista comparativa (visão padrão desde V12.3.5) também não tem select de
+    // parcelas (a escolha ali é por clique na célula), então troca pra
+    // cartões pro restante do teste, que é sobre o comportamento do card.
+    await page.getByTitle("Ver em cartões").click();
+
+    for (const valor of [
+      "Reduzida cartão · R$ 2.450,00",
+      "R$ 2.345,67",
+      "R$ 1.987,65",
+      "10x de R$ 251,90",
     ]) {
       await expect(page.getByText(valor, { exact: true }).first()).toBeVisible();
     }
@@ -265,7 +283,11 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     // reset do teste para tentar um segundo payload no mesmo card, igual à
     // abertura inicial (linha ~184).
     await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
-    await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+      timeout: 10_000,
+    });
+    // A navegação reabre na lista (visão padrão) — volta pra cartões.
+    await page.getByTitle("Ver em cartões").click();
 
     // Trocar a condição dentro da mesma forma atualiza o mesmo card. A opção
     // real à vista tem parcelas vazio e deve continuar selecionável/transmissível.
@@ -297,7 +319,9 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     // Mesmo motivo do reset acima: reabre o Passo Cálculo pela URL em vez de
     // depender de um "Voltar ao cálculo" que não existe mais após confirmar.
     await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
-    await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+      timeout: 10_000,
+    });
     await page.unroute("**/*");
 
     await page.getByRole("link", { name: "Comparativo lado a lado" }).click();
@@ -528,6 +552,10 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
 
     await loginAs(page, fixture.email, fixture.senha);
     await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
+    // Teste sobre o select de "Parcelas" desabilitado — específico do card
+    // (a lista comparativa, visão padrão, escolhe parcela por clique na
+    // célula, sem select). Troca pra cartões.
+    await page.getByTitle("Ver em cartões").click();
     const card = page.locator(".calc-card").filter({ hasText: "Seguradora Ambígua" });
     await expect(card.getByLabel("Forma de pagamento")).toBeDisabled();
     await expect(card.getByLabel("Forma de pagamento")).toHaveText("Indisponível");

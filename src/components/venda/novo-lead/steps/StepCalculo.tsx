@@ -1,17 +1,28 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
-import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { useImprimirCotacaoModal } from "@/components/venda/cotacoes/ImprimirCotacaoModal";
 import { docDadosDoForm } from "@/components/venda/cotacoes/doc-dados";
 import {
+  formatarNumeroCotacao,
+  useNumeroCotacao,
+} from "@/components/venda/novo-lead/hooks/useNumeroCotacao";
+import {
+  filtrarPorFaixaDePreco,
   gruposOpcoesResultado,
+  ordenarPorEscolha,
   ordenarResultados,
   premioNumerico,
+  type FaixaPrecoCalculo,
+  type OrdemCalculo,
 } from "@/components/venda/cotacoes/quiver-resultado";
+import { CalculoContexto } from "./calculo/CalculoContexto";
+import { CalculoToolbar, type CalcView } from "./calculo/CalculoToolbar";
+import { CalculoLista } from "./calculo/CalculoLista";
+import { CalculoCardsGrid } from "./calculo/CalculoCardsGrid";
+import type { EscolhaCard } from "./calculo/types";
 
-type EscolhaCard = { grupoId: string; opcaoId: string };
 export type OfertaTransmissao = {
   resultado: ResultadoCalculo;
   formaPagamento: string;
@@ -43,10 +54,25 @@ export function StepCalculo({
   onEscolherOferta,
 }: Props) {
   // Escolha de forma de pagamento/parcelas por card — o robô precisa das duas
-  // para clicar na célula certa do modal do portal.
+  // para clicar na célula certa do modal do portal. Compartilhada entre a
+  // lista comparativa e o grid de cartões (só uma visão fica visível por
+  // vez, mas a escolha do vendedor não deve se perder ao trocar).
   const [escolhas, setEscolhas] = useState<Record<string, EscolhaCard>>({});
   const [erroSelecao, setErroSelecao] = useState<string | null>(null);
+  const [calcView, setCalcView] = useState<CalcView>("lista");
+  const [calcOrdem, setCalcOrdem] = useState<OrdemCalculo>("menor");
+  const [calcFaixa, setCalcFaixa] = useState<FaixaPrecoCalculo>("");
   const imprimir = useImprimirCotacaoModal();
+  // Mesmo dado de `CalculoContexto` (react-query dedupe por `queryKey`) — o
+  // documento impresso precisa do número real da cotação, não de um pedaço
+  // do uuid.
+  const { numero: cotacaoNumero, criadoEm: cotacaoCriadoEm } = useNumeroCotacao(cotacaoId);
+  const numeroImpressaoFormatado = formatarNumeroCotacao(cotacaoNumero, cotacaoCriadoEm);
+
+  const resultadosExibidos = useMemo(
+    () => filtrarPorFaixaDePreco(ordenarPorEscolha(resultados, calcOrdem), calcFaixa),
+    [resultados, calcOrdem, calcFaixa],
+  );
 
   function escolhaDoCard(r: ResultadoCalculo): EscolhaCard {
     const primeiroGrupo = gruposOpcoesResultado(r)[0];
@@ -62,12 +88,15 @@ export function StepCalculo({
     setEscolhas((atual) => ({ ...atual, [cardId]: escolha }));
   }
 
-  function escolherOferta(r: ResultadoCalculo) {
+  // Núcleo compartilhado entre o botão "Contratar/Gerar proposta" (lê a
+  // escolha atual do estado) e o clique direto numa célula de parcela na
+  // lista comparativa (que já sabe grupo/opção sem depender do estado, pra
+  // não esbarrar num `setEscolhas` ainda não aplicado no mesmo clique).
+  function confirmarOferta(r: ResultadoCalculo, escolha: EscolhaCard) {
     if (!cotacaoId) {
       setErroSelecao("Salve a cotação antes de gerar a proposta.");
       return;
     }
-    const escolha = escolhaDoCard(r);
     const grupo = gruposOpcoesResultado(r).find((item) => item.id === escolha.grupoId);
     const opcao = grupo?.opcoes.find((item) => item.id === escolha.opcaoId);
     if (!grupo || !opcao) {
@@ -86,16 +115,26 @@ export function StepCalculo({
     });
   }
 
+  function escolherOferta(r: ResultadoCalculo) {
+    confirmarOferta(r, escolhaDoCard(r));
+  }
+
+  function contratarParcela(r: ResultadoCalculo, grupoId: string, opcaoId: string) {
+    const escolha = { grupoId, opcaoId };
+    setEscolha(r.cardId, escolha);
+    confirmarOferta(r, escolha);
+  }
+
   return (
     <>
-      <div className="row" style={{ alignItems: "center", marginBottom: 14 }}>
+      <div className="row" style={{ alignItems: "center", marginBottom: 6 }}>
         <div>
           <h2 style={{ margin: 0 }}>Coberturas e valores</h2>
           <div className="sub" style={{ margin: 0 }}>
             {calculando
               ? "Calculando com as seguradoras… isso pode levar alguns minutos."
               : resultados.length > 0
-                ? `${resultados.length} seguradoras calculadas · ${f.tipoCobertura || "Compreensiva"}`
+                ? "Compare, personalize e escolha a seguradora"
                 : (f.seguradorasSel?.length ?? 0) > 0
                   ? `${f.seguradorasSel.length} seguradoras selecionadas · clique em Calcular agora`
                   : "Selecione seguradoras no passo Seguro"}
@@ -114,40 +153,16 @@ export function StepCalculo({
             Comparativo lado a lado
           </Link>
         )}
-        <div className="calc-bar-r">
-          <button
-            className="btn btn-ghost btn-sm"
-            data-tour="calc-imprimir"
-            disabled={resultados.length === 0}
-            onClick={() =>
-              imprimir.abrir(
-                docDadosDoForm(
-                  f,
-                  ordenarResultados(resultados),
-                  cotacaoId ? `#${cotacaoId.slice(0, 8)}` : "rascunho",
-                ),
-              )
-            }
-          >
-            <svg width="13" height="13">
-              <use href="#i-download" />
-            </svg>{" "}
-            Imprimir
-          </button>
-          <button
-            className="btn btn-ghost btn-sm"
-            disabled={!podeCalcular || calculando}
-            title={!podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined}
-            onClick={doSimularCalculo}
-          >
-            <svg width="13" height="13">
-              <use href="#i-refresh" />
-            </svg>{" "}
-            {calculando ? "Calculando…" : "Recalcular"}
-          </button>
-        </div>
       </div>
       {imprimir.modal}
+
+      {resultados.length > 0 && (
+        <CalculoContexto
+          cotacaoId={cotacaoId}
+          cliente={f.nome ?? ""}
+          padrao={f.tipoCobertura || "Compreensiva"}
+        />
+      )}
 
       {erro && (
         <div
@@ -210,130 +225,54 @@ export function StepCalculo({
       )}
 
       {resultados.length > 0 && (
-        <div className="calc-grid">
-          {ordenarResultados(resultados).map((r) => {
-            const basicas = Object.entries(r.coberturasBasicas ?? {});
-            const adicionais = Object.entries(r.coberturasAdicionais ?? {});
-            const gruposPagamento = gruposOpcoesResultado(r);
-            const escolha = escolhaDoCard(r);
-            const grupoSelecionado = gruposPagamento.find((grupo) => grupo.id === escolha.grupoId);
-            const opcaoSelecionada = grupoSelecionado?.opcoes.find(
-              (opcao) => opcao.id === escolha.opcaoId,
-            );
-            const opcoesExibidas = opcaoSelecionada ? [opcaoSelecionada] : r.opcoes;
-            return (
-              <div className="calc-card" key={r.cardId}>
-                <div className="calc-head">
-                  <div className="calc-ins">
-                    <SeguradoraBadge nome={r.seguradora} tam="sm" /> {r.seguradora}
-                  </div>
-                  <span className="chip chip-slate">
-                    {r.produto ? `${r.produto} · ${r.nome}` : r.nome || "Compreensiva"}
-                  </span>
-                </div>
-                <div className="calc-tiers">
-                  {opcoesExibidas.map((o, opcaoIndex) => (
-                    <div className="calc-tier" key={`${r.cardId}-opcao-${opcaoIndex}`}>
-                      <div className="t-lbl">{o.tipo || "—"}</div>
-                      <div className="t-fr">{o.franquia || "—"}</div>
-                      <div className="t-vista">{o.avista || "—"}</div>
-                      <div className="t-parc">{o.parcelas || "—"}</div>
-                      {o.desconto && <div className="chip chip-ok">{o.desconto}</div>}
-                    </div>
-                  ))}
-                </div>
-                <div className="calc-cobs">
-                  <div className="cob-col">
-                    <div className="cob-h">Coberturas básicas</div>
-                    {basicas.length === 0 && (
-                      <div className="cob-row muted small">Não informado pela seguradora</div>
-                    )}
-                    {basicas.map(([label, valor]) => (
-                      <div className="cob-row" key={label}>
-                        <span>{label}</span>
-                        <b>{valor}</b>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="cob-col">
-                    <div className="cob-h">Adicionais</div>
-                    {adicionais.length === 0 && (
-                      <div className="cob-row muted small">Não informado pela seguradora</div>
-                    )}
-                    {adicionais.map(([label, valor]) => (
-                      <div className="cob-row" key={label}>
-                        <span>{label}</span>
-                        <b>{valor}</b>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="calc-foot">
-                  <select
-                    className="select-mini"
-                    aria-label="Forma de pagamento"
-                    value={escolha.grupoId}
-                    disabled={gruposPagamento.length === 0}
-                    onChange={(e) => {
-                      const grupo = gruposPagamento.find((item) => item.id === e.target.value);
-                      setEscolha(r.cardId, {
-                        grupoId: e.target.value,
-                        opcaoId: grupo?.opcoes[0]?.id ?? "",
-                      });
-                    }}
-                  >
-                    {gruposPagamento.length === 0 && <option value="">Indisponível</option>}
-                    {gruposPagamento.map((grupo) => (
-                      <option key={grupo.id} value={grupo.id}>
-                        {grupo.formaPagamento}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="select-mini"
-                    aria-label="Parcelas"
-                    value={escolha.opcaoId}
-                    disabled={!grupoSelecionado}
-                    onChange={(e) =>
-                      setEscolha(r.cardId, { grupoId: escolha.grupoId, opcaoId: e.target.value })
-                    }
-                  >
-                    {!grupoSelecionado && <option value="">Indisponível</option>}
-                    {grupoSelecionado?.opcoes.map((opcao) => (
-                      <option key={opcao.id} value={opcao.id}>
-                        {[opcao.tipo, opcao.parcelas].filter(Boolean).join(" · ") || "Opção"}
-                      </option>
-                    ))}
-                  </select>
-                  <button className="ic-btn" title="Observações">
-                    <svg width="15" height="15">
-                      <use href="#i-message" />
-                    </svg>
-                  </button>
-                  <button className="ic-btn" title="Enviar">
-                    <svg width="15" height="15">
-                      <use href="#i-download" />
-                    </svg>
-                  </button>
-                  <button
-                    className="ic-btn ok"
-                    title={
-                      cotacaoId
-                        ? `Gerar proposta (${r.seguradora})`
-                        : "Salve a cotação antes de gerar a proposta"
-                    }
-                    disabled={!cotacaoId || !opcaoSelecionada}
-                    onClick={() => escolherOferta(r)}
-                  >
-                    <svg width="15" height="15">
-                      <use href="#i-check" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <>
+          <CalculoToolbar
+            view={calcView}
+            onSetView={setCalcView}
+            ordem={calcOrdem}
+            onSetOrdem={setCalcOrdem}
+            faixa={calcFaixa}
+            onSetFaixa={setCalcFaixa}
+            podeImprimir={resultados.length > 0}
+            onImprimir={() =>
+              imprimir.abrir(
+                docDadosDoForm(
+                  f,
+                  ordenarResultados(resultados),
+                  numeroImpressaoFormatado ? `#${numeroImpressaoFormatado}` : "—",
+                ),
+              )
+            }
+            podeRecalcular={podeCalcular}
+            calculando={calculando}
+            onRecalcular={doSimularCalculo}
+            tituloRecalcular={
+              !podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined
+            }
+          />
+
+          {calcView === "lista" ? (
+            <CalculoLista
+              f={f}
+              resultados={resultadosExibidos}
+              todosResultados={resultados}
+              cotacaoId={cotacaoId}
+              erroGlobal={erro}
+              escolhaDoCard={escolhaDoCard}
+              setEscolha={setEscolha}
+              onEscolherOferta={escolherOferta}
+              onContratarParcela={contratarParcela}
+            />
+          ) : (
+            <CalculoCardsGrid
+              resultados={resultadosExibidos}
+              cotacaoId={cotacaoId}
+              escolhaDoCard={escolhaDoCard}
+              setEscolha={setEscolha}
+              onEscolherOferta={escolherOferta}
+            />
+          )}
+        </>
       )}
     </>
   );

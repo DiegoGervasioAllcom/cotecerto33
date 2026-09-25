@@ -82,7 +82,9 @@ async function prepararCotacaoCalculada(page: Page): Promise<CotacaoQuiverFixtur
   await loginAs(page, fixture.email, fixture.senha);
   await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
   await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
-  await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+    timeout: 10_000,
+  });
 
   return fixture;
 }
@@ -117,17 +119,22 @@ async function gerarPropostaComTentativaReal(page: Page, fixture: CotacaoQuiverF
     await route.continue();
   });
 
-  const cardAlfa = page.locator(".calc-card").filter({ hasText: CARD_ALFA.seguradora });
-  const cardBeta = page.locator(".calc-card").filter({ hasText: CARD_BETA.seguradora });
-  await expect(cardBeta).toBeVisible();
-  await cardAlfa.getByRole("button", { name: `Gerar proposta (${CARD_ALFA.seguradora})` }).click();
+  // Contratar pela lista comparativa (visão padrão do passo Cálculo,
+  // V12.3.5): o botão "Contratar" carrega o mesmo título
+  // `Gerar proposta (<seguradora>)` que o botão do card, então
+  // `getByTitle` acha a célula certa em qualquer visão sem depender do
+  // texto visível ("Contratar" na lista, ícone no card).
+  await expect(page.getByText(CARD_BETA.seguradora).first()).toBeVisible();
+  await page.getByTitle(`Gerar proposta (${CARD_ALFA.seguradora})`).click();
   await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
   await confirmarDadosComplementaresTransmissao(page);
 
-  // Modo "transmitindo": os demais cards somem, só sobra o painel de espera.
+  // Modo "transmitindo": o passo Cálculo inteiro some, só sobra o painel de
+  // espera (que mostra só a seguradora escolhida, Alfa — Beta não aparece
+  // mais em lugar nenhum da tela).
   await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible();
-  await expect(cardBeta).toHaveCount(0);
-  await expect(cardAlfa).toHaveCount(0);
+  await expect(page.locator(".calc-lista")).toHaveCount(0);
+  await expect(page.getByText(CARD_BETA.seguradora)).toHaveCount(0);
 
   return tentativaId;
 }
@@ -258,12 +265,9 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       await page.getByRole("button", { name: "Tentar novamente" }).click();
       await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
       await page.getByRole("button", { name: "Voltar ao cálculo" }).click();
-      await expect(
-        page.locator(".calc-card").filter({ hasText: CARD_ALFA.seguradora }),
-      ).toBeVisible();
-      await expect(
-        page.locator(".calc-card").filter({ hasText: CARD_BETA.seguradora }),
-      ).toBeVisible();
+      await expect(page.locator(".calc-lista")).toBeVisible();
+      await expect(page.getByText(CARD_ALFA.seguradora).first()).toBeVisible();
+      await expect(page.getByText(CARD_BETA.seguradora).first()).toBeVisible();
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
     }
