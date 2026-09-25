@@ -12,12 +12,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { SeguradoraTile } from "@/components/venda/novo-lead/SeguradoraBadge";
+import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicional";
 import {
   coberturaEntries,
   coberturaLabelsUnion,
   gruposOpcoesResultado,
   tituloResultado,
 } from "@/components/venda/cotacoes/quiver-resultado";
+import { SegAcoes } from "./SegAcoes";
 import type { EscolhaCard } from "./types";
 
 const normalizar = (texto: string | null | undefined) =>
@@ -36,6 +38,11 @@ type Props = {
   setEscolha: (cardId: string, escolha: EscolhaCard) => void;
   onEscolherOferta: (r: ResultadoCalculo) => void;
   onContratarParcela: (r: ResultadoCalculo, grupoId: string, opcaoId: string) => void;
+  // Ações por seguradora (`.seg-acoes` · V12.3.6) — infoFor/onAbrirDesconto
+  // vêm do `useDescontoAdicional` chamado em `StepCalculo`.
+  infoDescontoFor: (r: ResultadoCalculo) => DescontoInfo;
+  onAbrirDesconto: (r: ResultadoCalculo) => void;
+  onRecalcularSeguradora: (r: ResultadoCalculo) => Promise<void>;
 };
 
 type ColunaOferta = { tipo: "oferta"; resultado: ResultadoCalculo };
@@ -55,6 +62,9 @@ export function CalculoLista({
   setEscolha,
   onEscolherOferta,
   onContratarParcela,
+  infoDescontoFor,
+  onAbrirDesconto,
+  onRecalcularSeguradora,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [nav, setNav] = useState<Nav>(NAV_VAZIO);
@@ -363,9 +373,28 @@ export function CalculoLista({
             ))}
             <tr>
               <td className="cl-lbl">Ações</td>
-              {colunas.map((coluna) => (
-                <td key={coluna.tipo === "oferta" ? coluna.resultado.cardId : coluna.seguradora} />
-              ))}
+              {colunas.map((coluna) => {
+                if (coluna.tipo === "sem-retorno") return <td key={coluna.seguradora} />;
+                const { resultado } = coluna;
+                const outrasSeguradoras = colunas
+                  .filter(
+                    (item): item is ColunaOferta =>
+                      item.tipo === "oferta" && item.resultado.cardId !== resultado.cardId,
+                  )
+                  .map((item) => item.resultado.seguradora);
+                return (
+                  <td key={resultado.cardId}>
+                    <SegAcoes
+                      resultado={resultado}
+                      cotacaoId={cotacaoId}
+                      info={infoDescontoFor(resultado)}
+                      onAbrirDesconto={() => onAbrirDesconto(resultado)}
+                      outrasSeguradoras={outrasSeguradoras}
+                      onRecalcular={() => onRecalcularSeguradora(resultado)}
+                    />
+                  </td>
+                );
+              })}
             </tr>
             <tr>
               <td className="cl-lbl" />

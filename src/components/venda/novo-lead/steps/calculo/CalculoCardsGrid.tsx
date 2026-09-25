@@ -5,6 +5,8 @@
 import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { gruposOpcoesResultado } from "@/components/venda/cotacoes/quiver-resultado";
+import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicional";
+import { SegAcoes } from "./SegAcoes";
 import type { EscolhaCard } from "./types";
 
 type Props = {
@@ -13,6 +15,9 @@ type Props = {
   escolhaDoCard: (r: ResultadoCalculo) => EscolhaCard;
   setEscolha: (cardId: string, escolha: EscolhaCard) => void;
   onEscolherOferta: (r: ResultadoCalculo) => void;
+  infoDescontoFor: (r: ResultadoCalculo) => DescontoInfo;
+  onAbrirDesconto: (r: ResultadoCalculo) => void;
+  onRecalcularSeguradora: (r: ResultadoCalculo) => Promise<void>;
 };
 
 export function CalculoCardsGrid({
@@ -21,6 +26,9 @@ export function CalculoCardsGrid({
   escolhaDoCard,
   setEscolha,
   onEscolherOferta,
+  infoDescontoFor,
+  onAbrirDesconto,
+  onRecalcularSeguradora,
 }: Props) {
   return (
     <div className="calc-grid">
@@ -118,16 +126,16 @@ export function CalculoCardsGrid({
                   </option>
                 ))}
               </select>
-              <button className="ic-btn" title="Observações">
-                <svg width="15" height="15">
-                  <use href="#i-message" />
-                </svg>
-              </button>
-              <button className="ic-btn" title="Enviar">
-                <svg width="15" height="15">
-                  <use href="#i-download" />
-                </svg>
-              </button>
+              <SegAcoes
+                resultado={r}
+                cotacaoId={cotacaoId}
+                info={infoDescontoFor(r)}
+                onAbrirDesconto={() => onAbrirDesconto(r)}
+                outrasSeguradoras={resultados
+                  .filter((outro) => outro.cardId !== r.cardId)
+                  .map((outro) => outro.seguradora)}
+                onRecalcular={() => onRecalcularSeguradora(r)}
+              />
               <button
                 className="ic-btn ok"
                 title={

@@ -12,6 +12,7 @@ import { useConsultaPlaca } from "@/components/venda/novo-lead/hooks/useConsulta
 import { useConsultaCpf } from "@/components/venda/novo-lead/hooks/useConsultaCpf";
 import { useValidacaoEtapas } from "@/components/venda/novo-lead/hooks/useValidacaoEtapas";
 import { useSimulacaoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import { useRecalcularSeguradora } from "@/components/venda/novo-lead/hooks/useRecalcularSeguradora";
 import { useCotacaoRascunho } from "@/components/venda/novo-lead/hooks/useCotacaoRascunho";
 import { useTutorialWizardPreview } from "@/components/venda/novo-lead/hooks/useTutorialWizardPreview";
 import { NovoLeadHeader } from "@/components/venda/novo-lead/NovoLeadHeader";
@@ -297,10 +298,17 @@ function Page() {
     resultados,
     erro: erroCalculo,
     simularCalculo,
+    recalcularSeguradora,
     podeCalcular,
     camposFaltantes,
   } = useSimulacaoCalculo(f, cotacaoId, persistir);
-
+  // `.seg-acoes` · V12.3.6 — extraído em `useRecalcularSeguradora.ts` (regra 9).
+  const descontoAcoes = useRecalcularSeguradora({
+    cotacaoId,
+    resultados,
+    setF,
+    recalcularSeguradora,
+  });
   const {
     perdaOpen,
     setPerdaOpen,
@@ -531,6 +539,7 @@ function Page() {
               cotacaoId={cotacaoId}
               doSimularCalculo={doSimularCalculo}
               onEscolherOferta={onEscolherOferta}
+              descontoAcoes={descontoAcoes}
             />
           )}
 

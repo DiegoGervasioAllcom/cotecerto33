@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import type { DescontoAcoes } from "@/components/venda/novo-lead/hooks/useRecalcularSeguradora";
 import { useImprimirCotacaoModal } from "@/components/venda/cotacoes/ImprimirCotacaoModal";
 import { docDadosDoForm } from "@/components/venda/cotacoes/doc-dados";
 import {
@@ -40,6 +41,11 @@ type Props = {
   cotacaoId: string | null;
   doSimularCalculo: () => void;
   onEscolherOferta: (oferta: OfertaTransmissao) => void;
+  // Ações por seguradora (`.seg-acoes` · V12.3.6) — dados e orquestração
+  // (fetch de seguradoras/prêmios/solicitações, cancelamento de pedidos de
+  // desconto de outras seguradoras, setF+reenvio) ficam em `novo-lead.tsx`
+  // via `useRecalcularSeguradora`; aqui só repassa para a lista/grid.
+  descontoAcoes: DescontoAcoes;
 };
 
 export function StepCalculo({
@@ -52,7 +58,10 @@ export function StepCalculo({
   cotacaoId,
   doSimularCalculo,
   onEscolherOferta,
+  descontoAcoes,
 }: Props) {
+  const { infoDescontoFor, onAbrirDesconto, onRecalcularSeguradora, erroRecalculo, descontoModal } =
+    descontoAcoes;
   // Escolha de forma de pagamento/parcelas por card — o robô precisa das duas
   // para clicar na célula certa do modal do portal. Compartilhada entre a
   // lista comparativa e o grid de cartões (só uma visão fica visível por
@@ -194,6 +203,14 @@ export function StepCalculo({
         </div>
       )}
 
+      {erroRecalculo && (
+        <div className="banner alert" style={{ marginBottom: 12 }}>
+          {erroRecalculo}
+        </div>
+      )}
+
+      {descontoModal}
+
       {calculando && (
         <div style={{ padding: "12px 0", marginBottom: 8 }}>
           <span className="muted small">
@@ -262,6 +279,9 @@ export function StepCalculo({
               setEscolha={setEscolha}
               onEscolherOferta={escolherOferta}
               onContratarParcela={contratarParcela}
+              infoDescontoFor={infoDescontoFor}
+              onAbrirDesconto={onAbrirDesconto}
+              onRecalcularSeguradora={(r) => onRecalcularSeguradora(r)}
             />
           ) : (
             <CalculoCardsGrid
@@ -270,6 +290,9 @@ export function StepCalculo({
               escolhaDoCard={escolhaDoCard}
               setEscolha={setEscolha}
               onEscolherOferta={escolherOferta}
+              infoDescontoFor={infoDescontoFor}
+              onAbrirDesconto={onAbrirDesconto}
+              onRecalcularSeguradora={(r) => onRecalcularSeguradora(r)}
             />
           )}
         </>

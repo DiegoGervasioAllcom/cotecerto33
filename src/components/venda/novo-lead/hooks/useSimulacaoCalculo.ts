@@ -24,7 +24,7 @@ const POLL_MS = 4000;
 export function useSimulacaoCalculo(
   f: Form,
   cotacaoId: string | null,
-  persistirAntes: () => Promise<void>,
+  persistirAntes: (overrides?: { seguradorasSel?: string[] }) => Promise<void>,
 ) {
   const [calculando, setCalculando] = useState(false);
   const [resultados, setResultados] = useState<ResultadoCalculo[]>([]);
@@ -102,7 +102,7 @@ export function useSimulacaoCalculo(
     }, POLL_MS);
   }
 
-  async function simularCalculo() {
+  async function enviarECalcular(overrides?: { seguradorasSel?: string[] }) {
     if (!cotacaoId) {
       setErro("Salve os dados da cotação antes de calcular.");
       return;
@@ -110,7 +110,7 @@ export function useSimulacaoCalculo(
     setErro(null);
     setResultados([]);
     setCalculando(true);
-    await persistirAntes();
+    await persistirAntes(overrides);
     const { data: sess } = await supabase.auth.getSession();
     try {
       await enviarCotacaoQuiver({
@@ -122,6 +122,19 @@ export function useSimulacaoCalculo(
       return;
     }
     iniciarPolling(cotacaoId);
+  }
+
+  async function simularCalculo() {
+    await enviarECalcular();
+  }
+
+  /** "Recalcular esta seguradora" (SegAcoes · V12.3.6) — descarta as ofertas
+   * das outras seguradoras desta cotação: o chamador já cuidou de cancelar
+   * os pedidos de desconto pendentes/aguardando aceite de terceiros antes de
+   * chamar isto (bloqueio quando algum não pode ser cancelado). Aqui só
+   * força `seguradorasSel = [seguradora]` na persistência e reenvia. */
+  async function recalcularSeguradora(seguradora: string) {
+    await enviarECalcular({ seguradorasSel: [seguradora] });
   }
 
   // R.9 (revisão form vs robô Quiver, 2026-08): o gate reflete os campos que
@@ -155,6 +168,7 @@ export function useSimulacaoCalculo(
     setResultados,
     erro,
     simularCalculo,
+    recalcularSeguradora,
     podeCalcular,
     camposFaltantes,
   };

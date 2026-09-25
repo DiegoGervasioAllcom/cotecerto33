@@ -1471,6 +1471,129 @@ export async function definirSeguradorasSelE2E(
   if (error) throw new Error(`gravar seguradoras_sel: ${error.message}`);
 }
 
+/**
+ * Cria um pedido de desconto (`desconto_solicitacoes`) pendente numa
+ * seguradora desta cotação, com `solicitante_id` de um SEGUNDO usuário (não
+ * o dono da cotação) mas `nivel_atual = donoCotacaoId` — é o que deixa o
+ * dono da cotação ENXERGAR o pedido via RLS (`desconto_solicitacoes_select`:
+ * `nivel_atual = auth.uid() or fn_pode_ver_solicitacao_desconto(solicitante_id)`)
+ * sem poder CANCELAR (`cancelar_desconto` exige `solicitante_id = auth.uid()`).
+ * Usado por `seg-acoes.spec.ts` para exercitar o bloqueio real de
+ * "Recalcular esta seguradora" (RPC recusa com "apenas o solicitante pode
+ * cancelar", migration `g3_2_rpcs_desconto.sql`).
+ */
+export async function criarSolicitacaoDescontoDeOutroUsuarioE2E(
+  cotacaoId: string,
+  seguradoraNome: string,
+  donoCotacaoId: string,
+): Promise<{ solicitanteId: string; solicitacaoId: string }> {
+  const email = `${uniq("outro-solicitante-e2e")}@teste.local`;
+  const { data: userData, error: eUser } = await admin.auth.admin.createUser({
+    email,
+    password: "Teste@123!",
+    email_confirm: true,
+  });
+  if (eUser || !userData.user) throw new Error(`criar outro solicitante: ${eUser?.message}`);
+
+  const { data: seguradora, error: eSeguradora } = await admin
+    .from("seguradoras")
+    .select("id")
+    .eq("nome", seguradoraNome)
+    .single();
+  if (eSeguradora || !seguradora)
+    throw new Error(`buscar seguradora "${seguradoraNome}": ${eSeguradora?.message}`);
+
+  const { data: solicitacao, error: eSolicitacao } = await admin
+    .from("desconto_solicitacoes")
+    .insert({
+      cotacao_id: cotacaoId,
+      solicitante_id: userData.user.id,
+      nivel_atual: donoCotacaoId,
+      seguradora_id: seguradora.id,
+      pct_pedido: 15,
+      status: "pendente",
+    })
+    .select("id")
+    .single();
+  if (eSolicitacao || !solicitacao)
+    throw new Error(`criar solicitação de desconto de outro usuário: ${eSolicitacao?.message}`);
+
+  return { solicitanteId: userData.user.id, solicitacaoId: solicitacao.id };
+}
+
+/** Remove os dados de `criarSolicitacaoDescontoDeOutroUsuarioE2E`. */
+export async function limparSolicitacaoDescontoDeOutroUsuarioE2E(f: {
+  solicitanteId: string;
+  solicitacaoId: string;
+}): Promise<void> {
+  await admin.from("desconto_solicitacoes").delete().eq("id", f.solicitacaoId);
+  await admin.auth.admin.deleteUser(f.solicitanteId);
+}
+
+/**
+ * Cria um pedido de desconto (`desconto_solicitacoes`) pendente numa
+ * seguradora desta cotação, com `solicitante_id = nivel_atual = donoCotacaoId`
+ * — o PRÓPRIO dono da cotação, diferente de
+ * `criarSolicitacaoDescontoDeOutroUsuarioE2E`. Usado por `seg-acoes.spec.ts`
+ * para exercitar o caminho feliz de "Recalcular esta seguradora": a RPC
+ * `cancelar_desconto` aceita porque `solicitante_id = auth.uid()`, então o
+ * recálculo segue sem bloqueio. Sem cleanup próprio — cascade de
+ * `desconto_solicitacoes.cotacao_id` (`on delete cascade`) já cobre quando
+ * `limparCotacaoQuiverFixture` apaga a cotação.
+ */
+export async function criarSolicitacaoDescontoPropriaE2E(
+  cotacaoId: string,
+  seguradoraNome: string,
+  donoCotacaoId: string,
+): Promise<{ solicitacaoId: string }> {
+  const { data: seguradora, error: eSeguradora } = await admin
+    .from("seguradoras")
+    .select("id")
+    .eq("nome", seguradoraNome)
+    .single();
+  if (eSeguradora || !seguradora)
+    throw new Error(`buscar seguradora "${seguradoraNome}": ${eSeguradora?.message}`);
+
+  const { data: solicitacao, error: eSolicitacao } = await admin
+    .from("desconto_solicitacoes")
+    .insert({
+      cotacao_id: cotacaoId,
+      solicitante_id: donoCotacaoId,
+      nivel_atual: donoCotacaoId,
+      seguradora_id: seguradora.id,
+      pct_pedido: 10,
+      status: "pendente",
+    })
+    .select("id")
+    .single();
+  if (eSolicitacao || !solicitacao)
+    throw new Error(`criar solicitação de desconto própria: ${eSolicitacao?.message}`);
+
+  return { solicitacaoId: solicitacao.id };
+}
+
+/** Lê `status` de uma `desconto_solicitacoes` — para asserts pós-ação em E2E. */
+export async function statusSolicitacaoDescontoE2E(solicitacaoId: string): Promise<string> {
+  const { data, error } = await admin
+    .from("desconto_solicitacoes")
+    .select("status")
+    .eq("id", solicitacaoId)
+    .single();
+  if (error || !data) throw new Error(`buscar status da solicitação: ${error?.message}`);
+  return data.status;
+}
+
+/** Lê `cotacao_seguro.seguradoras_sel` — para asserts pós-recálculo em E2E. */
+export async function seguradorasSelE2E(cotacaoId: string): Promise<string[]> {
+  const { data, error } = await admin
+    .from("cotacao_seguro")
+    .select("seguradoras_sel")
+    .eq("cotacao_id", cotacaoId)
+    .maybeSingle();
+  if (error) throw new Error(`buscar seguradoras_sel: ${error.message}`);
+  return (data?.seguradoras_sel as string[] | null) ?? [];
+}
+
 export type CotacaoEnviadaQuiverExtra = { leadId: string; cotacaoId: string };
 
 /**

@@ -791,3 +791,42 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     // que o robô aceitou a solicitação e começou a processar.
     return { ok: true, numeroCotacao, tentativaId };
   });
+
+type ObterPayloadQuiverAtualPayload = { cotacaoId: string; caller_token: string };
+
+/**
+ * Ferramenta de análise do envio (V12.3.6 · `.seg-acoes` engrenagem) —
+ * remonta, só para leitura, o payload que a Quiver receberia HOJE se a
+ * cotação fosse (re)enviada agora. Reusa `montarPayloadQuiver` — mesma
+ * função usada por `enviarCotacaoQuiver` — para não haver duas fontes de
+ * verdade do formato do payload. Nada é persistido nem enviado ao robô;
+ * é só uma leitura para o vendedor conferir o que sairia daqui.
+ */
+export const obterPayloadQuiverAtual = createServerFn({ method: "POST" })
+  .inputValidator((data: ObterPayloadQuiverAtualPayload) => {
+    if (!data?.cotacaoId) throw new Error("cotacaoId obrigatório.");
+    if (!data?.caller_token) throw new Error("Sem token.");
+    return data;
+  })
+  .handler(async ({ data }) => {
+    const admin = getAdmin();
+    await assertDonoCotacao(admin, data.caller_token, data.cotacaoId);
+
+    const { data: cot, error: cotErr } = await admin
+      .from("cotacoes")
+      .select(
+        "id," +
+          "segurado:cotacao_segurado(*)," +
+          "seguro:cotacao_seguro(*)," +
+          "veiculo:cotacao_veiculo(*)," +
+          "perfil:cotacao_perfil(*)," +
+          "coberturas:cotacao_coberturas(*)",
+      )
+      .eq("id", data.cotacaoId)
+      .maybeSingle();
+    if (cotErr) throw new Error(cotErr.message);
+    if (!cot) throw new Error("Cotação não encontrada.");
+
+    const payload = montarPayloadQuiver(cot as unknown as CotacaoRow);
+    return { payload };
+  });
