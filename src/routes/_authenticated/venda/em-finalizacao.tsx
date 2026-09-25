@@ -309,19 +309,21 @@ function Page() {
                     )}
                   </td>
                   <td className="small muted">{tempoDesde(r.criadoEm)}</td>
-                  <td>
-                    <button
-                      className="btn btn-yellow btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        continuar(r.cotacaoId);
-                      }}
-                    >
-                      <svg width={13} height={13}>
-                        <use href={r.status === "falha" ? "#i-send" : "#i-search"} />
-                      </svg>{" "}
-                      {r.status === "falha" ? "Tentar novamente" : "Consultar status"}
-                    </button>
+                  <td className="fase-acoes-td">
+                    <div className="fase-acoes" data-tour="em-finalizacao-fase-acoes">
+                      <button
+                        className="btn btn-yellow btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          continuar(r.cotacaoId);
+                        }}
+                      >
+                        <svg width={13} height={13}>
+                          <use href={r.status === "falha" ? "#i-send" : "#i-search"} />
+                        </svg>{" "}
+                        {r.status === "falha" ? "Tentar novamente" : "Consultar status"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

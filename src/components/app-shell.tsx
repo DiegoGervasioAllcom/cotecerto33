@@ -38,6 +38,8 @@ import { useAuth } from "@/lib/auth";
 import { usePresence } from "@/lib/use-presence";
 import { useGroupScope } from "@/lib/group-scope";
 import { atenderAgoraRestanteMs, formatRemaining, useNavBadges } from "@/lib/nav-badges";
+import { useCotacoesNovas } from "@/lib/cotacao-novas";
+import { CotacaoFinalizadaAviso } from "@/components/venda/cotacao-finalizada-aviso";
 import { useAreas, ehPerfilInterno, type AreaChave } from "@/lib/use-areas";
 import { resolveNavExperiencia, ehAreaDaFull } from "@/lib/nav-experience";
 import type { Perfil } from "@/integrations/supabase/client";
@@ -294,6 +296,11 @@ export function AppShell({
     atenderMaisUrgente === null || atenderMaisUrgente === undefined
       ? null
       : formatRemaining(atenderMaisUrgente);
+  // Aviso "COTAÇÃO FINALIZADA" (V12.3.4) — só para quem vê a área de venda
+  // (vendedor + Franquia Individual, mesmo escopo de `venLike`). Também
+  // alimenta o "badge novo" pulsando do item "Em negociação" no menu.
+  const { data: cotacoesNovas } = useCotacoesNovas(session?.user.id ?? null, venLike);
+  const temCotacaoNova = !!cotacoesNovas?.length;
   // Interno só entra depois das áreas carregarem — senão a nav pisca vazia (ou
   // completa) antes do recorte do cargo chegar.
   const visibleGroups: Group[] = [
@@ -348,6 +355,7 @@ export function AppShell({
                               : item.to === "/venda/em-finalizacao"
                                 ? emFinalizacaoPendentes
                                 : null;
+                const ehEmNegociacao = item.to === "/venda/em-negociacao";
                 return (
                   <Link
                     key={item.to}
@@ -358,7 +366,9 @@ export function AppShell({
                         ? "nav-atender"
                         : item.to === "/venda/novo-lead"
                           ? "nav-novo-lead"
-                          : undefined
+                          : ehEmNegociacao
+                            ? "nav-em-negociacao"
+                            : undefined
                     }
                   >
                     <Icon className="ic" />
@@ -366,8 +376,13 @@ export function AppShell({
                     {item.soon && <span className="soon-tag">EM FORMULAÇÃO</span>}
                     {!!badgeCount && badgeCount > 0 && (
                       <span
-                        className={item.to === "/venda/atender" ? "badge pulse" : "badge"}
+                        className={`badge${item.to === "/venda/atender" ? " pulse" : ""}${ehEmNegociacao && temCotacaoNova ? " novo" : ""}`}
                         aria-label={`${badgeCount} ${badgeCount === 1 ? "lead aguardando atendimento" : "leads aguardando atendimento"}`}
+                        title={
+                          ehEmNegociacao && temCotacaoNova
+                            ? `${cotacoesNovas?.length} cotação(ões) finalizada(s) — pronta(s) para negociar`
+                            : undefined
+                        }
                       >
                         {badgeCount}
                       </span>
@@ -464,6 +479,12 @@ export function AppShell({
           {children}
         </div>
       </main>
+      {/* Escondido durante o tutorial (V12.3.4 · regressão achada pelo `testes`):
+          o cartão fixo no canto pode ficar por cima do spotlight, e como o
+          tour navega de verdade por /venda/em-negociacao (não é preview
+          isolado), o mais simples é não montar o aviso enquanto o tutorial
+          está aberto — a query em si é só leitura, o risco aqui é visual. */}
+      <CotacaoFinalizadaAviso uid={session?.user.id ?? null} ativo={venLike && !tutorialOpen} />
     </div>
   );
 }

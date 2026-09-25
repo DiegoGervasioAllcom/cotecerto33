@@ -65,7 +65,7 @@ const CASES = [
     fallback: {
       kind: "static",
       route: "/venda/em-negociacao",
-      target: '[data-tour="em-negociacao-lista"]',
+      target: '[data-tour="em-negociacao-finalizada"]',
     },
   },
   {
@@ -76,7 +76,7 @@ const CASES = [
     fallback: {
       kind: "static",
       route: "/venda/em-negociacao",
-      target: '[data-tour="em-negociacao-lista"]',
+      target: '[data-tour="em-negociacao-finalizada"]',
     },
   },
   {

@@ -26,12 +26,30 @@ type LeadStatusPipeline = Database["public"]["Enums"]["lead_status"];
 export const EM_COTACAO_STATUSES = ["rascunho"] as const satisfies readonly CotacaoStatus[];
 export type EmCotacaoStatus = (typeof EM_COTACAO_STATUSES)[number];
 
-/** Status de `cotacoes.status` que hoje `em-negociacao.tsx` trata como "em negociação". */
+/**
+ * Status de `cotacoes.status` que `em-negociacao.tsx` trata como "cotação
+ * finalizada" — todas as seguradoras já responderam, preço na mão, pronta
+ * para negociar com o cliente.
+ */
 export const EM_NEGOCIACAO_STATUSES = [
   "calculada",
   "proposta",
 ] as const satisfies readonly CotacaoStatus[];
 export type EmNegociacaoStatus = (typeof EM_NEGOCIACAO_STATUSES)[number];
+
+/**
+ * Status de `cotacoes.status` que `em-negociacao.tsx` trata como "aguardando
+ * cotação" — a cotação já foi enviada ao robô/API da Quiver mas ainda não
+ * temos o resultado final (`enviada_quiver`) ou o robô devolveu erro
+ * (`erro_quiver`, ex.: seguradora fora do ar, dado rejeitado pelo portal).
+ * Fica na mesma tela que `EM_NEGOCIACAO_STATUSES`, só numa lista separada —
+ * o vendedor ainda não tem preço para oferecer ao cliente.
+ */
+export const AGUARDANDO_CALCULO_STATUSES = [
+  "enviada_quiver",
+  "erro_quiver",
+] as const satisfies readonly CotacaoStatus[];
+export type AguardandoCalculoStatus = (typeof AGUARDANDO_CALCULO_STATUSES)[number];
 
 /**
  * Status de `cotacao_transmissoes.status` que hoje `em-finalizacao.tsx` (e
@@ -134,6 +152,20 @@ export type LeadEtapaBucket =
  * com `status = 'calculada'` aparece como "negociação" nessas telas e como
  * "finalização" no Pipeline. Migrar essas telas para o novo sinal está fora
  * do escopo desta frente.
+ *
+ * V12.3.4: o bucket "negociação" passou a incluir também
+ * `AGUARDANDO_CALCULO_STATUSES` (`enviada_quiver`/`erro_quiver`) — antes esses
+ * dois status caíam no fallback "novo", porque não estavam em nenhuma das
+ * duas listas checadas aqui. A view `public.pipeline_leads_etapa`
+ * (`supabase/migrations/20260924162114_v12_pipeline_kanban_paginado.sql`)
+ * reimplementa este mesmo `case` em SQL para o Kanban paginado — foi
+ * atualizada com o mesmo ajuste por uma migration seguinte
+ * (`20260925033524_v12_pipeline_aguardando_calculo.sql`), que troca
+ * `cr.cotacao_status in ('calculada', 'proposta')` por
+ * `cr.cotacao_status in ('calculada', 'proposta', 'enviada_quiver',
+ * 'erro_quiver')` na CTE de `etapa`. O teste de equivalência
+ * (`tests/db/pipeline-leads-etapa-equivalencia.test.ts`) cobre os dois
+ * status novos.
  */
 export type LeadEtapaInput = {
   statusPipeline: LeadStatusPipeline | string;
@@ -156,7 +188,8 @@ export function leadEtapaBucket(input: LeadEtapaInput): LeadEtapaBucket {
   if (input.transmissaoEmAberto || input.emEtapaTransmissao) return "finalizacao";
   if (
     input.cotacaoStatus !== null &&
-    (EM_NEGOCIACAO_STATUSES as readonly string[]).includes(input.cotacaoStatus)
+    ((EM_NEGOCIACAO_STATUSES as readonly string[]).includes(input.cotacaoStatus) ||
+      (AGUARDANDO_CALCULO_STATUSES as readonly string[]).includes(input.cotacaoStatus))
   )
     return "negociacao";
   if (

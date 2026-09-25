@@ -607,6 +607,13 @@ export async function criarVendedorComFilaDia(): Promise<VendedorComFilaDia> {
       status: "calculada",
       step_atual: 5,
       atualizado_em: atualizadoEmRisco,
+      // V12.3.4: sem isso, esta cotação "em risco" (parada há dias, não um
+      // cálculo recém-terminado) contaria como "nova" pra
+      // `useCotacoesNovas`/`CotacaoFinalizadaAviso` — o aviso global
+      // duplicaria o nome do segurado em cima de QUALQUER tela (ex.:
+      // `agenda.spec.ts`, que já mostra esse mesmo nome na lista de agenda).
+      // Semanticamente ela já foi vista há muito: é por isso que virou risco.
+      calculo_visto_em: atualizadoEmRisco,
     })
     .select("id")
     .single();
@@ -846,6 +853,10 @@ export async function criarVendedorComAgendaCompleta(): Promise<VendedorComAgend
       responsavel_id: base.userId,
       lead_id: base.leadId,
       status: "calculada",
+      // V12.3.4: mesmo motivo da cotação "em risco" acima — `calculada` aqui
+      // é só o pré-requisito pra existir uma linha de `desconto_solicitacoes`
+      // (fonte "aprovação"), não representa um cálculo recém-terminado.
+      calculo_visto_em: new Date().toISOString(),
     })
     .select("id")
     .single();
@@ -960,6 +971,10 @@ export async function criarVendedorComTutorial(): Promise<VendedorComTutorial> {
       },
       criado_em: criadoEmCalculada,
       atualizado_em: criadoEmCalculada,
+      // V12.3.4: fixture de exemplo do tutorial, não um cálculo "acabou de
+      // chegar" — sem isso, o aviso global "COTAÇÃO FINALIZADA" apareceria
+      // por cima de qualquer passo do tour com o nome "Cliente Tutorial".
+      calculo_visto_em: criadoEmCalculada,
     })
     .select("id")
     .single();
@@ -1424,6 +1439,53 @@ export async function limparCotacaoTransmissaoFixture(f: CotacaoQuiverFixture): 
   await admin.from("cotacao_transmissoes").delete().eq("cotacao_id", f.cotacaoId);
   await admin.from("cotacao_segurado").delete().eq("cotacao_id", f.cotacaoId);
   await limparCotacaoQuiverFixture(f);
+}
+
+export type CotacaoEnviadaQuiverExtra = { leadId: string; cotacaoId: string };
+
+/**
+ * Cria uma SEGUNDA cotação `enviada_quiver` (com lead próprio) para um vendedor
+ * que já existe (ex.: `criarCotacaoQuiverFixture`) — usado por
+ * `em-negociacao.spec.ts` (V12.3.4) para popular as duas listas de
+ * `/venda/em-negociacao` (Aguardando cotação + Cotação finalizada) ao mesmo
+ * tempo para o MESMO dono, sem duplicar a criação de empresa/usuário.
+ */
+export async function criarCotacaoEnviadaQuiverExtra(
+  empresaId: string,
+  userId: string,
+): Promise<CotacaoEnviadaQuiverExtra> {
+  const leadNome = uniq("Lead Quiver Extra E2E");
+  const { data: lead, error: eLead } = await admin
+    .from("leads")
+    .insert({
+      empresa_id: empresaId,
+      responsavel_id: userId,
+      nome: leadNome,
+      status_pipeline: "qualificando",
+    })
+    .select("id")
+    .single();
+  if (eLead || !lead) throw new Error(`criar lead extra: ${eLead?.message}`);
+
+  const { data: cot, error: eCot } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: empresaId,
+      responsavel_id: userId,
+      lead_id: lead.id,
+      status: "enviada_quiver",
+    })
+    .select("id")
+    .single();
+  if (eCot || !cot) throw new Error(`criar cotação extra: ${eCot?.message}`);
+
+  return { leadId: lead.id, cotacaoId: cot.id };
+}
+
+/** Remove os dados criados por `criarCotacaoEnviadaQuiverExtra` (best-effort; `db reset` também resolve). */
+export async function limparCotacaoEnviadaQuiverExtra(f: CotacaoEnviadaQuiverExtra): Promise<void> {
+  await admin.from("cotacoes").delete().eq("id", f.cotacaoId);
+  await admin.from("leads").delete().eq("id", f.leadId);
 }
 
 const QUIVER_TRANSMISSAO_WEBHOOK_KEY =

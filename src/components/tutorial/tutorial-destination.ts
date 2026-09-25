@@ -90,7 +90,11 @@ export async function resolveTutorialDestination(
       : {
           kind: "static",
           route: "/venda/em-negociacao",
-          target: '[data-tour="em-negociacao-lista"]',
+          // V12.3.4 dividiu a tela em duas listas — o card genérico
+          // "em-negociacao-lista" virou "em-negociacao-finalizada"
+          // (cotação já calculada, com premios/propostas — o mesmo universo
+          // que `firstVisibleId` busca acima).
+          target: '[data-tour="em-negociacao-finalizada"]',
         };
   }
   if (step.destination === "proposta-selecionada") {
@@ -99,7 +103,7 @@ export async function resolveTutorialDestination(
       : {
           kind: "static",
           route: "/venda/em-negociacao",
-          target: '[data-tour="em-negociacao-lista"]',
+          target: '[data-tour="em-negociacao-finalizada"]',
         };
   }
   if (step.destination === "franquia-detalhe") {
