@@ -137,6 +137,7 @@ describe("montarAgenda (unitário puro — junta as 3 fontes já ordenadas)", ()
   const risco: RiscoRow = {
     id: "cot-1",
     numero: 42,
+    criado_em: "2026-09-01T10:00:00Z",
     atualizado_em: new Date(AGORA.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     segurado: { nome: "Bruno" },
     veiculo: { marca_nome: "FIAT", modelo_nome: "UNO", ano_modelo: "2020" },
@@ -190,6 +191,13 @@ describe("montarAgenda (unitário puro — junta as 3 fontes já ordenadas)", ()
     const item = riscoParaItem(parado10Dias, AGORA);
     expect(item.texto).toContain("10 dias");
     expect(classificarUrgencia(item.data, AGORA).ord).toBe(0);
+  });
+
+  it("número da cotação usa o ano de CRIAÇÃO, não o ano corrente (cotação de ano anterior)", () => {
+    const criadaAnoAnterior: RiscoRow = { ...risco, criado_em: "2025-12-20T10:00:00Z" };
+    const item = riscoParaItem(criadaAnoAnterior, AGORA);
+    expect(item.titulo).toContain("COT-2025-00042");
+    expect(item.titulo).not.toContain("COT-2026-");
   });
 });
 

@@ -2,6 +2,8 @@
  * Helpers compartilhados pelas listas "Em cotação" e "Em negociação"
  * (Frente 9 · V12 — divisão da antiga /venda/cotacoes em duas telas).
  */
+import { formatarNumeroCotacao } from "@/lib/cotacao-numero";
+
 export type Premio = { seguradora: string; premio: number };
 
 export const money = (n: number) =>
@@ -11,8 +13,11 @@ export const money = (n: number) =>
     maximumFractionDigits: 0,
   });
 
-const pad = (n: number) => String(n).padStart(5, "0");
-export const cotNum = (numero: number) => `COT-${new Date().getFullYear()}-${pad(numero)}`;
+/** `COT-AAAA-NNNNN` com o ano de criação da cotação — nunca o ano corrente.
+ * `criadoEm` é obrigatório aqui porque toda linha destas listas já é uma
+ * cotação salva (tem `numero` e `criado_em` reais). */
+export const cotNum = (numero: number, criadoEm: string) =>
+  formatarNumeroCotacao(numero, criadoEm) ?? `COT-${String(numero).padStart(5, "0")}`;
 
 export function diasParaExpirar(criadoEm: string) {
   const created = new Date(criadoEm).getTime();

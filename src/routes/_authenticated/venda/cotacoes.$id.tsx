@@ -10,6 +10,7 @@ import {
 } from "@/components/venda/cotacoes/ComparativoQuiver";
 import { parseQuiverResultado } from "@/components/venda/cotacoes/quiver-resultado";
 import { supabase } from "@/integrations/supabase/client";
+import { formatarNumeroCotacao } from "@/lib/cotacao-numero";
 import { maskCpfCnpj } from "@/lib/masks";
 
 export const Route = createFileRoute("/_authenticated/venda/cotacoes/$id")({
@@ -57,10 +58,6 @@ type ComparativoData = {
   seguradoras: { id: string; nome: string }[];
   solicitacoes: Solicitacao[];
 };
-
-const pad = (numero: number) => String(numero).padStart(5, "0");
-const cotNum = (numero: number, criadoEm: string) =>
-  `COT-${new Date(criadoEm).getFullYear()}-${pad(numero)}`;
 
 async function fetchComparativo(id: string): Promise<ComparativoData> {
   const [cotacaoResult, seguradorasResult, solicitacoesResult] = await Promise.all([
@@ -168,7 +165,7 @@ function Page() {
     ? `${veiculo.marca_nome ?? ""} ${veiculo.modelo_nome ?? ""} ${veiculo.ano_modelo ?? ""}`.trim() ||
       "—"
     : "—";
-  const numero = cotNum(data.numero, data.criado_em);
+  const numero = formatarNumeroCotacao(data.numero, data.criado_em) ?? "—";
   const resultados = parseQuiverResultado(data.quiver_resultado_raw);
 
   return (

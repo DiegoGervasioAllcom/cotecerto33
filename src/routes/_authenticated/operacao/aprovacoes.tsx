@@ -8,6 +8,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { formatarNumeroCotacao } from "@/lib/cotacao-numero";
 import { useGroupScope } from "@/lib/group-scope";
 
 export const Route = createFileRoute("/_authenticated/operacao/aprovacoes")({
@@ -61,11 +62,6 @@ function fmtDate(s: string | null) {
         minute: "2-digit",
       })
     : "—";
-}
-
-function cotNum(numero: number | null | undefined, criado: string | null | undefined) {
-  if (numero == null || !criado) return "—";
-  return `COT-${new Date(criado).getFullYear()}-${String(numero).padStart(5, "0")}`;
 }
 
 /** Modal genérico de ação (aprovar/contrapropor/negar) com pct + observação opcionais. */
@@ -491,7 +487,8 @@ function Page() {
                   <span className="muted"> em </span>
                   <strong>{sol.seguradora?.nome ?? "—"}</strong>
                   <div className="muted small">
-                    Cotação {cotNum(sol.cotacao?.numero, sol.cotacao?.criado_em)} ·{" "}
+                    Cotação{" "}
+                    {formatarNumeroCotacao(sol.cotacao?.numero, sol.cotacao?.criado_em) ?? "—"} ·{" "}
                     {fmtDate(sol.criado_em)}
                   </div>
                 </div>

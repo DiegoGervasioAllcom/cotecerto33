@@ -39,6 +39,7 @@ export type TentativaRow = {
   proposta_id: string | null;
   cotacoes: {
     numero: number;
+    criado_em: string;
     // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
     segurado: { nome: string | null } | null;
     veiculo: {
@@ -54,6 +55,9 @@ export type Row = {
   tentativaId: string;
   cotacaoId: string;
   numero: number;
+  /** `criado_em` da COTAÇÃO (para o número `COT-AAAA-NNNNN`) — não confundir
+   * com `criadoEm` abaixo, que é da tentativa de transmissão. */
+  cotacaoCriadoEm: string;
   status: string;
   motivo: string | null;
   mensagem: string | null;
@@ -90,7 +94,7 @@ export function fetchEmFinalizacaoRows(uid: string) {
     .from("cotacao_transmissoes")
     .select(
       "id,cotacao_id,status,motivo,mensagem,seguradora,premio,forma_pagamento,criado_em,proposta_id," +
-        "cotacoes!inner(numero,responsavel_id,segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))",
+        "cotacoes!inner(numero,criado_em,responsavel_id,segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))",
     )
     .eq("cotacoes.responsavel_id", uid)
     .in("status", TRANSMISSAO_EM_ABERTO_STATUSES)
@@ -112,6 +116,7 @@ export function dedupTentativas(data: readonly TentativaRow[] | null): Row[] {
       tentativaId: t.id,
       cotacaoId: t.cotacao_id,
       numero: c?.numero ?? 0,
+      cotacaoCriadoEm: c?.criado_em ?? t.criado_em,
       status: t.status,
       motivo: t.motivo,
       mensagem: t.mensagem,
@@ -189,7 +194,7 @@ function Page() {
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        const t = `${cotNum(r.numero)} ${r.segurado} ${r.veiculo}`.toLowerCase();
+        const t = `${cotNum(r.numero, r.cotacaoCriadoEm)} ${r.segurado} ${r.veiculo}`.toLowerCase();
         if (q && !t.includes(q.toLowerCase())) return false;
         return true;
       }),
@@ -298,7 +303,7 @@ function Page() {
                     className="small muted"
                     style={{ fontFamily: "ui-monospace,Menlo,monospace" }}
                   >
-                    #{cotNum(r.numero)}
+                    #{cotNum(r.numero, r.cotacaoCriadoEm)}
                   </td>
                   <td>
                     <strong>{r.segurado}</strong>

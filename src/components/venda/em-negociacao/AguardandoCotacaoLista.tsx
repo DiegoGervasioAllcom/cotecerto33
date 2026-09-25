@@ -48,7 +48,7 @@ export function AguardandoCotacaoLista({
           return (
             <tr key={r.id}>
               <td className="small muted" style={{ fontFamily: "ui-monospace,Menlo,monospace" }}>
-                #{cotNum(r.numero)}
+                #{cotNum(r.numero, r.criado_em)}
               </td>
               <td>
                 <strong>{r.segurado?.nome || "—"}</strong>

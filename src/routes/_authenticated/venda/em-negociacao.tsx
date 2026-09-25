@@ -107,7 +107,7 @@ function Page() {
     () =>
       finalizadaRows.filter((r) => {
         const t =
-          `${cotNum(r.numero)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
+          `${cotNum(r.numero, r.criado_em)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
         if (q && !t.includes(q.toLowerCase())) return false;
         if (fSeguradora && !r.premios?.some((p) => p.seguradora === fSeguradora)) return false;
         if (fFaixa) {
@@ -124,7 +124,7 @@ function Page() {
     () =>
       aguardandoRows.filter((r) => {
         const t =
-          `${cotNum(r.numero)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
+          `${cotNum(r.numero, r.criado_em)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
         if (q && !t.includes(q.toLowerCase())) return false;
         return true;
       }),
@@ -152,7 +152,7 @@ function Page() {
         ? `${r.veiculo.marca_nome ?? ""} ${r.veiculo.modelo_nome ?? ""} ${r.veiculo.ano_modelo ?? ""}`.trim()
         : "";
       return [
-        cotNum(r.numero),
+        cotNum(r.numero, r.criado_em),
         r.segurado?.nome ?? "",
         veic,
         r.premios?.length ?? 0,

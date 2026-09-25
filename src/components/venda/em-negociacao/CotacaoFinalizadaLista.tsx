@@ -21,7 +21,7 @@ function statusChip(s: string) {
  * com os prêmios já carregados nesta lista. */
 function docDadosDaLinha(r: CotacaoFinalizadaRow): DocDados {
   const cabecalho = {
-    cotacaoNumero: `#${cotNum(r.numero)}`,
+    cotacaoNumero: `#${cotNum(r.numero, r.criado_em)}`,
     segurado: r.segurado,
     veiculo: r.veiculo,
   };
@@ -105,7 +105,7 @@ export function CotacaoFinalizadaLista({
                 }}
               >
                 <td className="small muted" style={{ fontFamily: "ui-monospace,Menlo,monospace" }}>
-                  #{cotNum(r.numero)}
+                  #{cotNum(r.numero, r.criado_em)}
                 </td>
                 <td>
                   <strong>{r.segurado?.nome || "—"}</strong>

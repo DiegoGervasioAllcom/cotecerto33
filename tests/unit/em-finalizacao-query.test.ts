@@ -107,7 +107,12 @@ function tentativa(overrides: Partial<TentativaRow> & { cotacao_id: string }): T
     // `cotacao_segurado`/`cotacao_veiculo` são 1:1 (`cotacao_id` é PK) — o
     // PostgREST devolve objeto, não array (bug corrigido: `dedupTentativas`
     // indexava `?.[0]` como se fosse array).
-    cotacoes: { numero: 1, segurado: { nome: "Fulano" }, veiculo: null },
+    cotacoes: {
+      numero: 1,
+      criado_em: "2026-01-01T00:00:00.000Z",
+      segurado: { nome: "Fulano" },
+      veiculo: null,
+    },
     ...overrides,
   };
 }
@@ -170,6 +175,7 @@ describe("dedupTentativas", () => {
         cotacao_id: "cot-1",
         cotacoes: {
           numero: 7,
+          criado_em: "2026-01-01T00:00:00.000Z",
           segurado: { nome: "Segurado Real" },
           veiculo: { marca_nome: "Fiat", modelo_nome: "Uno", ano_modelo: "2020", placa: null },
         },
@@ -190,6 +196,7 @@ describe("dedupTentativas", () => {
         forma_pagamento: "cartao",
         cotacoes: {
           numero: 42,
+          criado_em: "2025-12-20T00:00:00.000Z",
           segurado: { nome: "Ciclano" },
           veiculo: { marca_nome: "Fiat", modelo_nome: "Uno", ano_modelo: "2020", placa: "ABC1D23" },
         },
@@ -203,6 +210,7 @@ describe("dedupTentativas", () => {
       propostaId: "prop-1",
       formaPagamento: "cartao",
       numero: 42,
+      cotacaoCriadoEm: "2025-12-20T00:00:00.000Z",
       segurado: "Ciclano",
       veiculo: "Fiat Uno 2020 · ABC1D23",
     });

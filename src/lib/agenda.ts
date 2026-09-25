@@ -22,6 +22,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { veiculoLabel } from "@/lib/veiculo";
+import { formatarNumeroCotacao } from "@/lib/cotacao-numero";
 import type { LembreteTipo } from "@/lib/schemas/lembrete.schema";
 
 export type FonteAgenda = "retorno" | "risco" | "seguradora" | "aprovacao" | "lembrete";
@@ -113,9 +114,6 @@ export function diasParados(atualizadoEm: string, agora: Date = new Date()): num
   return Math.max(0, Math.floor(dias));
 }
 
-const padNumero = (n: number) => String(n).padStart(5, "0");
-export const cotNumero = (numero: number) => `COT-${new Date().getFullYear()}-${padNumero(numero)}`;
-
 // ---------------------------------------------------------------------------
 // Fonte 1 — retornos agendados (lead_agendamentos)
 // ---------------------------------------------------------------------------
@@ -171,6 +169,7 @@ export function retornoParaItem(r: RetornoRow): AgendaItem {
 export type RiscoRow = {
   id: string;
   numero: number;
+  criado_em: string;
   atualizado_em: string;
   segurado: { nome: string | null } | null;
   veiculo: {
@@ -190,7 +189,7 @@ export async function fetchRiscoAgenda(
   const { data, error } = await supabase
     .from("cotacoes")
     .select(
-      "id,numero,atualizado_em," +
+      "id,numero,criado_em,atualizado_em," +
         "segurado:cotacao_segurado(nome)," +
         "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)",
     )
@@ -216,7 +215,7 @@ export function riscoParaItem(c: RiscoRow, agora: Date = new Date()): AgendaItem
     fonte: "risco",
     data: dataISO,
     hora: null,
-    titulo: `${nome}${veiculo ? ` — ${veiculo}` : ""} · ${cotNumero(c.numero)}`,
+    titulo: `${nome}${veiculo ? ` — ${veiculo}` : ""} · ${formatarNumeroCotacao(c.numero, c.criado_em) ?? ""}`,
     texto: `Parada há ${dias} dia${dias === 1 ? "" : "s"} sem atualização`,
     leadId: null,
     statusPipeline: null,

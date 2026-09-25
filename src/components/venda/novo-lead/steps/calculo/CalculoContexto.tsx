@@ -8,6 +8,7 @@
  * mesmo já usado no comparativo lado a lado / listas de cotação), não um
  * sorteio como `STATE.cotacaoNum` do protótipo nem um pedaço do uuid.
  */
+import { useState } from "react";
 import {
   formatarNumeroCotacao,
   useNumeroCotacao,
@@ -31,12 +32,42 @@ type Props = {
 export function CalculoContexto({ cotacaoId, cliente, padrao }: Props) {
   const { numero, criadoEm } = useNumeroCotacao(cotacaoId);
   const numeroFormatado = formatarNumeroCotacao(numero, criadoEm);
+  const [copiado, setCopiado] = useState(false);
+
+  async function copiarNumero() {
+    if (!numeroFormatado) return;
+    try {
+      await navigator.clipboard.writeText(numeroFormatado);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1500);
+    } catch {
+      /* sem permissão de clipboard — botão fica sem feedback, sem quebrar a tela */
+    }
+  }
 
   return (
     <div className="calc-ctx" data-tour="calc-ctx">
       <span className="cx-item">
         <span className="cx-k">Cotação</span>
         <strong>{numeroFormatado ? `#${numeroFormatado}` : "—"}</strong>
+        {numeroFormatado && (
+          <button
+            type="button"
+            className="cx-copy"
+            title={copiado ? `Número ${numeroFormatado} copiado` : "Copiar número da cotação"}
+            aria-label="Copiar número da cotação"
+            onClick={() => void copiarNumero()}
+          >
+            <svg width={12} height={12}>
+              <use href="#i-layers" />
+            </svg>
+          </button>
+        )}
+        {copiado && (
+          <span style={{ color: "var(--ok, #16a34a)", fontWeight: 700 }}>
+            Número {numeroFormatado} copiado
+          </span>
+        )}
       </span>
       <span className="cx-item">
         <span className="cx-k">Cliente</span>

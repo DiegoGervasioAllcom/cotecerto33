@@ -77,7 +77,7 @@ function Page() {
     () =>
       rows.filter((r) => {
         const t =
-          `${cotNum(r.numero)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
+          `${cotNum(r.numero, r.criado_em)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
         if (q && !t.includes(q.toLowerCase())) return false;
         return true;
       }),
@@ -162,7 +162,7 @@ function Page() {
                       className="small muted"
                       style={{ fontFamily: "ui-monospace,Menlo,monospace" }}
                     >
-                      #{cotNum(r.numero)}
+                      #{cotNum(r.numero, r.criado_em)}
                     </td>
                     <td>
                       <strong>{r.segurado?.nome || "—"}</strong>
