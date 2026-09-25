@@ -23,12 +23,29 @@ type Data = {
   status: string;
   criado_em: string;
   quiver_resultado_raw: unknown;
-  segurado: { nome: string | null; cpf_cnpj: string | null } | null;
+  segurado: {
+    nome: string | null;
+    cpf_cnpj: string | null;
+    nascimento: string | null;
+    sexo: string | null;
+    estado_civil: string | null;
+  } | null;
   veiculo: {
     marca_nome: string | null;
     modelo_nome: string | null;
     ano_modelo: string | null;
+    ano_fab: string | null;
     placa: string | null;
+    chassi: string | null;
+    combustivel: string | null;
+  } | null;
+  // Usados só pelo modal "Imprimir cotação" (Frente 3 V12 · 7a) — a tela do
+  // comparativo em si não exibe esses dados.
+  seguro: { tipo_seguro: string | null; vig_ini: string | null; vig_fim: string | null } | null;
+  perfil: {
+    condutor_mesmo: boolean | null;
+    jovens_18_25: boolean | null;
+    cep_pernoite: string | null;
   } | null;
   premios: PremioComparativo[];
 };
@@ -51,8 +68,10 @@ async function fetchComparativo(id: string): Promise<ComparativoData> {
       .from("cotacoes")
       .select(
         "id,numero,status,criado_em,quiver_resultado_raw," +
-          "segurado:cotacao_segurado(nome,cpf_cnpj)," +
-          "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa)," +
+          "segurado:cotacao_segurado(nome,cpf_cnpj,nascimento,sexo,estado_civil)," +
+          "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,ano_fab,placa,chassi,combustivel)," +
+          "seguro:cotacao_seguro(tipo_seguro,vig_ini,vig_fim)," +
+          "perfil:cotacao_perfil(condutor_mesmo,jovens_18_25,cep_pernoite)," +
           "premios:cotacao_premios(id,seguradora,cobertura,premio)",
       )
       .eq("id", id)
@@ -198,9 +217,13 @@ function Page() {
         onAceitar={(solicitacaoId) => void handleAceitar(solicitacaoId)}
         onCancelar={(solicitacaoId) => void handleCancelar(solicitacaoId)}
         onDescontoEnviado={() => void queryClient.invalidateQueries({ queryKey })}
-        printMeta={`${headName} · ${headCar} · #${numero}${
-          data.segurado?.cpf_cnpj ? ` · ${maskCpfCnpj(data.segurado.cpf_cnpj)}` : ""
-        }`}
+        docCabecalho={{
+          cotacaoNumero: `#${numero}`,
+          segurado: data.segurado,
+          veiculo: data.veiculo,
+          seguro: data.seguro,
+          perfil: data.perfil,
+        }}
       />
 
       <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>

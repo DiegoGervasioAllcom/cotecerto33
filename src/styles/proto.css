@@ -31,6 +31,12 @@
   /* Frente 3 V12 — `.doc-li` (Transmitida/Emissão) usa `--cool-100` do
      protótipo, que também não existia aqui ainda. */
   --cool-100: #e3e8ec;
+  /* Frente 3 V12 (7a · Impressão de cotação) — trazidas byte a byte do bloco
+     `:root` do protótipo V12 (linhas ~27-39), só as que faltavam. */
+  --fs-md: 13px;
+  --cool-50: #f4f6f8;
+  --cream-border: #f0e6c2;
+  --gold-ink: #8a6d1a;
   --radius: 14px;
   --radius-lg: 20px;
   --radius-sm: 10px;
@@ -1571,6 +1577,472 @@ textarea.input:focus {
 .doc-li strong {
   text-align: right;
   font-weight: 700;
+}
+/* Frente 3 V12 (7a · Impressão de cotação) — trazidas byte a byte de
+   `cotecerto_prototipo_v12 - cópia.html`, linhas ~657-751 (blocos "IMPRESSÃO:
+   configuração", "pré-visualização" e "o documento em si"). Só as classes que
+   o modal `ImprimirCotacaoModal` usa; `.doc-interno`/comissão ficam para a
+   fatia B (V12.1.34-35). */
+.pr-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 26px;
+}
+.pr-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 11px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+.pr-radio.on {
+  border-color: var(--yellow);
+  background: var(--cream-hi);
+}
+.pr-radio .pr-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex: none;
+  margin-top: 2px;
+}
+.pr-radio.on .pr-dot {
+  border-color: var(--yellow);
+  background: var(--yellow);
+  box-shadow: inset 0 0 0 3px #fff;
+}
+.pr-radio strong {
+  display: block;
+  font-size: var(--fs-md);
+  color: var(--slate);
+}
+.pr-radio small {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-top: 1px;
+}
+.pr-cards {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+}
+.pr-card {
+  position: relative;
+  flex: none;
+  width: 112px;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+.pr-card.on {
+  border-color: var(--yellow);
+  background: var(--cream-hi);
+  box-shadow: 0 0 0 3px rgba(255, 182, 0, 0.16);
+}
+.pr-card:not(.on) {
+  opacity: 0.55;
+}
+.pr-card .pr-nome {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 6px;
+  line-height: 1.25;
+}
+.pr-card .pr-preco {
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--slate);
+  margin-top: 3px;
+}
+.pr-check {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2f3d48;
+}
+.pr-card.on .pr-check {
+  background: var(--yellow);
+  border-color: var(--yellow);
+}
+.pr-msgs-lbl {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin: 2px 0 6px;
+}
+.pr-msgs {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.pr-msg {
+  width: 112px;
+  flex: none;
+  height: 34px;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s;
+}
+.pr-msg.on {
+  border-color: var(--yellow);
+  background: var(--yellow);
+  color: #2f3d48;
+}
+.pr-msg.off {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.pr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+.pr-chip {
+  border: 1.5px solid var(--border-soft);
+  background: #fff;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.14s;
+}
+.pr-chip.on {
+  border-color: var(--slate);
+  background: var(--slate);
+  color: #fff;
+}
+.pr-chk {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--fs-md);
+  color: var(--slate);
+  font-weight: 600;
+  padding: 7px 0;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+.pr-chk .pr-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2f3d48;
+}
+.pr-chk.on .pr-box {
+  background: var(--yellow);
+  border-color: var(--yellow);
+}
+.pr-chk small {
+  width: 100%;
+  padding-left: 27px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: -4px;
+}
+/* ===== IMPRESSÃO: pré-visualização ===== */
+.modal-print {
+  max-width: 1120px;
+}
+.pv-body {
+  display: grid;
+  grid-template-columns: 1fr 268px;
+  gap: 18px;
+  align-items: start;
+}
+.pv-doc {
+  background: #e9ecef;
+  border-radius: 12px;
+  padding: 16px;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+.pv-lado {
+  position: sticky;
+  top: 0;
+}
+.pv-h {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--slate);
+  margin-bottom: 10px;
+}
+.pv-env {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--slate);
+  transition: all 0.14s;
+}
+.pv-env:hover {
+  border-color: var(--yellow);
+  background: var(--cream-hi);
+}
+.pv-env strong {
+  display: block;
+  font-size: var(--fs-md);
+}
+.pv-env small {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.pv-sep {
+  height: 1px;
+  background: var(--border-soft);
+  margin: 14px 0;
+}
+.pv-btn {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.pv-resumo {
+  margin-top: 14px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 12px;
+}
+.pv-resumo div {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-sm);
+  padding: 4px 0;
+}
+.pv-resumo span {
+  color: var(--muted);
+}
+.pv-resumo strong {
+  color: var(--slate);
+}
+/* ===== IMPRESSÃO: o documento em si ===== */
+.doc {
+  background: #fff;
+  padding: 30px 34px;
+  border-radius: 6px;
+  box-shadow: 0 3px 14px rgba(18, 28, 36, 0.12);
+  font-size: var(--fs-xs);
+  color: #2f3d48;
+  line-height: 1.5;
+}
+.doc.economia {
+  font-size: var(--fs-xs);
+  line-height: 1.38;
+}
+.doc-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  border-bottom: 2px solid var(--slate);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+.doc-logo {
+  width: 96px;
+  height: auto;
+  flex: none;
+}
+.doc.economia .doc-logo {
+  width: 76px;
+}
+.doc-logo-cia {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  flex: none;
+}
+.doc-logo-cia span {
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  color: var(--slate);
+  letter-spacing: 0.02em;
+}
+.doc-logo-cia small {
+  font-size: var(--fs-2xs);
+  color: #7a8794;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.doc-aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cream-soft);
+  border: 1px solid var(--cream-border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-top: 14px;
+  font-size: var(--fs-xs);
+  color: var(--gold-ink);
+}
+.doc-meta {
+  text-align: right;
+  font-size: var(--fs-xs);
+}
+.doc-obs {
+  font-size: var(--fs-2xs);
+  color: #7a8794;
+  margin-top: 3px;
+}
+.doc-ola {
+  margin: 0 0 14px;
+}
+.doc-sec {
+  background: var(--offwhite);
+  border-left: 3px solid var(--yellow);
+  font-weight: 800;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 7px 11px;
+  margin: 16px 0 10px;
+}
+.doc-bloco {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px 22px;
+  margin-bottom: 4px;
+}
+.doc-cols3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0 22px;
+  margin-bottom: 12px;
+}
+.doc-col-t {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: var(--fs-xs);
+  color: var(--slate);
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 5px;
+  margin-bottom: 6px;
+}
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+.doc-table td {
+  padding: 5px 9px;
+  border-bottom: 1px dotted var(--cool-100);
+  text-align: center;
+  vertical-align: middle;
+}
+.doc-table .doc-k {
+  text-align: left;
+  color: #7a8794;
+  width: 210px;
+  font-weight: 600;
+}
+.doc-table tr.doc-tit td {
+  background: var(--offwhite);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.05em;
+  border-bottom: 0;
+  padding-top: 9px;
+}
+.doc-table tr.doc-tit .doc-k {
+  color: var(--slate);
+}
+.doc-table tr.doc-vista td {
+  background: var(--cream-hi);
+  font-weight: 800;
+}
+.doc-table tr.doc-com td {
+  background: var(--cream-soft);
+  font-weight: 700;
+}
+.doc-seg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.doc-seg strong {
+  font-size: var(--fs-xs);
+}
+.doc-seg small {
+  font-size: var(--fs-2xs);
+  color: #7a8794;
+}
+.doc.colunado .doc-table td {
+  border-right: 1px solid var(--cool-50);
+}
+.doc-msg {
+  background: var(--offwhite);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 7px;
+  font-size: var(--fs-xs);
+}
+.doc-rodape {
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+  font-size: var(--fs-2xs);
+  color: #7a8794;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .pv-body {
+    grid-template-columns: 1fr;
+  }
+  .pr-grid2 {
+    grid-template-columns: 1fr;
+  }
 }
 .fold {
   margin-top: 18px;
@@ -4925,6 +5397,53 @@ textarea.input:focus {
   border-radius: 12px;
   padding: 12px 14px;
   margin-bottom: 6px;
+}
+/* Frente 3 V12 (7a · Impressão de cotação) — trazidas byte a byte de
+   `cotecerto_prototipo_v12 - cópia.html`, linhas ~459-466 ("menu de opções da
+   engrenagem"). Usadas pelas duas portas de `ImprimirCotacaoModal`
+   (Configurar impressão / Impressão expressa). */
+.op-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 13px 15px;
+  margin-bottom: 9px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--muted);
+  transition: all 0.14s;
+}
+.op-item:hover {
+  border-color: var(--yellow);
+  background: var(--cream-hi);
+}
+.op-ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--offwhite);
+  color: var(--slate);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.op-tx {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.op-tx strong {
+  font-size: var(--fs-md);
+  color: var(--slate);
+}
+.op-tx small {
+  font-size: var(--fs-xs);
+  color: var(--muted);
 }
 .acc-sec-t {
   font-size: 13px;

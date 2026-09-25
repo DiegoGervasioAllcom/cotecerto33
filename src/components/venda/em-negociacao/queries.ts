@@ -42,6 +42,9 @@ export type CotacaoFinalizadaRow = CotacaoBase & {
   calculo_visto_em: string | null;
   premios: Premio[];
   propostas: PropostaLigada[] | null;
+  // Usados só pelo modal "Imprimir cotação" (Frente 3 V12 · 7a) — a lista em
+  // si continua mostrando apenas `premios` (seguradora + prêmio).
+  quiver_resultado_raw: unknown;
 };
 
 /** Linha da lista "Aguardando cotação" (`AGUARDANDO_CALCULO_STATUSES`). */
@@ -65,7 +68,7 @@ export function fetchCotacaoFinalizadaRows(uid: string) {
   return supabase
     .from("cotacoes")
     .select(
-      "id,numero,status,ramo,criado_em,atualizado_em,calculo_visto_em," +
+      "id,numero,status,ramo,criado_em,atualizado_em,calculo_visto_em,quiver_resultado_raw," +
         "segurado:cotacao_segurado(nome)," +
         "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
         "premios:cotacao_premios(seguradora,premio)," +

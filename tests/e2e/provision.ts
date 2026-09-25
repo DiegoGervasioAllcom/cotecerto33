@@ -1409,6 +1409,20 @@ export async function criarCotacaoQuiverFixture(): Promise<CotacaoQuiverFixture>
   };
 }
 
+/**
+ * Marca `calculo_visto_em` direto no banco — usado por specs que não testam
+ * o aviso "COTAÇÃO FINALIZADA" (`cotacao-finalizada-aviso.tsx`) e por isso
+ * preferem que ele nunca apareça (ex.: `imprimir-cotacao.spec.ts`, cujo modal
+ * fica atrás do aviso na mesma tela) em vez de dispensá-lo a cada teste.
+ */
+export async function marcarCalculoVistoE2E(cotacaoId: string): Promise<void> {
+  const { error } = await admin
+    .from("cotacoes")
+    .update({ calculo_visto_em: new Date().toISOString() })
+    .eq("id", cotacaoId);
+  if (error) throw new Error(`marcar calculo_visto_em: ${error.message}`);
+}
+
 /** Remove os dados criados por `criarCotacaoQuiverFixture` (best-effort; `db reset` também resolve). */
 export async function limparCotacaoQuiverFixture(f: CotacaoQuiverFixture): Promise<void> {
   await admin.from("cotacoes").delete().eq("id", f.cotacaoId);

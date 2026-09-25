@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { printHtml, escapeHtml } from "@/lib/print";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
+import { useImprimirCotacaoModal } from "@/components/venda/cotacoes/ImprimirCotacaoModal";
+import { docDadosDoForm } from "@/components/venda/cotacoes/doc-dados";
 import {
   gruposOpcoesResultado,
   ordenarResultados,
@@ -45,6 +46,7 @@ export function StepCalculo({
   // para clicar na célula certa do modal do portal.
   const [escolhas, setEscolhas] = useState<Record<string, EscolhaCard>>({});
   const [erroSelecao, setErroSelecao] = useState<string | null>(null);
+  const imprimir = useImprimirCotacaoModal();
 
   function escolhaDoCard(r: ResultadoCalculo): EscolhaCard {
     const primeiroGrupo = gruposOpcoesResultado(r)[0];
@@ -112,81 +114,40 @@ export function StepCalculo({
             Comparativo lado a lado
           </Link>
         )}
-        <button
-          className="btn btn-ghost btn-sm"
-          disabled={!podeCalcular || calculando}
-          title={!podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined}
-          onClick={doSimularCalculo}
-        >
-          <svg width="13" height="13">
-            <use href="#i-refresh" />
-          </svg>{" "}
-          {calculando ? "Calculando…" : "Recalcular"}
-        </button>
-        <button
-          className="btn btn-ghost btn-sm"
-          disabled={resultados.length === 0}
-          onClick={() => {
-            const sorted = ordenarResultados(resultados);
-            const head = `
-              <div class="grid">
-                <div class="kv"><b>Cliente:</b> ${escapeHtml(f.nome || "—")}</div>
-                <div class="kv"><b>${f.pessoa === "Jurídica" ? "CNPJ" : "CPF"}:</b> ${escapeHtml(f.cpf || "—")}</div>
-                <div class="kv"><b>Celular:</b> ${escapeHtml(f.celular || "—")}</div>
-                <div class="kv"><b>Cidade/UF:</b> ${escapeHtml((f.cidade || "—") + (f.uf ? "/" + f.uf : ""))}</div>
-                <div class="kv"><b>Veículo:</b> ${escapeHtml(`${f.marca || ""} ${f.modelo || ""} ${f.anoModelo || ""}`.trim() || "—")}</div>
-                <div class="kv"><b>Placa:</b> ${escapeHtml(f.placa || "—")}</div>
-                <div class="kv"><b>Tipo de cobertura:</b> ${escapeHtml(f.tipoCobertura || "Compreensiva")}</div>
-                <div class="kv"><b>Tipo de cálculo:</b> ${escapeHtml(f.tipoCalculo || "—")}</div>
-              </div>`;
-            const cards = sorted
-              .map((r) => {
-                const rows = r.opcoes
-                  .map(
-                    (o) =>
-                      `<tr><td>${escapeHtml(o.tipo || "—")}</td><td>${escapeHtml(o.franquia || "—")}</td><td class="num"><strong>${escapeHtml(o.avista || "—")}</strong></td><td class="num">${escapeHtml(o.parcelas || "—")}</td></tr>`,
-                  )
-                  .join("");
-                return `<div class="card">
-                  <div style="display:flex;justify-content:space-between;align-items:baseline">
-                    <strong style="font-size:14px">${escapeHtml(r.seguradora)}</strong>
-                    <span style="color:#64748b;font-size:11px">${escapeHtml(r.produto ? `${r.produto} · ${r.nome}` : r.nome || "Compreensiva")}</span>
-                  </div>
-                  <table style="margin-top:8px">
-                    <tr><th>Plano</th><th>Franquia</th><th class="num">À vista</th><th class="num">Parcelado</th></tr>
-                    ${rows}
-                  </table>
-                </div>`;
-              })
-              .join("");
-            const cobRows = (r: ResultadoCalculo) =>
-              [
-                ...Object.entries(r.coberturasBasicas ?? {}),
-                ...Object.entries(r.coberturasAdicionais ?? {}),
-              ]
-                .map(
-                  ([label, valor]) =>
-                    `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(valor)}</td></tr>`,
-                )
-                .join("");
-            const cobBlocks = sorted
-              .map(
-                (r) =>
-                  `<h2>Coberturas · ${escapeHtml(r.seguradora)}</h2><table><tr><th>Item</th><th>Valor</th></tr>${cobRows(r) || `<tr><td colspan="2">Não informado pela seguradora</td></tr>`}</table>`,
+        <div className="calc-bar-r">
+          <button
+            className="btn btn-ghost btn-sm"
+            data-tour="calc-imprimir"
+            disabled={resultados.length === 0}
+            onClick={() =>
+              imprimir.abrir(
+                docDadosDoForm(
+                  f,
+                  ordenarResultados(resultados),
+                  cotacaoId ? `#${cotacaoId.slice(0, 8)}` : "rascunho",
+                ),
               )
-              .join("");
-            printHtml(
-              "Cotação · " + (f.nome || "Cliente"),
-              `<h1>Resumo da cotação</h1><div class="sub">${sorted.length} seguradora(s) calculada(s)</div>${head}<h2>Prêmios</h2>${cards}${cobBlocks}<p style="font-size:11px;color:#64748b">Cotação válida por 5 dias. Sujeita à aceitação da seguradora.</p>`,
-            );
-          }}
-        >
-          <svg width="13" height="13">
-            <use href="#i-download" />
-          </svg>{" "}
-          Imprimir
-        </button>
+            }
+          >
+            <svg width="13" height="13">
+              <use href="#i-download" />
+            </svg>{" "}
+            Imprimir
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={!podeCalcular || calculando}
+            title={!podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined}
+            onClick={doSimularCalculo}
+          >
+            <svg width="13" height="13">
+              <use href="#i-refresh" />
+            </svg>{" "}
+            {calculando ? "Calculando…" : "Recalcular"}
+          </button>
+        </div>
       </div>
+      {imprimir.modal}
 
       {erro && (
         <div

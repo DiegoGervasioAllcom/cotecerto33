@@ -443,23 +443,26 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await expect(page.getByText("12x de R$ 195,48", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Cobertura padrão", { exact: true })).toHaveCount(0);
 
-    const popupPromise = page.waitForEvent("popup");
+    // "Imprimir comparativo" agora abre o modal "Imprimir cotação" (Frente 3
+    // V12 · 7a) em vez de disparar o popup direto — "Impressão expressa" pega
+    // todas as seguradoras na versão resumida e monta o preview do documento
+    // dentro do próprio modal; só "Baixar PDF" abre a janela de impressão
+    // (`printCotacaoDoc`, em `src/lib/print.ts`).
     await page.getByRole("button", { name: "Imprimir comparativo" }).click();
+    await expect(page.getByRole("heading", { name: "Imprimir cotação" })).toBeVisible();
+    await page.getByText("Impressão expressa").click();
+    await expect(page.getByRole("heading", { name: "Impressão da cotação" })).toBeVisible();
+    const popupPromise = page.waitForEvent("popup");
+    await page.getByRole("button", { name: "Baixar PDF" }).click();
     const popup = await popupPromise;
-    await expect(popup.locator("body")).toContainText("Auto Completo · Plano Premium");
-    await expect(popup.locator("body")).toContainText("Auto Essencial · Plano Econômico");
-    await expect(popup.locator("body")).toContainText("Reduzida cartão · R$ 2.450,00");
-    await expect(popup.locator("body")).toContainText("10x de R$ 251,90");
-    await expect(popup.locator("body")).toContainText("5% no cartão");
-    await expect(popup.locator("body")).toContainText("Compreensiva débito");
-    await expect(popup.locator("body")).toContainText("Auto Protegido · Plano Gama");
-    await expect(popup.locator("body")).toContainText("Auto Total · Plano Ômega");
-    await expect(popup.locator("body")).toContainText("Reduzida débito · R$ 2.300,00");
-    await expect(popup.locator("body")).toContainText("7% no débito");
+    await expect(popup.locator("body")).toContainText("Seguradora Alfa");
+    await expect(popup.locator("body")).toContainText("Seguradora Beta");
+    await expect(popup.locator("body")).toContainText("R$ 2.345,67");
     await expect(popup.locator("body")).toContainText("R$ 150.000,00");
-    await expect(popup.locator("body")).toContainText("Prêmio registradoR$ 1.987,65R$ 2.345,67");
-    await expect(popup.locator("body")).not.toContainText("Vínculo indisponível");
-    await expect(popup.locator("body")).not.toContainText("12x de R$ 195,48");
+    // Documento nunca traz controle interno nem comissão (decisão do usuário
+    // — ver src/lib/print.ts).
+    await expect(popup.locator("body")).not.toContainText("Controle interno");
+    await expect(popup.locator("body")).not.toContainText(/comiss/i);
     await popup.close();
 
     await page.goto("/venda/pipeline");
