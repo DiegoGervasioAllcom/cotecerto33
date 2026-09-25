@@ -1153,15 +1153,26 @@ textarea.input:focus {
   gap: 14px;
   overflow-x: auto;
   padding-bottom: 10px;
+  /* V12: coluna passa a rolar por dentro (ver .kcol-fixo/.kcol-fila abaixo) —
+     por isso o Kanban precisa de uma altura limitada em vez de crescer com o
+     conteúdo. */
+  height: calc(100vh - 238px);
+  min-height: 460px;
 }
 .kcol {
   background: #eeead9;
   border-radius: 14px;
   padding: 12px 12px 14px;
-  min-height: 520px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* V12: min-height:0 permite que .kcol-fila (flex:1) encolha dentro da
+     altura fixa do Kanban; overflow:hidden evita que o cabeçalho/rodapé
+     vazem quando a coluna está mais cheia que a altura disponível. Trocou
+     o antigo min-height:520px, que forçava toda coluna a essa altura mínima
+     e brigava com a altura agora fixa do .kanban. */
+  min-height: 0;
+  overflow: hidden;
 }
 .kcol-h {
   display: flex;
@@ -1339,6 +1350,95 @@ textarea.input:focus {
   text-align: center;
   padding: 16px 0;
   font-style: italic;
+}
+/* --- V12: rolagem interna por coluna do Kanban (cotecerto_prototipo_v12) --- */
+.kcol-fixo {
+  flex: none;
+  padding-right: 5px;
+}
+.kcol-fixo .kcol-h {
+  padding-bottom: 6px;
+}
+.kcol-fixo .kcol-d {
+  margin-bottom: 2px;
+}
+.kcol-fila {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 5px 4px 0;
+  scroll-snap-type: y proximity;
+  scroll-padding-top: 6px;
+}
+.kcol-fila > .kcard {
+  scroll-snap-align: start;
+}
+.kcol-fila::-webkit-scrollbar {
+  width: 6px;
+}
+.kcol-fila::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kcol-fila::-webkit-scrollbar-thumb {
+  background: rgba(66, 85, 99, 0.22);
+  border-radius: 6px;
+}
+.kcol-fila:hover::-webkit-scrollbar-thumb {
+  background: rgba(66, 85, 99, 0.38);
+}
+.kcol-fila.tem-abaixo {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+}
+.kcol-fila.tem-acima {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+}
+.kcol-fila.tem-acima.tem-abaixo {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 18px,
+    #000 calc(100% - 26px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 18px,
+    #000 calc(100% - 26px),
+    transparent 100%
+  );
+}
+.kcol-restam {
+  flex: none;
+  text-align: center;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--slate-soft);
+  letter-spacing: 0.05em;
+  padding: 6px 5px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.kcol-restam .kr-seta {
+  display: flex;
+  animation: kmBounce 1.8s ease-in-out infinite;
+}
+@keyframes kmBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
 }
 .kcard-ponto {
   display: block;
