@@ -457,6 +457,7 @@ function Page() {
               celular: dados.celular,
               placa: dados.placa,
               canalOrigem: dados.canal,
+              ramo: dados.ramo,
             }));
             setLeadManualDone(true);
           }}

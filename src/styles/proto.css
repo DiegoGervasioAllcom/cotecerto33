@@ -6000,6 +6000,29 @@ body.hc {
   --soft-bg: #eceef0;
 }
 
+/* Tipo de item segurado — troca de produto dentro da cotação (padrão Quiver) — cotecerto_prototipo_v12.html:349-365 */
+.seg-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.tipo-item{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.tipo-item .ti-lbl{font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.tipo-item .ti-set{display:flex;gap:8px;align-items:flex-start}
+.ti-soon{display:flex;flex-direction:column;align-items:center;gap:5px}
+.ti-soon-row{display:flex;gap:8px}
+.ti-btn{width:44px;height:44px;border-radius:50%;background:#fff;border:1.5px solid var(--border-soft);color:var(--muted);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 10px rgba(18,28,36,.08);
+  transition:border-color .14s,box-shadow .14s,transform .1s,color .14s}
+.ti-btn:hover{transform:translateY(-2px);color:var(--slate);box-shadow:0 8px 18px rgba(18,28,36,.14)}
+.ti-btn.on{border-color:var(--yellow);color:var(--slate);box-shadow:0 0 0 3px rgba(255,182,0,.22)}
+/* produto sem jornada ainda: sinalização discreta, sem etiqueta gritando */
+.ti-btn.soon{opacity:.42}
+.ti-btn.soon:hover{opacity:.85}
+.ti-nota{font-size:var(--fs-2xs);color:var(--muted);opacity:.75;text-align:center;line-height:1.2}
+@media (max-width:760px){.seg-topo{flex-direction:column}.tipo-item{align-items:flex-start}}
+/* Lead Manual — mesmo picker, linha única (cotecerto_prototipo_v12.html:1193-1196) */
+.nl-tipos{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.nl-tipos .ti-btn{width:52px;height:52px}
+.nl-tipos .ti-btn svg{width:24px;height:24px}
+.nl-tipos-nota{font-size:var(--fs-xs);color:var(--muted);margin-top:8px}
+
 /* ===== Selo de seguradora (badge com wordmark) — espelha protótipo V12 ===== */
 .seg-pick{display:flex;flex-wrap:wrap;gap:14px;padding-top:10px}
 .seg-item{width:96px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;user-select:none}

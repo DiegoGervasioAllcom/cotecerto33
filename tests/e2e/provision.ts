@@ -1594,6 +1594,57 @@ export async function seguradorasSelE2E(cotacaoId: string): Promise<string[]> {
   return (data?.seguradoras_sel as string[] | null) ?? [];
 }
 
+/**
+ * V12.3.8 — lê `ramo` gravado por `salvar_cotacao_rascunho` nas duas colunas
+ * (`cotacoes.ramo` e `cotacao_seguro.ramo`), pra confirmar que o tipo de item
+ * escolhido no `TipoItemPicker` sobrevive ao autosave/reload.
+ */
+export async function lerRamoCotacaoE2E(
+  cotacaoId: string,
+): Promise<{ cotacoes: string | null; cotacaoSeguro: string | null }> {
+  const { data: cot, error: eCot } = await admin
+    .from("cotacoes")
+    .select("ramo")
+    .eq("id", cotacaoId)
+    .maybeSingle();
+  if (eCot) throw new Error(`buscar cotacoes.ramo: ${eCot.message}`);
+  const { data: seg, error: eSeg } = await admin
+    .from("cotacao_seguro")
+    .select("ramo")
+    .eq("cotacao_id", cotacaoId)
+    .maybeSingle();
+  if (eSeg) throw new Error(`buscar cotacao_seguro.ramo: ${eSeg.message}`);
+  return { cotacoes: cot?.ramo ?? null, cotacaoSeguro: seg?.ramo ?? null };
+}
+
+/** V12.3.8 — lê `cotacao_perfil.condutor_mesmo` (switch "principal condutor"). */
+export async function lerCondutorMesmoE2E(cotacaoId: string): Promise<boolean | null> {
+  const { data, error } = await admin
+    .from("cotacao_perfil")
+    .select("condutor_mesmo")
+    .eq("cotacao_id", cotacaoId)
+    .maybeSingle();
+  if (error) throw new Error(`buscar cotacao_perfil.condutor_mesmo: ${error.message}`);
+  return data?.condutor_mesmo ?? null;
+}
+
+/**
+ * Remove uma cotação criada pelo gate "Lead Manual — origem" (primeiro
+ * autosave via `salvar_cotacao_rascunho` sem `?id=` na URL): a RPC também cria
+ * o `lead` (V11 · `lead_manual_origem_canal`), então precisamos apagar os
+ * dois — deletar só `cotacoes` deixaria o `lead` órfão (best-effort; `db
+ * reset` também resolve).
+ */
+export async function limparCotacaoManualE2E(cotacaoId: string): Promise<void> {
+  const { data: cot } = await admin
+    .from("cotacoes")
+    .select("lead_id")
+    .eq("id", cotacaoId)
+    .maybeSingle();
+  await admin.from("cotacoes").delete().eq("id", cotacaoId);
+  if (cot?.lead_id) await admin.from("leads").delete().eq("id", cot.lead_id);
+}
+
 export type CotacaoEnviadaQuiverExtra = { leadId: string; cotacaoId: string };
 
 /**

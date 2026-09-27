@@ -1,5 +1,6 @@
 import type { Form, BonusFieldKey } from "@/components/venda/novo-lead/types";
 import { SeguradoraTile } from "@/components/venda/novo-lead/SeguradoraBadge";
+import { TipoItemPicker } from "@/components/venda/novo-lead/TipoItemPicker";
 
 export const ANOS_POR_TIPO_CALCULO: Record<string, number> = {
   Anual: 1,
@@ -31,8 +32,19 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
   const isRenov = (f.tipoSeguro || "").includes("Renovação");
   return (
     <>
-      <h2>Dados do Seguro</h2>
-      <div className="sub">Seguradoras para o cálculo, tipo de seguro e vigência.</div>
+      <div className="seg-topo">
+        <div>
+          <h2 style={{ margin: 0 }}>Dados do Seguro</h2>
+          <div className="sub" style={{ margin: 0 }}>
+            Seguradoras para o cálculo, tipo de seguro e vigência.
+          </div>
+        </div>
+        <TipoItemPicker
+          ramo={f.ramo}
+          onChange={(ramo) => up("ramo", ramo)}
+          dataTour="seguro-tipo-item"
+        />
+      </div>
 
       <div className="field-group full" style={{ marginBottom: 6 }}>
         <label>

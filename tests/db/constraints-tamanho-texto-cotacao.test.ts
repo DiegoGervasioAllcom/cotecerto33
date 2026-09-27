@@ -154,9 +154,11 @@ describe("D1 — CHECK de char_length em auditoria e cotação", () => {
     }
   });
 
+  // ramo migrou para constraints-ramo-valido.test.ts (V12.3.8: CHECK de
+  // valores válidos — deixou de ser texto livre, o char_length(<=150) segue
+  // existindo mas é redundante para os 5 rótulos do catálogo).
   it("cotacoes: limites de texto", async () => {
     const campos: Array<[string, number]> = [
-      ["ramo", 150],
       ["motivo_perda", 150],
       ["submotivo_perda", 150],
       ["observacao_perda", 2000],
@@ -211,11 +213,11 @@ describe("D1 — CHECK de char_length em auditoria e cotação", () => {
     }
   });
 
+  // ramo migrou para constraints-ramo-valido.test.ts (V12.3.8).
   it("cotacao_seguro: limites de texto", async () => {
     const campos: Array<[string, number]> = [
       ["tipo_seguro", 50],
       ["categoria", 50],
-      ["ramo", 150],
       ["cia_atual", 150],
       ["ci_atual", 150],
       ["classe_bonus", 150],

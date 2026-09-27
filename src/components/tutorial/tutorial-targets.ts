@@ -94,6 +94,8 @@ const PAGE_TARGETS: Partial<Record<TutorialPage, Record<string, string>>> = {
     "#foldVeic": ".wizard-card .fold:nth-of-type(2)",
     "#advCotacao": ".wizard-card .fold",
     "#resumoCard": ".resumo",
+    ".tipo-item": '[data-tour="seguro-tipo-item"]',
+    "#swCond": '[data-tour="perfil-condutor"]',
     "#btnHistorico": '[data-tour="lead-historico"]',
     "#btnClassificarPerda": '[data-tour="lead-perda"]',
   },
