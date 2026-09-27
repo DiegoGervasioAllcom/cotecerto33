@@ -40,13 +40,15 @@ function docDadosDaLinha(r: CotacaoFinalizadaRow): DocDados {
  */
 export function CotacaoFinalizadaLista({
   rows,
-  selectedPropostaId,
+  focoClasse,
   rowRefs,
   onAbrirCalculo,
   onNegociar,
 }: {
   rows: CotacaoFinalizadaRow[];
-  selectedPropostaId?: string;
+  /** V12.3.11 — classes `em-foco`/`foco-pisca` (proto.css) pra proposta ligada
+   * à linha; já resolve `foco` novo e `selected` legado (item 7/Pipeline). */
+  focoClasse: (propostaId: string) => string;
   rowRefs: RefObject<Record<string, HTMLTableRowElement | null>>;
   onAbrirCalculo: (id: string) => void;
   onNegociar: (propostaId: string) => void;
@@ -94,15 +96,10 @@ export function CotacaoFinalizadaLista({
                   rowRefs.current[r.id] = el;
                 }}
                 onClick={() => onAbrirCalculo(r.id)}
-                style={{
-                  cursor: "pointer",
-                  ...(propostaLigada && selectedPropostaId === propostaLigada.id
-                    ? {
-                        outline: "2px solid var(--brand, #2563eb)",
-                        background: "rgba(37,99,235,.06)",
-                      }
-                    : {}),
-                }}
+                style={{ cursor: "pointer" }}
+                className={
+                  (propostaLigada ? focoClasse(propostaLigada.id).trim() : "") || undefined
+                }
               >
                 <td className="small muted" style={{ fontFamily: "ui-monospace,Menlo,monospace" }}>
                   #{cotNum(r.numero, r.criado_em)}

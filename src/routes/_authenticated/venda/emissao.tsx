@@ -1,11 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { FocoBarra } from "@/components/venda/foco-barra";
 import { PropostasSection } from "@/components/venda/emissao/PropostasSection";
 import { useEmissaoRows } from "@/components/venda/emissao/queries";
 import { useAuth } from "@/lib/auth";
 import { embed1a1 } from "@/lib/postgrest-embed";
+import { FOCO_SCROLL_DELAY_MS, useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
 import {
   agruparPropostasPorSituacao,
   moedaOuTraco,
@@ -16,14 +18,18 @@ export { fetchEmissaoRows } from "@/components/venda/emissao/queries";
 
 export const Route = createFileRoute("/_authenticated/venda/emissao")({
   head: () => ({ meta: [{ title: "Emissão & histórico · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
-    selected: typeof s.selected === "string" ? s.selected : undefined,
+  validateSearch: (s: Record<string, unknown>): { foco?: string } => ({
+    foco: typeof s.foco === "string" ? s.foco : undefined,
   }),
   component: Page,
 });
 
 function Page() {
-  const { selected } = Route.useSearch();
+  const { foco: focoBusca } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const foco = useFocoAoChegar(focoBusca, () => {
+    void navigate({ search: (s) => ({ ...s, foco: undefined }) });
+  });
   const { session } = useAuth();
   const uid = session?.user.id ?? null;
   const { data, isLoading, error } = useEmissaoRows(uid);
@@ -35,10 +41,17 @@ function Page() {
   const [fSeguradora, setFSeguradora] = useState("");
 
   useEffect(() => {
-    if (!selected || loading) return;
-    const el = rowRefs.current[selected];
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [selected, loading, rows.length]);
+    if (!foco.ativo || !foco.id || loading) return;
+    const alvo = foco.id;
+    const t = window.setTimeout(() => {
+      rowRefs.current[alvo]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    }, FOCO_SCROLL_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, [foco.ativo, foco.id, loading, rows.length]);
 
   const seguradoras = useMemo(
     () => Array.from(new Set(rows.map((r) => r.seguradora).filter(Boolean) as string[])).sort(),
@@ -174,6 +187,8 @@ function Page() {
       {err && <div className="alert alert-err">{err}</div>}
       {loading && <div className="muted">Carregando…</div>}
 
+      <FocoBarra ativo={foco.ativo} fonte={foco.fonte} id={foco.id} onLimpar={foco.limpar} />
+
       {!loading && (
         <div data-tour="emissao-lista">
           <PropostasSection
@@ -190,7 +205,7 @@ function Page() {
             }
             tourId="emissao-aguardando"
             rowRefs={rowRefs}
-            selected={selected}
+            focoClasse={foco.classe}
           />
 
           <div style={{ marginTop: 16 }}>
@@ -202,7 +217,7 @@ function Page() {
               vazio="Assim que uma apólice for emitida, ela desce para cá sozinha."
               tourId="emissao-concluidas"
               rowRefs={rowRefs}
-              selected={selected}
+              focoClasse={foco.classe}
             />
           </div>
         </div>

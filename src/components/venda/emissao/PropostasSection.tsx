@@ -21,7 +21,7 @@ export function PropostasSection({
   vazio,
   tourId,
   rowRefs,
-  selected,
+  focoClasse,
 }: {
   titulo: string;
   chipTexto: string;
@@ -30,7 +30,8 @@ export function PropostasSection({
   vazio: string;
   tourId: string;
   rowRefs: RefObject<Record<string, HTMLTableRowElement | null>>;
-  selected: string | undefined;
+  /** V12.3.11 — classes `em-foco`/`foco-pisca` de `useFocoAoChegar` (proto.css). */
+  focoClasse: (id: string) => string;
 }) {
   return (
     <div className="card">
@@ -71,14 +72,7 @@ export function PropostasSection({
                   ref={(el) => {
                     rowRefs.current[r.id] = el;
                   }}
-                  style={
-                    selected === r.id
-                      ? {
-                          outline: "2px solid var(--brand, #2563eb)",
-                          background: "rgba(37,99,235,.06)",
-                        }
-                      : undefined
-                  }
+                  className={focoClasse(r.id).trim() || undefined}
                 >
                   <td>
                     <ClienteCotacaoCell row={r} />

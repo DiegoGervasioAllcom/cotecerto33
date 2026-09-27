@@ -111,7 +111,10 @@ test.describe.serial("minha agenda — filtros por tipo (V12.3.2)", () => {
     await linhaSeguradora.click();
 
     await expect(page).toHaveURL(/\/venda\/emissao/);
-    await expect(page).toHaveURL(new RegExp(`selected=${vendedor.propostaFalhaId}`));
+    // V12.3.11: o destaque de "de onde você veio" virou `foco=<fonte>:<id>`
+    // (ver tests/e2e/foco-ao-chegar.spec.ts) — `selected` era o mecanismo
+    // antigo, sem faixa nem pulso.
+    await expect(page).toHaveURL(new RegExp(`foco=seguradora.*${vendedor.propostaFalhaId}`));
 
     const linha = page.locator("tr").filter({ hasText: "PRP-E2E-FALHA" });
     await expect(linha).toBeVisible();

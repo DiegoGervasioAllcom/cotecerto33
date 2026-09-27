@@ -19,6 +19,7 @@ import {
   type AgendaItem,
 } from "@/lib/agenda";
 import { resolveExistingLeadDestination } from "@/lib/pipeline-lead-navigation";
+import { salvarFocoMotivo, serializeFoco } from "@/lib/use-foco-ao-chegar";
 
 const QK_RETORNOS = ["agenda", "retornos"] as const;
 const QK_RISCO = ["agenda", "risco"] as const;
@@ -110,17 +111,31 @@ export function useAgendaItens() {
     invalidarTudo();
   }
 
+  // O "foco" viaja pela URL como só `fonte:id` (nunca o nome do cliente); o
+  // motivo real (título/texto do AgendaItem que originou o clique) é gravado
+  // à parte, em sessionStorage, para a faixa da tela de destino reconstituir
+  // "de onde você veio" sem vazar dado pessoal na URL (ver use-foco-ao-chegar.ts).
+  function marcarFoco(item: AgendaItem, id: string) {
+    const foco = serializeFoco({ fonte: item.fonte, id });
+    salvarFocoMotivo(foco, { titulo: item.titulo, texto: item.texto });
+    return foco;
+  }
+
   async function abrirItem(item: AgendaItem) {
     if (abrindo) return;
     setErr(null);
     if (item.fonte === "risco") {
-      if (item.cotacaoId)
-        void navigate({ to: "/venda/novo-lead", search: { id: item.cotacaoId, step: 5 } });
+      if (item.cotacaoId) {
+        const foco = marcarFoco(item, item.cotacaoId);
+        void navigate({ to: "/venda/novo-lead", search: { id: item.cotacaoId, step: 5, foco } });
+      }
       return;
     }
     if (item.fonte === "seguradora") {
-      if (item.propostaId)
-        void navigate({ to: "/venda/emissao", search: { selected: item.propostaId } });
+      if (item.propostaId) {
+        const foco = marcarFoco(item, item.propostaId);
+        void navigate({ to: "/venda/emissao", search: { foco } });
+      }
       return;
     }
     // "aprovacao": só é clicável quando existe lead de origem (VIP de carteira
@@ -134,16 +149,24 @@ export function useAgendaItens() {
         canAssume: true,
       });
       if (destino.kind === "wizard") {
-        void navigate({ to: "/venda/novo-lead", search: { id: destino.id, step: destino.step } });
+        const foco = marcarFoco(item, destino.id);
+        void navigate({
+          to: "/venda/novo-lead",
+          search: { id: destino.id, step: destino.step, foco },
+        });
       } else if (destino.kind === "proposals") {
+        // `selected` continua abrindo o painel de negociação (comportamento
+        // já existente, inalterado); `foco` é só o destaque visual novo.
+        const foco = destino.selected ? marcarFoco(item, destino.selected) : undefined;
         void navigate({
           to: "/venda/em-negociacao",
-          search: destino.selected ? { selected: destino.selected } : {},
+          search: destino.selected ? { selected: destino.selected, foco } : {},
         });
       } else if (destino.kind === "acceptance") {
+        const foco = destino.selected ? marcarFoco(item, destino.selected) : undefined;
         void navigate({
           to: "/venda/em-finalizacao",
-          search: destino.selected ? { selected: destino.selected } : {},
+          search: foco ? { foco } : {},
         });
       } else {
         setErr(destino.message);

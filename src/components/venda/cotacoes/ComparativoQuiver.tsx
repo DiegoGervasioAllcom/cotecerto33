@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
 import { fmtBRL } from "@/lib/print";
+import { salvarFocoMotivo, serializeFoco } from "@/lib/use-foco-ao-chegar";
 import { useImprimirCotacaoModal } from "./ImprimirCotacaoModal";
 import { docDadosDoBanco, type DocDadosCabecalho } from "./doc-dados";
 import {
@@ -316,11 +317,28 @@ export function ComparativoQuiver({
                 to="/venda/emissao"
                 search={
                   resultadoTransmissao.propostaId
-                    ? { selected: resultadoTransmissao.propostaId }
+                    ? {
+                        foco: serializeFoco({
+                          fonte: "transmissao",
+                          id: resultadoTransmissao.propostaId,
+                        }),
+                      }
                     : {}
                 }
                 className="btn btn-yellow"
                 style={{ marginTop: 12 }}
+                onClick={() => {
+                  const propostaId = resultadoTransmissao.propostaId;
+                  if (!propostaId) return;
+                  // Motivo real (segurado + seguradora, já carregados neste
+                  // componente) — a URL leva só `foco=transmissao:<id>`.
+                  salvarFocoMotivo(serializeFoco({ fonte: "transmissao", id: propostaId }), {
+                    titulo: "Proposta transmitida",
+                    texto: `${docCabecalho.segurado?.nome || "—"} · ${
+                      transmissaoEmAndamento?.card.seguradora || "—"
+                    }`,
+                  });
+                }}
               >
                 Ir para Emissão
               </Link>

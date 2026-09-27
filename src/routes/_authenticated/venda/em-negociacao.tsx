@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
@@ -11,9 +11,11 @@ import {
 } from "@/components/venda/em-negociacao/queries";
 import { cotNum, FAIXAS, melhorPreco, money } from "@/components/venda/cotacoes/lista-helpers";
 import { NegociacaoPropostaPanel } from "@/components/venda/negociacao-proposta-panel";
+import { FocoBarra } from "@/components/venda/foco-barra";
 import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
 import { useAuth } from "@/lib/auth";
 import { COTACOES_NOVAS_QUERY_KEY, marcarCotacoesVistas } from "@/lib/cotacao-novas";
+import { FOCO_SCROLL_DELAY_MS, useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
 
 export {
   fetchAguardandoCotacaoRows,
@@ -22,8 +24,12 @@ export {
 
 export const Route = createFileRoute("/_authenticated/venda/em-negociacao")({
   head: () => ({ meta: [{ title: "Em negociação · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { selected?: string; foco?: string } => ({
+    // `selected` abre o painel de negociação (NegociacaoPropostaPanel) — usado
+    // pelo botão "Negociar", pelo tutorial e por links legados do Pipeline
+    // (fora do escopo da V12.3.11, item 7). `foco` é só o destaque visual novo.
     selected: typeof s.selected === "string" ? s.selected : undefined,
+    foco: typeof s.foco === "string" ? s.foco : undefined,
   }),
   component: Page,
 });
@@ -31,11 +37,14 @@ export const Route = createFileRoute("/_authenticated/venda/em-negociacao")({
 function Page() {
   const nav = useNavigate();
   const navigate = useNavigate({ from: "/venda/em-negociacao" });
-  const { selected } = Route.useSearch();
+  const { selected, foco: focoBusca } = Route.useSearch();
+  const { isOpen: tutorialOpen } = useTutorialController();
+  const foco = useFocoAoChegar(focoBusca, () => {
+    void navigate({ search: (s) => ({ ...s, foco: undefined }) });
+  });
   const { session } = useAuth();
   const uid = session?.user.id ?? null;
   const queryClient = useQueryClient();
-  const { isOpen: tutorialOpen } = useTutorialController();
 
   const {
     data: finalizadaData,
@@ -87,13 +96,38 @@ function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
 
+  // Destaque da linha: o novo `foco` (fila do dia/agenda, com faixa e pulso)
+  // ou, na ausência dele, `selected` legado (Pipeline, tutorial — item 7/G da
+  // V12.3.11 deixa o Pipeline fora do escopo, então esses links continuam
+  // funcionando, só que com o mesmo amarelo `em-foco` no lugar do contorno
+  // azul antigo, sem pulso e sem faixa). Nunca durante o tutorial.
+  const destaqueId = foco.ativo ? foco.id : !tutorialOpen ? (selected ?? null) : null;
   useEffect(() => {
-    if (!selected || loading) return;
-    const row = finalizadaRows.find((r) => r.propostas?.some((p) => p.id === selected));
+    if (!destaqueId || loading) return;
+    const row = finalizadaRows.find((r) => r.propostas?.some((p) => p.id === destaqueId));
     if (!row) return;
-    const el = rowRefs.current[row.id];
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [selected, loading, finalizadaRows]);
+    const delay = foco.ativo ? FOCO_SCROLL_DELAY_MS : 0;
+    const t = window.setTimeout(() => {
+      rowRefs.current[row.id]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [destaqueId, foco.ativo, loading, finalizadaRows]);
+
+  // Legado (Pipeline, fora do escopo — item 7): sem `foco` real, `selected`
+  // ainda ganha o mesmo amarelo `em-foco`, só sem pulso e sem faixa.
+  const focoClasse = useCallback(
+    (propostaId: string) => {
+      const cls = foco.classe(propostaId);
+      if (cls) return cls;
+      if (!foco.ativo && !tutorialOpen && selected === propostaId) return " em-foco";
+      return "";
+    },
+    [foco, tutorialOpen, selected],
+  );
 
   const seguradoras = useMemo(
     () =>
@@ -269,6 +303,8 @@ function Page() {
       {err && <div className="alert alert-err">{err}</div>}
       {loading && <div className="muted">Carregando…</div>}
 
+      <FocoBarra ativo={foco.ativo} fonte={foco.fonte} id={foco.id} onLimpar={foco.limpar} />
+
       {!loading && (
         <>
           <div className="card" data-tour="em-negociacao-aguardando" style={{ padding: 0 }}>
@@ -309,7 +345,7 @@ function Page() {
             <div style={{ overflow: "hidden" }}>
               <CotacaoFinalizadaLista
                 rows={finalizadaFiltrada}
-                selectedPropostaId={selected}
+                focoClasse={focoClasse}
                 rowRefs={rowRefs}
                 onAbrirCalculo={abrirCalculo}
                 onNegociar={negociarProposta}

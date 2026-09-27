@@ -108,15 +108,19 @@ test.describe("Emissão & histórico — lista (V12.1.25 parcial)", () => {
     expect(requisicaoDisparada).toBe(false);
   });
 
-  test("?selected=<id> destaca e leva a rolagem até a proposta", async ({ page }) => {
+  test("?foco=seguradora:<id> destaca e leva a rolagem até a proposta (V12.3.11)", async ({
+    page,
+  }) => {
+    // V12.3.11: `selected` (outline azul) foi substituído por `foco=<fonte>:<id>`
+    // (amarelo `em-foco`, ver tests/e2e/foco-ao-chegar.spec.ts) — este teste só
+    // confirma que a Emissão continua respeitando o parâmetro novo.
     await loginAs(page, vendedor.email, vendedor.senha);
-    await page.goto(`/venda/emissao?selected=${vendedor.propostaFalhaId}`);
-    await expect(page).toHaveURL(new RegExp(`selected=${vendedor.propostaFalhaId}`));
+    await page.goto(`/venda/emissao?foco=seguradora:${vendedor.propostaFalhaId}`);
+    await expect(page).toHaveURL(new RegExp(`foco=seguradora.*${vendedor.propostaFalhaId}`));
 
     const linhaFalha = page.locator("tr").filter({ hasText: "PRP-E2E-EMISSAO-FALHA" });
     await expect(linhaFalha).toBeVisible();
-    // Destaque visual (outline) aplicado via inline style quando `selected` bate.
-    await expect(linhaFalha).toHaveCSS("outline-color", /37, 99, 235|rgb\(37, 99, 235\)/);
+    await expect(linhaFalha).toHaveClass(/em-foco/);
   });
 
   test("um colega da mesma empresa NÃO aparece na Emissão — a tela é 'minhas propostas'", async ({
@@ -259,7 +263,9 @@ test.describe("Sub-passo Transmitida do wizard (V12.1.13 parcial)", () => {
     }
   });
 
-  test("atalho 'Emissão & histórico' leva pra lá com a proposta selecionada", async ({ page }) => {
+  test("atalho 'Emissão & histórico' leva pra lá com foco=transmissao — destaca a linha e mostra a faixa (revisão da V12.3.11)", async ({
+    page,
+  }) => {
     const fixture = await prepararCotacaoCalculada(page);
     try {
       await gerarPropostaComTentativaReal(page, fixture);
@@ -278,9 +284,17 @@ test.describe("Sub-passo Transmitida do wizard (V12.1.13 parcial)", () => {
       await expect(atalhos).toBeVisible({ timeout: 15_000 });
       await atalhos.getByRole("link", { name: /Emissão & histórico/ }).click();
 
-      await expect(page).toHaveURL(/\/venda\/emissao\?selected=/);
+      await expect(page).toHaveURL(/\/venda\/emissao/);
+      await expect(page).toHaveURL(/foco=transmissao/);
       const linha = page.locator("tr").filter({ hasText: /2\.345,67|Seguradora Alfa E2E/ });
       await expect(linha.first()).toBeVisible();
+      await expect(linha.first()).toHaveClass(/em-foco/);
+      // Motivo real (segurado + seguradora) gravado no clique — não é o
+      // rótulo de fallback ("Proposta transmitida" só coincide aqui porque é
+      // o título literal que TransmissaoTransmitidaCard grava).
+      await expect(page.locator(".foco-barra")).toBeVisible();
+      await expect(page.locator(".foco-barra strong")).toHaveText(/Proposta.*transmitida/);
+      await expect(page.locator(".foco-barra small")).toContainText("Seguradora Alfa E2E");
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
     }

@@ -905,6 +905,204 @@ export async function limparVendedorComAgendaCompleta(v: VendedorComAgendaComple
   await limparVendedorComFilaDia(v);
 }
 
+export type VendedorComRetornoEmNegociacao = VendedorComLead & {
+  cotacaoId: string;
+  propostaId: string;
+  retornoId: string;
+};
+
+/**
+ * Vendedor com um retorno agendado (fonte "retorno" da agenda) para um lead
+ * que já está em negociação de proposta (`status_pipeline='proposta'`) —
+ * usado por `foco-ao-chegar.spec.ts` (caso c): `abrirItem` resolve esse lead
+ * via `resolveExistingLeadDestination` para `{ kind: "proposals", selected }`
+ * e navega para `/venda/em-negociacao`, ao contrário dos leads "novos" que
+ * caem no wizard.
+ */
+export async function criarVendedorComRetornoEmNegociacao(): Promise<VendedorComRetornoEmNegociacao> {
+  const vendedor = await criarVendedorComLead();
+
+  const { error: eLead } = await admin
+    .from("leads")
+    .update({ status_pipeline: "proposta" })
+    .eq("id", vendedor.leadId);
+  if (eLead) throw new Error(`mover lead pra proposta E2E: ${eLead.message}`);
+
+  const { data: cotacao, error: eCotacao } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      lead_id: vendedor.leadId,
+      status: "proposta",
+    })
+    .select("id")
+    .single();
+  if (eCotacao || !cotacao)
+    throw new Error(`criar cotação em negociação E2E: ${eCotacao?.message}`);
+  const { error: eSegurado } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: cotacao.id, nome: "Cliente Retorno Negociação E2E" });
+  if (eSegurado)
+    throw new Error(`criar segurado da cotação em negociação E2E: ${eSegurado.message}`);
+
+  const { data: proposta, error: eProposta } = await admin
+    .from("propostas")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      cotacao_id: cotacao.id,
+      lead_id: vendedor.leadId,
+      numero: "PRP-E2E-RETORNO-NEG",
+    })
+    .select("id")
+    .single();
+  if (eProposta || !proposta)
+    throw new Error(`criar proposta em negociação E2E: ${eProposta?.message}`);
+
+  const ontemISO = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { data: retorno, error: eRetorno } = await admin
+    .from("lead_agendamentos")
+    .insert({
+      lead_id: vendedor.leadId,
+      data: ontemISO,
+      hora: "09:00",
+      nota: "Retorno em negociação E2E",
+      criado_por: vendedor.userId,
+    })
+    .select("id")
+    .single();
+  if (eRetorno || !retorno)
+    throw new Error(`criar retorno em negociação E2E: ${eRetorno?.message}`);
+
+  return {
+    ...vendedor,
+    cotacaoId: cotacao.id,
+    propostaId: proposta.id,
+    retornoId: retorno.id,
+  };
+}
+
+/** Remove os dados criados por `criarVendedorComRetornoEmNegociacao` (best-effort; `db reset` também resolve). */
+export async function limparVendedorComRetornoEmNegociacao(
+  v: VendedorComRetornoEmNegociacao,
+): Promise<void> {
+  await admin.from("lead_agendamentos").delete().eq("id", v.retornoId);
+  await admin.from("propostas").delete().eq("id", v.propostaId);
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", v.cotacaoId);
+  await admin.from("cotacoes").delete().eq("id", v.cotacaoId);
+  await limparVendedorComLead(v);
+}
+
+export type VendedorComRetornoEmFinalizacao = VendedorComLead & {
+  cotacaoId: string;
+  propostaId: string;
+  tentativaId: string;
+  retornoId: string;
+};
+
+/**
+ * Vendedor com um retorno agendado (fonte "retorno" da agenda) para um lead
+ * já ganho (`status_pipeline='ganho'`) com uma tentativa de transmissão em
+ * aberto (`cotacao_transmissoes.status='enviada'`) — usado por
+ * `foco-ao-chegar.spec.ts` (revisão pós-V12.3.11): `abrirItem` resolve esse
+ * lead via `resolveExistingLeadDestination` para
+ * `{ kind: "acceptance", selected }` e navega para `/venda/em-finalizacao`
+ * só com `foco` (sem `selected` — ao contrário de "proposals"/Em negociação,
+ * este destino nunca teve painel pra abrir).
+ */
+export async function criarVendedorComRetornoEmFinalizacao(): Promise<VendedorComRetornoEmFinalizacao> {
+  const vendedor = await criarVendedorComLead();
+
+  const { error: eLead } = await admin
+    .from("leads")
+    .update({ status_pipeline: "ganho" })
+    .eq("id", vendedor.leadId);
+  if (eLead) throw new Error(`mover lead pra ganho E2E: ${eLead.message}`);
+
+  const { data: cotacao, error: eCotacao } = await admin
+    .from("cotacoes")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      lead_id: vendedor.leadId,
+      status: "proposta",
+    })
+    .select("id")
+    .single();
+  if (eCotacao || !cotacao)
+    throw new Error(`criar cotação em finalização E2E: ${eCotacao?.message}`);
+  const { error: eSegurado } = await admin
+    .from("cotacao_segurado")
+    .insert({ cotacao_id: cotacao.id, nome: "Cliente Retorno Finalização E2E" });
+  if (eSegurado)
+    throw new Error(`criar segurado da cotação em finalização E2E: ${eSegurado.message}`);
+
+  const { data: proposta, error: eProposta } = await admin
+    .from("propostas")
+    .insert({
+      empresa_id: vendedor.empresaId,
+      responsavel_id: vendedor.userId,
+      cotacao_id: cotacao.id,
+      lead_id: vendedor.leadId,
+      numero: "PRP-E2E-RETORNO-FIN",
+    })
+    .select("id")
+    .single();
+  if (eProposta || !proposta)
+    throw new Error(`criar proposta em finalização E2E: ${eProposta?.message}`);
+
+  const { data: tentativa, error: eTentativa } = await admin
+    .from("cotacao_transmissoes")
+    .insert({
+      cotacao_id: cotacao.id,
+      proposta_id: proposta.id,
+      seguradora: "Seguradora Finalização E2E",
+      forma_pagamento: "Boleto",
+      premio: 1234.56,
+      status: "enviada",
+    })
+    .select("id")
+    .single();
+  if (eTentativa || !tentativa)
+    throw new Error(`criar tentativa de transmissão em finalização E2E: ${eTentativa?.message}`);
+
+  const ontemISO = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { data: retorno, error: eRetorno } = await admin
+    .from("lead_agendamentos")
+    .insert({
+      lead_id: vendedor.leadId,
+      data: ontemISO,
+      hora: "09:00",
+      nota: "Retorno em finalização E2E",
+      criado_por: vendedor.userId,
+    })
+    .select("id")
+    .single();
+  if (eRetorno || !retorno)
+    throw new Error(`criar retorno em finalização E2E: ${eRetorno?.message}`);
+
+  return {
+    ...vendedor,
+    cotacaoId: cotacao.id,
+    propostaId: proposta.id,
+    tentativaId: tentativa.id,
+    retornoId: retorno.id,
+  };
+}
+
+/** Remove os dados criados por `criarVendedorComRetornoEmFinalizacao` (best-effort; `db reset` também resolve). */
+export async function limparVendedorComRetornoEmFinalizacao(
+  v: VendedorComRetornoEmFinalizacao,
+): Promise<void> {
+  await admin.from("lead_agendamentos").delete().eq("id", v.retornoId);
+  await admin.from("cotacao_transmissoes").delete().eq("id", v.tentativaId);
+  await admin.from("propostas").delete().eq("id", v.propostaId);
+  await admin.from("cotacao_segurado").delete().eq("cotacao_id", v.cotacaoId);
+  await admin.from("cotacoes").delete().eq("id", v.cotacaoId);
+  await limparVendedorComLead(v);
+}
+
 /**
  * Acrescenta ao vendedor uma cotação calculada e uma proposta selecionada.
  * A fixture permite validar os destinos read-only do tutorial sem clicar em

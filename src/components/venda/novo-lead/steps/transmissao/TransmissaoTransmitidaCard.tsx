@@ -9,6 +9,7 @@ import {
   propostaSituacaoInfo,
   textoOuTraco,
 } from "@/lib/proposta-situacao";
+import { salvarFocoMotivo, serializeFoco } from "@/lib/use-foco-ao-chegar";
 import { useProposta } from "./useProposta";
 
 const linhaFf = (k: string, v: ReactNode) => (
@@ -51,6 +52,16 @@ export function TransmissaoTransmitidaCard({ propostaId, f }: Props) {
 
   const st = propostaSituacaoInfo(proposta.transmissao_status);
   const cliente = embed1a1(proposta.cotacoes?.segurado)?.nome || "—";
+  // V12.3.11 (destaque pós-transmissão) — o motivo real (segurado + nº da
+  // proposta) viaja em sessionStorage; a URL leva só `foco=transmissao:<id>`.
+  const focoEmissao = serializeFoco({ fonte: "transmissao", id: proposta.id });
+  const focoMotivo = {
+    titulo: `Proposta ${textoOuTraco(proposta.numero)} transmitida`,
+    texto: `${cliente} · ${proposta.seguradora || "—"}`,
+  };
+  function marcarFocoEmissao() {
+    salvarFocoMotivo(focoEmissao, focoMotivo);
+  }
 
   return (
     <div className="card" style={{ padding: 20, marginBottom: 12 }}>
@@ -186,9 +197,10 @@ export function TransmissaoTransmitidaCard({ propostaId, f }: Props) {
         <span className="at-lbl">Ir para</span>
         <Link
           to="/venda/emissao"
-          search={{ selected: proposta.id }}
+          search={{ foco: focoEmissao }}
           className="at-btn"
           style={{ textDecoration: "none" }}
+          onClick={marcarFocoEmissao}
         >
           <svg width={14} height={14}>
             <use href="#i-check-circle" />

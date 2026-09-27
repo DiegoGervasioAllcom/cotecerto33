@@ -1,20 +1,26 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { AceiteTutorialPreview } from "@/components/venda/aceite-tutorial-preview";
+import { FocoBarra } from "@/components/venda/foco-barra";
 import { cotNum, money } from "@/components/venda/cotacoes/lista-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { primeiraOcorrenciaPorChave, TRANSMISSAO_EM_ABERTO_STATUSES } from "@/lib/lead-etapa";
 import { embed1a1 } from "@/lib/postgrest-embed";
+import { FOCO_SCROLL_DELAY_MS, useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
 
 export const Route = createFileRoute("/_authenticated/venda/em-finalizacao")({
   head: () => ({ meta: [{ title: "Em finalização · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { selected?: string; foco?: string } => ({
+    // `selected`: link legado (Pipeline — fora do escopo, item 7). `foco` é o
+    // destaque novo (fila do dia/agenda), com faixa e pulso.
     selected: typeof s.selected === "string" ? s.selected : undefined,
+    foco: typeof s.foco === "string" ? s.foco : undefined,
   }),
   component: Page,
 });
@@ -156,8 +162,13 @@ function statusChip(r: Row) {
 
 function Page() {
   const nav = useNavigate();
-  const { selected } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { selected, foco: focoBusca } = Route.useSearch();
   const tutorialPreview = useTutorialPreview();
+  const { isOpen: tutorialOpen } = useTutorialController();
+  const foco = useFocoAoChegar(focoBusca, () => {
+    void navigate({ search: (s) => ({ ...s, foco: undefined }) });
+  });
   const { session } = useAuth();
   const uid = session?.user.id ?? null;
   const [q, setQ] = useState("");
@@ -183,13 +194,34 @@ function Page() {
   const loading = tutorialAtivo ? false : queryLoading;
   const err = tutorialAtivo ? null : error instanceof Error ? error.message : null;
 
+  // Destaque: `foco` novo (fila do dia/agenda) ou, na ausência dele,
+  // `selected` legado (Pipeline — fora do escopo, item 7). Nunca durante o
+  // tutorial (real ou preview do wizard de aceite).
+  const destaqueId =
+    foco.ativo && foco.id ? foco.id : !tutorialOpen && !tutorialAtivo ? (selected ?? null) : null;
   useEffect(() => {
-    if (!selected || loading) return;
-    const row = rows.find((r) => r.propostaId === selected);
+    if (!destaqueId || loading) return;
+    const row = rows.find((r) => r.propostaId === destaqueId);
     if (!row) return;
-    const el = rowRefs.current[row.cotacaoId];
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [selected, loading, rows]);
+    const delay = foco.ativo ? FOCO_SCROLL_DELAY_MS : 0;
+    const t = window.setTimeout(() => {
+      rowRefs.current[row.cotacaoId]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [destaqueId, foco.ativo, loading, rows]);
+  const focoClasse = useCallback(
+    (propostaId: string | null) => {
+      if (!propostaId) return undefined;
+      const cls = foco.classe(propostaId);
+      if (cls) return cls.trim();
+      return destaqueId === propostaId ? "em-foco" : undefined;
+    },
+    [foco, destaqueId],
+  );
 
   const filtered = useMemo(
     () =>
@@ -253,6 +285,8 @@ function Page() {
       {err && <div className="alert alert-err">{err}</div>}
       {loading && <div className="muted">Carregando…</div>}
 
+      <FocoBarra ativo={foco.ativo} fonte={foco.fonte} id={foco.id} onLimpar={foco.limpar} />
+
       {!loading && filtered.length === 0 && (
         <div className="card" data-tour="em-finalizacao-lista">
           <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
@@ -289,15 +323,8 @@ function Page() {
                     rowRefs.current[r.cotacaoId] = el;
                   }}
                   onClick={() => continuar(r.cotacaoId)}
-                  style={{
-                    cursor: "pointer",
-                    ...(r.propostaId && selected === r.propostaId
-                      ? {
-                          outline: "2px solid var(--brand, #2563eb)",
-                          background: "rgba(37,99,235,.06)",
-                        }
-                      : {}),
-                  }}
+                  style={{ cursor: "pointer" }}
+                  className={focoClasse(r.propostaId)}
                 >
                   <td
                     className="small muted"

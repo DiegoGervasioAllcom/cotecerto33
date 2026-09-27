@@ -16,6 +16,8 @@ import { useRecalcularSeguradora } from "@/components/venda/novo-lead/hooks/useR
 import { useCotacaoRascunho } from "@/components/venda/novo-lead/hooks/useCotacaoRascunho";
 import { useTutorialWizardPreview } from "@/components/venda/novo-lead/hooks/useTutorialWizardPreview";
 import { NovoLeadHeader } from "@/components/venda/novo-lead/NovoLeadHeader";
+import { FocoBarra } from "@/components/venda/foco-barra";
+import { useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
 import { StepSegurado } from "@/components/venda/novo-lead/steps/StepSegurado";
 import { StepSeguro, vigenciaAPartirDeHoje } from "@/components/venda/novo-lead/steps/StepSeguro";
 import { StepVeiculo } from "@/components/venda/novo-lead/steps/StepVeiculo";
@@ -37,10 +39,13 @@ import { useTutorialController } from "@/components/tutorial/tutorial-controller
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Lead Manual · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>): { id?: string; step?: number } => ({
+  validateSearch: (s: Record<string, unknown>): { id?: string; step?: number; foco?: string } => ({
     id: typeof s.id === "string" ? s.id : undefined,
     step:
       typeof s.step === "number" ? s.step : typeof s.step === "string" ? Number(s.step) : undefined,
+    // V12.3.11 — só a faixa "de onde você veio" no topo (sem destaque de
+    // linha: o wizard não tem uma lista pra destacar item nenhum).
+    foco: typeof s.foco === "string" ? s.foco : undefined,
   }),
   component: Page,
 });
@@ -62,6 +67,11 @@ const SEGURADORAS_SEM_ROBO = new Set([
 
 function Page() {
   const navigate = useNavigate();
+  const focoNavigate = useNavigate({ from: Route.fullPath });
+  const { foco: focoBusca } = Route.useSearch();
+  const foco = useFocoAoChegar(focoBusca, () => {
+    void focoNavigate({ search: (s) => ({ ...s, foco: undefined }) });
+  });
   const [step, setStep] = useState(0);
   const { visibleStep, setVisibleStep, showTutorialReady } = useTutorialWizardPreview(
     step,
@@ -471,6 +481,7 @@ function Page() {
     <AppShell title="Lead Manual">
       <ProtoIcons />
       <NovoLeadHeader onClassificarPerda={() => void abrirPerda()} />
+      <FocoBarra ativo={foco.ativo} fonte={foco.fonte} id={foco.id} onLimpar={foco.limpar} />
       {loading && (
         <div className="muted" style={{ marginBottom: 8 }}>
           Carregando rascunho…
