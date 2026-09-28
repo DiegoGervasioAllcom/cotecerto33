@@ -12,21 +12,32 @@
  * `carregarMais` diretamente. Esse hook ficou só com o estado/paginação em
  * si; a UI de scroll mora em `use-kcol-fila-scroll.ts`.
  *
- * `criarMotorPaginacao` é o núcleo sem React — só estado + funções puras/
- * assíncronas, testável direto em `tests/unit/use-pipeline-pagination.test.ts`
- * sem precisar de DOM/`renderHook` (o projeto não tem `@testing-library/react`
- * nem ambiente jsdom no Vitest — `vitest.config.ts` roda `environment: "node"`
- * e só inclui `tests/unit/**\/*.test.ts`). `usePipelinePagination` é só o
- * wrapper fino que liga esse motor a `useState`/`useEffect`.
+ * Ajuste pós-deploy V12 (item 3): a paginação deixou de ser um motor próprio
+ * (`criarMotorPaginacao`, com `useState`/`useEffect`/epoch manual pra
+ * proteção contra corrida) e passou a usar `useInfiniteQuery` do react-query
+ * — a fonte de estado de servidor do projeto (regra "Estado de servidor via
+ * react-query"). O react-query já resolve:
+ * - a "proteção contra corrida" (troca de `queryKey` invalida/descarta em
+ *   voo automaticamente, sem precisar de um contador de epoch à mão);
+ * - `retry` padrão do `QueryClient` do app (`src/router.tsx`);
+ * - cache/dedupe entre navegações pra dentro/fora da tela.
  *
- * Proteção contra corrida: mesmo padrão "epoch"/`isCurrent()` já usado em
- * `use-team-data.ts` (`@/components/operacao/acessos/full/use-team-data.ts`)
- * — cada `resetar()` (troca de `filtrosComuns`) incrementa um contador
- * módulo-local; toda resposta em voo confere esse contador antes de aplicar
- * o resultado e descarta se ele mudou (resposta de um filtro antigo não
- * sobrescreve o estado de um filtro mais novo).
+ * Cada `LeadEtapaBucket` possível (`TODAS_ETAPAS`) tem sua própria
+ * `useInfiniteQuery`, sempre chamada (nunca dentro de laço/condicional —
+ * regra dos hooks): a coluna só "existe" (aparece em `colunas`) quando o
+ * chamador pediu aquela etapa (`etapas`) E há uma sessão (`uid`); do
+ * contrário a query fica com `enabled: false` e a entrada correspondente
+ * nem é incluída no mapa devolvido — mesmo formato de antes
+ * (`Partial<Record<LeadEtapaBucket, EstadoColuna>>`), pra não exigir
+ * mudança em `pipeline.tsx`/`PipelineColuna`.
+ *
+ * O núcleo puro (cálculo de `limit`/cursor da próxima página,
+ * `cursorDoUltimo`) continua testável sem DOM em
+ * `tests/unit/use-pipeline-pagination.test.ts`; o encadeamento das páginas
+ * em si (react-query + rede) é coberto pelos E2E de
+ * `tests/e2e/pipeline-paginacao.spec.ts`.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, type UseInfiniteQueryResult } from "@tanstack/react-query";
 import type { LeadEtapaBucket } from "@/lib/lead-etapa";
 import {
   fetchPipelinePagina,
@@ -46,132 +57,120 @@ export type EstadoColuna = {
   error: string | null;
 };
 
-/** Assinatura de `fetchPipelinePagina` — injetável no motor para os testes. */
-type FetchPagina = typeof fetchPipelinePagina;
+/** Todos os buckets que podem virar coluna do Kanban ou o filtro "Perdidos". */
+export const TODAS_ETAPAS: readonly LeadEtapaBucket[] = [
+  "novo",
+  "cotacao",
+  "negociacao",
+  "finalizacao",
+  "fechamento",
+  "perdido",
+];
 
-const LIMITE_INICIAL = 5;
-const LIMITE_CARREGAR_MAIS = 4;
-
-function estadoInicial(): EstadoColuna {
-  return { leads: [], cursor: null, hasMore: true, loading: true, error: null };
-}
+export const LIMITE_INICIAL = 5;
+export const LIMITE_CARREGAR_MAIS = 4;
 
 /** Cursor keyset a partir do último lead de uma página — `undefined` se a página veio vazia ou sem `atualizado_em`. */
-function cursorDoUltimo(pagina: readonly PipelineLeadEtapaRow[]): PipelineCursor | undefined {
+export function cursorDoUltimo(
+  pagina: readonly PipelineLeadEtapaRow[],
+): PipelineCursor | undefined {
   const ultimo = pagina[pagina.length - 1];
   if (!ultimo?.atualizado_em) return undefined;
   return { atualizadoEm: ultimo.atualizado_em, leadId: ultimo.lead_id };
 }
 
-/**
- * Motor de paginação do Kanban, sem React. Ver comentário do módulo para o
- * desenho geral e a proteção contra corrida.
- */
-export function criarMotorPaginacao(fetchPagina: FetchPagina = fetchPipelinePagina) {
-  let colunas: Partial<Record<LeadEtapaBucket, EstadoColuna>> = {};
-  let filtrosAtuais: PipelineFiltrosComuns = {};
-  let epoch = 0;
-  const listeners = new Set<() => void>();
+/** Uma página já buscada, com o cursor pronto pra pedir a próxima (`undefined` = acabou). */
+type PaginaColuna = {
+  leads: PipelineLeadEtapaRow[];
+  cursorProximo: PipelineCursor | undefined;
+};
 
-  function emitir() {
-    for (const listener of listeners) listener();
-  }
-
-  function inscrever(listener: () => void): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  }
-
-  function obterEstado(): Partial<Record<LeadEtapaBucket, EstadoColuna>> {
-    return colunas;
-  }
-
-  async function buscar(
-    etapa: LeadEtapaBucket,
-    epocaDaChamada: number,
-    cursor: PipelineCursor,
-    limit: number,
-  ) {
-    const { leads, error } = await fetchPagina({ etapa, ...filtrosAtuais }, cursor, limit);
-    // Filtro mudou (ou a coluna nem existe mais) enquanto a busca estava em
-    // voo — descarta em vez de sobrescrever um estado mais novo.
-    if (epocaDaChamada !== epoch) return;
-    const anterior = colunas[etapa];
-    if (!anterior) return;
-
-    const acumulado = cursor === null ? leads : [...anterior.leads, ...leads];
-    colunas = {
-      ...colunas,
-      [etapa]: {
-        leads: acumulado,
-        cursor: cursorDoUltimo(leads) ?? anterior.cursor,
-        hasMore: leads.length >= limit,
-        loading: false,
-        error,
-      },
-    };
-    emitir();
-  }
-
-  /** Reseta TODAS as colunas (`etapas`) e recarrega a primeira página de cada — chamado quando `filtrosComuns` muda. */
-  function resetar(etapas: readonly LeadEtapaBucket[], filtrosComuns: PipelineFiltrosComuns) {
-    epoch += 1;
-    const epocaAtual = epoch;
-    filtrosAtuais = filtrosComuns;
-    const novasColunas: Partial<Record<LeadEtapaBucket, EstadoColuna>> = {};
-    for (const etapa of etapas) novasColunas[etapa] = estadoInicial();
-    colunas = novasColunas;
-    emitir();
-    for (const etapa of etapas) void buscar(etapa, epocaAtual, null, LIMITE_INICIAL);
-  }
-
-  /** Busca mais 4 leads da coluna `etapa`, a partir do cursor atual dela. No-op se já está carregando ou não há mais páginas. */
-  function carregarMais(etapa: LeadEtapaBucket) {
-    const atual = colunas[etapa];
-    if (!atual || atual.loading || !atual.hasMore) return;
-    colunas = { ...colunas, [etapa]: { ...atual, loading: true } };
-    emitir();
-    void buscar(etapa, epoch, atual.cursor, LIMITE_CARREGAR_MAIS);
-  }
-
-  return { inscrever, obterEstado, resetar, carregarMais };
+/** Limit de cada página: a primeira (pageParam null) busca `LIMITE_INICIAL`; as seguintes, `LIMITE_CARREGAR_MAIS`. */
+function limitDaPagina(pageParam: PipelineCursor): number {
+  return pageParam === null ? LIMITE_INICIAL : LIMITE_CARREGAR_MAIS;
 }
 
-export type PipelinePaginationEngine = ReturnType<typeof criarMotorPaginacao>;
+function useColunaInfinita(
+  etapa: LeadEtapaBucket,
+  habilitada: boolean,
+  filtrosComuns: PipelineFiltrosComuns,
+  uid: string | null,
+) {
+  return useInfiniteQuery({
+    queryKey: ["pipeline-pagina", uid, etapa, filtrosComuns],
+    enabled: habilitada && !!uid,
+    initialPageParam: null as PipelineCursor,
+    queryFn: async ({ pageParam }): Promise<PaginaColuna> => {
+      const limit = limitDaPagina(pageParam);
+      const { leads, error } = await fetchPipelinePagina(
+        { etapa, ...filtrosComuns },
+        pageParam,
+        limit,
+      );
+      if (error) throw new Error(error);
+      const paginaCheia = leads.length >= limit;
+      return { leads, cursorProximo: paginaCheia ? cursorDoUltimo(leads) : undefined };
+    },
+    getNextPageParam: (ultimaPagina) => ultimaPagina.cursorProximo ?? undefined,
+  });
+}
+
+/** Achata as páginas já carregadas de uma coluna no formato `EstadoColuna` que `pipeline.tsx`/`PipelineColuna` esperam. */
+function paraEstadoColuna(
+  query: UseInfiniteQueryResult<{ pages: PaginaColuna[] }, Error>,
+): EstadoColuna {
+  const paginas = query.data?.pages ?? [];
+  const leads = paginas.flatMap((p) => p.leads);
+  const ultimaPagina = paginas[paginas.length - 1];
+  return {
+    leads,
+    cursor: ultimaPagina?.cursorProximo ?? null,
+    hasMore: query.hasNextPage,
+    // `isFetchNextPageError` não existe — erro de "carregar mais" também vira `query.error`.
+    loading: query.isPending || query.isFetchingNextPage,
+    error: query.error?.message ?? null,
+  };
+}
 
 /**
- * Hook do Kanban: uma `EstadoColuna` por etapa. `filtrosComuns` deve ser um
- * objeto estável entre renders com o mesmo conteúdo (é serializado via
- * `JSON.stringify` para a dependência do `useEffect` de reset — evita
- * depender de identidade de referência, que mudaria a cada render em
- * `pipeline.tsx`).
+ * Hook do Kanban: uma `EstadoColuna` por etapa pedida em `etapas`. Chama
+ * `useInfiniteQuery` uma vez para CADA etapa possível (`TODAS_ETAPAS`,
+ * comprimento fixo — respeita a regra dos hooks) e só inclui no mapa
+ * devolvido as que estão em `etapas` (mesmo comportamento de antes: uma
+ * etapa fora do filtro Estágio/Status simplesmente não aparece).
  */
 export function usePipelinePagination(
   etapas: readonly LeadEtapaBucket[],
   filtrosComuns: PipelineFiltrosComuns,
+  uid: string | null,
 ): {
   colunas: Partial<Record<LeadEtapaBucket, EstadoColuna>>;
   carregarMais: (etapa: LeadEtapaBucket) => void;
 } {
-  const motorRef = useRef<PipelinePaginationEngine | null>(null);
-  if (!motorRef.current) motorRef.current = criarMotorPaginacao();
-  const motor = motorRef.current;
+  const queries = {
+    novo: useColunaInfinita("novo", etapas.includes("novo"), filtrosComuns, uid),
+    cotacao: useColunaInfinita("cotacao", etapas.includes("cotacao"), filtrosComuns, uid),
+    negociacao: useColunaInfinita("negociacao", etapas.includes("negociacao"), filtrosComuns, uid),
+    finalizacao: useColunaInfinita(
+      "finalizacao",
+      etapas.includes("finalizacao"),
+      filtrosComuns,
+      uid,
+    ),
+    fechamento: useColunaInfinita("fechamento", etapas.includes("fechamento"), filtrosComuns, uid),
+    perdido: useColunaInfinita("perdido", etapas.includes("perdido"), filtrosComuns, uid),
+  } as const;
 
-  const [colunas, setColunas] = useState(() => motor.obterEstado());
-  useEffect(() => motor.inscrever(() => setColunas(motor.obterEstado())), [motor]);
+  const colunas: Partial<Record<LeadEtapaBucket, EstadoColuna>> = {};
+  for (const etapa of TODAS_ETAPAS) {
+    if (etapas.includes(etapa)) colunas[etapa] = paraEstadoColuna(queries[etapa]);
+  }
 
-  const etapasKey = etapas.join(",");
-  const filtrosKey = JSON.stringify(filtrosComuns);
-  useEffect(() => {
-    motor.resetar(etapas, filtrosComuns);
-    // etapasKey/filtrosKey já capturam tudo que `etapas`/`filtrosComuns` têm
-    // de relevante — evita reset a cada render por identidade de referência.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [motor, etapasKey, filtrosKey]);
-
-  const carregarMais = useCallback((etapa: LeadEtapaBucket) => motor.carregarMais(etapa), [motor]);
+  function carregarMais(etapa: LeadEtapaBucket) {
+    const query = queries[etapa];
+    if (query.isFetchingNextPage || !query.hasNextPage) return;
+    void query.fetchNextPage();
+  }
 
   return { colunas, carregarMais };
 }

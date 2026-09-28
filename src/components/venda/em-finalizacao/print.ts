@@ -17,7 +17,12 @@ function docDadosDaLinha(r: Row): DocDados {
       segurado: r.segurado !== "—" ? { nome: r.segurado } : null,
       veiculo: r.veiculoRaw,
     },
-    { seguradora: r.seguradora, premio: r.premio },
+    {
+      seguradora: r.seguradora,
+      premio: r.premio,
+      parcelasNum: r.parcelasNum,
+      valorParcela: r.valorParcela,
+    },
   );
 }
 

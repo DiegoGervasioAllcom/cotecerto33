@@ -101,6 +101,8 @@ function tentativa(overrides: Partial<TentativaRow> & { cotacao_id: string }): T
     mensagem: null,
     seguradora: "Porto Seguro",
     premio: 1000,
+    parcelas_num: null,
+    valor_parcela: null,
     forma_pagamento: "boleto",
     criado_em: "2026-01-01T00:00:00.000Z",
     proposta_id: null,
@@ -186,6 +188,16 @@ describe("dedupTentativas", () => {
 
     expect(resultado[0].segurado).toBe("Segurado Real");
     expect(resultado[0].veiculo).toBe("Fiat Uno 2020");
+  });
+
+  it("mapeia parcelas_num/valor_parcela (snake_case) para parcelasNum/valorParcela (camelCase)", () => {
+    const rows: TentativaRow[] = [
+      tentativa({ cotacao_id: "cot-1", parcelas_num: 12, valor_parcela: 463.2 }),
+    ];
+
+    const resultado = dedupTentativas(rows);
+
+    expect(resultado[0]).toMatchObject({ parcelasNum: 12, valorParcela: 463.2 });
   });
 
   it("mapeia os campos de TentativaRow (snake_case) para Row (camelCase) corretamente", () => {

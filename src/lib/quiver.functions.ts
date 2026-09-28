@@ -10,6 +10,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { normalizePlaca } from "@/lib/masks";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
+import {
+  calcularPremioTransmissao,
+  type OpcaoIdentificador,
+} from "@/components/venda/cotacoes/quiver-resultado";
 
 function getAdmin() {
   const url =
@@ -556,10 +560,20 @@ type TransmitirPropostaPayload = {
   /** Texto do produto — serve de conferência contra o `produtoId`. */
   produto?: string;
   /**
-   * Prêmio numérico da opção escolhida (à vista ou parcelado — ver
-   * `premioNumerico` em `quiver-resultado.ts`). Calculado no front porque só
-   * ele tem acesso ao card/opção selecionados; usado apenas para registrar o
-   * histórico em `cotacao_transmissoes` (T.9), não é enviado ao robô.
+   * Discriminadores da faixa/opção escolhida (tipo/franquia/avista/desconto
+   * — mesma chave usada em `faixasComParcelas`/`gruposOpcoesResultado`) +
+   * o texto de parcelas selecionado (`parcelas` abaixo). O servidor usa os
+   * dois para localizar EXATAMENTE essa opção dentro de
+   * `cotacoes.quiver_resultado_raw` e recalcular o prêmio ali — nunca a
+   * partir do valor calculado no front (AGENTS.md regra 2).
+   */
+  opcao?: OpcaoIdentificador;
+  /**
+   * Prêmio numérico calculado no front — mantido só como CONFERÊNCIA (nunca
+   * como fonte de verdade): o servidor recalcula `premio`/`parcelas_num`/
+   * `valor_parcela` a partir do `quiver_resultado_raw`
+   * (`calcularPremioTransmissao`) e é esse valor que vai para
+   * `cotacao_transmissoes`.
    */
   premio?: number;
   dadosComplementares?: {
@@ -660,6 +674,25 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     const numeroCotacao =
       raw && typeof raw.numeroCotacao === "string" ? raw.numeroCotacao : undefined;
 
+    // Regra 2 do AGENTS.md (dinheiro roda no servidor): o `premio` do front é
+    // só conferência — o valor que vale é recalculado aqui, a partir do
+    // `quiver_resultado_raw` já persistido nesta cotação, localizando o
+    // MESMO card/opção que o vendedor escolheu (seguradora + produtoId +
+    // forma de pagamento + bundle da opção + texto de parcelas). Sem o
+    // resultado bruto, ou sem localizar a opção com segurança, a transmissão
+    // é recusada — nunca grava um valor adivinhado.
+    const premioCalculado = calcularPremioTransmissao(raw, {
+      seguradora: data.seguradora,
+      produtoId: data.produtoId,
+      produto: data.produto,
+      formaPagamento: data.formaPagamento,
+      parcelasEscolhidas: data.parcelas ?? "",
+      opcao: data.opcao ?? {},
+    });
+    if (!premioCalculado.ok) {
+      throw new Error(premioCalculado.erro);
+    }
+
     const segurado = Array.isArray(cotacao.segurado) ? cotacao.segurado[0] : cotacao.segurado;
     const veiculo = Array.isArray(cotacao.veiculo) ? cotacao.veiculo[0] : cotacao.veiculo;
 
@@ -736,7 +769,9 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
         produto: data.produto ?? null,
         forma_pagamento: data.formaPagamento,
         parcelas: data.parcelas ?? null,
-        premio: data.premio ?? null,
+        premio: premioCalculado.premio,
+        parcelas_num: premioCalculado.parcelasNum,
+        valor_parcela: premioCalculado.valorParcela,
         status: "enviada",
       })
       .select("id")

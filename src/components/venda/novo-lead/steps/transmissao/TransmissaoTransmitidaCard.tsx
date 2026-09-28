@@ -6,6 +6,7 @@ import {
   AVISO_INTEGRACAO_PENDENTE,
   dataOuTraco,
   moedaOuTraco,
+  premioComParcelamento,
   propostaSituacaoInfo,
   textoOuTraco,
 } from "@/lib/proposta-situacao";
@@ -139,12 +140,20 @@ export function TransmissaoTransmitidaCard({ propostaId, f }: Props) {
             <tbody>
               {linhaFf(
                 "Prêmio total",
-                <strong>{moedaOuTraco(proposta.premio ?? proposta.valor)}</strong>,
+                <strong>
+                  {premioComParcelamento(
+                    proposta.premio ?? proposta.valor,
+                    proposta.parcelas,
+                    proposta.valor_parcela,
+                  )}
+                </strong>,
               )}
               {linhaFf(
                 "Pagamento",
                 proposta.forma_pagamento
-                  ? `${proposta.forma_pagamento} · ${proposta.parcelas ?? 1}x ${moedaOuTraco(proposta.valor_parcela)}`
+                  ? proposta.parcelas
+                    ? `${proposta.forma_pagamento} · ${proposta.parcelas}x ${moedaOuTraco(proposta.valor_parcela)}`
+                    : `${proposta.forma_pagamento} · à vista`
                   : "—",
               )}
             </tbody>

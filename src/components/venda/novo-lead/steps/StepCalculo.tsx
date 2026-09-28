@@ -29,6 +29,14 @@ export type OfertaTransmissao = {
   formaPagamento: string;
   parcelas: string;
   premio: number | undefined;
+  /**
+   * Discriminadores da faixa/opção escolhida (tipo/franquia/avista/desconto)
+   * — o servidor usa isso + `parcelas` acima para localizar EXATAMENTE essa
+   * opção em `cotacoes.quiver_resultado_raw` e recalcular o prêmio lá
+   * (`transmitirPropostaQuiver`/`calcularPremioTransmissao`), em vez de
+   * confiar no `premio` calculado aqui no front.
+   */
+  opcao: { tipo?: string; franquia?: string; avista?: string; desconto?: string };
 };
 
 type Props = {
@@ -121,6 +129,12 @@ export function StepCalculo({
       formaPagamento: grupo.formaPagamento,
       parcelas: opcao.parcelas ?? "",
       premio: premioNumerico(opcao),
+      opcao: {
+        tipo: opcao.tipo,
+        franquia: opcao.franquia,
+        avista: opcao.avista,
+        desconto: opcao.desconto,
+      },
     });
   }
 
