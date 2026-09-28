@@ -4,7 +4,10 @@
 // StepCalculo não crescer ao virar orquestrador.
 import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
-import { gruposOpcoesResultado } from "@/components/venda/cotacoes/quiver-resultado";
+import {
+  gruposOpcoesResultado,
+  tituloResultado,
+} from "@/components/venda/cotacoes/quiver-resultado";
 import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicional";
 import { SegAcoes } from "./SegAcoes";
 import type { EscolhaCard } from "./types";
@@ -48,9 +51,7 @@ export function CalculoCardsGrid({
               <div className="calc-ins">
                 <SeguradoraBadge nome={r.seguradora} tam="sm" /> {r.seguradora}
               </div>
-              <span className="chip chip-slate">
-                {r.produto ? `${r.produto} · ${r.nome}` : r.nome || "Compreensiva"}
-              </span>
+              <span className="chip chip-slate">{tituloResultado(r)}</span>
             </div>
             <div className="calc-tiers">
               {opcoesExibidas.map((o, opcaoIndex) => (

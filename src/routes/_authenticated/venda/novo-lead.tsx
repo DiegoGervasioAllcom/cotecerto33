@@ -36,6 +36,13 @@ import { ResumoCotacao } from "@/components/venda/novo-lead/ResumoCotacao";
 import { ClassificarPerdaModal } from "@/components/venda/novo-lead/ClassificarPerdaModal";
 import { LeadManualGate } from "@/components/venda/novo-lead/LeadManualGate";
 import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
+import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
+import { CalculoListaTutorialPreview } from "@/components/venda/calculo-lista-tutorial-preview";
+import {
+  TransmissaoConfirmacaoTutorialPreview,
+  TransmissaoDadosTutorialPreview,
+} from "@/components/venda/transmissao-tutorial-preview";
+import { TransmitidaTutorialPreview } from "@/components/venda/transmitida-tutorial-preview";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Lead Manual · CoteCerto" }] }),
@@ -261,6 +268,7 @@ function Page() {
   // não redeclaram um `prepare` próprio, então não dá pra usar só o valor
   // atual de `tutorialPreview` — teria buracos no meio da mesma jornada.
   const { isOpen: tutorialIsOpen } = useTutorialController();
+  const tutorialPreview = useTutorialPreview();
   const [leadManualDone, setLeadManualDone] = useState(!!routeId);
   const leadManualGateAtivo = !leadManualDone && !tutorialIsOpen;
   const { cotacaoId, saveState, lastSavedAt, loading, persistir } = useCotacaoRascunho({
@@ -453,6 +461,29 @@ function Page() {
     } finally {
       setEnviandoProposta(false);
     }
+  }
+
+  // Etapa 7 (Cálculo/Transmissão) do tutorial do vendedor: essas telas
+  // dependem de uma cotação calculada/transmitida de verdade — o tutorial
+  // mostra um exemplo estático (mesmo padrão de `aceite-tutorial-preview`),
+  // sem tocar no wizard real nem disparar cálculo/transmissão nenhuma.
+  if (
+    tutorialPreview === "lead-calculo-lista" ||
+    tutorialPreview === "lead-transmissao-dados" ||
+    tutorialPreview === "lead-transmissao-confirmacao" ||
+    tutorialPreview === "lead-transmitida"
+  ) {
+    return (
+      <AppShell title="Lead Manual">
+        <ProtoIcons />
+        {tutorialPreview === "lead-calculo-lista" && <CalculoListaTutorialPreview />}
+        {tutorialPreview === "lead-transmissao-dados" && <TransmissaoDadosTutorialPreview />}
+        {tutorialPreview === "lead-transmissao-confirmacao" && (
+          <TransmissaoConfirmacaoTutorialPreview />
+        )}
+        {tutorialPreview === "lead-transmitida" && <TransmitidaTutorialPreview />}
+      </AppShell>
+    );
   }
 
   if (leadManualGateAtivo) {

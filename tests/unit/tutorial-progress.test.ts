@@ -76,8 +76,8 @@ describe("progresso do tutorial", () => {
 
   it.each([
     [
-      '{"status":"step","progress":{"chapter":2,"step":13}}',
-      { status: "step", progress: { chapter: 2, step: 13 } },
+      '{"status":"step","progress":{"chapter":2,"step":6}}',
+      { status: "step", progress: { chapter: 2, step: 6 } },
     ],
     ['{"status":"outro","chapter":3}', { status: "outro", chapter: 3 }],
     ['{"status":"completed"}', { status: "completed" }],

@@ -1,8 +1,8 @@
-// Adaptadores que convertem os 3 formatos de dados de cotação que o app tem
-// hoje (o `Form` do wizard novo-lead, o retorno bruto do Quiver e as linhas
-// de "Em negociação") no `DocDados`/`DocSeguradoraOferta` normalizados que
-// `buildCotacaoDoc` (src/lib/print.ts) consome — usado pelos 3 pontos de
-// entrada do modal "Imprimir cotação" (Frente 3 V12 · 7a).
+// Adaptadores que convertem os formatos de dados de cotação que o app tem
+// hoje (o `Form` do wizard novo-lead, o retorno bruto do Quiver, as linhas de
+// "Em negociação" e as de "Em finalização") no `DocDados`/`DocSeguradoraOferta`
+// normalizados que `buildCotacaoDoc` (src/lib/print.ts) consome — usado pelos
+// pontos de entrada do modal "Imprimir cotação" (Frente 3 V12 · 7a).
 import { fmtBRL, type DocDados, type DocSeguradoraOferta } from "@/lib/print";
 import type { ResultadoCalculo } from "./quiver-resultado";
 import type { Form } from "@/components/venda/novo-lead/types";
@@ -156,4 +156,17 @@ export function docDadosDosPremios(
       opcoes: [{ tipo: "Prêmio calculado", avista: fmtBRL(p.premio) }],
     })),
   };
+}
+
+/** Linha de "Em finalização" (`/venda/em-finalizacao`) — só tem a seguradora
+ * e o prêmio da tentativa de transmissão em si (sem `quiver_resultado_raw`,
+ * essa lista não guarda o comparativo inteiro). Mesmo adaptador de "Em
+ * negociação" (`docDadosDosPremios`): sem seguradora/prêmio, o documento sai
+ * só com o cabeçalho, sem inventar oferta nenhuma. */
+export function docDadosDaTransmissao(
+  cabecalho: DocDadosCabecalho,
+  oferta: { seguradora: string | null; premio: number | null },
+): DocDados {
+  if (!oferta.seguradora || oferta.premio == null) return docDadosDoBanco(cabecalho, []);
+  return docDadosDosPremios(cabecalho, [{ seguradora: oferta.seguradora, premio: oferta.premio }]);
 }

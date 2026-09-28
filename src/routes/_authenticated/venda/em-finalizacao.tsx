@@ -6,12 +6,18 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { AceiteTutorialPreview } from "@/components/venda/aceite-tutorial-preview";
+import { EM_FINALIZACAO_EXEMPLO_ROW } from "@/components/venda/em-finalizacao-tutorial-preview";
+import {
+  dedupTentativas,
+  EM_FINALIZACAO_ROWS_QUERY_KEY,
+  fetchEmFinalizacaoRows,
+  type Row,
+  type TentativaRow,
+} from "@/components/venda/em-finalizacao/queries";
+import { useEmFinalizacaoImprimir } from "@/components/venda/em-finalizacao/print";
 import { FocoBarra } from "@/components/venda/foco-barra";
 import { cotNum, money } from "@/components/venda/cotacoes/lista-helpers";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { primeiraOcorrenciaPorChave, TRANSMISSAO_EM_ABERTO_STATUSES } from "@/lib/lead-etapa";
-import { embed1a1 } from "@/lib/postgrest-embed";
 import { FOCO_SCROLL_DELAY_MS, useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
 
 export const Route = createFileRoute("/_authenticated/venda/em-finalizacao")({
@@ -25,119 +31,12 @@ export const Route = createFileRoute("/_authenticated/venda/em-finalizacao")({
   component: Page,
 });
 
-// A Etapa 7 (wizard de transmissão via Quiver) grava cada tentativa em
-// `cotacao_transmissoes`. Enquanto o robô não devolve o resultado pelo
-// webhook, a tentativa fica com status='enviada'; se o portal recusa, vira
-// 'falha' (o vendedor precisa agir — reabrir a Etapa 7 e reenviar). Só
-// quando a tentativa vira 'transmitida' é que a cotação sai desta lista —
-// nesse ponto ela já vive em Propostas/Emissão. Cada linha é a ÚLTIMA
-// tentativa por cotação (mais recente primeiro, deduplicada em memória).
-export type TentativaRow = {
-  id: string;
-  cotacao_id: string;
-  status: string;
-  motivo: string | null;
-  mensagem: string | null;
-  seguradora: string | null;
-  premio: number | null;
-  forma_pagamento: string | null;
-  criado_em: string;
-  proposta_id: string | null;
-  cotacoes: {
-    numero: number;
-    criado_em: string;
-    // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
-    segurado: { nome: string | null } | null;
-    veiculo: {
-      marca_nome: string | null;
-      modelo_nome: string | null;
-      ano_modelo: string | null;
-      placa: string | null;
-    } | null;
-  } | null;
-};
-
-export type Row = {
-  tentativaId: string;
-  cotacaoId: string;
-  numero: number;
-  /** `criado_em` da COTAÇÃO (para o número `COT-AAAA-NNNNN`) — não confundir
-   * com `criadoEm` abaixo, que é da tentativa de transmissão. */
-  cotacaoCriadoEm: string;
-  status: string;
-  motivo: string | null;
-  mensagem: string | null;
-  seguradora: string | null;
-  premio: number | null;
-  formaPagamento: string | null;
-  criadoEm: string;
-  propostaId: string | null;
-  segurado: string;
-  veiculo: string;
-};
-
 function tempoDesde(iso: string): string {
   const min = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
   if (min < 60) return `${min}min`;
   const horas = Math.floor(min / 60);
   if (horas < 24) return `${horas}h`;
   return `${Math.floor(horas / 24)}d`;
-}
-
-export const EM_FINALIZACAO_ROWS_QUERY_KEY = ["venda", "em-finalizacao", "rows"] as const;
-
-/**
- * Consulta as tentativas de transmissão em aberto (`TRANSMISSAO_EM_ABERTO_STATUSES`)
- * ligadas a cotações do PRÓPRIO vendedor — mesmo escopo do badge
- * `countEmFinalizacaoPendente` (`src/lib/nav-badges.ts`): `cotacao_transmissoes`
- * não tem `responsavel_id` direto, então o `cotacoes!inner(...)` traz a
- * cotação ligada só para poder filtrar por `responsavel_id` (a RLS já libera
- * a empresa toda; este filtro é a semântica da tela, "minhas propostas",
- * igual à decisão já aplicada em `em-negociacao/queries.ts`).
- */
-export function fetchEmFinalizacaoRows(uid: string) {
-  return supabase
-    .from("cotacao_transmissoes")
-    .select(
-      "id,cotacao_id,status,motivo,mensagem,seguradora,premio,forma_pagamento,criado_em,proposta_id," +
-        "cotacoes!inner(numero,criado_em,responsavel_id,segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))",
-    )
-    .eq("cotacoes.responsavel_id", uid)
-    .in("status", TRANSMISSAO_EM_ABERTO_STATUSES)
-    .order("criado_em", { ascending: false })
-    .limit(500);
-}
-
-/**
- * Uma cotação pode ter várias tentativas (retransmissão após falha) — só a
- * mais recente importa. Assume que `data` já vem ordenada por criado_em desc
- * (responsabilidade de `fetchEmFinalizacaoRows`).
- */
-export function dedupTentativas(data: readonly TentativaRow[] | null): Row[] {
-  return primeiraOcorrenciaPorChave(data ?? [], (t) => t.cotacao_id).map((t) => {
-    const c = t.cotacoes;
-    const veiculo = embed1a1(c?.veiculo);
-    const segurado = embed1a1(c?.segurado);
-    return {
-      tentativaId: t.id,
-      cotacaoId: t.cotacao_id,
-      numero: c?.numero ?? 0,
-      cotacaoCriadoEm: c?.criado_em ?? t.criado_em,
-      status: t.status,
-      motivo: t.motivo,
-      mensagem: t.mensagem,
-      seguradora: t.seguradora,
-      premio: t.premio,
-      formaPagamento: t.forma_pagamento,
-      criadoEm: t.criado_em,
-      propostaId: t.proposta_id,
-      segurado: segurado?.nome || "—",
-      veiculo: veiculo
-        ? [veiculo.marca_nome, veiculo.modelo_nome, veiculo.ano_modelo].filter(Boolean).join(" ") +
-          (veiculo.placa ? ` · ${veiculo.placa}` : "")
-        : "—",
-    };
-  });
 }
 
 function statusChip(r: Row) {
@@ -173,9 +72,14 @@ function Page() {
   const uid = session?.user.id ?? null;
   const [q, setQ] = useState("");
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+  const imprimir = useEmFinalizacaoImprimir();
 
   const tutorialAtivo =
     tutorialPreview === "aceite-aceita" || tutorialPreview === "aceite-pendencia";
+  // Tutorial do vendedor (cap. 8, "Em finalização — consultar status") —
+  // exemplo estático dentro da tabela real, pro caso de o vendedor ainda não
+  // ter nenhuma proposta em finalização (ver `EM_FINALIZACAO_EXEMPLO_ROW`).
+  const tutorialExemplo = tutorialPreview === "em-finalizacao-exemplo";
 
   const {
     data: rowsData,
@@ -183,22 +87,30 @@ function Page() {
     error,
   } = useQuery({
     queryKey: [...EM_FINALIZACAO_ROWS_QUERY_KEY, uid],
-    enabled: Boolean(uid) && !tutorialAtivo,
+    enabled: Boolean(uid) && !tutorialAtivo && !tutorialExemplo,
     queryFn: async (): Promise<Row[]> => {
       const { data, error } = await fetchEmFinalizacaoRows(uid as string);
       if (error) throw error;
       return dedupTentativas(data as unknown as TentativaRow[]);
     },
   });
-  const rows = useMemo(() => rowsData ?? [], [rowsData]);
-  const loading = tutorialAtivo ? false : queryLoading;
-  const err = tutorialAtivo ? null : error instanceof Error ? error.message : null;
+  const rows = useMemo(
+    () => (tutorialExemplo ? [EM_FINALIZACAO_EXEMPLO_ROW] : (rowsData ?? [])),
+    [rowsData, tutorialExemplo],
+  );
+  const loading = tutorialAtivo || tutorialExemplo ? false : queryLoading;
+  const err =
+    tutorialAtivo || tutorialExemplo ? null : error instanceof Error ? error.message : null;
 
   // Destaque: `foco` novo (fila do dia/agenda) ou, na ausência dele,
   // `selected` legado (Pipeline — fora do escopo, item 7). Nunca durante o
   // tutorial (real ou preview do wizard de aceite).
   const destaqueId =
-    foco.ativo && foco.id ? foco.id : !tutorialOpen && !tutorialAtivo ? (selected ?? null) : null;
+    foco.ativo && foco.id
+      ? foco.id
+      : !tutorialOpen && !tutorialAtivo && !tutorialExemplo
+        ? (selected ?? null)
+        : null;
   useEffect(() => {
     if (!destaqueId || loading) return;
     const row = rows.find((r) => r.propostaId === destaqueId);
@@ -322,9 +234,10 @@ function Page() {
                   ref={(el) => {
                     rowRefs.current[r.cotacaoId] = el;
                   }}
-                  onClick={() => continuar(r.cotacaoId)}
-                  style={{ cursor: "pointer" }}
+                  onClick={tutorialExemplo ? undefined : () => continuar(r.cotacaoId)}
+                  style={{ cursor: tutorialExemplo ? "default" : "pointer" }}
                   className={focoClasse(r.propostaId)}
+                  aria-readonly={tutorialExemplo || undefined}
                 >
                   <td
                     className="small muted"
@@ -334,6 +247,11 @@ function Page() {
                   </td>
                   <td>
                     <strong>{r.segurado}</strong>
+                    {tutorialExemplo && (
+                      <span className="chip chip-outline" style={{ marginLeft: 8 }}>
+                        Exemplo do tutorial
+                      </span>
+                    )}
                   </td>
                   <td>{r.veiculo}</td>
                   <td>{r.seguradora || "—"}</td>
@@ -358,15 +276,29 @@ function Page() {
                     <div className="fase-acoes" data-tour="em-finalizacao-fase-acoes">
                       <button
                         className="btn btn-yellow btn-sm"
+                        disabled={tutorialExemplo}
                         onClick={(e) => {
                           e.stopPropagation();
-                          continuar(r.cotacaoId);
+                          if (!tutorialExemplo) continuar(r.cotacaoId);
                         }}
                       >
                         <svg width={13} height={13}>
                           <use href={r.status === "falha" ? "#i-send" : "#i-search"} />
                         </svg>{" "}
                         {r.status === "falha" ? "Tentar novamente" : "Consultar status"}
+                      </button>
+                      <button
+                        className="ic-btn"
+                        title="Imprimir ou enviar a cotação aprovada"
+                        disabled={tutorialExemplo}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!tutorialExemplo) imprimir.abrir(r);
+                        }}
+                      >
+                        <svg width={15} height={15}>
+                          <use href="#i-printer" />
+                        </svg>
                       </button>
                     </div>
                   </td>
@@ -376,6 +308,7 @@ function Page() {
           </table>
         </div>
       )}
+      {imprimir.modal}
 
       <div className="clt-note" style={{ marginTop: 14 }}>
         <svg width={15} height={15}>

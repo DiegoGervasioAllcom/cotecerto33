@@ -55,7 +55,7 @@ import {
   dedupTentativas,
   fetchEmFinalizacaoRows,
   type TentativaRow,
-} from "@/routes/_authenticated/venda/em-finalizacao";
+} from "@/components/venda/em-finalizacao/queries";
 import { TRANSMISSAO_EM_ABERTO_STATUSES } from "@/lib/lead-etapa";
 
 describe("query de tentativas de transmissão em aberto (/venda/em-finalizacao)", () => {

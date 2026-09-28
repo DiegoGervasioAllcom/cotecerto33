@@ -132,7 +132,9 @@ O tutorial do vendedor do protótipo V12 (`TOUR_CHAPTERS`, 10 capítulos / 5 mó
 
 Falsos gaps (já existem, só o tutorial precisa mapear): Pipeline (`.kcol`/`.kcard`/filtros/toggle), `.seg-pick`, `.plano-pick`, `.hero-placar`, Histórico/Classificar perda, Mensagens prontas, Extrato inteiro, sub-passos 0–1 da Transmissão, desconto `%` no comparativo.
 
-**Integração com o robô (24/09/2026):** a transmissão para a Suhai funciona (resultado transmitida/falha + nº da cotação no portal). O robô também devolve os **documentos originais** (proposta/boleto), mas essa captura ainda não foi integrada — o usuário fará depois (V12.1.20/V12.1.21). Nº da proposta/protocolo da seguradora, status pós-transmissão (análise/emitida) e "Consultar protocolo" (V12.1.16/V12.1.17) não são capturados nesta frente, mas **o front de Emissão e Transmitida fica pronto para recebê-los** (decisão do usuário). Ordem ajustada: o Pipeline (V12.3.3) vem antes de Emissão e Transmitida.
+**Integração com o robô (24/09/2026):** a transmissão para a Suhai funciona (resultado transmitida/falha + nº da cotação no portal). ~~O robô também devolve os documentos originais~~ — **corrigido em 27/09/2026 após leitura do código do robô** (`/Users/diego.gervasio/Documents/playwright`): o robô **não** captura PDF de proposta/boleto (a captura de PDF foi removida; quem envia proposta/boleto ao cliente é o próprio portal, por e-mail) e o protocolo da seguradora só vai para o log. V12.1.20/V12.1.21 dependem de o robô passar a extrair esses dados (ver "Lacunas do robô" abaixo). Nº da proposta/protocolo da seguradora, status pós-transmissão (análise/emitida) e "Consultar protocolo" (V12.1.16/V12.1.17) não são capturados nesta frente, mas **o front de Emissão e Transmitida fica pronto para recebê-los** (decisão do usuário). Ordem ajustada: o Pipeline (V12.3.3) vem antes de Emissão e Transmitida.
+
+**Lacunas do robô (leitura do código em 27/09/2026, sem rodar o portal):** o portal Quiver tem, e o robô **não** extrai: (a) a seção de cada oferta — "Cotações para a cobertura Compreensiva" × "Ofertas adicionais" (é o dado real do filtro Compreensiva/Demais, V12.3.12); (b) "Mensagens de retorno" da seguradora (vistoria, alertas) — hoje só dentro de um `htmlSnippet` truncado que o CoteCerto descarta; (c) motivo de "sem retorno" por seguradora (cards/faixas sem preço são descartados); (d) "Prêmios por cobertura"; (e) campos de cobertura por seguradora na entrada (`PremiosCob_<cia>_<id>`, modal Coberturas) — o robô só preenche "(Todas)" (V12.3.7); (f) comissão/desconto/Código Afinidade por cia; (g) protocolo da seguradora (só no log). A conta do portal é de produção e cada cotação é real. **Decisão do usuário:** planejar as mudanças no robô e o consumo no CoteCerto.
 
 | Ordem | Task | Tag | Descrição | Depende de |
 |---|---|---|---|---|
@@ -152,6 +154,26 @@ Falsos gaps (já existem, só o tutorial precisa mapear): Pipeline (`.kcol`/`.kc
 | 11b | V12.3.11 | front | **Foco ao chegar** (`focoIr`/`.foco-barra`/`.em-foco` no protótipo): ao clicar num item da fila do dia ou da agenda, a tela de origem rola até o item, marca com contorno amarelo e mostra uma faixa "de onde você veio" com X para sair. Transversal (Pipeline, wizard, Em negociação, Em finalização); as classes não estão no `proto.css`. Na V12.3.1 o clique só navega, como a agenda já faz. | V12.3.1, V12.3.2 |
 | — | V12.3.9 | front/banco | **Cliente VIP** (botão Prêmio do `.seg-acoes`) — bloqueado pela decisão pendente nº 2; não entra na sequência. | Decisão pendente nº 2 |
 | 12 | V12.3.10 | front | **Tutorial do vendedor V12**: reescrever `src/components/tutorial/tutorial-content-sales.ts` com os 10 capítulos literais do protótipo, trocar a abertura em `tutorial-persona.ts` (CoteCerto · "TUTORIAL · O DIA A DIA DO VENDEDOR"), novas páginas em `tutorial-targets.ts` (agenda, em-cotação, em-negociação, em-finalização, emissão), novas preparações (Cálculo em lista, Transmissão sub-passos 0/1/3), e ajustar os testes unitários e E2E do tutorial. | V12.3.1–V12.3.8 |
+
+---
+
+## Frente 4 · Integração robô V12 (planejada em 27/09/2026 — começa depois do PR da Frente 3)
+
+Robô: `/Users/diego.gervasio/Documents/playwright` (tem `CLAUDE.md` próprio). **A conta do portal é de produção**: cada cotação é real e a sessão é única (derruba outros logados). Só rodar `tests/cotacao.spec.ts` com uma cotação por vez, em horário combinado com o usuário; **nunca** `transmissao.spec.ts` nem `npm run test` (roda a transmissão). Todo campo novo no webhook é opcional (robô e app sobem em qualquer ordem). Uma branch no robô e outra no CoteCerto.
+
+| Ordem | Task | Robô | CoteCerto | Obs. |
+|---|---|---|---|---|
+| 1 | V12.4.1 Protocolo da seguradora | `confirmarTransmissao` devolve o protocolo (já capturado em `TransmissaoPage.ts:1265`); spec grava `data/transmissoes/{id}.json` também no sucesso; webhook de transmissão manda `protocolo` | migration nova da RPC `registrar_resultado_transmissao_quiver` com `p_protocolo` → `propostas.protocolo_seguradora`; telas já exibem | decidir: texto completo ("Protocolo Suhai 215575619") ou só o número |
+| 2 | V12.4.2 Motivo de "Sem retorno" | array novo `semRetorno[]` fora de `cards[]` (o card sem preço hoje é descartado) | zod + "Sem retorno" com o motivo real na lista/cards | não vira linha em `cotacao_premios` |
+| 3 | V12.4.3 Mapeamento ao vivo da página de prêmios | 1–2 cotações reais, só leitura, em `doc/selectors/pagina6-premios.md`; **medir o custo de tempo** de cada captura | — | autorizado pelo usuário em horário combinado |
+| 4 | V12.4.4 Seção Compreensiva × Ofertas adicionais | campo `secao` pela posição do card em `Comp_Box`/`Demais_Box`; ausente se não der para decidir | filtro `.cob-filtro` só quando houver `secao` (destrava V12.3.12 e o passo reservado do tutorial) | |
+| 5 | V12.4.5 Mensagens da seguradora | `mensagensRetorno[]` (sem clique se possível) | botão Mensagens da `SegAcoes` habilitado quando houver; visível para quem já vê a cotação (decisão do usuário) | |
+| 6 | V12.3.7 Personalizar por seguradora | nada (usa "Recalcular esta seguradora" com a cobertura global) | persistir o ajuste por seguradora (migration + RLS) e enviar no recálculo; destrava o passo reservado do tutorial | |
+| 7 | V12.4.6 Prêmios por cobertura | `premiosPorCobertura` via `PremiosCoberturas` | item na Engrenagem | ver regra de custo abaixo |
+| 8 | V12.4.7 Documentos (spike) | só navegar para descobrir onde fica a cotação transmitida e se há PDF da proposta/boleto | — | sem clicar em Comprar/Efetivar |
+
+**Regra de custo (decisão do usuário):** medir no mapeamento ao vivo quanto cada captura com clique (mensagens, prêmios por cobertura) aumenta o tempo da cotação; se o aumento for grande, não capturar; se for pequeno, capturar; e procurar primeiro um jeito de obter o dado sem clique (texto já presente no card).
+**Fora:** comissão, desconto e Código Afinidade por seguradora (dado sensível; o CoteCerto tem motor de comissão e fluxo de desconto próprios).
 
 ---
 

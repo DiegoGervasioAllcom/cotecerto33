@@ -169,7 +169,7 @@ export function StepCalculo({
         <CalculoContexto
           cotacaoId={cotacaoId}
           cliente={f.nome ?? ""}
-          padrao={f.tipoCobertura || "Compreensiva"}
+          padrao={f.tipoCobertura || "—"}
         />
       )}
 

@@ -1,11 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers";
 import {
+  criarCotacaoComStatusExtra,
   criarCotacaoQuiverFixture,
+  criarTentativaTransmissaoEnviada,
+  limparCotacaoComStatusExtra,
   limparCotacaoQuiverFixture,
   marcarCalculoVistoE2E,
   QUIVER_WEBHOOK_HEADERS,
   type CotacaoQuiverFixture,
+  type CotacaoStatusExtra,
 } from "./provision";
 
 /**
@@ -177,5 +181,50 @@ test.describe("Imprimir cotação — modal comum aos 3 pontos de entrada", () =
     // Nenhuma requisição de rede (POST/PUT/DELETE) foi disparada pelos
     // controles desabilitados — nem envio, nem impressão de comissão.
     expect(requests).toEqual([]);
+  });
+
+  // V12.3.10 (correção) — 4º ponto de entrada: `/venda/em-finalizacao`
+  // (`docDadosDaTransmissao`, doc-dados.ts). Diferente do Cálculo/comparativo
+  // (que têm `quiver_resultado_raw`), essa lista só guarda a seguradora e o
+  // prêmio da própria tentativa de transmissão — fixture própria (mesma
+  // empresa/usuário do fixture da suíte), sem `cotacao_veiculo`.
+  test("Em finalização: botão da impressora abre o mesmo modal com a cotação da linha", async ({
+    page,
+  }) => {
+    const extra: CotacaoStatusExtra = await criarCotacaoComStatusExtra(
+      fixture.empresaId,
+      fixture.userId,
+      "aceita",
+      undefined,
+      "Segurado Em Finalização Print",
+    );
+    await criarTentativaTransmissaoEnviada({
+      cotacaoId: extra.cotacaoId,
+      seguradora: "Seguradora do exemplo",
+      formaPagamento: "Boleto Bancário",
+      premio: 3510,
+    });
+
+    try {
+      await page.goto("/venda/em-finalizacao");
+      const linha = page
+        .locator('[data-tour="em-finalizacao-lista"] tbody tr')
+        .filter({ hasText: "Segurado Em Finalização Print" });
+      await expect(linha).toBeVisible();
+
+      await linha.getByRole("button", { name: "Imprimir ou enviar a cotação aprovada" }).click();
+      await expect(page.getByRole("heading", { name: "Imprimir cotação" })).toBeVisible();
+      await page.getByText("Impressão expressa", { exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Impressão da cotação" })).toBeVisible();
+      // Escopado ao preview do documento (`.modal-print`) — a linha da
+      // lista, atrás do modal, também tem o mesmo texto (minúsculo).
+      const preview = page.locator(".modal-print");
+      await expect(
+        preview.getByText("SEGURADO EM FINALIZAÇÃO PRINT", { exact: true }),
+      ).toBeVisible();
+      await expect(preview.getByText("Seguradora do exemplo")).toBeVisible();
+    } finally {
+      await limparCotacaoComStatusExtra(extra);
+    }
   });
 });

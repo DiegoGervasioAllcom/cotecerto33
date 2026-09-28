@@ -9,7 +9,9 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { AgendaFiltroChips } from "@/components/venda/agenda/agenda-filtro-chips";
 import { AgendaItemRow } from "@/components/venda/agenda/agenda-item-row";
+import { AgendaTutorialPreviewRow } from "@/components/venda/agenda/agenda-tutorial-preview";
 import { NovoLembreteModal } from "@/components/venda/agenda/novo-lembrete-modal";
+import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { useAuth } from "@/lib/auth";
 import {
   classificarUrgencia,
@@ -31,6 +33,9 @@ function Page() {
   const [novoLembreteOpen, setNovoLembreteOpen] = useState(false);
   const [filtro, setFiltro] = useState<FonteAgenda | "todos">("todos");
   const { itens, loading, err, busyId, marcarFeito, abrirItem, invalidarTudo } = useAgendaItens();
+  // Tutorial do vendedor (cap. 2) — exemplo estático quando o vendedor ainda
+  // não tem nenhum item real na agenda (ver `agenda-tutorial-preview.tsx`).
+  const tutorialAtivo = useTutorialPreview() === "agenda-exemplo";
 
   const atrasados = itens.filter((i) => classificarUrgencia(i.data).ord === 0).length;
   const hoje = itens.filter((i) => classificarUrgencia(i.data).ord === 1).length;
@@ -106,7 +111,9 @@ function Page() {
         >
           {loading && <div className="muted">Carregando…</div>}
 
-          {!loading && itensFiltrados.length === 0 && itens.length > 0 && (
+          <AgendaTutorialPreviewRow />
+
+          {!loading && !tutorialAtivo && itensFiltrados.length === 0 && itens.length > 0 && (
             <div className="empty-state">
               <div className="ico">
                 <svg width={28} height={28} aria-hidden="true">
@@ -128,7 +135,7 @@ function Page() {
             </div>
           )}
 
-          {!loading && itens.length === 0 && (
+          {!loading && !tutorialAtivo && itens.length === 0 && (
             <div className="empty-state">
               <div className="ico">
                 <svg width={28} height={28} aria-hidden="true">

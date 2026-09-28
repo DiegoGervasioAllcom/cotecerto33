@@ -195,24 +195,39 @@ test.describe("roteiro de vendas", () => {
     await limparVendedorComTutorial(vendedor);
   });
 
+  // V12.3.10 reescreveu `salesTutorialChapters` do zero (protótipo V12, 10
+  // capítulos): a abertura "Rafinha"/"primeira semana" virou "CoteCerto"/"o
+  // dia a dia do vendedor", e as páginas simuladas de comparativo
+  // (`compare`), proposta (`proposal`) e aceite (`aceite`) — que dependiam
+  // de `destination: "cotacao-comparativo"/"proposta-selecionada"` e de
+  // registros reais no banco — saíram do roteiro: a Etapa 7 (Cálculo/
+  // Transmissão) agora é 100% preview estático dentro do próprio Lead Manual
+  // (ver `test.describe("tour completo V12.3.10 ...")` abaixo, que cobre
+  // esses capítulos ponta a ponta). Os dois testes abaixo foram reescritos
+  // para a abertura nova e para o capítulo 3 (real, com o rascunho da
+  // fixture); os antigos testes de `compare`/`proposal`/`aceite` e o teste
+  // de corrida de navegação pendente foram removidos porque testavam
+  // comportamento que não existe mais.
   test("Vendedor recebe a abertura sales e avança com spotlight", async ({ page }) => {
     await loginAs(page, vendedor.email, vendedor.senha);
     await expect(page).toHaveURL(/\/inicio/, { timeout: 15_000 });
 
     await abrirTutorial(page);
-    await expect(page.locator(".tour-welcome")).toContainText("A PRIMEIRA SEMANA DA RAFINHA");
+    await expect(page.locator(".tour-welcome .ravatar")).toHaveText("C");
+    await expect(page.locator(".tour-welcome")).toContainText("O DIA A DIA DO VENDEDOR");
+    await expect(page.locator(".tour-welcome h2")).toHaveText("Vou te mostrar o sistema inteiro");
     const browserErrors = collectBrowserErrors(page);
     await page.getByRole("button", { name: /Começar do início/ }).click();
 
-    let dialog = await esperarPasso(page, "Bem-vinda à Supper", "1 / 13");
+    let dialog = await esperarPasso(page, "O menu é o ciclo da venda", "1 / 8");
     await dialog.getByRole("button", { name: "Próximo" }).click();
-    dialog = await esperarPasso(page, "Essa é a sua navegação", "2 / 13");
+    dialog = await esperarPasso(page, "Atender agora — e o relógio de 3 minutos", "2 / 8");
     await expect(page.locator(".tour-spotlight")).toBeVisible();
     await dialog.getByRole("button", { name: "Sair", exact: true }).click();
     expect(browserErrors).toEqual([]);
   });
 
-  test("previews do Novo lead não disparam autosave ou RPC e destacam Histórico", async ({
+  test("capítulo 3 (jornada em 7 etapas) não dispara autosave ou RPC e destaca Histórico", async ({
     page,
   }) => {
     await loginAs(page, vendedor.email, vendedor.senha);
@@ -220,272 +235,34 @@ test.describe("roteiro de vendas", () => {
     const mutations = await monitorSupabaseMutations(page);
 
     await posicionarTutorial(page, vendedor.userId, "sales", 2, 0);
-    let dialog = await esperarPasso(page, "Você entrou no João Silva", "1 / 15");
-    await expect(page.getByRole("heading", { name: "Dados do Segurado" })).toBeVisible();
+    let dialog = await esperarPasso(page, "A trilha inteira, sempre à vista", "1 / 11");
+    await expect(page).toHaveURL(/\/venda\/novo-lead$/);
+    await expectSpotlightAround(page, page.locator(".stepper"));
 
-    for (const [title, progress] of [
-      ["Seis passos, espelhando o Quiver", "2 / 15"],
-      ["Passo 1 — Segurado: CPF primeiro", "3 / 15"],
-      ["CEP puxa endereço", "4 / 15"],
-      ["Passo 2 — Seguro", "5 / 15"],
-      ["Passo 3 — Veículo: placa → FIPE", "6 / 15"],
-    ] as const) {
-      await dialog.getByRole("button", { name: "Próximo" }).click();
-      dialog = await esperarPasso(page, title, progress);
-    }
-    await expect(page.getByRole("heading", { name: "Dados do Veículo" })).toBeVisible();
-    await expectSpotlightAround(page, page.locator('.wizard-grid input[placeholder="AAA0A00"]'));
-    await page.waitForTimeout(1_700);
-    expect(mutations, "preview não pode persistir rascunho nem chamar RPC").toEqual([]);
-    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
-
-    await posicionarTutorial(page, vendedor.userId, "sales", 2, 12);
-    dialog = await esperarPasso(page, "Pronto para cotar", "13 / 15");
-    const ready = page.locator(".stepper .ready");
-    await expect(ready).toBeVisible();
-    await expect(ready).toHaveText(/Pronto para cotar/);
-    await expectSpotlightAround(page, ready);
-    await page.waitForTimeout(1_700);
-    expect(mutations, "selo demonstrativo não pode persistir formulário inválido").toEqual([]);
-    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
-    await expect(ready).toHaveCount(0);
-    // Fora do preview do tour (sem ?id=, sem tutorialPreview ativo), a página
-    // real de "Novo lead" volta a mostrar o gate — nenhum progresso de fato
-    // foi feito durante a demonstração.
-    await expect(page.getByRole("heading", { name: "Lead Manual — origem" })).toBeVisible();
-
-    await posicionarTutorial(page, vendedor.userId, "sales", 2, 13);
-    dialog = await esperarPasso(page, "Agende um retorno — e seja lembrada", "14 / 15");
+    await dialog.getByRole("button", { name: "Próximo" }).click();
+    dialog = await esperarPasso(
+      page,
+      "Registros & agendamentos — a memória do atendimento",
+      "2 / 11",
+    );
     const historico = page.getByRole("button", { name: "Histórico", exact: true });
     await expect(historico).toHaveAttribute("data-tour", "lead-historico");
     await expectSpotlightAround(page, historico);
-    await expect(page.getByRole("button", { name: "Classificar perda" })).toHaveAttribute(
-      "data-tour",
-      "lead-perda",
-    );
-    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
-  });
 
-  test("destinos de cotação e proposta resolvem registros visíveis e seletores reais", async ({
-    page,
-  }) => {
-    await loginAs(page, vendedor.email, vendedor.senha);
-    await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
-    const mutations = await monitorSupabaseMutations(page);
-
-    await posicionarTutorial(page, vendedor.userId, "sales", 3, 0);
-    let dialog = await esperarPasso(page, "O comparativo multi-seguradora", "1 / 7");
-    await expect(page).toHaveURL(new RegExp(`/venda/cotacoes/${vendedor.cotacaoId}`));
-    await expect(page).not.toHaveURL(new RegExp(`/venda/cotacoes/${vendedor.rascunhoId}`));
-    await page.setViewportSize({ width: 2000, height: 900 });
-    const comparativoSemOverflow = page.getByRole("region", {
-      name: "Comparativo de propostas",
-      exact: true,
-    });
-    await expect(comparativoSemOverflow).not.toHaveAttribute("tabindex");
-    await expect
-      .poll(() =>
-        comparativoSemOverflow.evaluate(
-          (element) => element.scrollWidth <= element.clientWidth + 1,
-        ),
-      )
-      .toBe(true);
-    const compareTargets = [
-      [".compare-table thead", "Seguradoras e produtos", "2 / 7"],
-      [".ctable tbody tr:nth-last-child(5)", "Opções de prêmio", "3 / 7"],
-      [".ctable tbody tr:nth-last-child(4)", "Formas de pagamento", "4 / 7"],
-      [".ctable .total-row", "Prêmio registrado", "5 / 7"],
-      ['.compare-bar button[type="button"]', "Imprimir o comparativo", "6 / 7"],
-      [".ctable .actions-row .ins-actions", "Ações de cada produto", "7 / 7"],
-    ] as const;
-    for (const [selector, title, progress] of compareTargets) {
-      await dialog.getByRole("button", { name: "Próximo" }).click();
-      dialog = await esperarPasso(page, title, progress);
-      await expectSpotlightAround(page, page.locator(selector));
-    }
-    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
-
-    await posicionarTutorial(page, vendedor.userId, "sales", 4, 0);
-    dialog = await esperarPasso(page, "A proposta da Azul", "1 / 6");
-    await expect(page).toHaveURL(
-      new RegExp(`/venda/em-negociacao\\?selected=${vendedor.propostaId}`),
-    );
-    const proposalTargets = [
-      ['[data-tour="proposta-versao"]', "Ajuste fino de cobertura", "2 / 6"],
-      ['[data-tour="proposta-pagamento"]', "Como o cliente vai pagar", "3 / 6"],
-      ['[data-tour="proposta-nota"]', "Notas internas (não vão ao cliente)", "4 / 6"],
-      [".history", "Histórico de versões com diff", "5 / 6"],
-      ['[data-tour="proposta-enviar"]', "Enviar nova versão", "6 / 6"],
-    ] as const;
-    for (const [selector, title, progress] of proposalTargets) {
-      await dialog.getByRole("button", { name: "Próximo" }).click();
-      dialog = await esperarPasso(page, title, progress);
-      const target = page.locator(selector);
-      await expectSpotlightAround(page, target);
-      if (progress === "2 / 6") {
-        await expect(target).toHaveAttribute("aria-readonly", "true");
-        await expect(target).toContainText("Franquia · casco");
-        await expect(target).toContainText("R$ 3.000");
-        await expect(target).toContainText("RCF · danos materiais");
-        await expect(target).toContainText("R$ 150.000");
-        await expect(target).toContainText("Carro reserva");
-        await expect(target).toContainText("30 dias");
-        await expect(target.locator("select")).toHaveCount(4);
-        for (const select of await target.locator("select").all()) {
-          await expect(select).toBeDisabled();
-        }
-      }
-      if (progress === "4 / 6") {
-        await expect(target.getByText("Nota para esta versão")).toBeVisible();
-      }
-      if (progress === "6 / 6") {
-        await expect(target).toBeDisabled();
-        await expect(target).toHaveText("Enviar nova versão (V3) ao cliente");
-      }
-    }
-    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
-
-    const propostaRequests: string[] = [];
-    page.on("request", (request) => {
-      const pathname = new URL(request.url()).pathname;
-      if (pathname.endsWith("/rest/v1/propostas")) {
-        propostaRequests.push(`${request.method()} ${pathname}`);
-      }
-    });
-    await posicionarTutorial(page, vendedor.userId, "sales", 5, 0);
-    dialog = await esperarPasso(page, "Aceite & Transmissão", "1 / 7");
-    await expect(page.getByText("Proposta de exemplo")).toBeVisible();
-    for (const [selector, title, progress] of [
-      ['[data-tour="aceite-timeline"]', "A linha do tempo do aceite", "2 / 7"],
-      ['[data-tour="aceite-conferencia"]', "Conferência final dos dados", "3 / 7"],
-      ['[data-tour="aceite-checkbox"]', "O checkbox de responsabilidade", "4 / 7"],
-      ['[data-tour="aceite-transmitir"]', "Transmitir = oficializar a venda", "5 / 7"],
-    ] as const) {
-      await dialog.getByRole("button", { name: "Próximo" }).click();
-      dialog = await esperarPasso(page, title, progress);
-      const target = page.locator(selector);
-      await expectSpotlightAround(page, target);
-      if (progress === "2 / 7") {
-        await expect(target).toContainText("Exemplo do tutorial");
-        await expect(target).toContainText("Aceita pelo cliente");
-      }
-      if (progress === "3 / 7") {
-        await expect(target.locator("xpath=..")).toHaveAttribute("aria-readonly", "true");
-        await expect(target).toContainText("Fernanda Souza");
-        await expect(target).toContainText("Seguradora do exemplo");
-      }
-      if (progress === "4 / 7") {
-        await expect(target.locator('input[type="checkbox"]')).toBeDisabled();
-      }
-    }
-    const transmitir = page.locator('[data-tour="aceite-transmitir"]');
-    await expect(transmitir).toBeDisabled();
-    await expect(transmitir).toHaveText("Transmitir para a seguradora");
     await dialog.getByRole("button", { name: "Próximo" }).click();
-    dialog = await esperarPasso(page, "E se a seguradora pedir uma pendência?", "6 / 7");
-    const pendencia = page.locator('[data-tour="aceite-pendencia"]');
-    await expectSpotlightAround(page, pendencia);
-    await expect(
-      page.getByRole("heading", { name: "Aceite & transmissão · Eduardo Lima" }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Proposta de exemplo · Porto Seguro · Toyota Hilux 2023"),
-    ).toBeVisible();
-    const timelinePendencia = page.locator('[data-tour="aceite-timeline"]');
-    await expect(timelinePendencia).toContainText("17/05 · 15:20");
-    await expect(timelinePendencia).toContainText("18/05 · 10:12");
-    await expect(timelinePendencia).toContainText("19/05 · 09:14");
-    await expect(pendencia).toHaveAttribute("aria-readonly", "true");
-    await expect(pendencia).toContainText("Pendência aberta");
-    await expect(pendencia).toHaveCSS("background-color", "rgb(253, 236, 234)");
-    await expect(pendencia).toHaveCSS("border-top-color", "rgb(243, 214, 210)");
-    for (const button of await pendencia.locator("button").all()) {
-      await expect(button).toBeDisabled();
-    }
-    await expect(pendencia.locator("textarea")).toHaveAttribute("readonly", "");
-    expect(propostaRequests, "preview de aceite não pode consultar a tabela propostas").toEqual([]);
-    expect(mutations, "previews de aceite não podem escrever nem chamar RPC").toEqual([]);
-    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
-
-    await posicionarTutorial(page, vendedor.userId, "sales", 7, 3);
-    dialog = await esperarPasso(page, "Cada linha é uma venda sua", "4 / 7");
-    const vendaExemplo = page.locator('[data-tour="extrato-venda-exemplo"]');
-    await expectSpotlightAround(page, vendaExemplo);
-    await expect(page.getByText("0 vendas", { exact: true })).toBeVisible();
-    await expect(page.getByText("Nenhuma venda transmitida no período.")).toBeVisible();
-    await expect(vendaExemplo.locator("xpath=ancestor::div[@aria-readonly='true']")).toBeVisible();
-    await expect(vendaExemplo).toContainText("EXEMPLO-001");
-    await expect(vendaExemplo).toContainText("Exemplo do tutorial");
-    await expect(vendaExemplo).toContainText("Seguradora A");
-    expect(mutations, "linha EXEMPLO em conta vazia não pode criar venda").toEqual([]);
-    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
-
-    await posicionarTutorial(page, vendedor.userId, "sales", 7, 5);
-    dialog = await esperarPasso(page, "Campanhas ativas", "6 / 7");
-    const campanha = page.locator('[data-tour="extrato-campanha"]');
-    await expectSpotlightAround(page, campanha);
-    await expect(campanha.locator("xpath=..")).toHaveAttribute("aria-readonly", "true");
-    await expect(campanha).toContainText("Exemplo do tutorial");
-    await expect(campanha).toContainText("CAMPANHA PORTO");
-    await expect(campanha).toContainText("3 das 5 apólices");
-    await expect(campanha).toContainText("Faltam 2 apólices");
-    await dialog.getByRole("button", { name: "Próximo" }).click();
-    dialog = await esperarPasso(page, "Quando o dinheiro entra", "7 / 7");
-    const pagamentos = page.locator('[data-tour="extrato-pagamentos"]');
-    await expectSpotlightAround(page, pagamentos);
-    await expect(pagamentos.locator("xpath=..")).toHaveAttribute("aria-readonly", "true");
-    await expect(pagamentos).toContainText("Próximos pagamentos");
-    await expect(pagamentos).toContainText("Exemplo do tutorial");
-    await expect(pagamentos).toContainText("Seguradora A");
-    await expect(pagamentos).toContainText("Seguradora B");
-    await expect(pagamentos).toContainText("Seguradora C");
-    await expect(pagamentos).toContainText("R$ 1.980,00");
-    await expect(pagamentos).toContainText("R$ 1.080,00");
-    await expect(pagamentos).toContainText("R$ 540,00");
-    await page.waitForTimeout(500);
-    expect(mutations, "previews de proposta e extrato não podem escrever nem chamar RPC").toEqual(
-      [],
+    dialog = await esperarPasso(page, "Etapa 1 — comece pelo CPF", "3 / 11");
+    await expectSpotlightAround(
+      page,
+      page.locator('.wizard-grid input[placeholder="000.000.000-00"]'),
     );
+
+    await dialog.getByRole("button", { name: "Próximo" }).click();
+    dialog = await esperarPasso(page, "O CEP muda o preço", "4 / 11");
+    await expectSpotlightAround(page, page.locator('.wizard-grid input[placeholder="00000-000"]'));
+
+    await page.waitForTimeout(1_700);
+    expect(mutations, "o capítulo 3 não pode persistir rascunho nem chamar RPC").toEqual([]);
     await dialog.getByRole("button", { name: "Sair", exact: true }).click();
-  });
-
-  test("fechar durante a resolução pendente não navega depois", async ({ page }) => {
-    await loginAs(page, vendedor.email, vendedor.senha);
-    await expect(page).toHaveURL(/\/inicio/, { timeout: 15_000 });
-
-    let liberarRequisicao!: () => void;
-    const requisicaoLiberada = new Promise<void>((resolve) => {
-      liberarRequisicao = resolve;
-    });
-    let registrarInterceptacao!: () => void;
-    const requisicaoInterceptada = new Promise<void>((resolve) => {
-      registrarInterceptacao = resolve;
-    });
-
-    await page.route("**/rest/v1/cotacoes*", async (route) => {
-      if (!decodeURIComponent(route.request().url()).includes("quiver_resultado_raw")) {
-        await route.continue();
-        return;
-      }
-      registrarInterceptacao();
-      await requisicaoLiberada;
-      await route.continue().catch(() => undefined);
-    });
-
-    await posicionarTutorial(page, vendedor.userId, "sales", 3, 0);
-    await requisicaoInterceptada;
-    const dialog = page.locator(".tour-tip");
-    await expect(
-      dialog.getByRole("heading", { name: "O comparativo multi-seguradora" }),
-    ).toBeVisible();
-    await expect(page.locator(".tour-host")).toHaveAttribute("aria-busy", "true");
-    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
-    await expect(dialog).toHaveCount(0);
-
-    liberarRequisicao();
-    await page.waitForTimeout(750);
-    await expect(page).toHaveURL(/\/inicio$/);
-    await expect(page).not.toHaveURL(/\/venda\/cotacoes\/[0-9a-f-]+$/);
   });
 });
 
@@ -606,6 +383,518 @@ test.describe("roteiro de grupo", () => {
   });
 });
 
+// V12.3.10 — passeio completo do tutorial do vendedor: 10 capítulos / 5
+// módulos do protótipo V12 (ver `salesTutorialChapters`). Diferente do teste
+// "roteiro de vendas" acima (que valida trechos pontuais com fixtures
+// específicas), este passeia por TODOS os capítulos na ordem, checando
+// título + progresso + rota de cada passo, e faz um checklist de spotlight
+// "soft" (não derruba o teste no primeiro alvo que falhar) para que a lista
+// final de passos quebrados apareça inteira no relatório.
+type PassoEsperado = {
+  title: string;
+  progress: string;
+  route: RegExp;
+  target?: string;
+};
+
+// Seletores já resolvidos por `defineTutorial`/`tutorial-targets.ts` (o que o
+// engine efetivamente procura no DOM), não o texto bruto do protótipo.
+const CAP1_HOME_ATENDER: PassoEsperado[] = [
+  { title: "O menu é o ciclo da venda", progress: "1 / 8", route: /\/inicio$/ },
+  {
+    title: "Atender agora — e o relógio de 3 minutos",
+    progress: "2 / 8",
+    route: /\/inicio$/,
+    target: '[data-tour="nav-atender"]',
+  },
+  {
+    title: "Só existe uma ação nesta tela",
+    progress: "3 / 8",
+    route: /\/venda\/atender$/,
+    target: ".atender-grid",
+  },
+  {
+    title: "A busca acha por placa",
+    progress: "4 / 8",
+    route: /\/inicio$/,
+    target: '[data-tour="shell-search"]',
+  },
+  {
+    title: "Lead Manual — quem chegou por fora",
+    progress: "5 / 8",
+    route: /\/inicio$/,
+    target: '[data-tour="nav-novo-lead"]',
+  },
+  {
+    title: "Você, no pé do menu",
+    progress: "6 / 8",
+    route: /\/inicio$/,
+    target: '[data-tour="shell-user"]',
+  },
+  {
+    title: "Seu placar do mês",
+    progress: "7 / 8",
+    route: /\/inicio$/,
+    target: ".hero-placar",
+  },
+  {
+    title: "O que fazer agora",
+    progress: "8 / 8",
+    route: /\/inicio$/,
+    target: '[data-tour="home-fila"]',
+  },
+];
+
+const CAP2_AGENDA: PassoEsperado[] = [
+  { title: "Tudo que espera por você, num lugar só", progress: "1 / 6", route: /\/venda\/agenda$/ },
+  {
+    title: "Anotar o que não nasce de um lead",
+    progress: "2 / 6",
+    route: /\/venda\/agenda$/,
+    target: '[data-tour="agenda-novo-lembrete"]',
+  },
+  {
+    title: "Atrasado, hoje, total",
+    progress: "3 / 6",
+    route: /\/venda\/agenda$/,
+    target: '[data-tour="agenda-resumo"]',
+  },
+  {
+    title: "Filtrar por tipo de pendência",
+    progress: "4 / 6",
+    route: /\/venda\/agenda$/,
+    target: '[data-tour="agenda-filtros"]',
+  },
+  {
+    title: "Clicar leva para a origem — e destaca",
+    progress: "5 / 6",
+    route: /\/venda\/agenda$/,
+    target: '[data-tour="agenda-item"]',
+  },
+  {
+    title: "Marcar como feito",
+    progress: "6 / 6",
+    route: /\/venda\/agenda$/,
+    target: '[data-tour="agenda-concluir"]',
+  },
+];
+
+const CAP4_CALCULO: PassoEsperado[] = [
+  {
+    title: "A barra de contexto",
+    progress: "1 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: ".calc-ctx",
+  },
+  {
+    title: "A lista comparativa é a visão de venda",
+    progress: "2 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: ".calc-lista",
+  },
+  {
+    title: "Ver as seguradoras que não couberam na tela",
+    progress: "3 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: ".cl-nav",
+  },
+  {
+    title: "As cinco ferramentas de cada seguradora",
+    progress: "4 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: ".seg-acoes",
+  },
+  {
+    title: "Lista ou cards",
+    progress: "5 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: ".calc-toolset",
+  },
+  {
+    title: "Desconto: até onde você vai sozinho",
+    progress: "6 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: ".seg-acoes",
+  },
+  {
+    title: "Imprimir e mandar para o cliente",
+    progress: "7 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: ".calc-bar-r",
+  },
+];
+
+const CAP5_TRANSMISSAO: PassoEsperado[] = [
+  {
+    title: "Etapa 7 — os passos até a seguradora",
+    progress: "1 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: ".acc-sol",
+  },
+  {
+    title: "Passo 1 — o que a cotação não pediu",
+    progress: "2 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: '[data-tour="transmissao-dados"]',
+  },
+  {
+    title: "Passo 2 — a última conferida",
+    progress: "3 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: '[data-tour="transmissao-confirmacao"]',
+  },
+  {
+    title: "Efetivar proposta",
+    progress: "4 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: '[data-tour="transmissao-efetivar"]',
+  },
+  {
+    title: "Transmitida — o que você recebe de volta",
+    progress: "5 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: '[data-tour="transmitida-acoes"]',
+  },
+  {
+    title: "Os documentos originais",
+    progress: "6 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: '[data-tour="transmitida-acoes"]',
+  },
+  {
+    title: "Em cima, esta proposta; embaixo, o próximo passo",
+    progress: "7 / 7",
+    route: /\/venda\/novo-lead$/,
+    target: ".atalhos",
+  },
+];
+
+const CAP6_EMISSAO: PassoEsperado[] = [
+  { title: "Duas listas, duas naturezas", progress: "1 / 3", route: /\/venda\/emissao$/ },
+  {
+    title: "A coluna Situação é o que importa",
+    progress: "2 / 3",
+    route: /\/venda\/emissao$/,
+    target: '[data-tour="emissao-aguardando"]',
+  },
+  {
+    title: "Documentos e consulta de status",
+    progress: "3 / 3",
+    route: /\/venda\/emissao$/,
+    target: '[data-tour="emissao-aguardando"]',
+  },
+];
+
+const CAP7_PIPELINE: PassoEsperado[] = [
+  { title: "Não. E é essa a ideia", progress: "1 / 6", route: /\/venda\/pipeline$/ },
+  {
+    title: "As cinco colunas",
+    progress: "2 / 6",
+    route: /\/venda\/pipeline$/,
+    target: ".kcol",
+  },
+  {
+    title: "O card diz onde parou e há quanto tempo",
+    progress: "3 / 6",
+    route: /\/venda\/pipeline$/,
+    target: ".kcard",
+  },
+  {
+    title: "Filtrar por estágio, produto, canal e dias parados",
+    progress: "4 / 6",
+    route: /\/venda\/pipeline$/,
+    target: ".filters-bar",
+  },
+  {
+    title: "Kanban ou tabela",
+    progress: "5 / 6",
+    route: /\/venda\/pipeline$/,
+    target: ".toggle",
+  },
+  {
+    title: "Classificar a perda",
+    progress: "6 / 6",
+    route: /\/venda\/novo-lead$/,
+    target: '[data-tour="lead-perda"]',
+  },
+];
+
+const CAP8_FASES: PassoEsperado[] = [
+  {
+    title: "A mesma coisa do Pipeline, em modo lista",
+    progress: "1 / 6",
+    route: /\/venda\/em-cotacao$/,
+  },
+  {
+    title: "Em cotação — continuar de onde parou",
+    progress: "2 / 6",
+    route: /\/venda\/em-cotacao$/,
+    target: '[data-tour="em-cotacao-lista"]',
+  },
+  {
+    title: "Em negociação tem duas listas",
+    progress: "3 / 6",
+    route: /\/venda\/em-negociacao$/,
+    target: '[data-tour="em-negociacao-aguardando"]',
+  },
+  {
+    title: "Em negociação — duas ações",
+    progress: "4 / 6",
+    route: /\/venda\/em-negociacao$/,
+    target: '[data-tour="em-negociacao-fase-acoes"]',
+  },
+  {
+    title: "O sistema te avisa quando o preço chega",
+    progress: "5 / 6",
+    route: /\/venda\/em-negociacao$/,
+    target: '[data-tour="nav-em-negociacao"]',
+  },
+  {
+    title: "Em finalização — consultar status",
+    progress: "6 / 6",
+    route: /\/venda\/em-finalizacao$/,
+    target: '[data-tour="em-finalizacao-fase-acoes"]',
+  },
+];
+
+const CAP9_EXTRATO: PassoEsperado[] = [
+  {
+    title: "Seis números que contam o mês",
+    progress: "1 / 4",
+    route: /\/venda\/extrato$/,
+    target: ".kpi-grid",
+  },
+  {
+    title: "Estorno é comissão que volta",
+    progress: "2 / 4",
+    route: /\/venda\/extrato$/,
+    target: '[data-tour="extrato-estornos"]',
+  },
+  {
+    title: "Venda por venda",
+    progress: "3 / 4",
+    route: /\/venda\/extrato$/,
+    target: ".table-pipe.mtable",
+  },
+  {
+    title: "Filtrar por período e status",
+    progress: "4 / 4",
+    route: /\/venda\/extrato$/,
+    target: '[data-tour="extrato-filtros"]',
+  },
+];
+
+const CAP10_MENSAGENS: PassoEsperado[] = [
+  {
+    title: "Textos aprovados, já preenchidos",
+    progress: "1 / 3",
+    route: /\/venda\/mensagens-prontas$/,
+  },
+  {
+    title: "Organizadas pelo momento da conversa",
+    progress: "2 / 3",
+    route: /\/venda\/mensagens-prontas$/,
+    target: ".msg-cat-bar",
+  },
+  {
+    title: "Copiar ou abrir no WhatsApp",
+    progress: "3 / 3",
+    route: /\/venda\/mensagens-prontas$/,
+    target: ".msg-card",
+  },
+];
+
+async function trySpotlightAround(page: Page, selector: string): Promise<boolean> {
+  try {
+    const target = page.locator(selector).first();
+    await expect(target).toBeVisible({ timeout: 4_000 });
+    await expect(page.locator(".tour-spotlight")).toBeVisible({ timeout: 4_000 });
+    await expect
+      .poll(
+        async () => {
+          const [spotlightBox, targetBox] = await Promise.all([
+            page.locator(".tour-spotlight").boundingBox(),
+            target.boundingBox(),
+          ]);
+          if (!spotlightBox || !targetBox) return false;
+          return (
+            spotlightBox.x <= targetBox.x + 1 &&
+            spotlightBox.y <= targetBox.y + 1 &&
+            spotlightBox.x + spotlightBox.width >= targetBox.x + targetBox.width - 1 &&
+            spotlightBox.y + spotlightBox.height >= targetBox.y + targetBox.height - 1
+          );
+        },
+        { timeout: 4_000 },
+      )
+      .toBe(true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function percorrerCapitulo(
+  page: Page,
+  dialog: Locator,
+  passos: PassoEsperado[],
+  falhas: string[],
+  capituloLabel: string,
+) {
+  for (let i = 0; i < passos.length; i++) {
+    const passo = passos[i];
+    if (i > 0) {
+      await dialog
+        .getByRole("button", { name: /^Próximo$|^Próximo capítulo$|^Terminar tour$/ })
+        .click();
+    }
+    await expect(page.locator(".tour-host")).toHaveAttribute("aria-busy", "false", {
+      timeout: 10_000,
+    });
+    await expect(dialog.getByRole("heading", { name: passo.title })).toBeVisible();
+    await expect(dialog.locator(".progress")).toHaveText(passo.progress);
+    await expect(page).toHaveURL(passo.route);
+    if (passo.target) {
+      const ok = await trySpotlightAround(page, passo.target);
+      if (!ok) falhas.push(`${capituloLabel} · "${passo.title}" (${passo.target})`);
+    }
+  }
+}
+
+test.describe("tour completo V12.3.10 (vendedor)", () => {
+  let vendedor: VendedorComTutorial;
+
+  test.beforeAll(async () => {
+    vendedor = await criarVendedorComTutorial();
+  });
+
+  test.afterAll(async () => {
+    await limparVendedorComTutorial(vendedor);
+  });
+
+  test("percorre os 10 capítulos, confere rotas/spotlight e não dispara escrita nenhuma", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await loginAs(page, vendedor.email, vendedor.senha);
+    await expect(page).toHaveURL(/\/inicio/, { timeout: 15_000 });
+
+    const escritas: string[] = [];
+    page.on("request", (request) => {
+      const method = request.method();
+      if (!["POST", "PUT", "PATCH", "DELETE"].includes(method)) return;
+      const url = request.url();
+      if (url.includes("/realtime/v1/") || url.includes("/rest/v1/rpc/presence_set")) return;
+      if (url.includes("/rest/v1/") || url.includes("/_serverFn/")) {
+        escritas.push(`${method} ${url}`);
+      }
+    });
+
+    await abrirTutorial(page);
+    await expect(page.locator(".tour-welcome .ravatar")).toHaveText("C");
+    await expect(page.locator(".tour-welcome")).toContainText("CoteCerto");
+    await expect(page.locator(".tour-welcome")).toContainText("O DIA A DIA DO VENDEDOR");
+    await expect(page.locator(".tour-welcome h2")).toHaveText("Vou te mostrar o sistema inteiro");
+    await page.getByRole("button", { name: /Começar do início/ }).click();
+
+    const falhas: string[] = [];
+    let dialog = page.locator(".tour-tip");
+
+    await percorrerCapitulo(page, dialog, CAP1_HOME_ATENDER, falhas, "Cap.1 O lead chegou");
+    await dialog.getByRole("button", { name: "Próximo capítulo" }).click();
+    await expect(
+      page.locator(".tour-end").getByRole("heading", { name: "Capítulo 1 concluído" }),
+    ).toBeVisible();
+    await page.locator(".tour-end").getByRole("button", { name: "Próximo capítulo" }).click();
+
+    dialog = page.locator(".tour-tip");
+    await percorrerCapitulo(page, dialog, CAP2_AGENDA, falhas, "Cap.2 Minha agenda");
+    await dialog.getByRole("button", { name: "Próximo capítulo" }).click();
+    await expect(
+      page.locator(".tour-end").getByRole("heading", { name: "Capítulo 2 concluído" }),
+    ).toBeVisible();
+    // Cap.3 ("A jornada em 7 etapas") depende do wizard real com um rascunho
+    // em cada etapa — coberto separadamente pelo teste "previews do Novo
+    // lead..." acima. Aqui só confirmamos que o capítulo abre e navega para
+    // o Lead Manual, sem percorrer os 11 passos (evita duplicar fixture).
+    await page.locator(".tour-end").getByRole("button", { name: "Próximo capítulo" }).click();
+    dialog = page.locator(".tour-tip");
+    await expect(
+      dialog.getByRole("heading", { name: "A trilha inteira, sempre à vista" }),
+    ).toBeVisible();
+    await expect(dialog.locator(".progress")).toHaveText("1 / 11");
+    await expect(page).toHaveURL(/\/venda\/novo-lead$/);
+    const capitulo3Alvo = await trySpotlightAround(page, ".stepper");
+    if (!capitulo3Alvo)
+      falhas.push('Cap.3 A jornada em 7 etapas · "A trilha inteira, sempre à vista" (.stepper)');
+    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
+
+    // Pula direto para o capítulo 4 (Cálculo) via posicionamento — mesmo
+    // mecanismo usado no teste "roteiro de vendas" acima.
+    await posicionarTutorial(page, vendedor.userId, "sales", 3, 0);
+    dialog = page.locator(".tour-tip");
+    await percorrerCapitulo(page, dialog, CAP4_CALCULO, falhas, "Cap.4 O cálculo");
+    await dialog.getByRole("button", { name: "Próximo capítulo" }).click();
+    await expect(
+      page.locator(".tour-end").getByRole("heading", { name: "Capítulo 4 concluído" }),
+    ).toBeVisible();
+    await page.locator(".tour-end").getByRole("button", { name: "Próximo capítulo" }).click();
+
+    dialog = page.locator(".tour-tip");
+    await percorrerCapitulo(page, dialog, CAP5_TRANSMISSAO, falhas, "Cap.5 Transmissão");
+    // O selo "Exemplo do tutorial" precisa estar visível nos três previews
+    // estáticos da Etapa 7 (Dados/Confirmação/Transmitida).
+    await expect(page.getByText("Exemplo do tutorial")).toBeVisible();
+    await dialog.getByRole("button", { name: "Próximo capítulo" }).click();
+    await expect(
+      page.locator(".tour-end").getByRole("heading", { name: "Capítulo 5 concluído" }),
+    ).toBeVisible();
+    await page.locator(".tour-end").getByRole("button", { name: "Próximo capítulo" }).click();
+
+    dialog = page.locator(".tour-tip");
+    await percorrerCapitulo(page, dialog, CAP6_EMISSAO, falhas, "Cap.6 Emissão & histórico");
+    await dialog.getByRole("button", { name: "Próximo capítulo" }).click();
+    await expect(
+      page.locator(".tour-end").getByRole("heading", { name: "Capítulo 6 concluído" }),
+    ).toBeVisible();
+    await page.locator(".tour-end").getByRole("button", { name: "Próximo capítulo" }).click();
+
+    dialog = page.locator(".tour-tip");
+    await percorrerCapitulo(page, dialog, CAP7_PIPELINE, falhas, "Cap.7 O Pipeline anda sozinho");
+    await dialog.getByRole("button", { name: "Próximo capítulo" }).click();
+    await expect(
+      page.locator(".tour-end").getByRole("heading", { name: "Capítulo 7 concluído" }),
+    ).toBeVisible();
+    await page.locator(".tour-end").getByRole("button", { name: "Próximo capítulo" }).click();
+
+    dialog = page.locator(".tour-tip");
+    await percorrerCapitulo(page, dialog, CAP8_FASES, falhas, "Cap.8 Os atalhos por fase");
+    await dialog.getByRole("button", { name: "Próximo capítulo" }).click();
+    await expect(
+      page.locator(".tour-end").getByRole("heading", { name: "Capítulo 8 concluído" }),
+    ).toBeVisible();
+    await page.locator(".tour-end").getByRole("button", { name: "Próximo capítulo" }).click();
+
+    dialog = page.locator(".tour-tip");
+    await percorrerCapitulo(page, dialog, CAP9_EXTRATO, falhas, "Cap.9 Extrato de vendas");
+    await dialog.getByRole("button", { name: "Próximo capítulo" }).click();
+    await expect(
+      page.locator(".tour-end").getByRole("heading", { name: "Capítulo 9 concluído" }),
+    ).toBeVisible();
+    await page.locator(".tour-end").getByRole("button", { name: "Próximo capítulo" }).click();
+
+    dialog = page.locator(".tour-tip");
+    await percorrerCapitulo(page, dialog, CAP10_MENSAGENS, falhas, "Cap.10 Mensagens prontas");
+    await dialog.getByRole("button", { name: "Terminar tour" }).click();
+    await expect(
+      page.locator(".tour-end").getByRole("heading", { name: "Tutorial concluído!" }),
+    ).toBeVisible();
+    await page.locator(".tour-end").getByRole("button", { name: "Encerrar por agora" }).click();
+
+    expect.soft(falhas, "passos com spotlight que não encontrou o alvo").toEqual([]);
+    expect(escritas, "o tour não pode escrever no Supabase nem chamar server function").toEqual([]);
+  });
+});
+
 test.describe("abertura das demais experiências", () => {
   let supervisor: Persona;
   let individual: Persona;
@@ -644,9 +933,9 @@ test.describe("abertura das demais experiências", () => {
     await expect(page.locator(".tour-welcome")).toContainText("ÁREA DA FRANQUIA (INDIVIDUAL)");
     await page
       .locator(".tour-welcome")
-      .getByRole("button", { name: /Bem-vinda ao CoteCerto/ })
+      .getByRole("button", { name: /Primeiro dia no CoteCerto/ })
       .click();
-    await esperarPasso(page, "Bem-vinda à Supper", "1 / 13");
+    await esperarPasso(page, "O menu é o ciclo da venda", "1 / 8");
   });
 
   test("Franquia Full recebe apresentação e roteiro de grupo", async ({ page }) => {
