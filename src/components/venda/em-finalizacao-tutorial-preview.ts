@@ -15,6 +15,8 @@ export const EM_FINALIZACAO_EXEMPLO_ROW: Row = {
   mensagem: null,
   seguradora: "Seguradora do exemplo",
   premio: 3510,
+  parcelasNum: null,
+  valorParcela: null,
   formaPagamento: "Boleto Bancário",
   criadoEm: "2026-05-20T16:12:00Z",
   propostaId: null,

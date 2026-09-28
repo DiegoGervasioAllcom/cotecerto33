@@ -1291,12 +1291,14 @@ export type Database = {
           motivo: string | null;
           numero_cotacao_portal: string | null;
           parcelas: string | null;
+          parcelas_num: number | null;
           premio: number | null;
           produto: string | null;
           produto_id: string | null;
           proposta_id: string | null;
           seguradora: string | null;
           status: string;
+          valor_parcela: number | null;
         };
         Insert: {
           capturado_em?: string | null;
@@ -1308,12 +1310,14 @@ export type Database = {
           motivo?: string | null;
           numero_cotacao_portal?: string | null;
           parcelas?: string | null;
+          parcelas_num?: number | null;
           premio?: number | null;
           produto?: string | null;
           produto_id?: string | null;
           proposta_id?: string | null;
           seguradora?: string | null;
           status?: string;
+          valor_parcela?: number | null;
         };
         Update: {
           capturado_em?: string | null;
@@ -1325,12 +1329,14 @@ export type Database = {
           motivo?: string | null;
           numero_cotacao_portal?: string | null;
           parcelas?: string | null;
+          parcelas_num?: number | null;
           premio?: number | null;
           produto?: string | null;
           produto_id?: string | null;
           proposta_id?: string | null;
           seguradora?: string | null;
           status?: string;
+          valor_parcela?: number | null;
         };
         Relationships: [
           {
@@ -5071,6 +5077,14 @@ export type Database = {
       fn_pode_ver_solicitacao_desconto: {
         Args: { p_solicitante: string };
         Returns: boolean;
+      };
+      fn_premio_total_de_parcelas: {
+        Args: { p_texto: string };
+        Returns: {
+          parcelas_num: number;
+          premio_total: number;
+          valor_parcela: number;
+        }[];
       };
       fn_produtos_padrao: { Args: { _bloco: string }; Returns: string[] };
       fn_profile_acesso_por_empresa: {

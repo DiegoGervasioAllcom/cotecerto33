@@ -27,12 +27,20 @@ export function diasParaExpirar(criadoEm: string) {
 
 export function expiraChip(criadoEm: string) {
   const d = diasParaExpirar(criadoEm);
-  if (d <= 0)
+  if (d === 0)
     return (
       <span className="chip chip-alert" style={{ minWidth: 72 }}>
         Hoje
       </span>
     );
+  if (d < 0) {
+    const dias = Math.abs(d);
+    return (
+      <span className="chip chip-alert" style={{ minWidth: 72 }}>
+        Vencida há {dias} {dias === 1 ? "dia" : "dias"}
+      </span>
+    );
+  }
   if (d <= 3)
     return (
       <span className="chip chip-alert" style={{ minWidth: 72 }}>

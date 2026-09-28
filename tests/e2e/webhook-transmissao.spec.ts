@@ -69,6 +69,25 @@ const CARD_BETA = {
   coberturasBasicas: { Casco: "110% FIPE" },
 };
 
+// Ajustes pós-deploy V12 (item 2): produto só parcelado (sem preço à vista) —
+// base do prêmio = nº de parcelas × valor da parcela (nunca o valor de 1
+// parcela isolada, ver `calcularPremioTransmissao`/`fn_premio_total_de_parcelas`).
+const CARD_SO_PARCELADO = {
+  index: 30,
+  seguradora: "Seguradora Suhai E2E",
+  produto: "Roubo e Furto c/ Assistência",
+  nome: "Plano Básico",
+  opcoes: [
+    {
+      tipo: "Roubo e furto",
+      franquia: "Sem franquia",
+      parcelas: "em 12x de R$ 463,20",
+    },
+  ],
+  formaPagamento: "Boleto",
+  coberturasBasicas: { Casco: "Roubo e furto" },
+};
+
 /** Cria a fixture já calculada (webhook de cotação) e abre o Passo 6 logado. */
 async function prepararCotacaoCalculada(page: Page): Promise<CotacaoQuiverFixture> {
   const fixture = await criarCotacaoTransmissaoFixture();
@@ -268,6 +287,100 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       await expect(page.locator(".calc-lista")).toBeVisible();
       await expect(page.getByText(CARD_ALFA.seguradora).first()).toBeVisible();
       await expect(page.getByText(CARD_BETA.seguradora).first()).toBeVisible();
+    } finally {
+      await limparCotacaoTransmissaoFixture(fixture);
+    }
+  });
+
+  // Ajustes pós-deploy V12 (item 3): a oferta só parcelada precisa mostrar o
+  // MESMO total (nº de parcelas × valor da parcela) tanto em Em finalização
+  // quanto em Emissão — nunca o valor de 1 parcela isolada.
+  test("oferta só parcelada: Em finalização e Emissão mostram o mesmo total (12x de R$ 463,20 = R$ 5.558,40)", async ({
+    page,
+  }) => {
+    const fixture = await criarCotacaoTransmissaoFixture();
+    try {
+      const res = await page.request.post("/api/webhooks/quiver", {
+        headers: QUIVER_WEBHOOK_HEADERS,
+        data: { cotacaoId: fixture.cotacaoId, temPremios: true, cards: [CARD_SO_PARCELADO] },
+      });
+      expect(res.ok()).toBeTruthy();
+
+      await loginAs(page, fixture.email, fixture.senha);
+      await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
+      await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
+      await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+        timeout: 10_000,
+      });
+
+      // A tentativa real (`cotacao_transmissoes`) já nasce com os 3 campos
+      // que `transmitirPropostaQuiver` calcularia no servidor (T.2) —
+      // simulado aqui porque o robô real não roda no teste.
+      const tentativaId = await criarTentativaTransmissaoEnviada({
+        cotacaoId: fixture.cotacaoId,
+        seguradora: CARD_SO_PARCELADO.seguradora,
+        produto: CARD_SO_PARCELADO.produto,
+        formaPagamento: CARD_SO_PARCELADO.formaPagamento,
+        parcelas: CARD_SO_PARCELADO.opcoes[0].parcelas,
+        premio: 5558.4,
+        parcelasNum: 12,
+        valorParcela: 463.2,
+      });
+      await page.route("**/_serverFn/**", async (route) => {
+        const body = route.request().postData() ?? "";
+        if (body.includes(fixture.cotacaoId) && body.includes("formaPagamento")) {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              result: { ok: true, numeroCotacao: "N-E2E-PARCELADO", tentativaId },
+            }),
+          });
+          return;
+        }
+        await route.continue();
+      });
+
+      await page.getByTitle(`Gerar proposta (${CARD_SO_PARCELADO.seguradora})`).click();
+      await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
+      await confirmarDadosComplementaresTransmissao(page);
+      await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible();
+      await page.unroute("**/_serverFn/**");
+
+      // Em finalização: linha com status "enviada" antes do webhook — a
+      // célula PRÊMIO já mostra o total com o parcelamento.
+      await page.goto("/venda/em-finalizacao");
+      const linhaFinalizacao = page
+        .locator('[data-tour="em-finalizacao-lista"] tbody tr')
+        .filter({ hasText: CARD_SO_PARCELADO.seguradora });
+      await expect(linhaFinalizacao).toBeVisible({ timeout: 10_000 });
+      await expect(linhaFinalizacao).toContainText(/5\.558,40/);
+      await expect(linhaFinalizacao).toContainText(/12x de/);
+      await expect(linhaFinalizacao).toContainText(/463,20/);
+
+      // Webhook de sucesso: proposta nasce com o mesmo detalhamento.
+      const resTransmissao = await page.request.post("/api/webhooks/quiver-transmissao", {
+        headers: QUIVER_TRANSMISSAO_WEBHOOK_HEADERS,
+        data: {
+          cotacaoId: fixture.cotacaoId,
+          transmitido: true,
+          numeroCotacao: "N-E2E-PARCELADO",
+        },
+      });
+      expect(resTransmissao.ok()).toBeTruthy();
+
+      // Emissão: mesma proposta, mesmo total/parcelamento. O webhook já
+      // grava `propostas` de forma síncrona (`registrar_resultado_transmissao_quiver`)
+      // antes de responder — sem precisar reabrir o wizard (a página, aqui,
+      // já navegou para Em finalização acima).
+      await page.goto("/venda/emissao");
+      const linhaEmissao = page
+        .locator('[data-tour="emissao-aguardando"] tbody tr')
+        .filter({ hasText: CARD_SO_PARCELADO.seguradora });
+      await expect(linhaEmissao).toBeVisible({ timeout: 10_000 });
+      await expect(linhaEmissao).toContainText(/5\.558,40/);
+      await expect(linhaEmissao).toContainText(/12x/);
+      await expect(linhaEmissao).toContainText(/463,20/);
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
     }

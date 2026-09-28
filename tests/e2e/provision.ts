@@ -2036,6 +2036,8 @@ export async function criarTentativaTransmissaoEnviada(opts: {
   formaPagamento: string;
   parcelas?: string;
   premio?: number;
+  parcelasNum?: number;
+  valorParcela?: number;
 }): Promise<string> {
   const { data, error } = await admin
     .from("cotacao_transmissoes")
@@ -2046,6 +2048,8 @@ export async function criarTentativaTransmissaoEnviada(opts: {
       forma_pagamento: opts.formaPagamento,
       parcelas: opts.parcelas ?? null,
       premio: opts.premio ?? null,
+      parcelas_num: opts.parcelasNum ?? null,
+      valor_parcela: opts.valorParcela ?? null,
       status: "enviada",
     })
     .select("id")
