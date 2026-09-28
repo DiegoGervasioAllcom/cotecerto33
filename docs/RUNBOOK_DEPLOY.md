@@ -488,6 +488,41 @@ Observações (não bloqueiam, a investigar):
   provavelmente parcela × total; conferir e rotular.
 - Em negociação: cotações criadas em 18–19/08 aparecem com "Expira em: Hoje".
 
+**28/09/2026 (2ª rodada) — migration `20260928090000_premio_base_soma_parcelas`
+aplicada (PR #240, ajustes do smoke test):** antes, consulta só de leitura em
+`propostas` × `cotacao_transmissoes` mostrou uma proposta afetada pelo bug do
+prêmio só parcelado: **PRP-00001** com `premio = 623.92` (1 parcela de
+"em 12x de R$ 623,92"), sem `comissao_valor` e sem lançamentos em
+`comissao_lancamentos`; PRP-00023 e PRP-00046 corretas (à vista). Migration
+aplicada num script único em transação (conteúdo do arquivo + `insert` no
+histórico), ensaiado antes no banco local com `rollback`; saída sem `ERROR`,
+`COMMIT`, histórico com `20260928054400` e `20260928090000`. `supabase-rest`
+reiniciado. App publicado via `deploy.sh` com a tag `sha-e8eb361` (rollback:
+`sha-5294247`); health check do script OK (HTTP 200).
+
+Correções de dados (em transação, com trava):
+- **PRP-00001:** `premio = 7487.04`, `parcelas = 12`, `valor_parcela = 623.92`
+  (12 × 623,92), só se `premio` ainda fosse 623.92; conferido depois que
+  nenhum lançamento de comissão foi criado. Resultado `UPDATE 1`.
+- **Tentativas antigas em `cotacao_transmissoes`:** as 13 sem `parcelas_num` e
+  com texto de parcelamento legível (não à vista) receberam `premio` = soma
+  das parcelas, `parcelas_num` e `valor_parcela` via
+  `fn_premio_total_de_parcelas`, depois de uma prévia só de leitura conferida
+  linha a linha. Resultado `UPDATE 13`. São tentativas que não geraram
+  proposta nova — não afetam comissão.
+
+Gotcha: no bash do servidor, `!` dentro de aspas duplas dispara a expansão do
+histórico (`-bash: !~: event not found`) e o comando não roda. Passar SQL por
+heredoc com delimitador entre aspas (`<<'SQL'`) ou evitar `!~`.
+
+Smoke test pelo navegador (vendedor real, só navegando, sem erro no console):
+Pipeline abre em "Ativos" (sem a coluna Perdido) e o cabeçalho vem certo na
+primeira abertura ("27 de 27 leads em andamento"); Em negociação mostra
+"Vencida há 35/36 dias" nas cotações de agosto; Emissão mostra PRP-00001
+"R$ 7.487,04 · 12x R$ 623,92"; Em finalização mostra o total com o
+parcelamento das últimas tentativas ("R$ 1.287,75 · 3x de R$ 429,25",
+"R$ 4.025,76 · 12x de R$ 335,48").
+
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
