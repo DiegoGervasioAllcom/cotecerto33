@@ -674,25 +674,6 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     const numeroCotacao =
       raw && typeof raw.numeroCotacao === "string" ? raw.numeroCotacao : undefined;
 
-    // Regra 2 do AGENTS.md (dinheiro roda no servidor): o `premio` do front é
-    // só conferência — o valor que vale é recalculado aqui, a partir do
-    // `quiver_resultado_raw` já persistido nesta cotação, localizando o
-    // MESMO card/opção que o vendedor escolheu (seguradora + produtoId +
-    // forma de pagamento + bundle da opção + texto de parcelas). Sem o
-    // resultado bruto, ou sem localizar a opção com segurança, a transmissão
-    // é recusada — nunca grava um valor adivinhado.
-    const premioCalculado = calcularPremioTransmissao(raw, {
-      seguradora: data.seguradora,
-      produtoId: data.produtoId,
-      produto: data.produto,
-      formaPagamento: data.formaPagamento,
-      parcelasEscolhidas: data.parcelas ?? "",
-      opcao: data.opcao ?? {},
-    });
-    if (!premioCalculado.ok) {
-      throw new Error(premioCalculado.erro);
-    }
-
     const segurado = Array.isArray(cotacao.segurado) ? cotacao.segurado[0] : cotacao.segurado;
     const veiculo = Array.isArray(cotacao.veiculo) ? cotacao.veiculo[0] : cotacao.veiculo;
 
@@ -756,6 +737,27 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
         ? undefined
         : data.dadosComplementares?.enderecoCorrespondencia?.uf,
     };
+
+    // Regra 2 do AGENTS.md (dinheiro roda no servidor): o `premio` do front é
+    // só conferência — o valor que vale é recalculado aqui, a partir do
+    // `quiver_resultado_raw` já persistido nesta cotação, localizando o
+    // MESMO card/opção que o vendedor escolheu (seguradora + produtoId +
+    // forma de pagamento + bundle da opção + texto de parcelas). Sem o
+    // resultado bruto, ou sem localizar a opção com segurança, a transmissão
+    // é recusada — nunca grava um valor adivinhado. Feito só agora (depois de
+    // dono/`pode_transmitir`/config/número do portal) para preservar a ordem
+    // e as mensagens de erro das verificações anteriores.
+    const premioCalculado = calcularPremioTransmissao(raw, {
+      seguradora: data.seguradora,
+      produtoId: data.produtoId,
+      produto: data.produto,
+      formaPagamento: data.formaPagamento,
+      parcelasEscolhidas: data.parcelas ?? "",
+      opcao: data.opcao ?? {},
+    });
+    if (!premioCalculado.ok) {
+      throw new Error(premioCalculado.erro);
+    }
 
     // T.9: registra a tentativa ANTES de chamar o robô — é essa linha que o
     // front vai fazer polling (por `tentativaId`) até o webhook (Onda 2)
