@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { maskCpfCnpj, maskTelefone as maskPhone } from "@/lib/masks";
+import { embed1a1 } from "@/lib/postgrest-embed";
 import { useGroupScope } from "@/lib/group-scope";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { salesAlertSearchSchema } from "@/lib/dashboard-alerts";
@@ -38,9 +39,10 @@ type Proposta = {
   transmissao_status: string | null;
   transmissao_motivo: string | null;
   transmissao_mensagem: string | null;
+  // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
   cotacoes: {
-    segurado: { nome: string | null; cpf_cnpj: string | null; celular: string | null }[] | null;
-    seguro: { tipo_seguro: string | null }[] | null;
+    segurado: { nome: string | null; cpf_cnpj: string | null; celular: string | null } | null;
+    seguro: { tipo_seguro: string | null } | null;
   } | null;
 };
 
@@ -211,7 +213,7 @@ function Page() {
     ];
     const lines = [headers.join(";")];
     for (const p of filtered) {
-      const seg = p.cotacoes?.segurado?.[0];
+      const seg = embed1a1(p.cotacoes?.segurado);
       const tipo = (p.tipo_venda || "novo").toLowerCase() === "renovacao" ? "Renovação" : "Novo";
       const status = classify(p);
       const statusLbl =
@@ -399,7 +401,7 @@ function Page() {
             </thead>
             <tbody>
               {filtered.map((p) => {
-                const seg = p.cotacoes?.segurado?.[0];
+                const seg = embed1a1(p.cotacoes?.segurado);
                 const tipo =
                   (p.tipo_venda || "novo").toLowerCase() === "renovacao" ||
                   (p.tipo_venda || "").toLowerCase() === "renovação"

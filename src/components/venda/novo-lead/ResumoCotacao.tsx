@@ -1,5 +1,4 @@
 import type { Form } from "@/components/venda/novo-lead/types";
-import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 
 type Props = {
   f: Form;
@@ -10,7 +9,7 @@ type Props = {
   camposFaltantes: string[];
   setStep: React.Dispatch<React.SetStateAction<number>>;
   doSimularCalculo: () => void;
-  persistir: (extra?: { premios?: ResultadoCalculo[] }) => Promise<void>;
+  persistir: (overrides?: { seguradorasSel?: string[] }) => Promise<void>;
   saveState: "idle" | "saving" | "saved" | "error";
   lastSavedAt: Date | null;
   cotacaoId: string | null;

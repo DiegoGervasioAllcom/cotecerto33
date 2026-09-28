@@ -35,7 +35,13 @@ test.describe("regressões da auditoria visual V11", () => {
       await esperarLogin(page);
 
       await abrirSemRedirecionar(page, "/operacao/pipeline-geral");
-      await expect(page.getByText("FIAT UNO 2020")).toBeVisible({ timeout: 15_000 });
+      // Matriz enxerga leads de todo o sistema (inclusive de outros specs
+      // rodando em paralelo, que usam o mesmo veículo fixo da fixture) —
+      // escopar ao card do próprio lead pelo nome único do cliente evita
+      // "strict mode violation" por texto duplicado.
+      const card = page.getByRole("button", { name: vendedor.leadNome });
+      await expect(card).toBeVisible({ timeout: 15_000 });
+      await expect(card.getByText("FIAT UNO 2020")).toBeVisible();
       await expect(page.getByText(/Objects are not valid as a React child/)).toHaveCount(0);
     } finally {
       if (vendedor) await limparVendedorComLead(vendedor);

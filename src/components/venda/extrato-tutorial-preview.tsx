@@ -117,7 +117,7 @@ export function ExtratoTutorialSalePreview() {
       style={{ padding: 0, overflow: "hidden" }}
       aria-readonly="true"
     >
-      <table className="table-pipe extrato-table">
+      <table className="table-pipe mtable" style={{ minWidth: 800 }}>
         <thead>
           <tr>
             <th>DATA</th>

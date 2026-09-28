@@ -62,7 +62,7 @@ export function TransmissaoConfirmacao({
         </div>
       </div>
 
-      <div className="acc-sol" style={{ marginBottom: 16 }}>
+      <div className="acc-sol" data-tour="transmissao-resumo" style={{ marginBottom: 16 }}>
         <div className="row" style={{ gap: 28, flexWrap: "wrap", alignItems: "center" }}>
           <div>
             <span className="muted small">Cotação</span>
@@ -102,7 +102,11 @@ export function TransmissaoConfirmacao({
         </div>
       </div>
 
-      <div className="wizard-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+      <div
+        className="wizard-grid"
+        data-tour="transmissao-confirmacao"
+        style={{ gridTemplateColumns: "1fr 1fr", gap: 18 }}
+      >
         <div>
           <div className="acc-sec-t">Informações que serão enviadas</div>
           <table className="table-pipe ff-table">
@@ -159,6 +163,7 @@ export function TransmissaoConfirmacao({
           <button
             className="btn btn-yellow"
             type="button"
+            data-tour="transmissao-efetivar"
             onClick={onConfirmarTransmitir}
             disabled={enviando}
           >

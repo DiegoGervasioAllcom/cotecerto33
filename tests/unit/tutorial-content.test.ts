@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { tutorialDefinitions } from "@/components/tutorial/tutorial-content";
 
 const CONTRACT = {
-  sales: { content: 65, endings: 8, total: 73, spotlights: 56 },
+  sales: { content: 61, endings: 10, total: 71, spotlights: 55 },
   matriz: { content: 44, endings: 10, total: 54, spotlights: 41 },
   group: { content: 16, endings: 5, total: 21, spotlights: 14 },
 } as const;
@@ -30,8 +30,8 @@ describe("contrato dos três roteiros do tutorial V10", () => {
       definition.chapters.map((chapter) => chapter.outro),
     );
 
-    expect(steps.length + endings.length).toBe(148);
-    expect(steps.filter((step) => step.target)).toHaveLength(111);
+    expect(steps.length + endings.length).toBe(146);
+    expect(steps.filter((step) => step.target)).toHaveLength(110);
     expect(steps.some((step) => step.target === ".page")).toBe(false);
   });
 
@@ -72,15 +72,21 @@ describe("contrato dos três roteiros do tutorial V10", () => {
     const steps = tutorialDefinitions.sales.chapters.flatMap((chapter) => chapter.steps);
     const preparationByTitle = new Map(steps.map((step) => [step.title, step.prepare]));
 
-    expect(preparationByTitle.get("Pronto para cotar")).toBe("lead-ready");
-    expect(preparationByTitle.get("A linha do tempo do aceite")).toBe("aceite-aceita");
-    expect(preparationByTitle.get("Conferência final dos dados")).toBe("aceite-aceita");
-    expect(preparationByTitle.get("Transmitir = oficializar a venda")).toBe("aceite-aceita");
-    expect(preparationByTitle.get("E se a seguradora pedir uma pendência?")).toBe(
-      "aceite-pendencia",
+    expect(preparationByTitle.get("Etapa 5 — comece por um plano pronto")).toBe("lead-step-4");
+    expect(preparationByTitle.get("A barra de contexto")).toBe("lead-calculo-lista");
+    expect(preparationByTitle.get("A lista comparativa é a visão de venda")).toBe(
+      "lead-calculo-lista",
     );
-    expect(preparationByTitle.get("Cada linha é uma venda sua")).toBe("extrato-venda");
-    expect(preparationByTitle.get("Campanhas ativas")).toBe("extrato-campanha");
-    expect(preparationByTitle.get("Quando o dinheiro entra")).toBe("extrato-pagamentos");
+    expect(preparationByTitle.get("Etapa 7 — os passos até a seguradora")).toBe(
+      "lead-transmissao-dados",
+    );
+    expect(preparationByTitle.get("Passo 2 — a última conferida")).toBe(
+      "lead-transmissao-confirmacao",
+    );
+    expect(preparationByTitle.get("Transmitida — o que você recebe de volta")).toBe(
+      "lead-transmitida",
+    );
+    expect(preparationByTitle.get("Estorno é comissão que volta")).toBe("extrato-venda");
+    expect(preparationByTitle.get("Venda por venda")).toBe("extrato-venda");
   });
 });

@@ -46,7 +46,12 @@ export function useFipe(marca: string, modelo: string, anoModelo: string, combus
   useEffect(() => {
     fetch(`${FIPE_BASE}/marcas`)
       .then((r) => r.json())
-      .then(setMarcas)
+      // A API pública devolve 429 (rate limit) com um corpo JSON de erro
+      // (`{ error: "..." }`, não um array) sem que o `fetch` chegue a
+      // rejeitar — sem essa checagem, `setMarcas` grava esse objeto e
+      // qualquer `.find`/`.some` subsequente (ex.: `buildPayload` do
+      // autosave) quebra com "marcas.find is not a function".
+      .then((j) => setMarcas(Array.isArray(j) ? j : []))
       .catch(() => setMarcas([]));
   }, []);
   // FIPE: modelos quando marca muda
@@ -71,7 +76,9 @@ export function useFipe(marca: string, modelo: string, anoModelo: string, combus
     (async () => {
       try {
         const rAnos = await fetch(`${FIPE_BASE}/marcas/${marca}/modelos/${modelo}/anos`);
-        const anos: AnoFipe[] = await rAnos.json();
+        const jAnos: unknown = await rAnos.json();
+        // A API pública devolve JSON de erro (ex. 429) em vez de lista.
+        const anos: AnoFipe[] = Array.isArray(jAnos) ? (jAnos as AnoFipe[]) : [];
         const ano = escolherAnoFipe(anos, anoModelo, combustivel);
         if (!ano) {
           if (!cancelado) setFipeValor("");

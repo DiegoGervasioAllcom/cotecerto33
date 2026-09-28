@@ -12,9 +12,18 @@ import { useConsultaPlaca } from "@/components/venda/novo-lead/hooks/useConsulta
 import { useConsultaCpf } from "@/components/venda/novo-lead/hooks/useConsultaCpf";
 import { useValidacaoEtapas } from "@/components/venda/novo-lead/hooks/useValidacaoEtapas";
 import { useSimulacaoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import { useRecalcularSeguradora } from "@/components/venda/novo-lead/hooks/useRecalcularSeguradora";
 import { useCotacaoRascunho } from "@/components/venda/novo-lead/hooks/useCotacaoRascunho";
+import {
+  useRetomarTransmissao,
+  useAplicarRetomadaTransmissao,
+  gravarTransmissaoOfertaSnapshot,
+  limparTransmissaoOfertaSnapshot,
+} from "@/components/venda/novo-lead/hooks/useRetomarTransmissao";
 import { useTutorialWizardPreview } from "@/components/venda/novo-lead/hooks/useTutorialWizardPreview";
 import { NovoLeadHeader } from "@/components/venda/novo-lead/NovoLeadHeader";
+import { FocoBarra } from "@/components/venda/foco-barra";
+import { useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
 import { StepSegurado } from "@/components/venda/novo-lead/steps/StepSegurado";
 import { StepSeguro, vigenciaAPartirDeHoje } from "@/components/venda/novo-lead/steps/StepSeguro";
 import { StepVeiculo } from "@/components/venda/novo-lead/steps/StepVeiculo";
@@ -33,13 +42,23 @@ import { ResumoCotacao } from "@/components/venda/novo-lead/ResumoCotacao";
 import { ClassificarPerdaModal } from "@/components/venda/novo-lead/ClassificarPerdaModal";
 import { LeadManualGate } from "@/components/venda/novo-lead/LeadManualGate";
 import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
+import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
+import { CalculoListaTutorialPreview } from "@/components/venda/calculo-lista-tutorial-preview";
+import {
+  TransmissaoConfirmacaoTutorialPreview,
+  TransmissaoDadosTutorialPreview,
+} from "@/components/venda/transmissao-tutorial-preview";
+import { TransmitidaTutorialPreview } from "@/components/venda/transmitida-tutorial-preview";
 
 export const Route = createFileRoute("/_authenticated/venda/novo-lead")({
   head: () => ({ meta: [{ title: "Lead Manual · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>): { id?: string; step?: number } => ({
+  validateSearch: (s: Record<string, unknown>): { id?: string; step?: number; foco?: string } => ({
     id: typeof s.id === "string" ? s.id : undefined,
     step:
       typeof s.step === "number" ? s.step : typeof s.step === "string" ? Number(s.step) : undefined,
+    // V12.3.11 — só a faixa "de onde você veio" no topo (sem destaque de
+    // linha: o wizard não tem uma lista pra destacar item nenhum).
+    foco: typeof s.foco === "string" ? s.foco : undefined,
   }),
   component: Page,
 });
@@ -61,6 +80,20 @@ const SEGURADORAS_SEM_ROBO = new Set([
 
 function Page() {
   const navigate = useNavigate();
+  const focoNavigate = useNavigate({ from: Route.fullPath });
+  const { foco: focoBusca } = Route.useSearch();
+  const foco = useFocoAoChegar(focoBusca, () => {
+    void focoNavigate({ search: (s) => ({ ...s, foco: undefined }) });
+  });
+  // V12: mantém a URL (`?step=`) em sincronia com o passo visível ao entrar
+  // na Etapa 7 / voltar ao Cálculo — sem isso, um F5 sempre relia o `step`
+  // da navegação original (ex.: o link "Continuar" de Em finalização manda
+  // `step=6` fixo, mas um "Voltar ao Cálculo" preso na URL antiga fazia o
+  // rascunho reimpor `step=5` depois da retomada já ter avançado pra 6; ver
+  // `useRetomarTransmissao.ts`).
+  function sincronizarStepNaUrl(next: number) {
+    void focoNavigate({ search: (s) => ({ ...s, step: next }), replace: true });
+  }
   const [step, setStep] = useState(0);
   const { visibleStep, setVisibleStep, showTutorialReady } = useTutorialWizardPreview(
     step,
@@ -250,6 +283,7 @@ function Page() {
   // não redeclaram um `prepare` próprio, então não dá pra usar só o valor
   // atual de `tutorialPreview` — teria buracos no meio da mesma jornada.
   const { isOpen: tutorialIsOpen } = useTutorialController();
+  const tutorialPreview = useTutorialPreview();
   const [leadManualDone, setLeadManualDone] = useState(!!routeId);
   const leadManualGateAtivo = !leadManualDone && !tutorialIsOpen;
   const { cotacaoId, saveState, lastSavedAt, loading, persistir } = useCotacaoRascunho({
@@ -297,10 +331,17 @@ function Page() {
     resultados,
     erro: erroCalculo,
     simularCalculo,
+    recalcularSeguradora,
     podeCalcular,
     camposFaltantes,
   } = useSimulacaoCalculo(f, cotacaoId, persistir);
-
+  // `.seg-acoes` · V12.3.6 — extraído em `useRecalcularSeguradora.ts` (regra 9).
+  const descontoAcoes = useRecalcularSeguradora({
+    cotacaoId,
+    resultados,
+    setF,
+    recalcularSeguradora,
+  });
   const {
     perdaOpen,
     setPerdaOpen,
@@ -314,6 +355,9 @@ function Page() {
   } = useClassificarPerda(cotacaoId, persistir);
 
   function doSimularCalculo() {
+    // Best-effort: os resultados anteriores (e a oferta escolhida sobre
+    // eles) deixam de valer quando o cálculo é refeito.
+    if (cotacaoId) void limparTransmissaoOfertaSnapshot(cotacaoId);
     void simularCalculo();
   }
 
@@ -321,6 +365,12 @@ function Page() {
   // escolhida precisa sobreviver à troca de passo do wizard (setVisibleStep).
   const POLL_TRANSMISSAO_MS = 4000;
   const [oferta, setOferta] = useState<OfertaTransmissao | null>(null);
+  // V12: em que sub-passo a Etapa 7 deve nascer — normalmente "dados", mas
+  // uma transmissão retomada (`useRetomarTransmissao`) pode reabrir direto
+  // em "resultado" (falha/transmitida/aguardando).
+  const [faseInicialTransmissao, setFaseInicialTransmissao] = useState<
+    "dados" | "confirmacao" | "pagamento" | "resultado"
+  >("dados");
   const [enviandoProposta, setEnviandoProposta] = useState(false);
   const [erroProposta, setErroProposta] = useState<string | null>(null);
   // Onda 3 (T.10): enquanto uma transmissão está em andamento, a Etapa 7
@@ -391,18 +441,45 @@ function Page() {
 
   function onEscolherOferta(escolha: OfertaTransmissao) {
     setOferta(escolha);
+    setFaseInicialTransmissao("dados");
     setErroProposta(null);
     setVisibleStep(6);
+    sincronizarStepNaUrl(6);
+    // Best-effort: snapshot da oferta escolhida (sem dado pessoal), pra
+    // reabrir a Etapa 7 em "Dados complementares" mesmo antes da primeira
+    // tentativa real de transmissão (ver `useRetomarTransmissao`).
+    if (cotacaoId) void gravarTransmissaoOfertaSnapshot(cotacaoId, escolha);
   }
 
-  // Etapa 7 só existe depois de escolher uma oferta no Cálculo (é estado local,
-  // não persiste no rascunho). Sem isso, reabrir uma cotação salva com
-  // `step_atual = 6` (autosave) ou clicar direto em "Transmissão" no Stepper
-  // deixaria o wizard-card em branco (nem StepTransmissao nem WizardFooter
-  // renderizam para visibleStep === 6 sem oferta).
-  useEffect(() => {
-    if (visibleStep === 6 && !oferta) setVisibleStep(5);
-  }, [visibleStep, oferta, setVisibleStep]);
+  // V12: reabre a Etapa 7 no ponto certo em vez de sempre voltar ao Cálculo
+  // (última tentativa em `cotacao_transmissoes` + snapshot em
+  // `cotacoes.transmissao_oferta`). Durante a resolução (`resolvendo`), o
+  // wizard-card mostra um "carregando" em vez de piscar o Cálculo.
+  //
+  // `loading` (rascunho) atrasa o início da busca da retomada, não só por
+  // otimização: o load do rascunho (`useCotacaoRascunho`) e a retomada
+  // disputam `setStep`, e o do rascunho é mais lento (5 tabelas). Sem
+  // esperar `loading` virar `false` antes de sequer buscar, a ordem de
+  // chegada era imprevisível — quando o rascunho resolvia DEPOIS da
+  // retomada, `setStep(routeStep ?? step_atual)` sobrescrevia o passo 6 de
+  // volta pro 5, e como a retomada só se aplica 1x por cotação, o wizard
+  // ficava preso no Cálculo mesmo com a transmissão em andamento de verdade.
+  const { resolvendo: resolvendoTransmissao, retomado: transmissaoRetomada } =
+    useRetomarTransmissao(cotacaoId, !tutorialPreview, loading);
+  useAplicarRetomadaTransmissao({
+    cotacaoId,
+    resolvendo: resolvendoTransmissao,
+    retomado: transmissaoRetomada,
+    oferta,
+    visibleStep,
+    setVisibleStep,
+    setOferta,
+    setFaseInicialTransmissao,
+    setTransmissaoEmAndamento,
+    setResultadoTransmissao,
+    iniciarPollingTransmissao,
+    sincronizarStepNaUrl,
+  });
 
   async function onTransmitir(dadosComplementares: DadosComplementaresTransmissao) {
     if (!cotacaoId || !oferta) return;
@@ -437,6 +514,29 @@ function Page() {
     }
   }
 
+  // Etapa 7 (Cálculo/Transmissão) do tutorial do vendedor: essas telas
+  // dependem de uma cotação calculada/transmitida de verdade — o tutorial
+  // mostra um exemplo estático (mesmo padrão de `aceite-tutorial-preview`),
+  // sem tocar no wizard real nem disparar cálculo/transmissão nenhuma.
+  if (
+    tutorialPreview === "lead-calculo-lista" ||
+    tutorialPreview === "lead-transmissao-dados" ||
+    tutorialPreview === "lead-transmissao-confirmacao" ||
+    tutorialPreview === "lead-transmitida"
+  ) {
+    return (
+      <AppShell title="Lead Manual">
+        <ProtoIcons />
+        {tutorialPreview === "lead-calculo-lista" && <CalculoListaTutorialPreview />}
+        {tutorialPreview === "lead-transmissao-dados" && <TransmissaoDadosTutorialPreview />}
+        {tutorialPreview === "lead-transmissao-confirmacao" && (
+          <TransmissaoConfirmacaoTutorialPreview />
+        )}
+        {tutorialPreview === "lead-transmitida" && <TransmitidaTutorialPreview />}
+      </AppShell>
+    );
+  }
+
   if (leadManualGateAtivo) {
     return (
       <AppShell title="Lead Manual">
@@ -449,6 +549,7 @@ function Page() {
               celular: dados.celular,
               placa: dados.placa,
               canalOrigem: dados.canal,
+              ramo: dados.ramo,
             }));
             setLeadManualDone(true);
           }}
@@ -462,6 +563,7 @@ function Page() {
     <AppShell title="Lead Manual">
       <ProtoIcons />
       <NovoLeadHeader onClassificarPerda={() => void abrirPerda()} />
+      <FocoBarra ativo={foco.ativo} fonte={foco.fonte} id={foco.id} onLimpar={foco.limpar} />
       {loading && (
         <div className="muted" style={{ marginBottom: 8 }}>
           Carregando rascunho…
@@ -531,6 +633,7 @@ function Page() {
               cotacaoId={cotacaoId}
               doSimularCalculo={doSimularCalculo}
               onEscolherOferta={onEscolherOferta}
+              descontoAcoes={descontoAcoes}
             />
           )}
 
@@ -546,11 +649,20 @@ function Page() {
               onVoltarCalculo={() => {
                 setOferta(null);
                 setErroProposta(null);
+                if (cotacaoId) void limparTransmissaoOfertaSnapshot(cotacaoId);
                 setVisibleStep(5);
+                sincronizarStepNaUrl(5);
               }}
               onTentarNovamente={tentarNovamenteTransmissao}
               onFaseChange={onFaseTransmissaoChange}
+              faseInicial={faseInicialTransmissao}
             />
+          )}
+
+          {visibleStep === 6 && !oferta && resolvendoTransmissao && (
+            <div className="muted" style={{ padding: 20, textAlign: "center" }}>
+              Carregando transmissão…
+            </div>
           )}
 
           {visibleStep <= 5 && (

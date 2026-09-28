@@ -38,6 +38,11 @@ describe("leadEtapaBucket", () => {
     expect(leadEtapaBucket({ ...baseInput, cotacaoStatus: "proposta" })).toBe("negociacao");
   });
 
+  it("cotacaoStatus em AGUARDANDO_CALCULO_STATUSES também cai em negociacao (V12.3.4)", () => {
+    expect(leadEtapaBucket({ ...baseInput, cotacaoStatus: "enviada_quiver" })).toBe("negociacao");
+    expect(leadEtapaBucket({ ...baseInput, cotacaoStatus: "erro_quiver" })).toBe("negociacao");
+  });
+
   it("cotacaoStatus em EM_COTACAO_STATUSES cai em cotacao", () => {
     expect(leadEtapaBucket({ ...baseInput, cotacaoStatus: "rascunho" })).toBe("cotacao");
   });

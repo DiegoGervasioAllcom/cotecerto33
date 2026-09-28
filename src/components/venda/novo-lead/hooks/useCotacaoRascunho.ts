@@ -201,13 +201,26 @@ export function useCotacaoRascunho(params: {
     };
   }
 
-  async function persistir() {
+  // `overrides.seguradorasSel` existe só para "Recalcular esta seguradora"
+  // (SegAcoes · V12.3.6): força a lista de seguradoras enviada nesta
+  // persistência sem depender do timing de `setF` (o autosave debounced usa
+  // o estado `f` normal — este parâmetro é só para quem precisa garantir a
+  // gravação ANTES de reenviar à Quiver, no mesmo clique).
+  async function persistir(overrides?: { seguradorasSel?: string[] }) {
     // só persiste se tiver algo identificador mínimo
     if (!f.cpf && !f.nome && !cotacaoId) return;
     setSaveState("saving");
+    // `buildPayload()` monta um objeto NOVO a cada chamada (não reaproveita
+    // referência entre invocações) — por isso é seguro mutar `payload.seguro`
+    // abaixo com o override sem risco de vazar pro autosave normal (que
+    // chama `buildPayload()` de novo, sem overrides, em cada disparo dele).
+    const payload = buildPayload();
+    if (overrides?.seguradorasSel) {
+      payload.seguro.seguradoras_sel = overrides.seguradorasSel;
+    }
     const { data, error } = await supabase.rpc("salvar_cotacao_rascunho", {
       p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
-      p_payload: buildPayload() as never,
+      p_payload: payload as never,
       // Canal capturado no gate "Lead Manual — origem" (só importa na criação
       // do lead; a RPC ignora em updates). Sempre explícito — nunca undefined,
       // pra não depender de resolução de overload no PostgREST.

@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { renewalsAlertSearchSchema } from "@/lib/dashboard-alerts";
+import { embed1a1 } from "@/lib/postgrest-embed";
 
 export const Route = createFileRoute("/_authenticated/operacao/renovacoes")({
   validateSearch: renewalsAlertSearchSchema,
@@ -25,8 +26,9 @@ type Proposta = {
   empresa_id: string | null;
   responsavel_id: string | null;
   lead_id: string | null;
+  // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
   cotacoes: {
-    segurado: { nome: string | null }[] | null;
+    segurado: { nome: string | null } | null;
   } | null;
 };
 type Empresa = { id: string; nome: string };
@@ -184,7 +186,7 @@ function Page() {
     ];
     const lines = [headers.join(";")];
     for (const r of rows) {
-      const cliente = r.cotacoes?.segurado?.[0]?.nome || "";
+      const cliente = embed1a1(r.cotacoes?.segurado)?.nome || "";
       lines.push(
         [
           cliente,
@@ -358,7 +360,7 @@ function Page() {
               </tr>
             )}
             {rows.map((r) => {
-              const cliente = r.cotacoes?.segurado?.[0]?.nome || "—";
+              const cliente = embed1a1(r.cotacoes?.segurado)?.nome || "—";
               const dias = daysUntil(r.vencimento);
               const sla = dias === null ? "" : dias <= 15 ? "alert" : dias <= 45 ? "warn" : "ok";
               const jaIniciada = iniciadas.has(r.id);

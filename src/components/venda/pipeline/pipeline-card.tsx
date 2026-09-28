@@ -20,6 +20,7 @@ export function PipelineCard({
   retorno,
   atenderRestanteMs,
   onOpen,
+  tour = false,
 }: {
   lead: PipelineLeadRow;
   /** `true` quando este ou outro card está em navegação (`openLead` em andamento). */
@@ -34,6 +35,8 @@ export function PipelineCard({
    */
   atenderRestanteMs: number | null;
   onOpen: () => void;
+  /** Primeiro card da primeira coluna: ganha `data-tour="pipeline-card"` pro tutorial. */
+  tour?: boolean;
 }) {
   const isPerdido = lead.etapa === "perdido";
   const ponto = pontoExato(lead);
@@ -49,6 +52,7 @@ export function PipelineCard({
       role="button"
       tabIndex={opening ? -1 : 0}
       aria-disabled={opening}
+      data-tour={tour ? "pipeline-card" : undefined}
       onClick={onOpen}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {

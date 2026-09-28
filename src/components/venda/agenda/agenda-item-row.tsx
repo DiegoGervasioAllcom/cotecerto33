@@ -9,6 +9,8 @@ import { LEMBRETE_TIPO_ICON } from "@/lib/schemas/lembrete.schema";
 function iconePorItem(item: AgendaItem): string {
   if (item.fonte === "retorno") return "i-clock";
   if (item.fonte === "risco") return "i-trending-up";
+  if (item.fonte === "seguradora") return "i-alert-triangle";
+  if (item.fonte === "aprovacao") return "i-award";
   return LEMBRETE_TIPO_ICON[item.tipoLembrete ?? "tarefa"];
 }
 
@@ -30,11 +32,12 @@ export function AgendaItemRow({
   onConcluir?: () => void;
 }) {
   const urgencia = classificarUrgencia(item.data);
-  const clicavel = item.fonte === "risco" || !!item.leadId;
+  const clicavel = item.fonte === "risco" || item.fonte === "seguradora" || !!item.leadId;
 
   return (
     <div
       className="action-row"
+      data-tour="agenda-item"
       role={clicavel ? "button" : undefined}
       tabIndex={clicavel ? 0 : undefined}
       onClick={clicavel ? onOpen : undefined}
@@ -68,6 +71,7 @@ export function AgendaItemRow({
           <button
             type="button"
             className="ic-mini"
+            data-tour="agenda-concluir"
             title="Marcar como feito"
             aria-label="Marcar como feito"
             disabled={busy}

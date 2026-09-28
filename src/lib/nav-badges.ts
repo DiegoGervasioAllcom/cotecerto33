@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Perfil } from "@/integrations/supabase/client";
 import { limiteRiscoISO } from "@/lib/agenda";
 import {
+  AGUARDANDO_CALCULO_STATUSES,
   EM_COTACAO_STATUSES,
   EM_NEGOCIACAO_STATUSES,
   TRANSMISSAO_EM_ABERTO_STATUSES,
@@ -118,38 +119,55 @@ async function countAgendaPendente(userId: string): Promise<number> {
   return (retornos.count ?? 0) + (risco.count ?? 0) + (lembretes.count ?? 0);
 }
 
-/** Contagem de cotações em preenchimento (mesmo filtro de em-cotacao.tsx). */
-async function countEmCotacaoPendente(): Promise<number> {
+/**
+ * Contagem de cotações em preenchimento do PRÓPRIO vendedor (mesmo filtro de
+ * status de em-cotacao.tsx). A RLS de `cotacoes` libera a empresa inteira;
+ * o `.eq("responsavel_id", uid)` aqui é a semântica do badge — igual à
+ * decisão já aplicada em `countEmNegociacaoPendente`.
+ */
+export async function countEmCotacaoPendente(userId: string): Promise<number> {
   const { count } = await supabase
     .from("cotacoes")
     .select("id", { count: "exact", head: true })
+    .eq("responsavel_id", userId)
     .in("status", EM_COTACAO_STATUSES);
   return count ?? 0;
 }
 
-/** Contagem de cotações em negociação (mesmo filtro de em-negociacao.tsx). */
-async function countEmNegociacaoPendente(): Promise<number> {
+/**
+ * Contagem de cotações em negociação do PRÓPRIO vendedor — soma as duas
+ * listas da tela "Em negociação" (`fetchCotacaoFinalizadaRows` +
+ * `fetchAguardandoCotacaoRows` em
+ * `src/components/venda/em-negociacao/queries.ts`): "Cotação finalizada"
+ * (`EM_NEGOCIACAO_STATUSES`) e "Aguardando cotação"
+ * (`AGUARDANDO_CALCULO_STATUSES`).
+ */
+export async function countEmNegociacaoPendente(userId: string): Promise<number> {
   const { count } = await supabase
     .from("cotacoes")
     .select("id", { count: "exact", head: true })
-    .in("status", EM_NEGOCIACAO_STATUSES);
+    .eq("responsavel_id", userId)
+    .in("status", [...EM_NEGOCIACAO_STATUSES, ...AGUARDANDO_CALCULO_STATUSES]);
   return count ?? 0;
 }
 
 /**
- * Contagem de tentativas de transmissão em aberto (mesmo filtro de
- * em-finalizacao.tsx), deduplicadas por `cotacao_id` — uma cotação pode ter
- * várias tentativas por retransmissão após falha, só a mais recente conta.
- * A dedupe acontece em memória sobre as últimas 500 tentativas (mesmo limite
- * da tela); se algum dia existirem mais de 500 tentativas simultâneas em
- * aberto, o número pode ficar levemente subcontado — limitação aceita, igual
- * à da própria lista.
+ * Contagem de tentativas de transmissão em aberto do PRÓPRIO vendedor (mesmo
+ * filtro de em-finalizacao.tsx), deduplicadas por `cotacao_id` — uma cotação
+ * pode ter várias tentativas por retransmissão após falha, só a mais recente
+ * conta. A dedupe acontece em memória sobre as últimas 500 tentativas (mesmo
+ * limite da tela); se algum dia existirem mais de 500 tentativas
+ * simultâneas em aberto, o número pode ficar levemente subcontado —
+ * limitação aceita, igual à da própria lista. O `cotacoes!inner` filtra pelo
+ * responsável antes do limite, para não perder tentativas de outros
+ * vendedores na paginação.
  */
-async function countEmFinalizacaoPendente(): Promise<number> {
+export async function countEmFinalizacaoPendente(userId: string): Promise<number> {
   const { data, error } = await supabase
     .from("cotacao_transmissoes")
-    .select("cotacao_id")
+    .select("cotacao_id, cotacoes!inner(responsavel_id)")
     .in("status", TRANSMISSAO_EM_ABERTO_STATUSES)
+    .eq("cotacoes.responsavel_id", userId)
     .order("criado_em", { ascending: false })
     .limit(500);
   if (error) throw error;
@@ -260,25 +278,25 @@ export function useNavBadges({
     refetchOnWindowFocus: true,
   });
   const emCotacaoQuery = useQuery({
-    queryKey: EM_COTACAO_BADGE_QUERY_KEY,
-    queryFn: countEmCotacaoPendente,
-    enabled: verVenda,
+    queryKey: [...EM_COTACAO_BADGE_QUERY_KEY, userId],
+    queryFn: () => countEmCotacaoPendente(userId!),
+    enabled: verVenda && !!userId,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
   const emNegociacaoQuery = useQuery({
-    queryKey: EM_NEGOCIACAO_BADGE_QUERY_KEY,
-    queryFn: countEmNegociacaoPendente,
-    enabled: verVenda,
+    queryKey: [...EM_NEGOCIACAO_BADGE_QUERY_KEY, userId],
+    queryFn: () => countEmNegociacaoPendente(userId!),
+    enabled: verVenda && !!userId,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
   const emFinalizacaoQuery = useQuery({
-    queryKey: EM_FINALIZACAO_BADGE_QUERY_KEY,
-    queryFn: countEmFinalizacaoPendente,
-    enabled: verVenda,
+    queryKey: [...EM_FINALIZACAO_BADGE_QUERY_KEY, userId],
+    queryFn: () => countEmFinalizacaoPendente(userId!),
+    enabled: verVenda && !!userId,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -348,8 +366,8 @@ export function useNavBadges({
     atenderAgora: verAtenderAgora && userId ? (atenderQuery.data ?? null) : null,
     atenderAgoraErro: atenderQuery.error instanceof Error ? atenderQuery.error.message : null,
     agendaPendentes: verVenda && userId ? (agendaQuery.data ?? null) : null,
-    emCotacaoPendentes: verVenda ? (emCotacaoQuery.data ?? null) : null,
-    emNegociacaoPendentes: verVenda ? (emNegociacaoQuery.data ?? null) : null,
-    emFinalizacaoPendentes: verVenda ? (emFinalizacaoQuery.data ?? null) : null,
+    emCotacaoPendentes: verVenda && userId ? (emCotacaoQuery.data ?? null) : null,
+    emNegociacaoPendentes: verVenda && userId ? (emNegociacaoQuery.data ?? null) : null,
+    emFinalizacaoPendentes: verVenda && userId ? (emFinalizacaoQuery.data ?? null) : null,
   };
 }

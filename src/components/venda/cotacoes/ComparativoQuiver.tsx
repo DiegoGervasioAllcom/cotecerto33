@@ -1,17 +1,26 @@
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SolicitarDescontoModal } from "@/components/venda/solicitar-desconto-modal";
 import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
-import { escapeHtml, fmtBRL, printHtml } from "@/lib/print";
+import { fmtBRL } from "@/lib/print";
+import { salvarFocoMotivo, serializeFoco } from "@/lib/use-foco-ao-chegar";
+import { useImprimirCotacaoModal } from "./ImprimirCotacaoModal";
+import { docDadosDoBanco, type DocDadosCabecalho } from "./doc-dados";
 import {
+  STATUS_CHIP,
+  STATUS_LABEL,
+  useDescontoAdicional,
+  type PremioComparativo,
+  type SolicitacaoComparativo,
+} from "./useDescontoAdicional";
+import {
+  coberturaEntries,
   faixasComParcelas,
   formasPagamentoResultado,
   gruposOpcoesResultado,
   ordenarResultados,
   premioNumerico,
   tituloResultado,
-  vincularPremiosQuiver,
   type ResultadoCalculo,
 } from "./quiver-resultado";
 
@@ -26,20 +35,7 @@ type TransmissaoResultado = {
 
 type EscolhaCard = { grupoId: string; opcaoId: string };
 
-export type PremioComparativo = {
-  id: string;
-  seguradora: string;
-  cobertura: string | null;
-  premio: number;
-};
-
-export type SolicitacaoComparativo = {
-  id: string;
-  seguradora_id: string;
-  pct_pedido: number;
-  pct_concedido: number | null;
-  status: string;
-};
+export type { PremioComparativo, SolicitacaoComparativo };
 
 type Props = {
   cotacaoId: string;
@@ -51,42 +47,10 @@ type Props = {
   onAceitar: (id: string) => void;
   onCancelar: (id: string) => void;
   onDescontoEnviado: () => void;
-  printMeta: string;
+  /** Cabeçalho (segurado/veículo/seguro/perfil) para o modal "Imprimir
+   * cotação". */
+  docCabecalho: DocDadosCabecalho;
 };
-
-const STATUS_LABEL: Record<string, string> = {
-  pendente: "Pendente",
-  aguardando_aceite: "Aguardando seu aceite",
-  aprovado: "Aprovado",
-  negado: "Negado",
-  cancelado: "Cancelado",
-};
-const STATUS_CHIP: Record<string, string> = {
-  pendente: "chip-yellow",
-  aguardando_aceite: "chip-info",
-  aprovado: "chip-ok",
-  negado: "chip-alert",
-  cancelado: "chip-outline",
-};
-
-const normalizar = (texto: string | null | undefined) =>
-  (texto ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLocaleLowerCase("pt-BR");
-
-function coberturaEntries(resultado: ResultadoCalculo) {
-  return [
-    ...Object.entries(resultado.coberturasBasicas ?? {}),
-    ...Object.entries(resultado.coberturasAdicionais ?? {}),
-  ];
-}
-
-const opcaoTexto = (opcao: ResultadoCalculo["opcoes"][number]) =>
-  [opcao.tipo, opcao.franquia, opcao.avista, opcao.parcelas, opcao.desconto]
-    .filter(Boolean)
-    .join(" · ");
 
 const DETAIL_COLUMN_WIDTH = 190;
 const OFFER_COLUMN_WIDTH = 280;
@@ -101,9 +65,9 @@ export function ComparativoQuiver({
   onAceitar,
   onCancelar,
   onDescontoEnviado,
-  printMeta,
+  docCabecalho,
 }: Props) {
-  const [descontoModal, setDescontoModal] = useState<PremioComparativo | null>(null);
+  const imprimir = useImprimirCotacaoModal();
   // Escolha de forma de pagamento/parcelas por card — mesmo mecanismo do
   // StepCalculo (novo-lead), replicado aqui pra "Gerar proposta" transmitir
   // de verdade em vez do link estático que existia antes.
@@ -171,31 +135,15 @@ export function ComparativoQuiver({
     ],
     [offers],
   );
-  const vinculados = useMemo(() => vincularPremiosQuiver(offers, premios), [offers, premios]);
-  const cardsPorSeguradora = useMemo(() => {
-    const contagem = new Map<string, number>();
-    for (const resultado of offers) {
-      const chave = normalizar(resultado.seguradora);
-      contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
-    }
-    return contagem;
-  }, [offers]);
-
-  const seguradoraId = (nome: string) =>
-    seguradoras.find((seguradora) => normalizar(seguradora.nome) === normalizar(nome))?.id ?? null;
-  const solicitacaoFor = (nome: string) => {
-    const id = seguradoraId(nome);
-    if (!id) return null;
-    return (
-      solicitacoes.find(
-        (solicitacao) =>
-          solicitacao.seguradora_id === id &&
-          ["pendente", "aguardando_aceite"].includes(solicitacao.status),
-      ) ??
-      solicitacoes.find((solicitacao) => solicitacao.seguradora_id === id) ??
-      null
-    );
-  };
+  const desconto = useDescontoAdicional({
+    cotacaoId,
+    resultados: offers,
+    premios,
+    seguradoras,
+    solicitacoes,
+    onDescontoEnviado,
+  });
+  const { vinculados, infoFor } = desconto;
 
   function pararPollingTransmissao() {
     if (pollTransmissaoTimer.current) {
@@ -292,50 +240,13 @@ export function ComparativoQuiver({
     }
   }
 
-  const doPrint = (onlyCardId?: string) => {
+  // Modal "Imprimir cotação" (Frente 3 V12 · 7a) — `onlyCardId` restringe o
+  // universo de seguradoras já pré-selecionadas quando o clique parte da
+  // linha de uma oferta específica (`imprimir.abrir` ainda deixa o vendedor
+  // trocar a seleção na porta "Configurar impressão").
+  const abrirImpressao = (onlyCardId?: string) => {
     const list = onlyCardId == null ? offers : offers.filter((item) => item.cardId === onlyCardId);
-    const headers = list
-      .map(
-        (item) =>
-          `<th>${escapeHtml(item.seguradora)}<br><small>${escapeHtml(tituloResultado(item))}</small></th>`,
-      )
-      .join("");
-    const coverageRows = coberturaLabels
-      .map(
-        (label) =>
-          `<tr><td><strong>${escapeHtml(label)}</strong></td>${list
-            .map((item) => {
-              const value = coberturaEntries(item).find(([candidate]) => candidate === label)?.[1];
-              return `<td>${escapeHtml(value || "—")}</td>`;
-            })
-            .join("")}</tr>`,
-      )
-      .join("");
-    const paymentRow = `<tr><td><strong>Opções por forma de pagamento</strong></td>${list
-      .map(
-        (item) =>
-          `<td>${
-            gruposOpcoesResultado(item)
-              .map(
-                (grupo) =>
-                  `<strong>${escapeHtml(grupo.formaPagamento)}</strong>${grupo.opcoes
-                    .map((opcao) => `<div>${escapeHtml(opcaoTexto(opcao) || "—")}</div>`)
-                    .join("")}`,
-              )
-              .join("<br>") || "—"
-          }<br><small>Formas disponíveis: ${escapeHtml(formasPagamentoResultado(item).join(" · ") || "—")}</small></td>`,
-      )
-      .join("")}</tr>`;
-    const registeredRow = `<tr><td><strong>Prêmio registrado</strong></td>${list
-      .map((item) => {
-        const premio = vinculados.get(item.cardId);
-        return `<td>${escapeHtml(premio ? fmtBRL(Number(premio.premio)) : "Vínculo indisponível")}</td>`;
-      })
-      .join("")}</tr>`;
-    printHtml(
-      onlyCardId == null ? "Comparativo de cotação" : `Cotação · ${list[0]?.seguradora ?? ""}`,
-      `<h1>Comparativo de cotação</h1><div class="sub">${escapeHtml(printMeta)}</div><table><tr><th>Detalhe</th>${headers}</tr>${coverageRows}${paymentRow}${registeredRow}</table><p style="font-size:11px;color:#64748b">Valores e condições retornados pela seguradora. Sujeitos à aceitação.</p>`,
-    );
+    imprimir.abrir(docDadosDoBanco(docCabecalho, list));
   };
 
   if (offers.length === 0) {
@@ -355,7 +266,7 @@ export function ComparativoQuiver({
           Cada coluna representa um produto/opção retornado pela seguradora.
         </span>
         <span className="spacer" style={{ flex: 1 }} />
-        <button className="btn btn-ghost btn-sm" type="button" onClick={() => doPrint()}>
+        <button className="btn btn-ghost btn-sm" type="button" onClick={() => abrirImpressao()}>
           Imprimir comparativo
         </button>
       </div>
@@ -406,11 +317,28 @@ export function ComparativoQuiver({
                 to="/venda/emissao"
                 search={
                   resultadoTransmissao.propostaId
-                    ? { selected: resultadoTransmissao.propostaId }
+                    ? {
+                        foco: serializeFoco({
+                          fonte: "transmissao",
+                          id: resultadoTransmissao.propostaId,
+                        }),
+                      }
                     : {}
                 }
                 className="btn btn-yellow"
                 style={{ marginTop: 12 }}
+                onClick={() => {
+                  const propostaId = resultadoTransmissao.propostaId;
+                  if (!propostaId) return;
+                  // Motivo real (segurado + seguradora, já carregados neste
+                  // componente) — a URL leva só `foco=transmissao:<id>`.
+                  salvarFocoMotivo(serializeFoco({ fonte: "transmissao", id: propostaId }), {
+                    titulo: "Proposta transmitida",
+                    texto: `${docCabecalho.segurado?.nome || "—"} · ${
+                      transmissaoEmAndamento?.card.seguradora || "—"
+                    }`,
+                  });
+                }}
               >
                 Ir para Emissão
               </Link>
@@ -739,7 +667,7 @@ export function ComparativoQuiver({
                           <button
                             className="btn btn-ghost btn-sm"
                             type="button"
-                            onClick={() => doPrint(resultado.cardId)}
+                            onClick={() => abrirImpressao(resultado.cardId)}
                           >
                             Imprimir
                           </button>
@@ -756,12 +684,8 @@ export function ComparativoQuiver({
                     <small>Desconto adicional</small>
                   </td>
                   {offers.map((resultado) => {
-                    const premio = vinculados.get(resultado.cardId);
-                    const solicitacao = solicitacaoFor(resultado.seguradora);
-                    const multiplosProdutos =
-                      (cardsPorSeguradora.get(normalizar(resultado.seguradora)) ?? 0) > 1;
-                    const emAndamento =
-                      solicitacao && ["pendente", "aguardando_aceite"].includes(solicitacao.status);
+                    const info = infoFor(resultado);
+                    const { solicitacao } = info;
                     return (
                       <td key={resultado.cardId}>
                         {solicitacao && (
@@ -776,18 +700,11 @@ export function ComparativoQuiver({
                             </span>
                           </div>
                         )}
-                        {multiplosProdutos ? (
-                          <span className="muted small">
-                            Indisponível: o desconto é aplicado à seguradora inteira, que retornou
-                            mais de um produto nesta cotação.
-                          </span>
-                        ) : !premio ? (
-                          <span className="muted small">
-                            Indisponível: não foi possível vincular este produto a um único prêmio.
-                          </span>
+                        {!info.disponivel ? (
+                          <span className="muted small">{info.indisponivelMotivo}</span>
                         ) : (
                           <>
-                            {emAndamento ? (
+                            {info.emAndamento && solicitacao ? (
                               <div className="ins-actions">
                                 {solicitacao.status === "aguardando_aceite" && (
                                   <button
@@ -814,7 +731,7 @@ export function ComparativoQuiver({
                               <button
                                 className="btn btn-ghost btn-sm"
                                 type="button"
-                                onClick={() => setDescontoModal(premio)}
+                                onClick={() => desconto.abrirModal(resultado)}
                               >
                                 Solicitar desconto adicional
                               </button>
@@ -834,16 +751,8 @@ export function ComparativoQuiver({
           </div>
         </div>
       )}
-      {descontoModal && (
-        <SolicitarDescontoModal
-          cotacaoId={cotacaoId}
-          seguradoraNome={descontoModal.seguradora}
-          seguradoraId={seguradoraId(descontoModal.seguradora)}
-          premio={Number(descontoModal.premio)}
-          onClose={() => setDescontoModal(null)}
-          onSent={onDescontoEnviado}
-        />
-      )}
+      {desconto.modal}
+      {imprimir.modal}
     </>
   );
 }

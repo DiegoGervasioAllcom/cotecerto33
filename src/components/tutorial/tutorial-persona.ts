@@ -103,11 +103,11 @@ export function resolveTutorialPersona(input: TutorialPersonaInput): TutorialPer
 
   return {
     kind,
-    avatar: "R",
-    guideName: "Rafinha",
-    eyebrow: "TUTORIAL · A PRIMEIRA SEMANA DA RAFINHA",
-    title: "Aprenda o CoteCerto comigo",
+    avatar: "C",
+    guideName: "CoteCerto",
+    eyebrow: "TUTORIAL · O DIA A DIA DO VENDEDOR",
+    title: "Vou te mostrar o sistema inteiro",
     intro:
-      "Sou a Rafinha. Vou te acompanhar pelos capítulos do tutorial, organizados em módulos. Cada um dura entre 3 e 6 minutos. Você pode começar do início ou pular pro que quiser.",
+      "Sou o assistente do CoteCerto. Os capítulos seguem a ordem real do trabalho — do lead que chega à comissão que cai — e cada um explica também a regra por trás da tela. Comece do início ou pule para o que precisar agora.",
   };
 }

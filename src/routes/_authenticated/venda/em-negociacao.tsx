@@ -1,127 +1,147 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { AguardandoCotacaoLista } from "@/components/venda/em-negociacao/AguardandoCotacaoLista";
+import { CotacaoFinalizadaLista } from "@/components/venda/em-negociacao/CotacaoFinalizadaLista";
 import {
-  cotNum,
-  diasParaExpirar,
-  expiraChip,
-  FAIXAS,
-  melhorPreco,
-  money,
-  type Premio,
-} from "@/components/venda/cotacoes/lista-helpers";
-import { supabase } from "@/integrations/supabase/client";
+  useAguardandoCotacaoRows,
+  useCotacaoFinalizadaRows,
+} from "@/components/venda/em-negociacao/queries";
+import { cotNum, FAIXAS, melhorPreco, money } from "@/components/venda/cotacoes/lista-helpers";
 import { NegociacaoPropostaPanel } from "@/components/venda/negociacao-proposta-panel";
-import { EM_NEGOCIACAO_STATUSES } from "@/lib/lead-etapa";
+import { FocoBarra } from "@/components/venda/foco-barra";
+import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
+import { useAuth } from "@/lib/auth";
+import { COTACOES_NOVAS_QUERY_KEY, marcarCotacoesVistas } from "@/lib/cotacao-novas";
+import { FOCO_SCROLL_DELAY_MS, useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
+
+export {
+  fetchAguardandoCotacaoRows,
+  fetchCotacaoFinalizadaRows,
+} from "@/components/venda/em-negociacao/queries";
 
 export const Route = createFileRoute("/_authenticated/venda/em-negociacao")({
   head: () => ({ meta: [{ title: "Em negociação · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { selected?: string; foco?: string } => ({
+    // `selected` abre o painel de negociação (NegociacaoPropostaPanel) — usado
+    // pelo botão "Negociar", pelo tutorial e por links legados do Pipeline
+    // (fora do escopo da V12.3.11, item 7). `foco` é só o destaque visual novo.
     selected: typeof s.selected === "string" ? s.selected : undefined,
+    foco: typeof s.foco === "string" ? s.foco : undefined,
   }),
   component: Page,
 });
 
-// Assim que um prêmio é selecionado no comparativo, o trigger
-// _gerar_proposta_de_premio cria/atualiza uma `propostas` (status='gerada',
-// transmissao_status ainda null) e vira a cotação para status='proposta' —
-// ela continua aqui até a Etapa 7 transmitir com sucesso (ela não some desta
-// lista sozinha; ver nota em em-finalizacao.tsx sobre esse gap). Por isso a
-// negociação de versão/prazo/aceite da proposta (G7.2) mora aqui, e não em
-// Emissão & histórico (que só lista propostas já transmitidas).
-type PropostaLigada = {
-  id: string;
-  numero: string | null;
-  seguradora: string | null;
-  premio: number | null;
-  valor: number | null;
-  negociacao_status: string;
-  prazo_resposta: string | null;
-  transmissao_status: string | null;
-};
-
-type Row = {
-  id: string;
-  numero: number;
-  status: string;
-  ramo: string;
-  criado_em: string;
-  atualizado_em: string;
-  segurado: { nome: string | null } | null;
-  veiculo: {
-    marca_nome: string | null;
-    modelo_nome: string | null;
-    ano_modelo: string | null;
-  } | null;
-  premios: Premio[];
-  propostas: PropostaLigada[] | null;
-};
-
-function statusChip(s: string) {
-  const label = s === "calculada" ? "Aberta" : s === "proposta" ? "Em ajuste" : s;
-  const cls = s === "calculada" ? "chip-info" : s === "proposta" ? "chip-yellow" : "chip-outline";
-  return <span className={`chip chip-status ${cls}`}>{label}</span>;
-}
-
-/** Consulta as cotações em negociação (status "calculada" ou "proposta") exibidas nesta tela. */
-export function fetchEmNegociacaoRows() {
-  return supabase
-    .from("cotacoes")
-    .select(
-      "id,numero,status,ramo,criado_em,atualizado_em," +
-        "segurado:cotacao_segurado(nome)," +
-        "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo)," +
-        "premios:cotacao_premios(seguradora,premio)," +
-        "propostas(id,numero,seguradora,premio,valor,negociacao_status,prazo_resposta,transmissao_status)",
-    )
-    .in("status", EM_NEGOCIACAO_STATUSES)
-    .order("atualizado_em", { ascending: false })
-    .limit(200);
-}
-
 function Page() {
   const nav = useNavigate();
   const navigate = useNavigate({ from: "/venda/em-negociacao" });
-  const { selected } = Route.useSearch();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const { selected, foco: focoBusca } = Route.useSearch();
+  const { isOpen: tutorialOpen } = useTutorialController();
+  const foco = useFocoAoChegar(focoBusca, () => {
+    void navigate({ search: (s) => ({ ...s, foco: undefined }) });
+  });
+  const { session } = useAuth();
+  const uid = session?.user.id ?? null;
+  const queryClient = useQueryClient();
+
+  const {
+    data: finalizadaData,
+    isLoading: loadingFinalizada,
+    error: erroFinalizada,
+    refetch: refetchFinalizada,
+  } = useCotacaoFinalizadaRows(uid);
+  const {
+    data: aguardandoData,
+    isLoading: loadingAguardando,
+    error: erroAguardando,
+  } = useAguardandoCotacaoRows(uid);
+  const finalizadaRows = useMemo(() => finalizadaData ?? [], [finalizadaData]);
+  const aguardandoRows = useMemo(() => aguardandoData ?? [], [aguardandoData]);
+  const loading = loadingFinalizada || loadingAguardando;
+  const err = erroFinalizada?.message ?? erroAguardando?.message ?? null;
+
   const [q, setQ] = useState("");
   const [fSeguradora, setFSeguradora] = useState("");
   const [fFaixa, setFFaixa] = useState("");
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
-  async function loadRows() {
-    const { data, error } = await fetchEmNegociacaoRows();
-    if (error) setErr(error.message);
-    setRows((data ?? []) as unknown as Row[]);
-    setLoading(false);
-  }
-
+  // Abrir a tela marca como vistas todas as cotações "calculada" ainda sem
+  // `calculo_visto_em` do vendedor logado (protótipo V12 · `faseTela`) — some
+  // o "nova" da lista, o cartão do aviso global e o pulsar do menu.
+  //
+  // NÃO durante o tutorial: `posicionarTutorial`/`abrirNaEtapa` navegam de
+  // verdade para esta rota (não é o preview de `?tutorialPreview=` como no
+  // wizard de Lead Manual — aqui não existe rascunho isolado pra simular),
+  // então sem esse gate o passo "A proposta da Azul" gravaria
+  // `calculo_visto_em` em cotações reais só por o vendedor estar vendo a
+  // demonstração — mesmo espírito de `useTutorialWizardPreview`, mas via
+  // `isOpen` do controller (o tour inteiro é real aqui, não um preview
+  // isolado).
+  //
+  // `tutorialAoMontar` congela o valor de `tutorialOpen` na primeira
+  // renderização desta instância da página (não reage a mudanças depois) —
+  // sem isso, clicar em "Sair" do tour AINDA NESTA TELA vira `tutorialOpen`
+  // de `true` para `false` com o componente continuando montado, o que
+  // religaria o efeito e dispararia o `PATCH` mesmo sem navegar (é
+  // exatamente esse instante que o teste `tutorial.spec.ts` pega).
+  const tutorialAoMontar = useRef(tutorialOpen);
   useEffect(() => {
-    void loadRows();
-  }, []);
+    if (!uid || tutorialAoMontar.current) return;
+    void marcarCotacoesVistas(uid).then(() => {
+      void queryClient.invalidateQueries({ queryKey: COTACOES_NOVAS_QUERY_KEY });
+      void refetchFinalizada();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid]);
 
+  // Destaque da linha: o novo `foco` (fila do dia/agenda, com faixa e pulso)
+  // ou, na ausência dele, `selected` legado (Pipeline, tutorial — item 7/G da
+  // V12.3.11 deixa o Pipeline fora do escopo, então esses links continuam
+  // funcionando, só que com o mesmo amarelo `em-foco` no lugar do contorno
+  // azul antigo, sem pulso e sem faixa). Nunca durante o tutorial.
+  const destaqueId = foco.ativo ? foco.id : !tutorialOpen ? (selected ?? null) : null;
   useEffect(() => {
-    if (!selected || loading) return;
-    const row = rows.find((r) => r.propostas?.some((p) => p.id === selected));
+    if (!destaqueId || loading) return;
+    const row = finalizadaRows.find((r) => r.propostas?.some((p) => p.id === destaqueId));
     if (!row) return;
-    const el = rowRefs.current[row.id];
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [selected, loading, rows]);
+    const delay = foco.ativo ? FOCO_SCROLL_DELAY_MS : 0;
+    const t = window.setTimeout(() => {
+      rowRefs.current[row.id]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [destaqueId, foco.ativo, loading, finalizadaRows]);
+
+  // Legado (Pipeline, fora do escopo — item 7): sem `foco` real, `selected`
+  // ainda ganha o mesmo amarelo `em-foco`, só sem pulso e sem faixa.
+  const focoClasse = useCallback(
+    (propostaId: string) => {
+      const cls = foco.classe(propostaId);
+      if (cls) return cls;
+      if (!foco.ativo && !tutorialOpen && selected === propostaId) return " em-foco";
+      return "";
+    },
+    [foco, tutorialOpen, selected],
+  );
 
   const seguradoras = useMemo(
     () =>
-      Array.from(new Set(rows.flatMap((r) => r.premios?.map((p) => p.seguradora) ?? []))).sort(),
-    [rows],
+      Array.from(
+        new Set(finalizadaRows.flatMap((r) => r.premios?.map((p) => p.seguradora) ?? [])),
+      ).sort(),
+    [finalizadaRows],
   );
 
-  const filtered = useMemo(
+  const finalizadaFiltrada = useMemo(
     () =>
-      rows.filter((r) => {
+      finalizadaRows.filter((r) => {
         const t =
-          `${cotNum(r.numero)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
+          `${cotNum(r.numero, r.criado_em)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
         if (q && !t.includes(q.toLowerCase())) return false;
         if (fSeguradora && !r.premios?.some((p) => p.seguradora === fSeguradora)) return false;
         if (fFaixa) {
@@ -131,10 +151,22 @@ function Page() {
         }
         return true;
       }),
-    [rows, q, fSeguradora, fFaixa],
+    [finalizadaRows, q, fSeguradora, fFaixa],
   );
 
-  const totVal = filtered.reduce((a, r) => a + (melhorPreco(r.premios) ?? 0), 0);
+  const aguardandoFiltrada = useMemo(
+    () =>
+      aguardandoRows.filter((r) => {
+        const t =
+          `${cotNum(r.numero, r.criado_em)} ${r.segurado?.nome ?? ""} ${r.veiculo?.modelo_nome ?? ""}`.toLowerCase();
+        if (q && !t.includes(q.toLowerCase())) return false;
+        return true;
+      }),
+    [aguardandoRows, q],
+  );
+
+  const totVal = finalizadaFiltrada.reduce((a, r) => a + (melhorPreco(r.premios) ?? 0), 0);
+  const totalNegociacao = finalizadaFiltrada.length + aguardandoFiltrada.length;
 
   function exportar() {
     const head = [
@@ -145,9 +177,8 @@ function Page() {
       "Melhor preço",
       "Status",
       "Criada",
-      "Expira em",
     ];
-    const lines = filtered.map((r) => {
+    const lines = finalizadaFiltrada.map((r) => {
       const best = r.premios?.length
         ? r.premios.reduce((m, p) => (Number(p.premio) < Number(m.premio) ? p : m))
         : null;
@@ -155,17 +186,13 @@ function Page() {
         ? `${r.veiculo.marca_nome ?? ""} ${r.veiculo.modelo_nome ?? ""} ${r.veiculo.ano_modelo ?? ""}`.trim()
         : "";
       return [
-        cotNum(r.numero),
+        cotNum(r.numero, r.criado_em),
         r.segurado?.nome ?? "",
         veic,
         r.premios?.length ?? 0,
         best ? `${money(Number(best.premio))} (${best.seguradora})` : "",
         r.status === "calculada" ? "Aberta" : r.status === "proposta" ? "Em ajuste" : r.status,
         new Date(r.criado_em).toLocaleDateString("pt-BR"),
-        (() => {
-          const d = diasParaExpirar(r.criado_em);
-          return d <= 0 ? "Hoje" : `${d}d`;
-        })(),
       ]
         .map((v) => `"${String(v).replaceAll('"', '""')}"`)
         .join(",");
@@ -189,10 +216,11 @@ function Page() {
   }
 
   const propostaSelecionada = selected
-    ? (rows.flatMap((r) => r.propostas ?? []).find((p) => p.id === selected) ?? null)
+    ? (finalizadaRows.flatMap((r) => r.propostas ?? []).find((p) => p.id === selected) ?? null)
     : null;
   const seguradoDaSelecionada = selected
-    ? (rows.find((r) => r.propostas?.some((p) => p.id === selected))?.segurado?.nome ?? null)
+    ? (finalizadaRows.find((r) => r.propostas?.some((p) => p.id === selected))?.segurado?.nome ??
+      null)
     : null;
 
   return (
@@ -202,7 +230,7 @@ function Page() {
         <div>
           <h1>Em negociação</h1>
           <div className="sub">
-            {filtered.length} cotações já calculadas · ajustando coberturas e preço com o cliente ·
+            {totalNegociacao} cotações em negociação · {finalizadaFiltrada.length} já calculadas ·
             valor total estimado <strong>{money(totVal)}/ano</strong>
           </div>
         </div>
@@ -275,128 +303,68 @@ function Page() {
       {err && <div className="alert alert-err">{err}</div>}
       {loading && <div className="muted">Carregando…</div>}
 
-      {!loading && filtered.length === 0 && (
-        <div className="card" data-tour="em-negociacao-lista">
-          <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
-            Nenhuma cotação calculada aguardando ajuste.
+      <FocoBarra ativo={foco.ativo} fonte={foco.fonte} id={foco.id} onLimpar={foco.limpar} />
+
+      {!loading && (
+        <>
+          <div className="card" data-tour="em-negociacao-aguardando" style={{ padding: 0 }}>
+            <div className="card-h">
+              <h3>
+                <svg width={16} height={16} aria-hidden="true">
+                  <use href="#i-clock" />
+                </svg>{" "}
+                Aguardando cotação{" "}
+                <span className="muted small" style={{ fontWeight: 500 }}>
+                  — {aguardandoFiltrada.length}
+                </span>
+              </h3>
+              <span className="chip chip-slate">seguradoras calculando</span>
+            </div>
+            <div style={{ overflow: "hidden" }}>
+              <AguardandoCotacaoLista rows={aguardandoFiltrada} onReabrir={abrirCalculo} />
+            </div>
           </div>
-        </div>
+
+          <div
+            className="card"
+            data-tour="em-negociacao-finalizada"
+            style={{ padding: 0, marginTop: 16 }}
+          >
+            <div className="card-h">
+              <h3>
+                <svg width={16} height={16} aria-hidden="true">
+                  <use href="#i-check-circle" />
+                </svg>{" "}
+                Cotação finalizada{" "}
+                <span className="muted small" style={{ fontWeight: 500 }}>
+                  — {finalizadaFiltrada.length}
+                </span>
+              </h3>
+              <span className="chip chip-yellow">preço na mão · negocie</span>
+            </div>
+            <div style={{ overflow: "hidden" }}>
+              <CotacaoFinalizadaLista
+                rows={finalizadaFiltrada}
+                focoClasse={focoClasse}
+                rowRefs={rowRefs}
+                onAbrirCalculo={abrirCalculo}
+                onNegociar={negociarProposta}
+              />
+            </div>
+          </div>
+        </>
       )}
 
-      {filtered.length > 0 && (
-        <div
-          className="card"
-          data-tour="em-negociacao-lista"
-          style={{ padding: 0, overflow: "hidden" }}
-        >
-          <table className="table-pipe">
-            <thead>
-              <tr>
-                <th>Nº COTAÇÃO</th>
-                <th>SEGURADO</th>
-                <th>VEÍCULO</th>
-                <th style={{ textAlign: "center" }}>SEGURADORAS</th>
-                <th style={{ textAlign: "right" }}>MELHOR PREÇO</th>
-                <th>STATUS</th>
-                <th>CRIADA</th>
-                <th>EXPIRA EM</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => {
-                const best = r.premios?.length
-                  ? r.premios.reduce((m, p) => (Number(p.premio) < Number(m.premio) ? p : m))
-                  : null;
-                const veic = r.veiculo
-                  ? `${r.veiculo.marca_nome ?? ""} ${r.veiculo.modelo_nome ?? ""} ${r.veiculo.ano_modelo ?? ""}`.trim()
-                  : "—";
-                const propostaLigada = r.propostas?.find(
-                  (p) => p.transmissao_status !== "transmitida",
-                );
-                return (
-                  <tr
-                    key={r.id}
-                    ref={(el) => {
-                      rowRefs.current[r.id] = el;
-                    }}
-                    onClick={() => abrirCalculo(r.id)}
-                    style={{
-                      cursor: "pointer",
-                      ...(propostaLigada && selected === propostaLigada.id
-                        ? {
-                            outline: "2px solid var(--brand, #2563eb)",
-                            background: "rgba(37,99,235,.06)",
-                          }
-                        : {}),
-                    }}
-                  >
-                    <td
-                      className="small muted"
-                      style={{ fontFamily: "ui-monospace,Menlo,monospace" }}
-                    >
-                      #{cotNum(r.numero)}
-                    </td>
-                    <td>
-                      <strong>{r.segurado?.nome || "—"}</strong>
-                    </td>
-                    <td>{veic}</td>
-                    <td style={{ textAlign: "center" }}>
-                      <span className="chip chip-outline">{r.premios?.length || 0} cotadas</span>
-                    </td>
-                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                      {best ? (
-                        <>
-                          <strong>{money(Number(best.premio))}</strong>
-                          <br />
-                          <span className="muted small">{best.seguradora}</span>
-                        </>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td>{statusChip(r.status)}</td>
-                    <td className="small muted">
-                      {new Date(r.criado_em).toLocaleDateString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
-                    </td>
-                    <td>{expiraChip(r.criado_em)}</td>
-                    <td>
-                      <div className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
-                        {propostaLigada && (
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              negociarProposta(propostaLigada.id);
-                            }}
-                          >
-                            Negociar
-                          </button>
-                        )}
-                        <button
-                          className="btn btn-yellow btn-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            abrirCalculo(r.id);
-                          }}
-                        >
-                          <svg width={13} height={13}>
-                            <use href="#i-compare" />
-                          </svg>{" "}
-                          Abrir cálculo
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <div className="clt-note" style={{ marginTop: 14 }}>
+        <svg width={15} height={15}>
+          <use href="#i-info" />
+        </svg>
+        <div>
+          A lista de cima <strong>se atualiza sozinha</strong>: quando a última seguradora devolve o
+          preço, a cotação desce para <strong>Cotação finalizada</strong> e você recebe um aviso na
+          tela — é a hora de ligar para o cliente.
         </div>
-      )}
+      </div>
 
       {propostaSelecionada && (
         <NegociacaoPropostaPanel
@@ -410,7 +378,7 @@ function Page() {
             prazo_resposta: propostaSelecionada.prazo_resposta,
             segurado: seguradoDaSelecionada,
           }}
-          onChanged={() => void loadRows()}
+          onChanged={() => void refetchFinalizada()}
         />
       )}
     </AppShell>

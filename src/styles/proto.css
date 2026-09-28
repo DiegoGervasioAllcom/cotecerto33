@@ -28,6 +28,15 @@
   --fs-xs: 11px;
   --fs-sm: 12px;
   --fs-lg: 15px;
+  /* Frente 3 V12 — `.doc-li` (Transmitida/Emissão) usa `--cool-100` do
+     protótipo, que também não existia aqui ainda. */
+  --cool-100: #e3e8ec;
+  /* Frente 3 V12 (7a · Impressão de cotação) — trazidas byte a byte do bloco
+     `:root` do protótipo V12 (linhas ~27-39), só as que faltavam. */
+  --fs-md: 13px;
+  --cool-50: #f4f6f8;
+  --cream-border: #f0e6c2;
+  --gold-ink: #8a6d1a;
   --radius: 14px;
   --radius-lg: 20px;
   --radius-sm: 10px;
@@ -1153,15 +1162,26 @@ textarea.input:focus {
   gap: 14px;
   overflow-x: auto;
   padding-bottom: 10px;
+  /* V12: coluna passa a rolar por dentro (ver .kcol-fixo/.kcol-fila abaixo) —
+     por isso o Kanban precisa de uma altura limitada em vez de crescer com o
+     conteúdo. */
+  height: calc(100vh - 238px);
+  min-height: 460px;
 }
 .kcol {
   background: #eeead9;
   border-radius: 14px;
   padding: 12px 12px 14px;
-  min-height: 520px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* V12: min-height:0 permite que .kcol-fila (flex:1) encolha dentro da
+     altura fixa do Kanban; overflow:hidden evita que o cabeçalho/rodapé
+     vazem quando a coluna está mais cheia que a altura disponível. Trocou
+     o antigo min-height:520px, que forçava toda coluna a essa altura mínima
+     e brigava com a altura agora fixa do .kanban. */
+  min-height: 0;
+  overflow: hidden;
 }
 .kcol-h {
   display: flex;
@@ -1340,6 +1360,95 @@ textarea.input:focus {
   padding: 16px 0;
   font-style: italic;
 }
+/* --- V12: rolagem interna por coluna do Kanban (cotecerto_prototipo_v12) --- */
+.kcol-fixo {
+  flex: none;
+  padding-right: 5px;
+}
+.kcol-fixo .kcol-h {
+  padding-bottom: 6px;
+}
+.kcol-fixo .kcol-d {
+  margin-bottom: 2px;
+}
+.kcol-fila {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 5px 4px 0;
+  scroll-snap-type: y proximity;
+  scroll-padding-top: 6px;
+}
+.kcol-fila > .kcard {
+  scroll-snap-align: start;
+}
+.kcol-fila::-webkit-scrollbar {
+  width: 6px;
+}
+.kcol-fila::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kcol-fila::-webkit-scrollbar-thumb {
+  background: rgba(66, 85, 99, 0.22);
+  border-radius: 6px;
+}
+.kcol-fila:hover::-webkit-scrollbar-thumb {
+  background: rgba(66, 85, 99, 0.38);
+}
+.kcol-fila.tem-abaixo {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+}
+.kcol-fila.tem-acima {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px);
+}
+.kcol-fila.tem-acima.tem-abaixo {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 18px,
+    #000 calc(100% - 26px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 18px,
+    #000 calc(100% - 26px),
+    transparent 100%
+  );
+}
+.kcol-restam {
+  flex: none;
+  text-align: center;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--slate-soft);
+  letter-spacing: 0.05em;
+  padding: 6px 5px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.kcol-restam .kr-seta {
+  display: flex;
+  animation: kmBounce 1.8s ease-in-out infinite;
+}
+@keyframes kmBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
 .kcard-ponto {
   display: block;
   font-size: var(--fs-2xs);
@@ -1413,6 +1522,527 @@ textarea.input:focus {
 }
 .wizard-grid .full {
   grid-column: 1 / -1;
+}
+/* Frente 3 V12 (Emissão & histórico / Transmitida) — trazidas byte a byte de
+   `cotecerto_prototipo_v12.html`, linhas ~490-497 (.atalhos/.at-btn) e
+   ~731-733 (.doc-li). Não existiam em nenhuma versão anterior do proto.css. */
+.atalhos {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
+}
+.atalhos .at-lbl {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-right: 2px;
+}
+.at-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 7px 11px;
+  border-radius: 9px;
+  transition: all 0.14s;
+}
+.at-btn:hover {
+  background: var(--offwhite);
+  color: var(--slate);
+}
+.atalhos .spacer {
+  flex: 1;
+}
+.doc-li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0;
+  border-bottom: 1px dotted var(--cool-100);
+}
+.doc-li span {
+  color: #7a8794;
+}
+.doc-li strong {
+  text-align: right;
+  font-weight: 700;
+}
+/* Frente 3 V12 (7a · Impressão de cotação) — trazidas byte a byte de
+   `cotecerto_prototipo_v12 - cópia.html`, linhas ~657-751 (blocos "IMPRESSÃO:
+   configuração", "pré-visualização" e "o documento em si"). Só as classes que
+   o modal `ImprimirCotacaoModal` usa; `.doc-interno`/comissão ficam para a
+   fatia B (V12.1.34-35). */
+.pr-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 26px;
+}
+.pr-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 11px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+.pr-radio.on {
+  border-color: var(--yellow);
+  background: var(--cream-hi);
+}
+.pr-radio .pr-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex: none;
+  margin-top: 2px;
+}
+.pr-radio.on .pr-dot {
+  border-color: var(--yellow);
+  background: var(--yellow);
+  box-shadow: inset 0 0 0 3px #fff;
+}
+.pr-radio strong {
+  display: block;
+  font-size: var(--fs-md);
+  color: var(--slate);
+}
+.pr-radio small {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-top: 1px;
+}
+.pr-cards {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 10px;
+}
+.pr-card {
+  position: relative;
+  flex: none;
+  width: 112px;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+.pr-card.on {
+  border-color: var(--yellow);
+  background: var(--cream-hi);
+  box-shadow: 0 0 0 3px rgba(255, 182, 0, 0.16);
+}
+.pr-card:not(.on) {
+  opacity: 0.55;
+}
+.pr-card .pr-nome {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 6px;
+  line-height: 1.25;
+}
+.pr-card .pr-preco {
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--slate);
+  margin-top: 3px;
+}
+.pr-check {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2f3d48;
+}
+.pr-card.on .pr-check {
+  background: var(--yellow);
+  border-color: var(--yellow);
+}
+.pr-msgs-lbl {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin: 2px 0 6px;
+}
+.pr-msgs {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.pr-msg {
+  width: 112px;
+  flex: none;
+  height: 34px;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s;
+}
+.pr-msg.on {
+  border-color: var(--yellow);
+  background: var(--yellow);
+  color: #2f3d48;
+}
+.pr-msg.off {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.pr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+.pr-chip {
+  border: 1.5px solid var(--border-soft);
+  background: #fff;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.14s;
+}
+.pr-chip.on {
+  border-color: var(--slate);
+  background: var(--slate);
+  color: #fff;
+}
+.pr-chk {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--fs-md);
+  color: var(--slate);
+  font-weight: 600;
+  padding: 7px 0;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+.pr-chk .pr-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2f3d48;
+}
+.pr-chk.on .pr-box {
+  background: var(--yellow);
+  border-color: var(--yellow);
+}
+.pr-chk small {
+  width: 100%;
+  padding-left: 27px;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: -4px;
+}
+/* ===== IMPRESSÃO: pré-visualização ===== */
+.modal-print {
+  max-width: 1120px;
+}
+.pv-body {
+  display: grid;
+  grid-template-columns: 1fr 268px;
+  gap: 18px;
+  align-items: start;
+}
+.pv-doc {
+  background: #e9ecef;
+  border-radius: 12px;
+  padding: 16px;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+.pv-lado {
+  position: sticky;
+  top: 0;
+}
+.pv-h {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--slate);
+  margin-bottom: 10px;
+}
+.pv-env {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--slate);
+  transition: all 0.14s;
+}
+.pv-env:hover {
+  border-color: var(--yellow);
+  background: var(--cream-hi);
+}
+.pv-env strong {
+  display: block;
+  font-size: var(--fs-md);
+}
+.pv-env small {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.pv-sep {
+  height: 1px;
+  background: var(--border-soft);
+  margin: 14px 0;
+}
+.pv-btn {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.pv-resumo {
+  margin-top: 14px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 12px;
+}
+.pv-resumo div {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-sm);
+  padding: 4px 0;
+}
+.pv-resumo span {
+  color: var(--muted);
+}
+.pv-resumo strong {
+  color: var(--slate);
+}
+/* ===== IMPRESSÃO: o documento em si ===== */
+.doc {
+  background: #fff;
+  padding: 30px 34px;
+  border-radius: 6px;
+  box-shadow: 0 3px 14px rgba(18, 28, 36, 0.12);
+  font-size: var(--fs-xs);
+  color: #2f3d48;
+  line-height: 1.5;
+}
+.doc.economia {
+  font-size: var(--fs-xs);
+  line-height: 1.38;
+}
+.doc-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  border-bottom: 2px solid var(--slate);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+.doc-logo {
+  width: 96px;
+  height: auto;
+  flex: none;
+}
+.doc.economia .doc-logo {
+  width: 76px;
+}
+.doc-logo-cia {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  flex: none;
+}
+.doc-logo-cia span {
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  color: var(--slate);
+  letter-spacing: 0.02em;
+}
+.doc-logo-cia small {
+  font-size: var(--fs-2xs);
+  color: #7a8794;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.doc-aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cream-soft);
+  border: 1px solid var(--cream-border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-top: 14px;
+  font-size: var(--fs-xs);
+  color: var(--gold-ink);
+}
+.doc-meta {
+  text-align: right;
+  font-size: var(--fs-xs);
+}
+.doc-obs {
+  font-size: var(--fs-2xs);
+  color: #7a8794;
+  margin-top: 3px;
+}
+.doc-ola {
+  margin: 0 0 14px;
+}
+.doc-sec {
+  background: var(--offwhite);
+  border-left: 3px solid var(--yellow);
+  font-weight: 800;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 7px 11px;
+  margin: 16px 0 10px;
+}
+.doc-bloco {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px 22px;
+  margin-bottom: 4px;
+}
+.doc-cols3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0 22px;
+  margin-bottom: 12px;
+}
+.doc-col-t {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: var(--fs-xs);
+  color: var(--slate);
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 5px;
+  margin-bottom: 6px;
+}
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+.doc-table td {
+  padding: 5px 9px;
+  border-bottom: 1px dotted var(--cool-100);
+  text-align: center;
+  vertical-align: middle;
+}
+.doc-table .doc-k {
+  text-align: left;
+  color: #7a8794;
+  width: 210px;
+  font-weight: 600;
+}
+.doc-table tr.doc-tit td {
+  background: var(--offwhite);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.05em;
+  border-bottom: 0;
+  padding-top: 9px;
+}
+.doc-table tr.doc-tit .doc-k {
+  color: var(--slate);
+}
+.doc-table tr.doc-vista td {
+  background: var(--cream-hi);
+  font-weight: 800;
+}
+.doc-table tr.doc-com td {
+  background: var(--cream-soft);
+  font-weight: 700;
+}
+.doc-seg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.doc-seg strong {
+  font-size: var(--fs-xs);
+}
+.doc-seg small {
+  font-size: var(--fs-2xs);
+  color: #7a8794;
+}
+.doc.colunado .doc-table td {
+  border-right: 1px solid var(--cool-50);
+}
+.doc-msg {
+  background: var(--offwhite);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 7px;
+  font-size: var(--fs-xs);
+}
+.doc-rodape {
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+  font-size: var(--fs-2xs);
+  color: #7a8794;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .pv-body {
+    grid-template-columns: 1fr;
+  }
+  .pr-grid2 {
+    grid-template-columns: 1fr;
+  }
 }
 .fold {
   margin-top: 18px;
@@ -3148,12 +3778,286 @@ textarea.input:focus {
   color: #fff;
   border-color: var(--ok);
 }
+/* V12.3.6: Cálculo — ações por seguradora (`.seg-acoes`), trazidas byte a
+   byte de `cotecerto_prototipo_v12.html` linhas 404-405. */
+.seg-acoes {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.seg-acoes .ic-btn {
+  width: 30px;
+  height: 30px;
+}
 .modal-box {
   background: var(--white);
   border-radius: 16px;
   box-shadow: 0 12px 40px rgba(46, 61, 72, 0.18);
   padding: 26px 28px;
 }
+
+/* === V12.3.5: Cálculo — barra de contexto (.calc-ctx) === */
+.calc-ctx {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  background: var(--slate);
+  color: #fff;
+  border-radius: 12px;
+  padding: 11px 16px;
+  margin-bottom: 12px;
+}
+.calc-ctx .cx-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-md);
+}
+.calc-ctx .cx-k {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+  font-weight: 700;
+}
+.calc-ctx strong {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.cx-copy {
+  background: rgba(255, 255, 255, 0.14);
+  border: 0;
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.cx-copy:hover {
+  background: rgba(255, 182, 0, 0.85);
+  color: var(--slate);
+}
+
+/* === V12.3.5: Cálculo — lista comparativa (navegação, células e seções) === */
+.cl-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.cl-arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-soft);
+  background: #fff;
+  color: var(--slate);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+.cl-arrow:hover:not(:disabled) {
+  border-color: var(--yellow);
+  background: var(--cream-hi);
+}
+.cl-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.cl-cont {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  min-width: 210px;
+  text-align: center;
+}
+.cl-cont strong {
+  color: var(--slate);
+  font-weight: 800;
+}
+.cl-cont .cl-de {
+  opacity: 0.75;
+}
+/* célula de parcela: valor + botão Contratar que surge no hover */
+.calc-table td.cl-cell {
+  position: relative;
+}
+.calc-table td.cl-cell .cl-v {
+  transition: opacity 0.12s;
+}
+.cl-buy {
+  position: absolute;
+  inset: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--yellow);
+  color: #2f3d48;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s;
+  box-shadow: 0 4px 12px rgba(18, 28, 36, 0.18);
+}
+.cl-buy .buy-v {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.cl-buy:hover {
+  background: var(--yellow-deep);
+}
+.calc-table td.cl-cell:hover .cl-buy {
+  opacity: 1;
+  visibility: visible;
+}
+.calc-table td.cl-cell:hover .cl-v {
+  opacity: 0;
+}
+.calc-table tr.cl-sec td {
+  background: var(--slate);
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  padding: 8px 12px;
+}
+.calc-table tr.cl-sec .cl-lbl {
+  background: var(--slate);
+  color: #fff;
+}
+.calc-table tr.cl-sec small {
+  color: rgba(255, 255, 255, 0.6);
+}
+/* Lista: cabeçalho com o logo redondo, como na fase Seguro */
+.calc-table .cl-seg small {
+  font-size: var(--fs-2xs);
+  opacity: 0.85;
+  font-weight: 600;
+}
+.calc-table .cl-seg .seg-badge {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+/* no cabeçalho escuro o nome do padrão vira branco */
+.calc-table thead .seg-item .seg-nome {
+  color: #fff;
+}
+.calc-table thead .seg-item {
+  margin: 0 auto;
+}
+.calc-table thead th {
+  padding: 12px;
+}
+/* Lista: célula de parcela clicável */
+.calc-table td.cl-cell {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.calc-table td.cl-cell:hover {
+  background: var(--cream-hi);
+}
+.calc-table td.cl-cell.on {
+  background: var(--cream-mid);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1.5px var(--yellow);
+}
+.calc-table .cl-sj {
+  color: var(--ok);
+  font-weight: 700;
+}
+.calc-table .cl-mark {
+  color: var(--gold-ink);
+}
+.calc-table tr.cl-parc td {
+  padding: 7px 12px;
+}
+
+/* Barra de ferramentas do Cálculo (V12.3.5). ATENÇÃO: o próprio protótipo
+   V12 tem duas regras `.calc-bar` que colidem — esta (toolbar, fonte
+   original ~linha 793) e a barra de progresso logo abaixo (fonte original
+   ~linha 1148, sem uso em nenhum .tsx). Nenhuma tela usa a classe `calc-bar`
+   pura fora da toolbar do Cálculo, então a ordem replicada aqui (toolbar
+   antes) é inofensiva na prática, mas é a mesma cascata do protótipo — não
+   renomear nem apagar a regra de progresso abaixo. */
+.calc-bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  background: var(--offwhite);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 12px 0 16px;
+  box-sizing: border-box;
+  min-height: 58px;
+  line-height: 1.3;
+  overflow: visible;
+}
+.calc-bar-l {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  line-height: 1.3;
+  padding: 2px 0;
+}
+.calc-bar-r {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.calc-bar .select-mini {
+  height: 34px;
+  line-height: 1;
+  max-width: 210px;
+}
+.calc-bar .btn {
+  white-space: nowrap;
+}
+.calc-toolset {
+  display: flex;
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.calc-tool {
+  width: 34px;
+  height: 32px;
+  border: 0;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.calc-tool + .calc-tool {
+  border-left: 1px solid var(--border-soft);
+}
+.calc-tool.on {
+  background: var(--yellow);
+  color: #2f3d48;
+}
+
+/* barra de progresso (sem uso em nenhum .tsx hoje) — ver comentário acima
+   sobre a colisão com `.calc-bar` da toolbar, replicada do protótipo. */
 .calc-bar {
   height: 8px;
   border-radius: 999px;
@@ -3166,6 +4070,73 @@ textarea.input:focus {
   width: 0;
   background: var(--yellow);
   transition: width 0.2s;
+}
+
+/* Lista comparativa (V12.3.5) */
+.calc-lista {
+  overflow-x: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: #fff;
+}
+.calc-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+  font-size: var(--fs-sm);
+}
+.calc-table th,
+.calc-table td {
+  padding: 10px 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+.calc-table thead th {
+  background: var(--slate);
+  color: #fff;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+}
+.calc-table .cl-lbl {
+  text-align: left;
+  font-weight: 600;
+  color: var(--slate);
+  background: var(--offwhite);
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 180px;
+}
+.calc-table thead .cl-lbl {
+  background: var(--slate);
+  color: #fff;
+  z-index: 3;
+}
+.calc-table .cl-seg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.calc-table .cl-seg span {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.calc-table .nc {
+  color: var(--muted);
+  font-style: italic;
+}
+.calc-table tr.cl-preco td {
+  background: var(--cream-hi);
+  font-size: var(--fs-lg);
+}
+.calc-table tbody tr:hover td {
+  background: var(--white);
+}
+.calc-table tbody tr:hover .cl-lbl {
+  background: var(--offwhite);
 }
 
 /* ============================================
@@ -4768,6 +5739,53 @@ textarea.input:focus {
   padding: 12px 14px;
   margin-bottom: 6px;
 }
+/* Frente 3 V12 (7a · Impressão de cotação) — trazidas byte a byte de
+   `cotecerto_prototipo_v12 - cópia.html`, linhas ~459-466 ("menu de opções da
+   engrenagem"). Usadas pelas duas portas de `ImprimirCotacaoModal`
+   (Configurar impressão / Impressão expressa). */
+.op-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 13px 15px;
+  margin-bottom: 9px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--muted);
+  transition: all 0.14s;
+}
+.op-item:hover {
+  border-color: var(--yellow);
+  background: var(--cream-hi);
+}
+.op-ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--offwhite);
+  color: var(--slate);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.op-tx {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.op-tx strong {
+  font-size: var(--fs-md);
+  color: var(--slate);
+}
+.op-tx small {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
 .acc-sec-t {
   font-size: 13px;
   font-weight: 700;
@@ -4982,6 +6000,29 @@ body.hc {
   --soft-bg: #eceef0;
 }
 
+/* Tipo de item segurado — troca de produto dentro da cotação (padrão Quiver) — cotecerto_prototipo_v12.html:349-365 */
+.seg-topo{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.tipo-item{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.tipo-item .ti-lbl{font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.tipo-item .ti-set{display:flex;gap:8px;align-items:flex-start}
+.ti-soon{display:flex;flex-direction:column;align-items:center;gap:5px}
+.ti-soon-row{display:flex;gap:8px}
+.ti-btn{width:44px;height:44px;border-radius:50%;background:#fff;border:1.5px solid var(--border-soft);color:var(--muted);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 10px rgba(18,28,36,.08);
+  transition:border-color .14s,box-shadow .14s,transform .1s,color .14s}
+.ti-btn:hover{transform:translateY(-2px);color:var(--slate);box-shadow:0 8px 18px rgba(18,28,36,.14)}
+.ti-btn.on{border-color:var(--yellow);color:var(--slate);box-shadow:0 0 0 3px rgba(255,182,0,.22)}
+/* produto sem jornada ainda: sinalização discreta, sem etiqueta gritando */
+.ti-btn.soon{opacity:.42}
+.ti-btn.soon:hover{opacity:.85}
+.ti-nota{font-size:var(--fs-2xs);color:var(--muted);opacity:.75;text-align:center;line-height:1.2}
+@media (max-width:760px){.seg-topo{flex-direction:column}.tipo-item{align-items:flex-start}}
+/* Lead Manual — mesmo picker, linha única (cotecerto_prototipo_v12.html:1193-1196) */
+.nl-tipos{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.nl-tipos .ti-btn{width:52px;height:52px}
+.nl-tipos .ti-btn svg{width:24px;height:24px}
+.nl-tipos-nota{font-size:var(--fs-xs);color:var(--muted);margin-top:8px}
+
 /* ===== Selo de seguradora (badge com wordmark) — espelha protótipo V12 ===== */
 .seg-pick{display:flex;flex-wrap:wrap;gap:14px;padding-top:10px}
 .seg-item{width:96px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;user-select:none}
@@ -5026,3 +6067,54 @@ body.hc {
 .plano-card.on .pc-ic{color:var(--yellow)}
 .plano-card .pc-check{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:50%;background:var(--yellow);color:#2F3D48;display:flex;align-items:center;justify-content:center}
 @media (max-width:980px){.plano-pick{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== V12.3.4 — trazido byte a byte de cotecerto_prototipo_v12.html
+   (aviso lateral "COTAÇÃO FINALIZADA" + badge "novo" pulsando no menu) ===== */
+.aviso-host{position:fixed;right:20px;bottom:20px;z-index:300;display:flex;flex-direction:column-reverse;gap:10px;max-width:330px}
+.aviso-card{background:var(--white);border-radius:14px;box-shadow:var(--shadow-lg);border-left:5px solid var(--ok);
+  padding:14px 15px 13px;animation:avisoIn .28s cubic-bezier(.2,.8,.3,1)}
+@keyframes avisoIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.aviso-card .av-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.aviso-card .av-ic{width:28px;height:28px;border-radius:9px;background:var(--ok-soft);color:var(--ok);
+  display:inline-flex;align-items:center;justify-content:center;flex:none}
+.aviso-card .av-t{font-size:var(--fs-sm);font-weight:700;color:var(--ok);letter-spacing:.02em;flex:1}
+.aviso-card .av-x{color:var(--muted);cursor:pointer;display:flex;padding:2px;border-radius:6px}
+.aviso-card .av-x:hover{background:var(--offwhite);color:var(--slate)}
+.aviso-card .av-cli{font-size:var(--fs-lg);font-weight:700;color:var(--slate);line-height:1.25}
+.aviso-card .av-sub{font-size:var(--fs-sm);color:var(--muted);margin-top:2px;line-height:1.4}
+.aviso-card .av-acoes{display:flex;gap:8px;margin-top:11px}
+/* o item do menu pulsa enquanto houver cotação nova que ele ainda não abriu */
+.sidebar .nav-item .badge.novo{background:var(--ok);color:#fff;animation:reactpulse 1.8s ease-in-out infinite}
+
+/* ===== FOCO — o lembrete que viaja com o clique
+   Trazido byte a byte de cotecerto_prototipo_v12.html (~linhas 549-588 e
+   2418-2431) — V12.3.11 "Foco ao chegar" ===== */
+.foco-barra{display:flex;align-items:center;gap:13px;background:var(--cream-soft);border:1.5px solid var(--yellow);
+  border-radius:12px;padding:13px 16px;margin-bottom:16px;animation:fadein .2s}
+.foco-barra .fb-ic{width:34px;height:34px;border-radius:9px;background:var(--yellow);color:#2F3D48;flex:none;
+  display:inline-flex;align-items:center;justify-content:center}
+.foco-barra .fb-tx{flex:1;min-width:0}
+.foco-barra .fb-tx strong{display:block;font-size:var(--fs-md);color:var(--slate)}
+.foco-barra .fb-tx small{display:block;font-size:var(--fs-xs);color:var(--gold-ink)}
+.foco-barra .fb-x{background:none;border:0;color:var(--gold-ink);cursor:pointer;display:inline-flex;padding:4px;flex:none}
+.foco-barra .fb-x:hover{color:var(--slate)}
+/* a linha ou o card que motivou a vinda — contorno só em volta do bloco,
+   nunca célula a célula; linhas vizinhas em foco viram um bloco único */
+tr.em-foco > td{background:var(--cream-hi) !important;
+  box-shadow:inset 0 1.5px 0 var(--yellow), inset 0 -1.5px 0 var(--yellow)}
+tr.em-foco > td:first-child{box-shadow:inset 0 1.5px 0 var(--yellow),inset 0 -1.5px 0 var(--yellow),inset 2px 0 0 var(--yellow)}
+tr.em-foco > td:last-child{box-shadow:inset 0 1.5px 0 var(--yellow),inset 0 -1.5px 0 var(--yellow),inset -1.5px 0 0 var(--yellow)}
+tr.em-foco + tr.em-foco > td{box-shadow:inset 0 -1.5px 0 var(--yellow)}
+tr.em-foco + tr.em-foco > td:first-child{box-shadow:inset 0 -1.5px 0 var(--yellow),inset 2px 0 0 var(--yellow)}
+tr.em-foco + tr.em-foco > td:last-child{box-shadow:inset 0 -1.5px 0 var(--yellow),inset -1.5px 0 0 var(--yellow)}
+.em-foco{position:relative}
+/* pulso ao chegar no item, para o olho encontrar sozinho */
+@keyframes focoPisca{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,182,0,0)}
+  25%{box-shadow:0 0 0 7px rgba(255,182,0,.42)}
+  50%{box-shadow:0 0 0 0 rgba(255,182,0,0)}
+  75%{box-shadow:0 0 0 7px rgba(255,182,0,.42)}
+}
+.foco-pisca{animation:focoPisca 2.2s ease-out}
+tr.foco-pisca > td{animation:focoPisca 2.2s ease-out}
+.kcard.em-foco{border-color:var(--yellow) !important;box-shadow:0 0 0 3px rgba(255,182,0,.32) !important;background:var(--cream-hi) !important}

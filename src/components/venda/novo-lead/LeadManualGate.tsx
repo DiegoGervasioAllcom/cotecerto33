@@ -10,22 +10,23 @@
 import { useState } from "react";
 import { Icon } from "@/components/operacao/acessos/icon";
 import { ModalShell } from "@/components/operacao/configuracoes/modal-shell";
+import { TipoItemPicker } from "./TipoItemPicker";
+import { produtoTemJornada, produtoPorRamo, type Produto } from "./produtos";
 import { maskCel, maskPlaca } from "./masks";
 
 const CANAIS = ["Movida", "Google", "Facebook", "Indicação", "Manual", "Outro"];
-const PRODUTOS = [
-  { id: "Automóvel", nome: "Auto", disponivel: true },
-  { id: "Moto", nome: "Moto", disponivel: false },
-  { id: "Vida", nome: "Vida", disponivel: false },
-  { id: "Residencial", nome: "Residencial", disponivel: false },
-  { id: "Celular", nome: "Celular", disponivel: false },
-];
 
 export function LeadManualGate({
   onIniciar,
   onCancelar,
 }: {
-  onIniciar: (dados: { nome: string; celular: string; placa: string; canal: string }) => void;
+  onIniciar: (dados: {
+    nome: string;
+    celular: string;
+    placa: string;
+    canal: string;
+    ramo: Produto["ramo"];
+  }) => void;
   onCancelar: () => void;
 }) {
   const [nome, setNome] = useState("");
@@ -35,10 +36,10 @@ export function LeadManualGate({
   const [descricaoOutro, setDescricaoOutro] = useState("");
   const [lojaMovida, setLojaMovida] = useState("");
   const [vendedorMovida, setVendedorMovida] = useState("");
-  const [produto, setProduto] = useState("Automóvel");
+  const [ramo, setRamo] = useState<Produto["ramo"]>("Automóvel");
   const [erro, setErro] = useState<string | null>(null);
 
-  const produtoAtual = PRODUTOS.find((p) => p.id === produto);
+  const produtoAtual = produtoPorRamo(ramo);
 
   function confirmar() {
     if (!nome.trim() || !celular.trim() || !placa.trim() || !canal) {
@@ -53,7 +54,7 @@ export function LeadManualGate({
       setErro("Informe Loja e Vendedor (Movida)");
       return;
     }
-    if (!produtoAtual?.disponivel) {
+    if (!produtoAtual || !produtoTemJornada(produtoAtual.id)) {
       setErro(`Jornada de ${produtoAtual?.nome} em construção — selecione Auto para iniciar`);
       return;
     }
@@ -64,7 +65,7 @@ export function LeadManualGate({
         : canal === "Movida"
           ? `Movida · ${lojaMovida.trim()} · ${vendedorMovida.trim()}`
           : canal;
-    onIniciar({ nome: nome.trim(), celular, placa, canal: canalLabel });
+    onIniciar({ nome: nome.trim(), celular, placa, canal: canalLabel, ramo });
   }
 
   return (
@@ -189,20 +190,8 @@ export function LeadManualGate({
       <div className="sub" style={{ marginTop: 16, marginBottom: 6 }}>
         Tipo de seguro — define a jornada da cotação
       </div>
-      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-        {PRODUTOS.map((p) => (
-          <span
-            key={p.id}
-            className={"chip " + (produto === p.id ? "chip-yellow" : "chip-outline")}
-            style={{ cursor: "pointer" }}
-            onClick={() => setProduto(p.id)}
-          >
-            {p.nome}
-            {!p.disponivel && <span style={{ opacity: 0.6 }}> · em breve</span>}
-          </span>
-        ))}
-      </div>
-      {!produtoAtual?.disponivel && (
+      <TipoItemPicker ramo={ramo} onChange={setRamo} variant="linha" />
+      {(!produtoAtual || !produtoTemJornada(produtoAtual.id)) && (
         <div className="clt-note" style={{ marginTop: 10, borderColor: "var(--yellow)" }}>
           <Icon id="info" size={15} />
           <div>

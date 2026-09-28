@@ -17,7 +17,7 @@ function ehCartaoCredito(formaPagamento: string): boolean {
   return /cart/i.test(formaPagamento);
 }
 
-type Fase = "dados" | "confirmacao" | "pagamento" | "resultado";
+export type Fase = "dados" | "confirmacao" | "pagamento" | "resultado";
 
 type Props = {
   f: Form;
@@ -33,6 +33,11 @@ type Props = {
   // Nunca disparado para "resultado" — nesse ponto a transmissão de verdade já
   // tem sua própria linha em `cotacao_transmissoes`.
   onFaseChange?: (fase: "dados" | "confirmacao" | "pagamento") => void;
+  // Reabertura de uma transmissão já iniciada (`useRetomarTransmissao`): sem
+  // isso, o sub-passo local sempre nasce em "dados", mesmo quando o
+  // resultado já existe (falha/transmitida) — nesses casos o wizard-card
+  // ainda mostraria "Dados complementares" por 1 frame até o vendedor mexer.
+  faseInicial?: Fase;
 };
 
 export function StepTransmissao({
@@ -46,8 +51,9 @@ export function StepTransmissao({
   onVoltarCalculo,
   onTentarNovamente,
   onFaseChange,
+  faseInicial = "dados",
 }: Props) {
-  const [fase, setFase] = useState<Fase>("dados");
+  const [fase, setFase] = useState<Fase>(faseInicial);
   const [dadosComplementares, setDadosComplementares] =
     useState<DadosComplementaresTransmissao | null>(null);
 
@@ -117,6 +123,7 @@ export function StepTransmissao({
         seguradora={oferta.resultado.seguradora}
         resultado={resultadoTransmissao}
         tentarNovamente={tentarNovamente}
+        f={f}
       />
     );
   } else if (faseAtual === "confirmacao") {

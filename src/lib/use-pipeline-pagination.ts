@@ -3,16 +3,21 @@
  * Extraído para cá (regra 9 do AGENTS.md) em vez de crescer
  * `pipeline.tsx`/`pipeline-data.ts`: cada coluna (`LeadEtapaBucket`) tem sua
  * própria página de `pipeline_leads_etapa` (`@/lib/pipeline-query`), com
- * carga inicial de 5 leads e "carregar mais" de 4 em 4 via scroll
- * (`IntersectionObserver`).
+ * carga inicial de 5 leads e "carregar mais" de 4 em 4.
+ *
+ * Pipeline V12, T14: o gatilho de "carregar mais" deixou de ser scroll da
+ * página inteira (`IntersectionObserver`/sentinela) ou um botão "Mostrar
+ * mais" — cada coluna agora rola por dentro (`.kcol-fila`,
+ * `useKcolFilaScroll`) e o rodapé "mais N" (`PipelineColuna`) chama
+ * `carregarMais` diretamente. Esse hook ficou só com o estado/paginação em
+ * si; a UI de scroll mora em `use-kcol-fila-scroll.ts`.
  *
  * `criarMotorPaginacao` é o núcleo sem React — só estado + funções puras/
  * assíncronas, testável direto em `tests/unit/use-pipeline-pagination.test.ts`
  * sem precisar de DOM/`renderHook` (o projeto não tem `@testing-library/react`
  * nem ambiente jsdom no Vitest — `vitest.config.ts` roda `environment: "node"`
  * e só inclui `tests/unit/**\/*.test.ts`). `usePipelinePagination` é só o
- * wrapper fino que liga esse motor a `useState`/`useEffect` e ao
- * `IntersectionObserver` por coluna.
+ * wrapper fino que liga esse motor a `useState`/`useEffect`.
  *
  * Proteção contra corrida: mesmo padrão "epoch"/`isCurrent()` já usado em
  * `use-team-data.ts` (`@/components/operacao/acessos/full/use-team-data.ts`)
@@ -137,11 +142,11 @@ export function criarMotorPaginacao(fetchPagina: FetchPagina = fetchPipelinePagi
 export type PipelinePaginationEngine = ReturnType<typeof criarMotorPaginacao>;
 
 /**
- * Hook do Kanban: uma `EstadoColuna` por etapa, com scroll infinito
- * (`sentinelaRef`) por coluna. `filtrosComuns` deve ser um objeto estável
- * entre renders com o mesmo conteúdo (é serializado via `JSON.stringify`
- * para a dependência do `useEffect` de reset — evita depender de identidade
- * de referência, que mudaria a cada render em `pipeline.tsx`).
+ * Hook do Kanban: uma `EstadoColuna` por etapa. `filtrosComuns` deve ser um
+ * objeto estável entre renders com o mesmo conteúdo (é serializado via
+ * `JSON.stringify` para a dependência do `useEffect` de reset — evita
+ * depender de identidade de referência, que mudaria a cada render em
+ * `pipeline.tsx`).
  */
 export function usePipelinePagination(
   etapas: readonly LeadEtapaBucket[],
@@ -149,7 +154,6 @@ export function usePipelinePagination(
 ): {
   colunas: Partial<Record<LeadEtapaBucket, EstadoColuna>>;
   carregarMais: (etapa: LeadEtapaBucket) => void;
-  sentinelaRef: (etapa: LeadEtapaBucket) => (node: HTMLElement | null) => void;
 } {
   const motorRef = useRef<PipelinePaginationEngine | null>(null);
   if (!motorRef.current) motorRef.current = criarMotorPaginacao();
@@ -169,34 +173,5 @@ export function usePipelinePagination(
 
   const carregarMais = useCallback((etapa: LeadEtapaBucket) => motor.carregarMais(etapa), [motor]);
 
-  const observadoresRef = useRef<Partial<Record<LeadEtapaBucket, IntersectionObserver>>>({});
-  useEffect(
-    () => () => {
-      for (const observer of Object.values(observadoresRef.current)) observer?.disconnect();
-      observadoresRef.current = {};
-    },
-    [],
-  );
-
-  const sentinelaRef = useCallback(
-    (etapa: LeadEtapaBucket) => (node: HTMLElement | null) => {
-      observadoresRef.current[etapa]?.disconnect();
-      delete observadoresRef.current[etapa];
-      if (!node) return;
-      const observer = new IntersectionObserver(
-        (entries) => {
-          // `carregarMais` já é no-op enquanto `loading`/`!hasMore` — não
-          // precisa de guarda extra aqui, mesmo se o sentinela disparar de
-          // novo antes da página anterior terminar de chegar.
-          if (entries.some((entry) => entry.isIntersecting)) carregarMais(etapa);
-        },
-        { rootMargin: "200px" },
-      );
-      observer.observe(node);
-      observadoresRef.current[etapa] = observer;
-    },
-    [carregarMais],
-  );
-
-  return { colunas, carregarMais, sentinelaRef };
+  return { colunas, carregarMais };
 }

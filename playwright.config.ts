@@ -12,6 +12,8 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
+    // Screenshot só em falha, e só na CI (evita mudar o comportamento local).
+    screenshot: process.env.CI ? "only-on-failure" : "off",
   },
   projects: [
     {

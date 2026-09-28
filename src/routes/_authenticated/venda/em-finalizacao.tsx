@@ -1,68 +1,35 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { AceiteTutorialPreview } from "@/components/venda/aceite-tutorial-preview";
+import { EM_FINALIZACAO_EXEMPLO_ROW } from "@/components/venda/em-finalizacao-tutorial-preview";
+import {
+  dedupTentativas,
+  EM_FINALIZACAO_ROWS_QUERY_KEY,
+  fetchEmFinalizacaoRows,
+  type Row,
+  type TentativaRow,
+} from "@/components/venda/em-finalizacao/queries";
+import { useEmFinalizacaoImprimir } from "@/components/venda/em-finalizacao/print";
+import { FocoBarra } from "@/components/venda/foco-barra";
 import { cotNum, money } from "@/components/venda/cotacoes/lista-helpers";
-import { supabase } from "@/integrations/supabase/client";
-import { primeiraOcorrenciaPorChave, TRANSMISSAO_EM_ABERTO_STATUSES } from "@/lib/lead-etapa";
+import { useAuth } from "@/lib/auth";
+import { FOCO_SCROLL_DELAY_MS, useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
 
 export const Route = createFileRoute("/_authenticated/venda/em-finalizacao")({
   head: () => ({ meta: [{ title: "Em finalização · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
+  validateSearch: (s: Record<string, unknown>): { selected?: string; foco?: string } => ({
+    // `selected`: link legado (Pipeline — fora do escopo, item 7). `foco` é o
+    // destaque novo (fila do dia/agenda), com faixa e pulso.
     selected: typeof s.selected === "string" ? s.selected : undefined,
+    foco: typeof s.foco === "string" ? s.foco : undefined,
   }),
   component: Page,
 });
-
-// A Etapa 7 (wizard de transmissão via Quiver) grava cada tentativa em
-// `cotacao_transmissoes`. Enquanto o robô não devolve o resultado pelo
-// webhook, a tentativa fica com status='enviada'; se o portal recusa, vira
-// 'falha' (o vendedor precisa agir — reabrir a Etapa 7 e reenviar). Só
-// quando a tentativa vira 'transmitida' é que a cotação sai desta lista —
-// nesse ponto ela já vive em Propostas/Emissão. Cada linha é a ÚLTIMA
-// tentativa por cotação (mais recente primeiro, deduplicada em memória).
-export type TentativaRow = {
-  id: string;
-  cotacao_id: string;
-  status: string;
-  motivo: string | null;
-  mensagem: string | null;
-  seguradora: string | null;
-  premio: number | null;
-  forma_pagamento: string | null;
-  criado_em: string;
-  proposta_id: string | null;
-  cotacoes: {
-    numero: number;
-    segurado: { nome: string | null }[] | null;
-    veiculo:
-      | {
-          marca_nome: string | null;
-          modelo_nome: string | null;
-          ano_modelo: string | null;
-          placa: string | null;
-        }[]
-      | null;
-  } | null;
-};
-
-export type Row = {
-  tentativaId: string;
-  cotacaoId: string;
-  numero: number;
-  status: string;
-  motivo: string | null;
-  mensagem: string | null;
-  seguradora: string | null;
-  premio: number | null;
-  formaPagamento: string | null;
-  criadoEm: string;
-  propostaId: string | null;
-  segurado: string;
-  veiculo: string;
-};
 
 function tempoDesde(iso: string): string {
   const min = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
@@ -70,49 +37,6 @@ function tempoDesde(iso: string): string {
   const horas = Math.floor(min / 60);
   if (horas < 24) return `${horas}h`;
   return `${Math.floor(horas / 24)}d`;
-}
-
-/** Consulta as tentativas de transmissão em aberto (status "enviada" ou "falha") exibidas nesta tela. */
-export function fetchEmFinalizacaoRows() {
-  return supabase
-    .from("cotacao_transmissoes")
-    .select(
-      "id,cotacao_id,status,motivo,mensagem,seguradora,premio,forma_pagamento,criado_em,proposta_id," +
-        "cotacoes(numero,segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))",
-    )
-    .in("status", TRANSMISSAO_EM_ABERTO_STATUSES)
-    .order("criado_em", { ascending: false })
-    .limit(500);
-}
-
-/**
- * Uma cotação pode ter várias tentativas (retransmissão após falha) — só a
- * mais recente importa. Assume que `data` já vem ordenada por criado_em desc
- * (responsabilidade de `fetchEmFinalizacaoRows`).
- */
-export function dedupTentativas(data: readonly TentativaRow[] | null): Row[] {
-  return primeiraOcorrenciaPorChave(data ?? [], (t) => t.cotacao_id).map((t) => {
-    const c = t.cotacoes;
-    const veiculo = c?.veiculo?.[0];
-    return {
-      tentativaId: t.id,
-      cotacaoId: t.cotacao_id,
-      numero: c?.numero ?? 0,
-      status: t.status,
-      motivo: t.motivo,
-      mensagem: t.mensagem,
-      seguradora: t.seguradora,
-      premio: t.premio,
-      formaPagamento: t.forma_pagamento,
-      criadoEm: t.criado_em,
-      propostaId: t.proposta_id,
-      segurado: c?.segurado?.[0]?.nome || "—",
-      veiculo: veiculo
-        ? [veiculo.marca_nome, veiculo.modelo_nome, veiculo.ano_modelo].filter(Boolean).join(" ") +
-          (veiculo.placa ? ` · ${veiculo.placa}` : "")
-        : "—",
-    };
-  });
 }
 
 function statusChip(r: Row) {
@@ -137,46 +61,84 @@ function statusChip(r: Row) {
 
 function Page() {
   const nav = useNavigate();
-  const { selected } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { selected, foco: focoBusca } = Route.useSearch();
   const tutorialPreview = useTutorialPreview();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const { isOpen: tutorialOpen } = useTutorialController();
+  const foco = useFocoAoChegar(focoBusca, () => {
+    void navigate({ search: (s) => ({ ...s, foco: undefined }) });
+  });
+  const { session } = useAuth();
+  const uid = session?.user.id ?? null;
   const [q, setQ] = useState("");
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+  const imprimir = useEmFinalizacaoImprimir();
 
-  async function load() {
-    setLoading(true);
-    const { data, error } = await fetchEmFinalizacaoRows();
-    if (error) {
-      setErr(error.message);
-      setLoading(false);
-      return;
-    }
-    setRows(dedupTentativas(data as unknown as TentativaRow[]));
-    setLoading(false);
-  }
+  const tutorialAtivo =
+    tutorialPreview === "aceite-aceita" || tutorialPreview === "aceite-pendencia";
+  // Tutorial do vendedor (cap. 8, "Em finalização — consultar status") —
+  // exemplo estático dentro da tabela real, pro caso de o vendedor ainda não
+  // ter nenhuma proposta em finalização (ver `EM_FINALIZACAO_EXEMPLO_ROW`).
+  const tutorialExemplo = tutorialPreview === "em-finalizacao-exemplo";
 
+  const {
+    data: rowsData,
+    isLoading: queryLoading,
+    error,
+  } = useQuery({
+    queryKey: [...EM_FINALIZACAO_ROWS_QUERY_KEY, uid],
+    enabled: Boolean(uid) && !tutorialAtivo && !tutorialExemplo,
+    queryFn: async (): Promise<Row[]> => {
+      const { data, error } = await fetchEmFinalizacaoRows(uid as string);
+      if (error) throw error;
+      return dedupTentativas(data as unknown as TentativaRow[]);
+    },
+  });
+  const rows = useMemo(
+    () => (tutorialExemplo ? [EM_FINALIZACAO_EXEMPLO_ROW] : (rowsData ?? [])),
+    [rowsData, tutorialExemplo],
+  );
+  const loading = tutorialAtivo || tutorialExemplo ? false : queryLoading;
+  const err =
+    tutorialAtivo || tutorialExemplo ? null : error instanceof Error ? error.message : null;
+
+  // Destaque: `foco` novo (fila do dia/agenda) ou, na ausência dele,
+  // `selected` legado (Pipeline — fora do escopo, item 7). Nunca durante o
+  // tutorial (real ou preview do wizard de aceite).
+  const destaqueId =
+    foco.ativo && foco.id
+      ? foco.id
+      : !tutorialOpen && !tutorialAtivo && !tutorialExemplo
+        ? (selected ?? null)
+        : null;
   useEffect(() => {
-    if (tutorialPreview === "aceite-aceita" || tutorialPreview === "aceite-pendencia") {
-      setLoading(false);
-      return;
-    }
-    void load();
-  }, [tutorialPreview]);
-
-  useEffect(() => {
-    if (!selected || loading) return;
-    const row = rows.find((r) => r.propostaId === selected);
+    if (!destaqueId || loading) return;
+    const row = rows.find((r) => r.propostaId === destaqueId);
     if (!row) return;
-    const el = rowRefs.current[row.cotacaoId];
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [selected, loading, rows]);
+    const delay = foco.ativo ? FOCO_SCROLL_DELAY_MS : 0;
+    const t = window.setTimeout(() => {
+      rowRefs.current[row.cotacaoId]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [destaqueId, foco.ativo, loading, rows]);
+  const focoClasse = useCallback(
+    (propostaId: string | null) => {
+      if (!propostaId) return undefined;
+      const cls = foco.classe(propostaId);
+      if (cls) return cls.trim();
+      return destaqueId === propostaId ? "em-foco" : undefined;
+    },
+    [foco, destaqueId],
+  );
 
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
-        const t = `${cotNum(r.numero)} ${r.segurado} ${r.veiculo}`.toLowerCase();
+        const t = `${cotNum(r.numero, r.cotacaoCriadoEm)} ${r.segurado} ${r.veiculo}`.toLowerCase();
         if (q && !t.includes(q.toLowerCase())) return false;
         return true;
       }),
@@ -235,6 +197,8 @@ function Page() {
       {err && <div className="alert alert-err">{err}</div>}
       {loading && <div className="muted">Carregando…</div>}
 
+      <FocoBarra ativo={foco.ativo} fonte={foco.fonte} id={foco.id} onLimpar={foco.limpar} />
+
       {!loading && filtered.length === 0 && (
         <div className="card" data-tour="em-finalizacao-lista">
           <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
@@ -270,25 +234,24 @@ function Page() {
                   ref={(el) => {
                     rowRefs.current[r.cotacaoId] = el;
                   }}
-                  onClick={() => continuar(r.cotacaoId)}
-                  style={{
-                    cursor: "pointer",
-                    ...(r.propostaId && selected === r.propostaId
-                      ? {
-                          outline: "2px solid var(--brand, #2563eb)",
-                          background: "rgba(37,99,235,.06)",
-                        }
-                      : {}),
-                  }}
+                  onClick={tutorialExemplo ? undefined : () => continuar(r.cotacaoId)}
+                  style={{ cursor: tutorialExemplo ? "default" : "pointer" }}
+                  className={focoClasse(r.propostaId)}
+                  aria-readonly={tutorialExemplo || undefined}
                 >
                   <td
                     className="small muted"
                     style={{ fontFamily: "ui-monospace,Menlo,monospace" }}
                   >
-                    #{cotNum(r.numero)}
+                    #{cotNum(r.numero, r.cotacaoCriadoEm)}
                   </td>
                   <td>
                     <strong>{r.segurado}</strong>
+                    {tutorialExemplo && (
+                      <span className="chip chip-outline" style={{ marginLeft: 8 }}>
+                        Exemplo do tutorial
+                      </span>
+                    )}
                   </td>
                   <td>{r.veiculo}</td>
                   <td>{r.seguradora || "—"}</td>
@@ -309,19 +272,35 @@ function Page() {
                     )}
                   </td>
                   <td className="small muted">{tempoDesde(r.criadoEm)}</td>
-                  <td>
-                    <button
-                      className="btn btn-yellow btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        continuar(r.cotacaoId);
-                      }}
-                    >
-                      <svg width={13} height={13}>
-                        <use href={r.status === "falha" ? "#i-send" : "#i-search"} />
-                      </svg>{" "}
-                      {r.status === "falha" ? "Tentar novamente" : "Consultar status"}
-                    </button>
+                  <td className="fase-acoes-td">
+                    <div className="fase-acoes" data-tour="em-finalizacao-fase-acoes">
+                      <button
+                        className="btn btn-yellow btn-sm"
+                        disabled={tutorialExemplo}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!tutorialExemplo) continuar(r.cotacaoId);
+                        }}
+                      >
+                        <svg width={13} height={13}>
+                          <use href={r.status === "falha" ? "#i-send" : "#i-search"} />
+                        </svg>{" "}
+                        {r.status === "falha" ? "Tentar novamente" : "Consultar status"}
+                      </button>
+                      <button
+                        className="ic-btn"
+                        title="Imprimir ou enviar a cotação aprovada"
+                        disabled={tutorialExemplo}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!tutorialExemplo) imprimir.abrir(r);
+                        }}
+                      >
+                        <svg width={15} height={15}>
+                          <use href="#i-printer" />
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -329,6 +308,7 @@ function Page() {
           </table>
         </div>
       )}
+      {imprimir.modal}
 
       <div className="clt-note" style={{ marginTop: 14 }}>
         <svg width={15} height={15}>

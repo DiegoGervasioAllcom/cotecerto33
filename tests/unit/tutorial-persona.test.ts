@@ -67,7 +67,7 @@ describe("roteiro por persona", () => {
         scopeLoading: false,
       },
       kind: "sales",
-      presentation: ["Rafinha", "A PRIMEIRA SEMANA DA RAFINHA"],
+      presentation: ["sistema inteiro", "O DIA A DIA DO VENDEDOR"],
     },
     {
       experiencia: "Master",

@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
+import { PipelineColuna } from "@/components/venda/pipeline/pipeline-coluna";
 import { supabase } from "@/integrations/supabase/client";
 import { useGroupScope } from "@/lib/group-scope";
 import { veiculoLabel } from "@/lib/veiculo";
@@ -280,14 +281,23 @@ function Page() {
           const list = grouped[key] ?? [];
           const total = list.reduce((a, l) => a + Number(l.valor || 0), 0);
           return (
-            <div className="kcol" key={s.id}>
-              <div className="kcol-h">
-                <span className="name">{s.nome}</span>
-                <span className="count">{list.length}</span>
-              </div>
-              <div className="kcol-h" style={{ marginTop: -6, paddingTop: 0 }}>
-                <span className="value">{brl(total)}</span>
-              </div>
+            <PipelineColuna
+              key={s.id}
+              stageKey={key}
+              itemCount={list.length}
+              total={list.length}
+              header={
+                <>
+                  <div className="kcol-h">
+                    <span className="name">{s.nome}</span>
+                    <span className="count">{list.length}</span>
+                  </div>
+                  <div className="kcol-h" style={{ marginTop: -6, paddingTop: 0 }}>
+                    <span className="value">{brl(total)}</span>
+                  </div>
+                </>
+              }
+            >
               {list.length === 0 && (
                 <div className="small muted" style={{ padding: 8 }}>
                   Vazio
@@ -345,7 +355,7 @@ function Page() {
                   </div>
                 );
               })}
-            </div>
+            </PipelineColuna>
           );
         })}
       </div>

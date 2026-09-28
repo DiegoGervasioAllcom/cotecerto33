@@ -195,6 +195,18 @@ describe("pipeline_leads_etapa — equivalência com leadEtapaBucket()", () => {
       esperado: "negociacao",
     },
     {
+      nome: "cotacaoStatus 'enviada_quiver' (AGUARDANDO_CALCULO_STATUSES) cai em negociacao",
+      statusPipeline: "novo",
+      cotacaoStatus: "enviada_quiver",
+      esperado: "negociacao",
+    },
+    {
+      nome: "cotacaoStatus 'erro_quiver' (AGUARDANDO_CALCULO_STATUSES) cai em negociacao",
+      statusPipeline: "novo",
+      cotacaoStatus: "erro_quiver",
+      esperado: "negociacao",
+    },
+    {
       nome: "cotacaoStatus 'rascunho' (EM_COTACAO_STATUSES) cai em cotacao",
       statusPipeline: "novo",
       cotacaoStatus: "rascunho",

@@ -2,12 +2,14 @@ import type { TutorialChapter, TutorialKind, TutorialStep } from "./tutorial-typ
 
 export type TutorialPage =
   | "home"
+  | "agenda"
   | "atender"
   | "pipeline"
   | "lead"
-  | "compare"
-  | "proposal"
-  | "aceite"
+  | "emcotacao"
+  | "emnegociacao"
+  | "emfinalizacao"
+  | "emissao"
   | "msgs"
   | "extrato"
   | "mdash"
@@ -42,12 +44,14 @@ export type TutorialSourceChapter = Omit<TutorialChapter, "steps"> & {
 
 const ROUTES: Record<TutorialPage, string> = {
   home: "/inicio",
+  agenda: "/venda/agenda",
   atender: "/venda/atender",
   pipeline: "/venda/pipeline",
   lead: "/venda/novo-lead",
-  compare: "/venda/em-negociacao",
-  proposal: "/venda/em-negociacao",
-  aceite: "/venda/em-finalizacao",
+  emcotacao: "/venda/em-cotacao",
+  emnegociacao: "/venda/em-negociacao",
+  emfinalizacao: "/venda/em-finalizacao",
+  emissao: "/venda/emissao",
   msgs: "/venda/mensagens-prontas",
   extrato: "/venda/extrato",
   mdash: "/comando/visao-geral",
@@ -74,6 +78,7 @@ const ROUTES: Record<TutorialPage, string> = {
 const SHARED_TARGETS: Record<string, string> = {
   ".sidebar": '[data-tour="shell-sidebar"]',
   '.nav-item[data-nav="atender"]': '[data-tour="nav-atender"]',
+  '.nav-item[data-nav="emnegociacao"]': '[data-tour="nav-em-negociacao"]',
   ".topbar .search": '[data-tour="shell-search"]',
   "#btnNovoLead": '[data-tour="nav-novo-lead"]',
   "#sideUser": '[data-tour="shell-user"]',
@@ -84,6 +89,14 @@ const PAGE_TARGETS: Partial<Record<TutorialPage, Record<string, string>>> = {
   home: {
     "#meuFunilCard": '[data-tour="home-funil"]',
     "#trendChart": '[data-tour="home-tendencia"]',
+    ".dia-fila": '[data-tour="home-fila"]',
+  },
+  agenda: {
+    "#btnNovoLembrete": '[data-tour="agenda-novo-lembrete"]',
+    ".summary-chips": '[data-tour="agenda-resumo"]',
+    ".ag-filtros": '[data-tour="agenda-filtros"]',
+    ".ag-item": '[data-tour="agenda-item"]',
+    ".ic-btn.ok": '[data-tour="agenda-concluir"]',
   },
   lead: {
     "#stepperBar": ".stepper",
@@ -94,24 +107,31 @@ const PAGE_TARGETS: Partial<Record<TutorialPage, Record<string, string>>> = {
     "#foldVeic": ".wizard-card .fold:nth-of-type(2)",
     "#advCotacao": ".wizard-card .fold",
     "#resumoCard": ".resumo",
+    ".tipo-item": '[data-tour="seguro-tipo-item"]',
+    "#swCond": '[data-tour="perfil-condutor"]',
     "#btnHistorico": '[data-tour="lead-historico"]',
     "#btnClassificarPerda": '[data-tour="lead-perda"]',
+    // Etapa 7 (Transmissão) — a Confirmação (`.ff-table`) e o botão
+    // "Efetivar proposta" vivem no mesmo `data-tour` do resumo/rodapé real
+    // (`TransmissaoConfirmacao.tsx`), tanto no preview do tutorial
+    // (`lead-transmissao-confirmacao`) quanto na tela de verdade.
+    ".wizard-grid": '[data-tour="transmissao-dados"]',
+    ".ff-table": '[data-tour="transmissao-confirmacao"]',
+    ".wizard-foot .btn-yellow": '[data-tour="transmissao-efetivar"]',
+    ".acc-pills": '[data-tour="transmitida-acoes"]',
   },
-  compare: {
-    "#btnCompareMais": '[data-tour="comparar-mais"]',
+  emcotacao: {
+    ".table-pipe": '[data-tour="em-cotacao-lista"]',
   },
-  proposal: {
-    ".prop-section:nth-child(2)": '[data-tour="proposta-versao"]',
-    ".payment-grid": '[data-tour="proposta-pagamento"]',
-    ".prop-section:nth-child(5)": '[data-tour="proposta-nota"]',
-    ".prop-card .row:last-child .btn-yellow": '[data-tour="proposta-enviar"]',
+  emnegociacao: {
+    "#page-emnegociacao .card": '[data-tour="em-negociacao-aguardando"]',
+    ".fase-acoes": '[data-tour="em-negociacao-fase-acoes"]',
   },
-  aceite: {
-    ".timeline": '[data-tour="aceite-timeline"]',
-    ".confer-grid": '[data-tour="aceite-conferencia"]',
-    ".confer-check": '[data-tour="aceite-checkbox"]',
-    "#btnTransmit": '[data-tour="aceite-transmitir"]',
-    ".confer-card": '[data-tour="aceite-pendencia"]',
+  emfinalizacao: {
+    ".fase-acoes": '[data-tour="em-finalizacao-fase-acoes"]',
+  },
+  emissao: {
+    ".table-pipe": '[data-tour="emissao-aguardando"]',
   },
   extrato: {
     "#page-extrato .kpi-grid": ".kpi-grid",
@@ -121,6 +141,14 @@ const PAGE_TARGETS: Partial<Record<TutorialPage, Record<string, string>>> = {
     "#page-extrato .extrato-estornos": '[data-tour="extrato-estornos"]',
     "#page-extrato .extrato-campanha": '[data-tour="extrato-campanha"]',
     "#page-extrato .extrato-pagamentos": '[data-tour="extrato-pagamentos"]',
+    ".extrato-filters": '[data-tour="extrato-filtros"]',
+    // Primeira ocorrência de `.table-pipe.mtable` na página — o passo usa
+    // `prepare: "extrato-venda"` (`ExtratoTutorialSalePreview`, em
+    // `extrato-tutorial-preview.tsx`), que desenha essa mesma tabela mesmo
+    // sem nenhuma venda real (a tabela de verdade só existe com
+    // `rows.length > 0`).
+    ".extrato-table": ".table-pipe.mtable",
+    ".extrato-estornos": '[data-tour="extrato-estornos"]',
   },
   mfranq: {
     "#page-mfranq .mtable": '[data-tour="franquias-lista"]',
@@ -151,8 +179,6 @@ function resolveDestination(
   page: TutorialPage,
   target: string | null,
 ): TutorialStep["destination"] | undefined {
-  if (page === "compare") return "cotacao-comparativo";
-  if (page === "proposal") return "proposta-selecionada";
   if (page === "mfranq" && target?.includes(".funnel")) return "franquia-detalhe";
   if (page === "mvend" && target?.includes(".funnel")) return "vendedor-detalhe";
   return undefined;

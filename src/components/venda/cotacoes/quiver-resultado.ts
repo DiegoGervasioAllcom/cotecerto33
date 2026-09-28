@@ -112,6 +112,98 @@ export function ordenarResultados(resultados: readonly ResultadoCalculo[]): Resu
   return [...resultados].sort((a, b) => premioNumerico(a.opcoes[0]) - premioNumerico(b.opcoes[0]));
 }
 
+/**
+ * Critério de ordenação da lista comparativa do Cálculo (V12.3.5 ·
+ * `.calc-bar` → select de ordenação): "menor"/"maior" prêmio (primeira opção
+ * do card) ou "retorno" (ordem em que a Quiver devolveu os cards, via
+ * `resultado.index` — o protótipo mantém "a ordem em que as cias
+ * responderam").
+ */
+export type OrdemCalculo = "menor" | "maior" | "retorno";
+
+export const ORDEM_CALCULO_OPCOES: Array<[OrdemCalculo, string]> = [
+  ["menor", "Menor preço"],
+  ["maior", "Maior preço"],
+  ["retorno", "Retorno das cias"],
+];
+
+export function ordenarPorEscolha(
+  resultados: readonly ResultadoCalculo[],
+  ordem: OrdemCalculo,
+): ResultadoCalculo[] {
+  if (ordem === "retorno") return [...resultados].sort((a, b) => a.index - b.index);
+  if (ordem === "maior") {
+    // Mesma matemática do protótipo (`calcBarra`/comparador "maior"): cards
+    // sem prêmio numérico (Infinity) contam como 0 na comparação, então
+    // sempre afundam pro fim da lista em vez de ir para o topo do "maior".
+    return [...resultados].sort((a, b) => {
+      const av = premioNumerico(a.opcoes[0]);
+      const bv = premioNumerico(b.opcoes[0]);
+      return (bv === Infinity ? 0 : bv) - (av === Infinity ? 0 : av);
+    });
+  }
+  return ordenarResultados(resultados);
+}
+
+/**
+ * Faixa de preço da barra de ferramentas do Cálculo (`CALC_FAIXAS` no
+ * protótipo). Os limites são cópia literal do protótipo V12; o valor
+ * comparado é sempre o prêmio real (primeiro item de `opcoes`), nunca
+ * inventado.
+ */
+export type FaixaPrecoCalculo = "" | "ate3500" | "3500a4000" | "4000a5000" | "acima5000";
+
+export const FAIXAS_PRECO_CALCULO: Array<[FaixaPrecoCalculo, string]> = [
+  ["", "Faixa de preço · todas"],
+  ["ate3500", "Até R$ 3.500"],
+  ["3500a4000", "R$ 3.500 a R$ 4.000"],
+  ["4000a5000", "R$ 4.000 a R$ 5.000"],
+  ["acima5000", "Acima de R$ 5.000"],
+];
+
+export function estaNaFaixaDePreco(premio: number, faixa: FaixaPrecoCalculo): boolean {
+  if (!faixa) return true;
+  if (faixa === "ate3500") return premio <= 3500;
+  if (faixa === "3500a4000") return premio > 3500 && premio <= 4000;
+  if (faixa === "4000a5000") return premio > 4000 && premio <= 5000;
+  return premio > 5000;
+}
+
+export function filtrarPorFaixaDePreco(
+  resultados: readonly ResultadoCalculo[],
+  faixa: FaixaPrecoCalculo,
+): ResultadoCalculo[] {
+  return resultados.filter((resultado) => {
+    const premio = premioNumerico(resultado.opcoes[0]);
+    // Card sem prêmio numérico (não deu pra extrair um valor real da
+    // seguradora) nunca é escondido por faixa de preço — mesma regra do
+    // protótipo (`calcSemRetorno(sg) || calcNaFaixa(...)`).
+    return premio === Infinity || estaNaFaixaDePreco(premio, faixa);
+  });
+}
+
+/** Uma entrada de cobertura (label + valor) de um card, básica ou adicional. */
+export function coberturaEntries(resultado: ResultadoCalculo): Array<[string, string]> {
+  return [
+    ...Object.entries(resultado.coberturasBasicas ?? {}),
+    ...Object.entries(resultado.coberturasAdicionais ?? {}),
+  ];
+}
+
+/**
+ * União dos labels de cobertura (básicas + adicionais) de todos os cards,
+ * na ordem em que aparecem pela primeira vez — cada linha da lista
+ * comparativa é um desses labels; quando uma seguradora não mandou aquele
+ * label, a célula mostra "—" (nunca inventa o valor).
+ */
+export function coberturaLabelsUnion(resultados: readonly ResultadoCalculo[]): string[] {
+  return [
+    ...new Set(
+      resultados.flatMap((resultado) => coberturaEntries(resultado).map(([label]) => label)),
+    ),
+  ];
+}
+
 export function tituloResultado(resultado: ResultadoCalculo): string {
   return [resultado.produto, resultado.nome].filter(Boolean).join(" · ") || "Produto não informado";
 }

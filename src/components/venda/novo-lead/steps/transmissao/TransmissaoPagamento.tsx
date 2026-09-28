@@ -61,7 +61,13 @@ export function TransmissaoPagamento({ enviando, erroEnvio, onVoltar, onEfetivar
           Voltar
         </button>
         <span className="spacer" />
-        <button className="btn btn-yellow" type="button" onClick={onEfetivar} disabled={enviando}>
+        <button
+          className="btn btn-yellow"
+          type="button"
+          data-tour="transmissao-efetivar"
+          onClick={onEfetivar}
+          disabled={enviando}
+        >
           <svg width="14" height="14">
             <use href="#i-check" />
           </svg>{" "}

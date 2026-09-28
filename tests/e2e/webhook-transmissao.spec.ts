@@ -82,7 +82,9 @@ async function prepararCotacaoCalculada(page: Page): Promise<CotacaoQuiverFixtur
   await loginAs(page, fixture.email, fixture.senha);
   await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
   await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
-  await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+    timeout: 10_000,
+  });
 
   return fixture;
 }
@@ -117,23 +119,28 @@ async function gerarPropostaComTentativaReal(page: Page, fixture: CotacaoQuiverF
     await route.continue();
   });
 
-  const cardAlfa = page.locator(".calc-card").filter({ hasText: CARD_ALFA.seguradora });
-  const cardBeta = page.locator(".calc-card").filter({ hasText: CARD_BETA.seguradora });
-  await expect(cardBeta).toBeVisible();
-  await cardAlfa.getByRole("button", { name: `Gerar proposta (${CARD_ALFA.seguradora})` }).click();
+  // Contratar pela lista comparativa (visão padrão do passo Cálculo,
+  // V12.3.5): o botão "Contratar" carrega o mesmo título
+  // `Gerar proposta (<seguradora>)` que o botão do card, então
+  // `getByTitle` acha a célula certa em qualquer visão sem depender do
+  // texto visível ("Contratar" na lista, ícone no card).
+  await expect(page.getByText(CARD_BETA.seguradora).first()).toBeVisible();
+  await page.getByTitle(`Gerar proposta (${CARD_ALFA.seguradora})`).click();
   await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
   await confirmarDadosComplementaresTransmissao(page);
 
-  // Modo "transmitindo": os demais cards somem, só sobra o painel de espera.
+  // Modo "transmitindo": o passo Cálculo inteiro some, só sobra o painel de
+  // espera (que mostra só a seguradora escolhida, Alfa — Beta não aparece
+  // mais em lugar nenhum da tela).
   await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible();
-  await expect(cardBeta).toHaveCount(0);
-  await expect(cardAlfa).toHaveCount(0);
+  await expect(page.locator(".calc-lista")).toHaveCount(0);
+  await expect(page.getByText(CARD_BETA.seguradora)).toHaveCount(0);
 
   return tentativaId;
 }
 
 test.describe("Webhook de transmissão — StepCalculo reage ao resultado do robô", () => {
-  test("sucesso: webhook transmitido=true → UI mostra confirmação e link para Emissão", async ({
+  test("sucesso: webhook transmitido=true → sub-passo Transmitida mostra o card completo (Frente 3, V12.1.13 parcial)", async ({
     page,
   }) => {
     const fixture = await prepararCotacaoCalculada(page);
@@ -151,11 +158,32 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       });
       expect(res.ok()).toBeTruthy();
 
-      // O polling do front roda a cada 4s — margem generosa acima disso.
-      await expect(page.getByText("Proposta transmitida com sucesso")).toBeVisible({
-        timeout: 15_000,
-      });
-      await expect(page.getByRole("link", { name: "Ir para Emissão" })).toBeVisible();
+      // O polling do front roda a cada 4s — margem generosa acima disso. A
+      // proposta virou uma linha real (`registrar_resultado_transmissao_quiver`),
+      // então o ramo `transmitida` do resultado ganha o card completo de
+      // `TransmissaoTransmitidaCard` em vez do resumo antigo.
+      const acoes = page.locator('[data-tour="transmitida-acoes"]');
+      await expect(acoes).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText("Proposta transmitida com sucesso")).toHaveCount(0);
+
+      // Ações desabilitadas — dependem da integração que ainda não devolve
+      // protocolo/documentos (nunca simular, V12.1.28).
+      await expect(acoes.getByRole("button", { name: "Documentos e envio" })).toBeDisabled();
+      await expect(acoes.getByRole("button", { name: "Consultar protocolo" })).toBeDisabled();
+
+      // Campos que a integração futura preenche continuam "—" hoje.
+      await expect(page.getByRole("cell", { name: "Protocolo" })).toBeVisible();
+      // Nome do segurado (embed 1:1 `cotacao_segurado` — `embed1a1` em
+      // `useProposta`/`TransmissaoTransmitidaCard`): confirma que o PostgREST
+      // devolve objeto (não array) e o card não trava em "—". Escopado em
+      // `transmitida-docs` — o mesmo nome aparece em mais lugares da tela
+      // (resumo, aviso de cotação finalizada), o que deixaria o locator
+      // ambíguo se não escopado.
+      const docs = page.locator('[data-tour="transmitida-docs"]');
+      await expect(docs.getByText("CLIENTE TRANSMISSÃO E2E")).toBeVisible();
+      const atalhos = page.locator('[data-tour="transmitida-atalhos"]');
+      await expect(atalhos.getByRole("link", { name: /Emissão & histórico/ })).toBeVisible();
+      await expect(atalhos.getByRole("link", { name: /Pipeline/ })).toBeVisible();
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
     }
@@ -237,12 +265,9 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       await page.getByRole("button", { name: "Tentar novamente" }).click();
       await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
       await page.getByRole("button", { name: "Voltar ao cálculo" }).click();
-      await expect(
-        page.locator(".calc-card").filter({ hasText: CARD_ALFA.seguradora }),
-      ).toBeVisible();
-      await expect(
-        page.locator(".calc-card").filter({ hasText: CARD_BETA.seguradora }),
-      ).toBeVisible();
+      await expect(page.locator(".calc-lista")).toBeVisible();
+      await expect(page.getByText(CARD_ALFA.seguradora).first()).toBeVisible();
+      await expect(page.getByText(CARD_BETA.seguradora).first()).toBeVisible();
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
     }

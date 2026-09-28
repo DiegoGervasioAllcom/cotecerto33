@@ -231,27 +231,23 @@ export function StepPerfil({ f, up, erros }: Props) {
       </div>
       <div className="wizard-grid">
         <div className="field-group full">
-          <label>Condutor principal é o próprio segurado?</label>
-          <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-            <label>
-              <input
-                type="radio"
-                name="cond"
-                checked={f.condutorMesmo === "sim"}
-                onChange={() => up("condutorMesmo", "sim")}
-              />{" "}
-              Sim
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="cond"
-                checked={f.condutorMesmo === "nao"}
-                onChange={() => up("condutorMesmo", "nao")}
-              />{" "}
-              Não
-            </label>
-          </div>
+          <label
+            className={`switch ${f.condutorMesmo === "sim" ? "on" : ""}`}
+            data-tour="perfil-condutor"
+            role="switch"
+            aria-checked={f.condutorMesmo === "sim"}
+            tabIndex={0}
+            onClick={() => up("condutorMesmo", f.condutorMesmo === "sim" ? "nao" : "sim")}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                up("condutorMesmo", f.condutorMesmo === "sim" ? "nao" : "sim");
+              }
+            }}
+          >
+            <span className="track"></span>
+            <span className="label">O segurado é o principal condutor do veículo</span>
+          </label>
         </div>
         {f.condutorMesmo === "nao" && (
           <>

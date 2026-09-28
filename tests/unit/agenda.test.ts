@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
+  aprovacaoParaItem,
   classificarUrgencia,
+  contarPorFonte,
   diasParados,
+  filtrarPorFonte,
+  HOME_FILA_N,
   lembreteParaItem,
   limiteRiscoISO,
   montarAgenda,
@@ -9,10 +13,15 @@ import {
   retornoParaItem,
   riscoParaItem,
   RISCO_DIAS_PARADO,
+  seguradoraParaItem,
+  selecionarFilaHome,
   type AgendaItem,
+  type AprovacaoRow,
+  type FonteAgenda,
   type LembreteRow,
   type RetornoRow,
   type RiscoRow,
+  type SeguradoraRow,
 } from "@/lib/agenda";
 
 // Data de referência fixa para os testes não dependerem do dia em que rodam.
@@ -69,6 +78,7 @@ describe("ordenarAgenda (unitário puro)", () => {
       leadId: null,
       statusPipeline: null,
       cotacaoId: null,
+      propostaId: null,
       tipoLembrete: "tarefa",
     };
   }
@@ -127,6 +137,7 @@ describe("montarAgenda (unitário puro — junta as 3 fontes já ordenadas)", ()
   const risco: RiscoRow = {
     id: "cot-1",
     numero: 42,
+    criado_em: "2026-09-01T10:00:00Z",
     atualizado_em: new Date(AGORA.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     segurado: { nome: "Bruno" },
     veiculo: { marca_nome: "FIAT", modelo_nome: "UNO", ano_modelo: "2020" },
@@ -163,11 +174,11 @@ describe("montarAgenda (unitário puro — junta as 3 fontes já ordenadas)", ()
     });
   });
 
-  it("junta as 3 fontes e ordena por urgência (atrasado > hoje > depois)", () => {
+  it("junta as 5 fontes e ordena por urgência (atrasado > hoje > depois)", () => {
     // retorno e risco caem no mesmo grupo "atrasado" (ord 0); dentro do grupo
     // o desempate é por hora, e risco não tem hora (null) — por isso vem
     // primeiro. O lembrete (hoje, ord 1) fica por último.
-    const itens = montarAgenda([retorno], [risco], [lembrete], AGORA);
+    const itens = montarAgenda([retorno], [risco], [], [], [lembrete], AGORA);
     expect(itens.map((i) => i.fonte)).toEqual(["risco", "retorno", "lembrete"]);
   });
 
@@ -180,5 +191,226 @@ describe("montarAgenda (unitário puro — junta as 3 fontes já ordenadas)", ()
     const item = riscoParaItem(parado10Dias, AGORA);
     expect(item.texto).toContain("10 dias");
     expect(classificarUrgencia(item.data, AGORA).ord).toBe(0);
+  });
+
+  it("número da cotação usa o ano de CRIAÇÃO, não o ano corrente (cotação de ano anterior)", () => {
+    const criadaAnoAnterior: RiscoRow = { ...risco, criado_em: "2025-12-20T10:00:00Z" };
+    const item = riscoParaItem(criadaAnoAnterior, AGORA);
+    expect(item.titulo).toContain("COT-2025-00042");
+    expect(item.titulo).not.toContain("COT-2026-");
+  });
+});
+
+describe("selecionarFilaHome (unitário puro — cartão 'O que fazer agora' do Início)", () => {
+  // Item sintético já em ordem de urgência crescente (não reordena — a
+  // função assume que `itens` já veio de `montarAgenda`/`ordenarAgenda`).
+  function item(fonte: FonteAgenda, id: string, ord: 0 | 1 | 2 | 3 = 0): AgendaItem {
+    const datas = ["2026-09-16", "2026-09-17", "2026-09-18", "2026-09-25"];
+    return {
+      id: `${fonte}:${id}`,
+      fonte,
+      data: datas[ord],
+      hora: null,
+      titulo: id,
+      texto: "",
+      leadId: null,
+      statusPipeline: null,
+      cotacaoId: fonte === "risco" ? id : null,
+      propostaId: fonte === "seguradora" ? id : null,
+      tipoLembrete: fonte === "lembrete" ? "tarefa" : null,
+    };
+  }
+
+  it(`corta a lista em HOME_FILA_N (${HOME_FILA_N}) mantendo a ordem de urgência`, () => {
+    const itens = [
+      item("retorno", "a", 0),
+      item("risco", "b", 0),
+      item("lembrete", "c", 1),
+      item("risco", "d", 1),
+      item("retorno", "e", 2),
+      item("risco", "f", 2),
+      item("lembrete", "g", 3), // 7º — deveria ficar de fora
+    ];
+    const fila = selecionarFilaHome(itens);
+    expect(fila).toHaveLength(HOME_FILA_N);
+    expect(fila.map((i) => i.id)).toEqual([
+      "retorno:a",
+      "risco:b",
+      "lembrete:c",
+      "risco:d",
+      "retorno:e",
+      "risco:f",
+    ]);
+  });
+
+  it("quando os 6 primeiros são só avisos do sistema (risco) e existe um item pessoal depois, ele substitui o último slot", () => {
+    const itens = [
+      item("risco", "r1", 0),
+      item("risco", "r2", 0),
+      item("risco", "r3", 1),
+      item("risco", "r4", 1),
+      item("risco", "r5", 2),
+      item("risco", "r6", 2),
+      item("retorno", "pessoal", 3), // 7º — só ele é pessoal
+    ];
+    const fila = selecionarFilaHome(itens);
+    expect(fila).toHaveLength(HOME_FILA_N);
+    // Os 5 primeiros riscos continuam intactos; só o último slot vira o item pessoal.
+    expect(fila.map((i) => i.id)).toEqual([
+      "risco:r1",
+      "risco:r2",
+      "risco:r3",
+      "risco:r4",
+      "risco:r5",
+      "retorno:pessoal",
+    ]);
+  });
+
+  it("já havendo um item pessoal (retorno ou lembrete) entre os 6 primeiros, não altera a fila", () => {
+    const itens = [
+      item("risco", "r1", 0),
+      item("lembrete", "pessoal-cedo", 0),
+      item("risco", "r2", 1),
+      item("risco", "r3", 1),
+      item("risco", "r4", 2),
+      item("risco", "r5", 2),
+      item("retorno", "pessoal-tarde", 3),
+    ];
+    const fila = selecionarFilaHome(itens);
+    expect(fila.map((i) => i.id)).toEqual([
+      "risco:r1",
+      "lembrete:pessoal-cedo",
+      "risco:r2",
+      "risco:r3",
+      "risco:r4",
+      "risco:r5",
+    ]);
+  });
+
+  it("sem nenhum item pessoal em toda a lista, não altera nada (não há o que substituir)", () => {
+    const itens = [
+      item("risco", "r1", 0),
+      item("risco", "r2", 0),
+      item("risco", "r3", 1),
+      item("risco", "r4", 1),
+      item("risco", "r5", 2),
+      item("risco", "r6", 2),
+      item("risco", "r7", 3),
+    ];
+    const fila = selecionarFilaHome(itens);
+    expect(fila.map((i) => i.id)).toEqual([
+      "risco:r1",
+      "risco:r2",
+      "risco:r3",
+      "risco:r4",
+      "risco:r5",
+      "risco:r6",
+    ]);
+  });
+
+  it("lista menor que HOME_FILA_N volta inteira, sem preencher nem estourar", () => {
+    const itens = [item("risco", "r1", 0), item("lembrete", "pessoal", 1)];
+    expect(selecionarFilaHome(itens)).toHaveLength(2);
+    expect(selecionarFilaHome(itens).map((i) => i.id)).toEqual(["risco:r1", "lembrete:pessoal"]);
+
+    const semPessoal = [item("risco", "r1", 0)];
+    expect(selecionarFilaHome(semPessoal)).toEqual(semPessoal);
+
+    expect(selecionarFilaHome([])).toEqual([]);
+  });
+});
+
+describe("seguradoraParaItem / aprovacaoParaItem (unitário puro — V12.3.2)", () => {
+  const seguradora: SeguradoraRow = {
+    id: "prop-1",
+    numero: "PRP-00042",
+    atualizado_em: new Date(AGORA.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    transmissao_motivo: "documento_pendente",
+    transmissao_mensagem: "Falta o CRLV do veículo",
+    cotacao: { segurado: { nome: "Carla" } },
+  };
+  const aprovacao: AprovacaoRow = {
+    id: "desc-1",
+    pct_pedido: 12,
+    criado_em: new Date(AGORA.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    cotacao: { lead: { id: "lead-9", nome: "Renato", status_pipeline: "negociacao" } },
+  };
+
+  it("proposta bloqueada vira item com o motivo/mensagem da seguradora", () => {
+    const item = seguradoraParaItem(seguradora, AGORA);
+    expect(item).toMatchObject({
+      id: "seguradora:prop-1",
+      fonte: "seguradora",
+      leadId: null,
+      cotacaoId: null,
+      propostaId: "prop-1",
+    });
+    expect(item.texto).toContain("CRLV");
+  });
+
+  it("desconto pendente vira item ligado ao lead da cotação quando ele existe", () => {
+    const item = aprovacaoParaItem(aprovacao, AGORA);
+    expect(item).toMatchObject({
+      id: "aprovacao:desc-1",
+      fonte: "aprovacao",
+      leadId: "lead-9",
+      statusPipeline: "negociacao",
+    });
+    expect(item.titulo).toContain("12%");
+  });
+
+  it("desconto sem lead de origem (carteira/PJ) não trava — só fica sem leadId", () => {
+    const semLead: AprovacaoRow = { ...aprovacao, cotacao: { lead: null } };
+    expect(aprovacaoParaItem(semLead, AGORA).leadId).toBeNull();
+  });
+});
+
+describe("contarPorFonte / filtrarPorFonte (unitário puro — chips de filtro da agenda)", () => {
+  function item(fonte: FonteAgenda, id: string): AgendaItem {
+    return {
+      id: `${fonte}:${id}`,
+      fonte,
+      data: "2026-09-17",
+      hora: null,
+      titulo: id,
+      texto: "",
+      leadId: null,
+      statusPipeline: null,
+      cotacaoId: null,
+      propostaId: null,
+      tipoLembrete: null,
+    };
+  }
+
+  const itens: AgendaItem[] = [
+    item("retorno", "a"),
+    item("risco", "b"),
+    item("risco", "c"),
+    item("seguradora", "d"),
+    item("aprovacao", "e"),
+    item("lembrete", "f"),
+  ];
+
+  it("conta cada fonte isoladamente, incluindo as que não têm nenhum item", () => {
+    expect(contarPorFonte(itens)).toEqual({
+      retorno: 1,
+      risco: 2,
+      seguradora: 1,
+      aprovacao: 1,
+      lembrete: 1,
+    });
+    expect(contarPorFonte([])).toEqual({
+      retorno: 0,
+      risco: 0,
+      seguradora: 0,
+      aprovacao: 0,
+      lembrete: 0,
+    });
+  });
+
+  it("'todos' devolve a lista inteira; uma fonte específica filtra só ela", () => {
+    expect(filtrarPorFonte(itens, "todos")).toEqual(itens);
+    expect(filtrarPorFonte(itens, "risco").map((i) => i.id)).toEqual(["risco:b", "risco:c"]);
+    expect(filtrarPorFonte(itens, "aprovacao").map((i) => i.id)).toEqual(["aprovacao:e"]);
   });
 });

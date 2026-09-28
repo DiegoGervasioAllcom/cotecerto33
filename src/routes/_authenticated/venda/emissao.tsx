@@ -1,73 +1,57 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
-import { supabase } from "@/integrations/supabase/client";
-import { PROPOSTA_TRANSMITIDA_STATUS } from "@/lib/lead-etapa";
+import { FocoBarra } from "@/components/venda/foco-barra";
+import { PropostasSection } from "@/components/venda/emissao/PropostasSection";
+import { useEmissaoRows } from "@/components/venda/emissao/queries";
+import { useAuth } from "@/lib/auth";
+import { embed1a1 } from "@/lib/postgrest-embed";
+import { FOCO_SCROLL_DELAY_MS, useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
+import {
+  agruparPropostasPorSituacao,
+  moedaOuTraco,
+  propostaSituacaoInfo,
+} from "@/lib/proposta-situacao";
+
+export { fetchEmissaoRows } from "@/components/venda/emissao/queries";
 
 export const Route = createFileRoute("/_authenticated/venda/emissao")({
   head: () => ({ meta: [{ title: "Emissão & histórico · CoteCerto" }] }),
-  validateSearch: (s: Record<string, unknown>): { selected?: string } => ({
-    selected: typeof s.selected === "string" ? s.selected : undefined,
+  validateSearch: (s: Record<string, unknown>): { foco?: string } => ({
+    foco: typeof s.foco === "string" ? s.foco : undefined,
   }),
   component: Page,
 });
 
-type Row = {
-  id: string;
-  numero: string | null;
-  apolice_numero: string | null;
-  seguradora: string | null;
-  premio: number | null;
-  valor: number | null;
-  criado_em: string;
-  transmitida_em: string | null;
-  cotacao_id: string | null;
-  cotacoes: { segurado: { nome: string | null }[] | null } | null;
-};
-
-const fmtBRL = (n: number | null) =>
-  n ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
-
-/** Consulta as propostas já transmitidas com sucesso exibidas nesta tela. */
-export function fetchEmissaoRows() {
-  return supabase
-    .from("propostas")
-    .select(
-      "id,numero,apolice_numero,seguradora,premio,valor,criado_em,transmitida_em,cotacao_id," +
-        "cotacoes(segurado:cotacao_segurado(nome))",
-    )
-    .eq("transmissao_status", PROPOSTA_TRANSMITIDA_STATUS)
-    .order("transmitida_em", { ascending: false })
-    .limit(200);
-}
-
 function Page() {
-  const { selected } = Route.useSearch();
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+  const { foco: focoBusca } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const foco = useFocoAoChegar(focoBusca, () => {
+    void navigate({ search: (s) => ({ ...s, foco: undefined }) });
+  });
+  const { session } = useAuth();
+  const uid = session?.user.id ?? null;
+  const { data, isLoading, error } = useEmissaoRows(uid);
+  const rows = useMemo(() => data ?? [], [data]);
+  const loading = isLoading;
+  const err = error ? error.message : null;
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const [q, setQ] = useState("");
   const [fSeguradora, setFSeguradora] = useState("");
 
-  async function loadRows() {
-    setLoading(true);
-    const { data, error } = await fetchEmissaoRows();
-    if (error) setErr(error.message);
-    setRows((data ?? []) as unknown as Row[]);
-    setLoading(false);
-  }
-
   useEffect(() => {
-    void loadRows();
-  }, []);
-
-  useEffect(() => {
-    if (!selected || loading) return;
-    const el = rowRefs.current[selected];
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [selected, loading, rows.length]);
+    if (!foco.ativo || !foco.id || loading) return;
+    const alvo = foco.id;
+    const t = window.setTimeout(() => {
+      rowRefs.current[alvo]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    }, FOCO_SCROLL_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, [foco.ativo, foco.id, loading, rows.length]);
 
   const seguradoras = useMemo(
     () => Array.from(new Set(rows.map((r) => r.seguradora).filter(Boolean) as string[])).sort(),
@@ -79,8 +63,9 @@ function Page() {
       rows.filter((r) => {
         if (fSeguradora && r.seguradora !== fSeguradora) return false;
         if (q) {
-          const t =
-            `${r.numero ?? ""} ${r.apolice_numero ?? ""} ${r.cotacoes?.segurado?.[0]?.nome ?? ""}`.toLowerCase();
+          const t = `${r.numero ?? ""} ${r.protocolo_seguradora ?? ""} ${r.apolice_numero ?? ""} ${
+            embed1a1(r.cotacoes?.segurado)?.nome ?? ""
+          }`.toLowerCase();
           if (!t.includes(q.toLowerCase())) return false;
         }
         return true;
@@ -88,23 +73,48 @@ function Page() {
     [rows, fSeguradora, q],
   );
 
+  const { aguardando, concluidas } = useMemo(
+    () => agruparPropostasPorSituacao(filtered),
+    [filtered],
+  );
+
   const totalValor = filtered.reduce((a, r) => a + (r.premio ?? r.valor ?? 0), 0);
   const ticketMedio = filtered.length ? totalValor / filtered.length : 0;
 
   function exportar() {
-    const head = ["Nº", "Segurado", "Seguradora", "Prêmio", "Gerada em", "Transmitida"];
-    const lines = filtered.map((r) =>
-      [
-        r.apolice_numero || r.numero || "",
-        r.cotacoes?.segurado?.[0]?.nome ?? "",
+    const head = [
+      "Segurado",
+      "Cotação",
+      "Seguradora",
+      "Produto",
+      "Proposta nº",
+      "Protocolo",
+      "Prêmio",
+      "Parcelas",
+      "Situação",
+      "Transmitida em",
+      "Apólice",
+      "Emitida em",
+    ];
+    const lines = filtered.map((r) => {
+      const st = propostaSituacaoInfo(r.transmissao_status);
+      return [
+        embed1a1(r.cotacoes?.segurado)?.nome ?? "",
+        r.cotacoes?.numero ?? "",
         r.seguradora ?? "",
-        fmtBRL(r.premio ?? r.valor),
-        new Date(r.criado_em).toLocaleDateString("pt-BR"),
+        r.cotacoes?.ramo ?? "",
+        r.numero ?? "",
+        r.protocolo_seguradora ?? "",
+        moedaOuTraco(r.premio ?? r.valor),
+        r.parcelas ? `${r.parcelas}x ${moedaOuTraco(r.valor_parcela)}` : "",
+        st.label,
         r.transmitida_em ? new Date(r.transmitida_em).toLocaleString("pt-BR") : "",
+        r.apolice_numero ?? "",
+        r.emitida_em ? new Date(r.emitida_em).toLocaleString("pt-BR") : "",
       ]
         .map((v) => `"${String(v).replaceAll('"', '""')}"`)
-        .join(","),
-    );
+        .join(",");
+    });
     const csv = [head.join(","), ...lines].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -122,9 +132,8 @@ function Page() {
         <div>
           <h1>Emissão & histórico</h1>
           <div className="sub">
-            {filtered.length} proposta{filtered.length !== 1 ? "s" : ""} transmitida
-            {filtered.length !== 1 ? "s" : ""} · valor total {fmtBRL(totalValor)} · ticket médio{" "}
-            {fmtBRL(ticketMedio)}
+            {filtered.length} proposta{filtered.length !== 1 ? "s" : ""} · valor total{" "}
+            {moedaOuTraco(totalValor)} · ticket médio {moedaOuTraco(ticketMedio)}
           </div>
         </div>
         <div className="tools">
@@ -159,7 +168,7 @@ function Page() {
         </select>
         <input
           className="select-mini"
-          placeholder="Buscar segurado, nº proposta/apólice…"
+          placeholder="Buscar segurado, nº proposta/protocolo/apólice…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           style={{ flex: 1, minWidth: 220 }}
@@ -178,66 +187,39 @@ function Page() {
       {err && <div className="alert alert-err">{err}</div>}
       {loading && <div className="muted">Carregando…</div>}
 
-      {!loading && filtered.length === 0 && (
-        <div className="card" data-tour="emissao-lista">
-          <div
-            className="card-b"
-            style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}
-          >
-            {rows.length === 0
-              ? "Nenhuma proposta transmitida ainda. Assim que a seguradora confirmar o recebimento na Etapa 7, ela aparece aqui."
-              : "Nenhuma proposta encontrada com os filtros atuais."}
-          </div>
-        </div>
-      )}
+      <FocoBarra ativo={foco.ativo} fonte={foco.fonte} id={foco.id} onLimpar={foco.limpar} />
 
-      {filtered.length > 0 && (
-        <div
-          data-tour="emissao-lista"
-          className="card"
-          style={{ padding: 0, overflow: "hidden", overflowX: "auto" }}
-        >
-          <table className="table-pipe mtable" style={{ minWidth: 800 }}>
-            <thead>
-              <tr>
-                <th>Nº</th>
-                <th>Segurado</th>
-                <th>Seguradora</th>
-                <th style={{ textAlign: "right" }}>Prêmio</th>
-                <th>Gerada em</th>
-                <th>Transmitida</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr
-                  key={r.id}
-                  ref={(el) => {
-                    rowRefs.current[r.id] = el;
-                  }}
-                  style={
-                    selected === r.id
-                      ? {
-                          outline: "2px solid var(--brand, #2563eb)",
-                          background: "rgba(37,99,235,.06)",
-                        }
-                      : undefined
-                  }
-                >
-                  <td>
-                    <strong>{r.apolice_numero || r.numero || "—"}</strong>
-                  </td>
-                  <td>{r.cotacoes?.segurado?.[0]?.nome || "—"}</td>
-                  <td>{r.seguradora || "—"}</td>
-                  <td style={{ textAlign: "right" }}>{fmtBRL(r.premio ?? r.valor)}</td>
-                  <td>{new Date(r.criado_em).toLocaleDateString("pt-BR")}</td>
-                  <td>
-                    {r.transmitida_em ? new Date(r.transmitida_em).toLocaleString("pt-BR") : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {!loading && (
+        <div data-tour="emissao-lista">
+          <PropostasSection
+            titulo="Aguardando a seguradora"
+            chipTexto="vistoria · pagamento · emissão"
+            chipClass="chip-yellow"
+            rows={aguardando}
+            vazio={
+              rows.length === 0
+                ? "Nenhuma proposta por aqui ainda. Assim que a Etapa 7 transmitir uma proposta — com sucesso ou com pendência da seguradora —, ela aparece aqui."
+                : filtered.length === 0
+                  ? "Nenhuma proposta encontrada com os filtros atuais."
+                  : "Nada aguardando a seguradora no momento."
+            }
+            tourId="emissao-aguardando"
+            rowRefs={rowRefs}
+            focoClasse={foco.classe}
+          />
+
+          <div style={{ marginTop: 16 }}>
+            <PropostasSection
+              titulo="Concluídas"
+              chipTexto="apólice emitida"
+              chipClass="chip-ok"
+              rows={concluidas}
+              vazio="Assim que uma apólice for emitida, ela desce para cá sozinha."
+              tourId="emissao-concluidas"
+              rowRefs={rowRefs}
+              focoClasse={foco.classe}
+            />
+          </div>
         </div>
       )}
 
@@ -246,9 +228,8 @@ function Page() {
           <use href="#i-info" />
         </svg>
         <div>
-          Por enquanto esta lista mostra todas as propostas já transmitidas com sucesso, sem separar
-          "aguardando a seguradora" de "emitida" — essa divisão chega numa próxima iteração, quando
-          o status de transmissão ganhar mais detalhe.
+          A lista de cima se atualiza sozinha: quando a seguradora emite a apólice, a proposta desce
+          para as concluídas. Aqui o vendedor só acompanha — a ação já foi feita.
         </div>
       </div>
     </AppShell>

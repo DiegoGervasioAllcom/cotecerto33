@@ -55,7 +55,7 @@ import {
   dedupTentativas,
   fetchEmFinalizacaoRows,
   type TentativaRow,
-} from "@/routes/_authenticated/venda/em-finalizacao";
+} from "@/components/venda/em-finalizacao/queries";
 import { TRANSMISSAO_EM_ABERTO_STATUSES } from "@/lib/lead-etapa";
 
 describe("query de tentativas de transmissão em aberto (/venda/em-finalizacao)", () => {
@@ -64,10 +64,11 @@ describe("query de tentativas de transmissão em aberto (/venda/em-finalizacao)"
     mock.result = { data: [], error: null };
   });
 
-  it("filtra cotacao_transmissoes pelos status de TRANSMISSAO_EM_ABERTO_STATUSES, ordenadas por criado_em desc, limitadas a 500", async () => {
-    await fetchEmFinalizacaoRows();
+  it("filtra cotacao_transmissoes ligadas a cotações do PRÓPRIO vendedor pelos status de TRANSMISSAO_EM_ABERTO_STATUSES, ordenadas por criado_em desc, limitadas a 500", async () => {
+    await fetchEmFinalizacaoRows("vendedor-1");
 
     expect(mock.operations).toContainEqual(["from", "cotacao_transmissoes"]);
+    expect(mock.operations).toContainEqual(["eq", "cotacoes.responsavel_id", "vendedor-1"]);
     expect(mock.operations).toContainEqual(["order", "criado_em", { ascending: false }]);
     expect(mock.operations).toContainEqual(["limit", 500]);
 
@@ -88,7 +89,7 @@ describe("query de tentativas de transmissão em aberto (/venda/em-finalizacao)"
   it("propaga o resultado (data/error) do Supabase sem transformação", async () => {
     mock.result = { data: [{ id: "tent-1" }], error: null };
 
-    await expect(fetchEmFinalizacaoRows()).resolves.toEqual(mock.result);
+    await expect(fetchEmFinalizacaoRows("vendedor-1")).resolves.toEqual(mock.result);
   });
 });
 
@@ -103,7 +104,15 @@ function tentativa(overrides: Partial<TentativaRow> & { cotacao_id: string }): T
     forma_pagamento: "boleto",
     criado_em: "2026-01-01T00:00:00.000Z",
     proposta_id: null,
-    cotacoes: { numero: 1, segurado: [{ nome: "Fulano" }], veiculo: [] },
+    // `cotacao_segurado`/`cotacao_veiculo` são 1:1 (`cotacao_id` é PK) — o
+    // PostgREST devolve objeto, não array (bug corrigido: `dedupTentativas`
+    // indexava `?.[0]` como se fosse array).
+    cotacoes: {
+      numero: 1,
+      criado_em: "2026-01-01T00:00:00.000Z",
+      segurado: { nome: "Fulano" },
+      veiculo: null,
+    },
     ...overrides,
   };
 }
@@ -160,6 +169,25 @@ describe("dedupTentativas", () => {
     expect(dedupTentativas(null)).toEqual([]);
   });
 
+  it("bug corrigido: segurado/veiculo vêm como OBJETO (1:1, cotacao_id é PK), não array — antes o `?.[0]` indexava o objeto e sempre caía em '—'", () => {
+    const rows: TentativaRow[] = [
+      tentativa({
+        cotacao_id: "cot-1",
+        cotacoes: {
+          numero: 7,
+          criado_em: "2026-01-01T00:00:00.000Z",
+          segurado: { nome: "Segurado Real" },
+          veiculo: { marca_nome: "Fiat", modelo_nome: "Uno", ano_modelo: "2020", placa: null },
+        },
+      }),
+    ];
+
+    const resultado = dedupTentativas(rows);
+
+    expect(resultado[0].segurado).toBe("Segurado Real");
+    expect(resultado[0].veiculo).toBe("Fiat Uno 2020");
+  });
+
   it("mapeia os campos de TentativaRow (snake_case) para Row (camelCase) corretamente", () => {
     const rows: TentativaRow[] = [
       tentativa({
@@ -168,10 +196,9 @@ describe("dedupTentativas", () => {
         forma_pagamento: "cartao",
         cotacoes: {
           numero: 42,
-          segurado: [{ nome: "Ciclano" }],
-          veiculo: [
-            { marca_nome: "Fiat", modelo_nome: "Uno", ano_modelo: "2020", placa: "ABC1D23" },
-          ],
+          criado_em: "2025-12-20T00:00:00.000Z",
+          segurado: { nome: "Ciclano" },
+          veiculo: { marca_nome: "Fiat", modelo_nome: "Uno", ano_modelo: "2020", placa: "ABC1D23" },
         },
       }),
     ];
@@ -183,6 +210,7 @@ describe("dedupTentativas", () => {
       propostaId: "prop-1",
       formaPagamento: "cartao",
       numero: 42,
+      cotacaoCriadoEm: "2025-12-20T00:00:00.000Z",
       segurado: "Ciclano",
       veiculo: "Fiat Uno 2020 · ABC1D23",
     });

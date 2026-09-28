@@ -195,9 +195,9 @@ test.describe("pipeline — lead em finalização parado num sub-passo da Transm
       await loginAs(page, fixture.email, fixture.senha);
       await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
       await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
-      await expect(page.getByText(/seguradoras calculadas/i)).toBeVisible({ timeout: 10_000 });
-
-      const card = page.locator(".calc-card").filter({ hasText: CARD_FINALIZACAO_E2E.seguradora });
+      await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+        timeout: 10_000,
+      });
 
       // O clique em "Gerar proposta" muda o `step` local pra 6 (Etapa 7), o
       // que dispara o autosave debounced (1500ms, `useCotacaoRascunho`) que
@@ -244,9 +244,10 @@ test.describe("pipeline — lead em finalização parado num sub-passo da Transm
       // nenhum PATCH desta fase capaz de chegar tarde e pisar no
       // "confirmacao" que vem a seguir.
       const doisPatchesDados = Promise.all([esperarPatchFase("dados"), esperarPatchFase("dados")]);
-      await card
-        .getByRole("button", { name: `Gerar proposta (${CARD_FINALIZACAO_E2E.seguradora})` })
-        .click();
+      // Contratar pela lista comparativa (visão padrão do passo Cálculo,
+      // V12.3.5) — `getByTitle` acha o botão certo em qualquer visão (mesma
+      // técnica de `webhook-transmissao.spec.ts`).
+      await page.getByTitle(`Gerar proposta (${CARD_FINALIZACAO_E2E.seguradora})`).click();
       await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
       await doisPatchesDados;
 

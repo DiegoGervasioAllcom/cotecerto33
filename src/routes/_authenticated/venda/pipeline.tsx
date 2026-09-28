@@ -29,6 +29,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { PipelineCard } from "@/components/venda/pipeline/pipeline-card";
+import { PipelineColuna } from "@/components/venda/pipeline/pipeline-coluna";
 import {
   ageDays,
   ETAPAS_ATIVAS,
@@ -127,7 +128,7 @@ function Page() {
 
   const etapas = useMemo(() => etapasParaBuscar(fEtapa, fStatus), [fEtapa, fStatus]);
 
-  const { colunas, carregarMais, sentinelaRef } = usePipelinePagination(etapas, filtrosComuns);
+  const { colunas, carregarMais } = usePipelinePagination(etapas, filtrosComuns);
 
   // Header + contagem do filtro Estágio: agregado no banco (`etapa → total/
   // valor`), respeitando ramo/origem/parado/motivo — não depende de quantas
@@ -308,7 +309,7 @@ function Page() {
   const algumaColunaComMais = Object.values(colunas).some((c) => c?.hasMore);
   const erroDeColuna = Object.values(colunas).find((c) => c?.error)?.error ?? null;
 
-  function renderCard(l: PipelineLeadRow) {
+  function renderCard(l: PipelineLeadRow, tour = false) {
     const atenderLead = l.etapa === "novo" ? atenderPorLead.get(l.lead_id) : undefined;
     return (
       <PipelineCard
@@ -318,26 +319,26 @@ function Page() {
         retorno={retornoPorLead.get(l.lead_id) ?? null}
         atenderRestanteMs={atenderLead ? atenderAgoraRestanteMs(atenderLead, now) : null}
         onOpen={() => void openLead(l)}
+        tour={tour}
       />
     );
   }
 
-  function renderColunaFooter(etapa: LeadEtapaBucket) {
-    const col = colunas[etapa];
-    if (!col) return null;
+  function renderColunaHeader(
+    label: string,
+    cor: string,
+    total: number,
+    valorTotal: number,
+    descricao: string,
+  ) {
     return (
       <>
-        <div ref={sentinelaRef(etapa)} />
-        {col.hasMore && (
-          <button
-            type="button"
-            className="btn-link btn-sm"
-            disabled={col.loading}
-            onClick={() => carregarMais(etapa)}
-          >
-            {col.loading ? "Carregando…" : "Mostrar mais"}
-          </button>
-        )}
+        <div className="kcol-h" style={{ borderTop: `3px solid ${cor}` }}>
+          <span className="name">{label}</span>
+          <span className="count">{total}</span>
+          <span className="value">{money(valorTotal)}</span>
+        </div>
+        <div className="kcol-d">{descricao}</div>
       </>
     );
   }
@@ -460,47 +461,68 @@ function Page() {
 
       {view === "kanban" ? (
         <div className="kanban">
-          {ETAPAS_ATIVAS.filter((info) => colunas[info.key]).map((info) => {
+          {ETAPAS_ATIVAS.filter((info) => colunas[info.key]).map((info, i) => {
             const col = colunas[info.key]!;
             const resumoCol = resumoEtapas.find((r) => r.etapa === info.key);
             const total = resumoCol?.total ?? col.leads.length;
             const valorTotal = resumoCol?.valorTotal ?? 0;
+            const primeira = i === 0;
             return (
-              <div key={info.key} className="kcol" data-stage={info.key}>
-                <div className="kcol-h" style={{ borderTop: `3px solid ${info.cor}` }}>
-                  <span className="name">{info.label}</span>
-                  <span className="count">{total}</span>
-                  <span className="value">{money(valorTotal)}</span>
-                </div>
-                <div className="kcol-d">{ETAPA_DESCRICAO[info.key]}</div>
+              <PipelineColuna
+                key={info.key}
+                stageKey={info.key}
+                header={renderColunaHeader(
+                  info.label,
+                  info.cor,
+                  total,
+                  valorTotal,
+                  ETAPA_DESCRICAO[info.key],
+                )}
+                itemCount={col.leads.length}
+                total={total}
+                loading={col.loading}
+                hasMore={col.hasMore}
+                onCarregarMais={() => carregarMais(info.key)}
+                primeira={primeira}
+              >
                 {col.leads.length === 0 && !col.loading && (
                   <div className="kcol-vazio">nenhum lead aqui</div>
                 )}
-                {col.leads.map((l) => renderCard(l))}
-                {renderColunaFooter(info.key)}
-              </div>
+                {col.leads.map((l, i2) => renderCard(l, primeira && i2 === 0))}
+              </PipelineColuna>
             );
           })}
-          {colunas.perdido && (
-            <div className="kcol" data-stage="perdido">
-              <div className="kcol-h" style={{ borderTop: "3px solid var(--alert, #dc2626)" }}>
-                <span className="name">Perdido</span>
-                <span className="count">
-                  {resumoEtapas.find((r) => r.etapa === "perdido")?.total ??
-                    colunas.perdido.leads.length}
-                </span>
-                <span className="value">
-                  {money(resumoEtapas.find((r) => r.etapa === "perdido")?.valorTotal ?? 0)}
-                </span>
-              </div>
-              <div className="kcol-d">{ETAPA_DESCRICAO.perdido}</div>
-              {colunas.perdido.leads.length === 0 && !colunas.perdido.loading && (
-                <div className="kcol-vazio">nenhum lead aqui</div>
-              )}
-              {colunas.perdido.leads.map((l) => renderCard(l))}
-              {renderColunaFooter("perdido")}
-            </div>
-          )}
+          {colunas.perdido &&
+            (() => {
+              const total =
+                resumoEtapas.find((r) => r.etapa === "perdido")?.total ??
+                colunas.perdido.leads.length;
+              const valorTotal = resumoEtapas.find((r) => r.etapa === "perdido")?.valorTotal ?? 0;
+              const primeira = ETAPAS_ATIVAS.filter((info) => colunas[info.key]).length === 0;
+              return (
+                <PipelineColuna
+                  stageKey="perdido"
+                  header={renderColunaHeader(
+                    "Perdido",
+                    "var(--alert, #dc2626)",
+                    total,
+                    valorTotal,
+                    ETAPA_DESCRICAO.perdido,
+                  )}
+                  itemCount={colunas.perdido.leads.length}
+                  total={total}
+                  loading={colunas.perdido.loading}
+                  hasMore={colunas.perdido.hasMore}
+                  onCarregarMais={() => carregarMais("perdido")}
+                  primeira={primeira}
+                >
+                  {colunas.perdido.leads.length === 0 && !colunas.perdido.loading && (
+                    <div className="kcol-vazio">nenhum lead aqui</div>
+                  )}
+                  {colunas.perdido.leads.map((l, i2) => renderCard(l, primeira && i2 === 0))}
+                </PipelineColuna>
+              );
+            })()}
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>

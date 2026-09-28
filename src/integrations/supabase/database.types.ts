@@ -1533,6 +1533,7 @@ export type Database = {
       cotacoes: {
         Row: {
           atualizado_em: string;
+          calculo_visto_em: string | null;
           criado_em: string;
           destino_perda: string | null;
           destino_perda_sugerido: string | null;
@@ -1552,9 +1553,11 @@ export type Database = {
           step_atual: number;
           submotivo_perda: string | null;
           transmissao_fase: string | null;
+          transmissao_oferta: Json | null;
         };
         Insert: {
           atualizado_em?: string;
+          calculo_visto_em?: string | null;
           criado_em?: string;
           destino_perda?: string | null;
           destino_perda_sugerido?: string | null;
@@ -1574,9 +1577,11 @@ export type Database = {
           step_atual?: number;
           submotivo_perda?: string | null;
           transmissao_fase?: string | null;
+          transmissao_oferta?: Json | null;
         };
         Update: {
           atualizado_em?: string;
+          calculo_visto_em?: string | null;
           criado_em?: string;
           destino_perda?: string | null;
           destino_perda_sugerido?: string | null;
@@ -1596,6 +1601,7 @@ export type Database = {
           step_atual?: number;
           submotivo_perda?: string | null;
           transmissao_fase?: string | null;
+          transmissao_oferta?: Json | null;
         };
         Relationships: [
           {
