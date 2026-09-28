@@ -85,6 +85,63 @@ const CARD_SEM_QUANTIDADE = {
   formaPagamento: "Boleto",
 };
 
+// Textos reais gravados em produção por versões anteriores do robô/front
+// (ver `cotacao_transmissoes.parcelas`) — sem o "de" entre "Nx" e o valor,
+// ou com asterisco solto no fim. `extrairParcelamento` precisa tratar os
+// dois do mesmo jeito que "10x de R$ ...".
+const CARD_PARCELADO_SEM_DE = {
+  seguradora: "Porto",
+  produto: "Auto Porto",
+  produtoId: "porto-auto",
+  opcoes: [
+    {
+      tipo: "Compreensiva",
+      franquia: "Normal",
+      parcelas: "em 12x de R$ 623,92",
+    },
+  ],
+  formaPagamento: "Boleto",
+};
+
+const CARD_PARCELADO_COM_ASTERISCO = {
+  seguradora: "Azul",
+  produto: "Auto Azul",
+  produtoId: "azul-auto",
+  opcoes: [
+    {
+      tipo: "Compreensiva",
+      franquia: "Normal",
+      parcelas: "3x R$ 429,25 *",
+    },
+  ],
+  formaPagamento: "Cartão",
+};
+
+// Card com duas variantes de opção (mesmo bundle tipo/franquia/avista),
+// diferindo só no texto de `parcelas` escolhido: uma com o texto "À vista
+// R$ ..." literal gravado por versões antigas do front, outra sem `parcelas`
+// (front atual manda `parcelasEscolhidas: ""`). Ambas precisam cair no
+// mesmo cálculo à vista, a partir de `avista`, nunca do texto de parcelas.
+const CARD_AVISTA_TEXTO_LITERAL = {
+  seguradora: "Bradesco",
+  produto: "Auto Bradesco",
+  produtoId: "bradesco-auto",
+  opcoes: [
+    {
+      tipo: "Compreensiva",
+      franquia: "Normal",
+      avista: "R$ 1.287,74",
+      parcelas: "À vista R$ 1.287,74",
+    },
+    {
+      tipo: "Compreensiva",
+      franquia: "Normal",
+      avista: "R$ 1.287,74",
+    },
+  ],
+  formaPagamento: "Boleto",
+};
+
 function raw(cards: unknown[]) {
   return { temPremios: true, cards };
 }
@@ -146,6 +203,60 @@ describe("calcularPremioTransmissao", () => {
       opcao: { tipo: "Compreensiva", franquia: "Normal" },
     });
     expect(resultado.ok).toBe(false);
+  });
+
+  it('"em 12x de R$ 623,92" (sem "de" entre "Nx" e o valor no início do texto): base = 12 × 623,92 = 7.487,04', () => {
+    const resultado = calcularPremioTransmissao(raw([CARD_PARCELADO_SEM_DE]), {
+      seguradora: "Porto",
+      produtoId: "porto-auto",
+      formaPagamento: "Boleto",
+      parcelasEscolhidas: "em 12x de R$ 623,92",
+      opcao: { tipo: "Compreensiva", franquia: "Normal" },
+    });
+    expect(resultado).toEqual({
+      ok: true,
+      premio: 7487.04,
+      parcelasNum: 12,
+      valorParcela: 623.92,
+    });
+  });
+
+  it('"3x R$ 429,25 *" (sem "de", com asterisco no fim): base = 3 × 429,25 = 1.287,75', () => {
+    const resultado = calcularPremioTransmissao(raw([CARD_PARCELADO_COM_ASTERISCO]), {
+      seguradora: "Azul",
+      produtoId: "azul-auto",
+      formaPagamento: "Cartão",
+      parcelasEscolhidas: "3x R$ 429,25 *",
+      opcao: { tipo: "Compreensiva", franquia: "Normal" },
+    });
+    expect(resultado).toEqual({
+      ok: true,
+      premio: 1287.75,
+      parcelasNum: 3,
+      valorParcela: 429.25,
+    });
+  });
+
+  it('à vista com texto literal "À vista R$ 1.287,74" em `parcelasEscolhidas`: usa `avista`, nunca o texto de parcelas', () => {
+    const resultado = calcularPremioTransmissao(raw([CARD_AVISTA_TEXTO_LITERAL]), {
+      seguradora: "Bradesco",
+      produtoId: "bradesco-auto",
+      formaPagamento: "Boleto",
+      parcelasEscolhidas: "À vista R$ 1.287,74",
+      opcao: { tipo: "Compreensiva", franquia: "Normal", avista: "R$ 1.287,74" },
+    });
+    expect(resultado).toEqual({ ok: true, premio: 1287.74, parcelasNum: null, valorParcela: null });
+  });
+
+  it("à vista com `parcelasEscolhidas` vazio (front atual): também usa `avista`", () => {
+    const resultado = calcularPremioTransmissao(raw([CARD_AVISTA_TEXTO_LITERAL]), {
+      seguradora: "Bradesco",
+      produtoId: "bradesco-auto",
+      formaPagamento: "Boleto",
+      parcelasEscolhidas: "",
+      opcao: { tipo: "Compreensiva", franquia: "Normal", avista: "R$ 1.287,74" },
+    });
+    expect(resultado).toEqual({ ok: true, premio: 1287.74, parcelasNum: null, valorParcela: null });
   });
 
   it("opção/card não encontrado no resultado atual: recusa (nunca confia no front)", () => {
