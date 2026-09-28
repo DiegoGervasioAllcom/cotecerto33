@@ -16,7 +16,8 @@ import {
 } from "@/components/venda/em-finalizacao/queries";
 import { useEmFinalizacaoImprimir } from "@/components/venda/em-finalizacao/print";
 import { FocoBarra } from "@/components/venda/foco-barra";
-import { cotNum, money } from "@/components/venda/cotacoes/lista-helpers";
+import { cotNum } from "@/components/venda/cotacoes/lista-helpers";
+import { premioComParcelamento } from "@/lib/proposta-situacao";
 import { useAuth } from "@/lib/auth";
 import { FOCO_SCROLL_DELAY_MS, useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
 
@@ -256,7 +257,9 @@ function Page() {
                   <td>{r.veiculo}</td>
                   <td>{r.seguradora || "—"}</td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                    {r.premio ? money(Number(r.premio)) : "—"}
+                    {r.premio
+                      ? premioComParcelamento(r.premio, r.parcelasNum, r.valorParcela)
+                      : "—"}
                   </td>
                   <td>
                     {statusChip(r)}

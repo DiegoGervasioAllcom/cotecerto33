@@ -14,10 +14,10 @@
 //   colunas somem da tela em vez de aparecerem vazias.
 // - Filtro "Status" (ativos/perdidos): decide se a coluna "Perdido" entra na
 //   lista de etapas pedida ao hook.
-// - Header e contagens do Estágio usam `fetchPipelineResumoEtapas` (agregado
-//   no banco) em vez de contar a lista carregada — os totais/valores por
-//   coluna também vêm dali, não do tamanho de `col.leads` (que é só a
-//   página carregada).
+// - Header e contagens do Estágio usam `usePipelineResumoEtapas` (agregado
+//   no banco, via react-query — ajuste pós-deploy V12) em vez de contar a
+//   lista carregada — os totais/valores por coluna também vêm dali, não do
+//   tamanho de `col.leads` (que é só a página carregada).
 // - Contagens de Tipo de seguro/Origem/Motivo de perda usam os fetchers de
 //   opções (`fetchPipeline*Disponiveis`), recalculadas a cada troca de
 //   filtro — cada select reflete os OUTROS filtros já ativos (incluindo
@@ -57,9 +57,8 @@ import {
   fetchPipelineMotivosDisponiveis,
   fetchPipelineOrigensDisponiveis,
   fetchPipelineRamosDisponiveis,
-  fetchPipelineResumoEtapas,
+  usePipelineResumoEtapas,
   type PipelineOpcaoComContagem,
-  type PipelineResumoEtapa,
 } from "@/lib/pipeline-query";
 import { resolveExistingLeadDestination } from "@/lib/pipeline-lead-navigation";
 import { usePipelinePagination, type PipelineFiltrosComuns } from "@/lib/use-pipeline-pagination";
@@ -104,7 +103,9 @@ function Page() {
   // propósito: lá, lead perdido sai do Pipeline por completo (Carteira de
   // Recuperação). Essa tela ainda não existe no nosso produto, então o
   // perdido continua visível aqui — só que via filtro, não como coluna fixa.
-  const [fStatus, setFStatus] = useState<StatusFiltro>("todos");
+  // Padrão da tela é "Ativos" (coluna Perdido não aparece ao abrir) — "Todos"
+  // e "Perdidos" continuam disponíveis no select.
+  const [fStatus, setFStatus] = useState<StatusFiltro>("ativos");
   const [fMotivo, setFMotivo] = useState<string>("todos");
 
   function clearFilters() {
@@ -112,7 +113,7 @@ function Page() {
     setFRamo("todas");
     setFOrigem("todas");
     setFParado("todos");
-    setFStatus("todos");
+    setFStatus("ativos");
     setFMotivo("todos");
   }
 
@@ -128,26 +129,16 @@ function Page() {
 
   const etapas = useMemo(() => etapasParaBuscar(fEtapa, fStatus), [fEtapa, fStatus]);
 
-  const { colunas, carregarMais } = usePipelinePagination(etapas, filtrosComuns);
+  const { colunas, carregarMais } = usePipelinePagination(etapas, filtrosComuns, uid);
 
   // Header + contagem do filtro Estágio: agregado no banco (`etapa → total/
   // valor`), respeitando ramo/origem/parado/motivo — não depende de quantas
-  // páginas cada coluna já carregou.
-  const [resumoEtapas, setResumoEtapas] = useState<PipelineResumoEtapa[]>([]);
-  useEffect(() => {
-    let ativo = true;
-    fetchPipelineResumoEtapas(filtrosComuns).then(({ resumo, error }) => {
-      if (!ativo) return;
-      if (error) {
-        setErr(error);
-        return;
-      }
-      setResumoEtapas(resumo);
-    });
-    return () => {
-      ativo = false;
-    };
-  }, [filtrosComuns]);
+  // páginas cada coluna já carregou. Via react-query (`usePipelineResumoEtapas`,
+  // ajuste pós-deploy V12 item 3): erro de rede se corrige sozinho no retry
+  // padrão do `QueryClient`, sem precisar de reload.
+  const resumoEtapasQuery = usePipelineResumoEtapas(uid, filtrosComuns);
+  const resumoEtapas = useMemo(() => resumoEtapasQuery.data ?? [], [resumoEtapasQuery.data]);
+  const erroResumo = resumoEtapasQuery.error?.message ?? null;
 
   // Opções dos filtros Tipo de seguro/Origem/Motivo de perda, com contagem
   // condicionada aos OUTROS filtros já ativos (Pipeline V12, T10b): a
@@ -156,8 +147,10 @@ function Page() {
   // `PipelineFiltrosOpcoes` em `pipeline-query.ts`). Decisão: Estágio/Status
   // também entram (via `etapas`, a mesma lista pedida ao Kanban), pra
   // consistência com o que já está visível na tela. Recalcula a cada troca
-  // de filtro — `ativo` (mesmo padrão do efeito do resumo acima) descarta
-  // respostas de uma rodada anterior que cheguem atrasadas.
+  // de filtro — `ativo` descarta respostas de uma rodada anterior que
+  // cheguem atrasadas (estes 3 selects continuam em `useState`/`useEffect`
+  // direto, sem react-query: não são "estado de servidor" reaproveitável
+  // entre telas, são só a lista de opções do próprio filtro).
   const [ramoOpcoes, setRamoOpcoes] = useState<PipelineOpcaoComContagem[]>([]);
   const [origemOpcoes, setOrigemOpcoes] = useState<PipelineOpcaoComContagem[]>([]);
   const [motivoOpcoes, setMotivoOpcoes] = useState<PipelineOpcaoComContagem[]>([]);
@@ -302,7 +295,7 @@ function Page() {
     fRamo !== "todas" ||
     fOrigem !== "todas" ||
     fParado !== "todos" ||
-    fStatus !== "todos" ||
+    fStatus !== "ativos" ||
     fMotivo !== "todos";
 
   const algumaColunaCarregando = Object.values(colunas).some((c) => c?.loading);
@@ -454,7 +447,9 @@ function Page() {
         {/* TODO Q3: filtro por seguradora depende de join com cotações/propostas (sem cobertura barata no schema atual) */}
       </div>
 
-      {(err || erroDeColuna) && <div className="alert alert-err">{err ?? erroDeColuna}</div>}
+      {(err || erroDeColuna || erroResumo) && (
+        <div className="alert alert-err">{err ?? erroDeColuna ?? erroResumo}</div>
+      )}
       {algumaColunaCarregando && Object.keys(colunas).length === 0 && (
         <div className="muted">Carregando…</div>
       )}

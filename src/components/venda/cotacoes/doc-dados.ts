@@ -141,20 +141,39 @@ export function docDadosDoBanco(
 
 /** "Em negociação" só tem `premios` (seguradora + prêmio, sem card/opções do
  * Quiver) — sem `quiver_resultado_raw` não há coberturas/parcelas por
- * seguradora, então o documento sai só com a lista de prêmios. */
+ * seguradora, então o documento sai só com a lista de prêmios. `parcelasNum`/
+ * `valorParcela` (opcionais — ajustes pós-deploy V12, item 2) refletem, só
+ * quando a oferta é parcelada, o mesmo detalhamento mostrado em Em
+ * finalização/Emissão; sem eles, mostra só o total (à vista). */
 export function docDadosDosPremios(
   cabecalho: DocDadosCabecalho,
-  premios: { seguradora: string; premio: number }[],
+  premios: {
+    seguradora: string;
+    premio: number;
+    parcelasNum?: number | null;
+    valorParcela?: number | null;
+  }[],
 ): DocDados {
   const base = docDadosDoBanco(cabecalho, []);
   return {
     ...base,
-    seguradoras: premios.map((p, index) => ({
-      id: `premio-${index}-${p.seguradora}`,
-      seguradora: p.seguradora,
-      precoLabel: fmtBRL(p.premio),
-      opcoes: [{ tipo: "Prêmio calculado", avista: fmtBRL(p.premio) }],
-    })),
+    seguradoras: premios.map((p, index) => {
+      const parcelado = p.parcelasNum && p.valorParcela != null;
+      return {
+        id: `premio-${index}-${p.seguradora}`,
+        seguradora: p.seguradora,
+        precoLabel: fmtBRL(p.premio),
+        opcoes: [
+          {
+            tipo: "Prêmio calculado",
+            avista: parcelado ? undefined : fmtBRL(p.premio),
+            parcelasOpcoes: parcelado
+              ? [`${p.parcelasNum}x sem juros de ${fmtBRL(p.valorParcela as number)}`]
+              : undefined,
+          },
+        ],
+      };
+    }),
   };
 }
 
@@ -165,8 +184,20 @@ export function docDadosDosPremios(
  * só com o cabeçalho, sem inventar oferta nenhuma. */
 export function docDadosDaTransmissao(
   cabecalho: DocDadosCabecalho,
-  oferta: { seguradora: string | null; premio: number | null },
+  oferta: {
+    seguradora: string | null;
+    premio: number | null;
+    parcelasNum?: number | null;
+    valorParcela?: number | null;
+  },
 ): DocDados {
   if (!oferta.seguradora || oferta.premio == null) return docDadosDoBanco(cabecalho, []);
-  return docDadosDosPremios(cabecalho, [{ seguradora: oferta.seguradora, premio: oferta.premio }]);
+  return docDadosDosPremios(cabecalho, [
+    {
+      seguradora: oferta.seguradora,
+      premio: oferta.premio,
+      parcelasNum: oferta.parcelasNum,
+      valorParcela: oferta.valorParcela,
+    },
+  ]);
 }

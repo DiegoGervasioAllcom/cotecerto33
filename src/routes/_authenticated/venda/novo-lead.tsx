@@ -483,7 +483,7 @@ function Page() {
 
   async function onTransmitir(dadosComplementares: DadosComplementaresTransmissao) {
     if (!cotacaoId || !oferta) return;
-    const { resultado: r, formaPagamento, parcelas, premio } = oferta;
+    const { resultado: r, formaPagamento, parcelas, premio, opcao } = oferta;
     setResultadoTransmissao(null);
     setErroProposta(null);
     setEnviandoProposta(true);
@@ -498,6 +498,7 @@ function Page() {
           produto: r.produto || r.nome || undefined,
           formaPagamento,
           parcelas,
+          opcao,
           premio,
           dadosComplementares,
         },

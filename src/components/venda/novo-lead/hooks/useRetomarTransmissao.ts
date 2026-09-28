@@ -42,6 +42,14 @@ const snapshotSchema = z.object({
   forma_pagamento: z.string().trim().min(1),
   parcelas: z.string().nullable().optional(),
   premio: z.number().nullable().optional(),
+  // Discriminadores da opção escolhida (tipo/franquia/avista/desconto) — só
+  // usados para retomar a Etapa 7 ANTES da primeira tentativa real (fase
+  // "dados"), quando `onTransmitir` precisa deles pra localizar a opção no
+  // servidor (ver `OfertaTransmissao.opcao` em StepCalculo.tsx).
+  opcao_tipo: z.string().nullable().optional(),
+  opcao_franquia: z.string().nullable().optional(),
+  opcao_avista: z.string().nullable().optional(),
+  opcao_desconto: z.string().nullable().optional(),
 });
 
 export type TransmissaoOfertaSnapshot = z.infer<typeof snapshotSchema>;
@@ -84,6 +92,14 @@ function montarOferta(
     formaPagamento,
     parcelas: tentativa?.parcelas ?? snapshot?.parcelas ?? "",
     premio: tentativa?.premio ?? snapshot?.premio ?? undefined,
+    // Só o snapshot guarda o bundle da opção (uma tentativa real já foi
+    // enviada ao servidor — não precisa mais dele para retransmitir).
+    opcao: {
+      tipo: snapshot?.opcao_tipo ?? undefined,
+      franquia: snapshot?.opcao_franquia ?? undefined,
+      avista: snapshot?.opcao_avista ?? undefined,
+      desconto: snapshot?.opcao_desconto ?? undefined,
+    },
   };
 }
 
@@ -242,6 +258,10 @@ export async function gravarTransmissaoOfertaSnapshot(
     forma_pagamento: escolha.formaPagamento,
     parcelas: escolha.parcelas || null,
     premio: escolha.premio ?? null,
+    opcao_tipo: escolha.opcao.tipo ?? null,
+    opcao_franquia: escolha.opcao.franquia ?? null,
+    opcao_avista: escolha.opcao.avista ?? null,
+    opcao_desconto: escolha.opcao.desconto ?? null,
   };
   const { error } = await supabase
     .from("cotacoes")

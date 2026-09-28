@@ -314,8 +314,18 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     const objetoData = corpoSerializado.t.p.v[0].p;
     const indiceParcelas = objetoData.k.indexOf("parcelas");
     expect(indiceParcelas).toBeGreaterThanOrEqual(0);
+    // O que esta asserção protege: `parcelas` — o campo que o robô de fato
+    // usa pra clicar a célula certa no portal — continua vazio para a opção
+    // real "à vista" (nunca fabrica um "12x" ou outro texto).
     expect(objetoData.v[indiceParcelas]).toEqual({ t: 1, s: "" });
-    expect(requisicaoTransmissao).not.toContain("À vista");
+    // Não dá mais pra checar "À vista" ausente do corpo inteiro: desde os
+    // ajustes pós-deploy V12 (item 2), o payload da server fn também leva
+    // `opcao` (tipo/franquia/avista/desconto da opção escolhida — usado só
+    // pelo SERVIDOR para recalcular o prêmio a partir de
+    // `quiver_resultado_raw`, nunca repassado ao robô, ver `payload` em
+    // `transmitirPropostaQuiver`/quiver.functions.ts), e o `tipo` desta opção
+    // é legitimamente "À vista no cartão" (webhook acima). O check acima em
+    // `parcelas` já garante o que importa de verdade.
     // Mesmo motivo do reset acima: reabre o Passo Cálculo pela URL em vez de
     // depender de um "Voltar ao cálculo" que não existe mais após confirmar.
     await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);

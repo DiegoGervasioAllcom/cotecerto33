@@ -108,6 +108,148 @@ export function premioNumerico(opcao?: OpcaoPremio): number {
   return Infinity;
 }
 
+/**
+ * Discriminadores que identificam uma faixa/opção dentro de um card (mesma
+ * chave usada em `faixasComParcelas`) — servem para o servidor localizar,
+ * dentro de `cotacoes.quiver_resultado_raw`, EXATAMENTE a opção que o
+ * vendedor escolheu no front, em vez de confiar num prêmio calculado no
+ * cliente (AGENTS.md regra 2 — dinheiro/alçada roda no servidor).
+ */
+export type OpcaoIdentificador = {
+  tipo?: string;
+  franquia?: string;
+  avista?: string;
+  desconto?: string;
+};
+
+export type PremioTransmissaoOk = {
+  ok: true;
+  premio: number;
+  parcelasNum: number | null;
+  valorParcela: number | null;
+};
+export type PremioTransmissaoErro = { ok: false; erro: string };
+export type PremioTransmissaoResultado = PremioTransmissaoOk | PremioTransmissaoErro;
+
+function extrairAVista(texto?: string | null): number | null {
+  if (!texto) return null;
+  const match = texto.match(/(?:R\$\s*)?([\d.]+(?:,\d+)?)/);
+  if (!match) return null;
+  const numero = Number(match[1].replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(numero) && numero > 0 ? numero : null;
+}
+
+/**
+ * Espelha `fn_premio_total_de_parcelas` (SQL,
+ * `supabase/migrations/20260928090000_premio_base_soma_parcelas.sql`): exige
+ * a quantidade (1–12) E o valor da parcela extraíveis com segurança do
+ * mesmo texto — nunca confunde "12x" com o valor.
+ */
+function extrairParcelamento(
+  texto?: string | null,
+): { parcelasNum: number; valorParcela: number } | null {
+  if (!texto) return null;
+  const nMatch = texto.match(/(\d{1,2})\s*[xX]\b/);
+  const vMatch = texto.match(/([\d.]*\d,\d{1,2})/);
+  if (!nMatch || !vMatch) return null;
+  const n = Number(nMatch[1]);
+  const valor = Number(vMatch[1].replace(/\./g, "").replace(",", "."));
+  if (!Number.isInteger(n) || n < 1 || n > 12) return null;
+  if (!Number.isFinite(valor) || valor <= 0) return null;
+  return { parcelasNum: n, valorParcela: Math.round(valor * 100) / 100 };
+}
+
+/**
+ * Recalcula, a partir do `quiver_resultado_raw` (fonte da verdade), o prêmio
+ * da oferta que o vendedor escolheu na transmissão — nunca confia no `premio`
+ * calculado no front. Localiza o card (seguradora + produtoId/produto), a
+ * forma de pagamento (grupo) e, dentro dela, a opção exata (bundle
+ * tipo/franquia/avista/desconto + texto de parcelas escolhido). Se qualquer
+ * etapa da localização falhar, ou o valor não puder ser extraído do texto
+ * com segurança, recusa a transmissão em vez de gravar um valor errado.
+ */
+export function calcularPremioTransmissao(
+  raw: unknown,
+  params: {
+    seguradora: string;
+    produtoId?: string | null;
+    produto?: string | null;
+    formaPagamento: string;
+    parcelasEscolhidas: string;
+    opcao: OpcaoIdentificador;
+  },
+): PremioTransmissaoResultado {
+  const resultados = parseQuiverResultado(raw);
+  const seguradoraNorm = normalizar(params.seguradora);
+
+  const candidatos = resultados.filter((r) => {
+    if (normalizar(r.seguradora) !== seguradoraNorm) return false;
+    if (params.produtoId) return (r.produtoId ?? "") === params.produtoId;
+    if (params.produto) return normalizar(r.produto ?? "") === normalizar(params.produto);
+    return true;
+  });
+  if (candidatos.length !== 1) {
+    return {
+      ok: false,
+      erro: "Não foi possível localizar, com segurança, a oferta escolhida no resultado atual da cotação. Recalcule e tente novamente.",
+    };
+  }
+  const resultado = candidatos[0];
+
+  const grupo = gruposOpcoesResultado(resultado).find(
+    (g) => normalizar(g.formaPagamento) === normalizar(params.formaPagamento),
+  );
+  if (!grupo) {
+    return {
+      ok: false,
+      erro: "A forma de pagamento escolhida não foi encontrada na oferta atual. Recalcule e tente novamente.",
+    };
+  }
+
+  const bundleIgual = (o: OpcaoPremio) =>
+    normalizar(o.tipo ?? "") === normalizar(params.opcao.tipo ?? "") &&
+    normalizar(o.franquia ?? "") === normalizar(params.opcao.franquia ?? "") &&
+    normalizar(o.avista ?? "") === normalizar(params.opcao.avista ?? "") &&
+    normalizar(o.desconto ?? "") === normalizar(params.opcao.desconto ?? "");
+
+  const opcoesCandidatas = grupo.opcoes.filter(
+    (o) => bundleIgual(o) && (o.parcelas ?? "") === params.parcelasEscolhidas,
+  );
+  if (opcoesCandidatas.length !== 1) {
+    return {
+      ok: false,
+      erro: "A opção de pagamento escolhida não foi encontrada na oferta atual. Recalcule e tente novamente.",
+    };
+  }
+  const opcao = opcoesCandidatas[0];
+  const parcelasTexto = (params.parcelasEscolhidas ?? "").trim();
+
+  if (!parcelasTexto || isVista(parcelasTexto)) {
+    const valor = extrairAVista(opcao.avista);
+    if (valor === null) {
+      return {
+        ok: false,
+        erro: "Não foi possível calcular o valor à vista desta oferta com segurança.",
+      };
+    }
+    return { ok: true, premio: valor, parcelasNum: null, valorParcela: null };
+  }
+
+  const parcelado = extrairParcelamento(parcelasTexto);
+  if (!parcelado) {
+    return {
+      ok: false,
+      erro: "Não foi possível calcular o valor parcelado desta oferta com segurança.",
+    };
+  }
+  return {
+    ok: true,
+    premio: Math.round(parcelado.parcelasNum * parcelado.valorParcela * 100) / 100,
+    parcelasNum: parcelado.parcelasNum,
+    valorParcela: parcelado.valorParcela,
+  };
+}
+
 export function ordenarResultados(resultados: readonly ResultadoCalculo[]): ResultadoCalculo[] {
   return [...resultados].sort((a, b) => premioNumerico(a.opcoes[0]) - premioNumerico(b.opcoes[0]));
 }

@@ -11,6 +11,7 @@
  * banco — a mesma regra de `leadEtapaBucket()` — então dá pra paginar de
  * verdade com cursor (`atualizado_em desc, lead_id desc`), sem OFFSET.
  */
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/database.types";
 import type { LeadEtapaBucket } from "@/lib/lead-etapa";
@@ -192,6 +193,26 @@ export async function fetchPipelineResumoEtapas(
     })),
     error: null,
   };
+}
+
+/**
+ * Header/contagem do filtro Estágio (`pipeline.tsx`) via react-query —
+ * ajuste pós-deploy V12 (item 3). `uid` entra na `queryKey` (mesmo padrão de
+ * `useCotacaoFinalizadaRows`/`useAguardandoCotacaoRows` em
+ * `em-negociacao/queries.ts`) e `enabled` trava a busca até a sessão
+ * carregar; sem `uid` a query fica pendente em vez de rodar contra uma
+ * empresa errada.
+ */
+export function usePipelineResumoEtapas(uid: string | null, filtros: PipelineFiltrosResumo) {
+  return useQuery({
+    queryKey: ["pipeline-resumo-etapas", uid, filtros],
+    enabled: Boolean(uid),
+    queryFn: async (): Promise<PipelineResumoEtapa[]> => {
+      const { resumo, error } = await fetchPipelineResumoEtapas(filtros);
+      if (error) throw new Error(error);
+      return resumo;
+    },
+  });
 }
 
 export type PipelineOpcaoComContagem = { valor: string; total: number };

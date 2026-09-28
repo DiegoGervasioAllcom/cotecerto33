@@ -125,23 +125,26 @@ test.describe("pipeline — lead externo recebido", () => {
     await expect(cardTexto).toBeVisible({ timeout: 15_000 });
 
     const colunaPerdido = page.locator('.kcol[data-stage="perdido"]');
-    // Default (Status · todos): coluna Perdido existe (vazia, sem lead perdido nesta fixture).
-    await expect(colunaPerdido).toBeVisible();
+    // Default (Status · ativos): coluna Perdido nem aparece.
+    await expect(colunaPerdido).toHaveCount(0);
 
     const filtroStatus = page
       .locator("select")
       .filter({ has: page.locator('option[value="ativos"]') });
 
-    // Negativo: "Ativos" some com a coluna Perdido por completo.
-    await filtroStatus.selectOption("ativos");
-    await expect(colunaPerdido).toHaveCount(0);
+    // Positivo: "Todos" traz a coluna Perdido de volta (vazia, sem lead perdido nesta fixture).
+    await filtroStatus.selectOption("todos");
+    await expect(colunaPerdido).toBeVisible();
     await expect(cardTexto).toBeVisible();
 
-    // Negativo: "Perdidos" esconde o lead ativo (ele não é 'perdido').
+    // Negativo: "Perdidos" esconde o lead ativo (ele não é 'perdido') e mostra a coluna Perdido.
     await filtroStatus.selectOption("perdidos");
     await expect(cardTexto).toHaveCount(0);
+    await expect(colunaPerdido).toBeVisible();
 
-    await filtroStatus.selectOption("todos");
+    // Volta ao padrão: "Ativos" some com a coluna Perdido de novo.
+    await filtroStatus.selectOption("ativos");
+    await expect(colunaPerdido).toHaveCount(0);
     await expect(cardTexto).toBeVisible();
   });
 

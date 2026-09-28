@@ -217,4 +217,37 @@ test.describe("pipeline — paginação server-side do Kanban", () => {
     await expect(colunaNovo.locator(".kcard")).toHaveCount(1, { timeout: 10_000 });
     await expect(colunaCotacao.locator(".kcard")).toHaveCount(1, { timeout: 10_000 });
   });
+
+  // Ajuste pós-deploy V12 (item 3): o resumo do header (`usePipelineResumoEtapas`,
+  // `@/lib/pipeline-query`) migrou pra react-query. O retry padrão do
+  // `QueryClient` (`src/router.tsx`, sem override nesta query) precisa se
+  // recuperar sozinho de uma falha de rede — sem precisar de reload.
+  test("resumo do header se corrige sozinho quando a 1ª chamada falha, sem reload", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await loginAs(page, vendedorEstagios.email, vendedorEstagios.senha);
+
+    let chamadas = 0;
+    await page.route("**/rest/v1/pipeline_resumo_etapas*", async (route) => {
+      chamadas += 1;
+      if (chamadas === 1) {
+        await route.fulfill({ status: 500, body: "erro simulado (E2E)" });
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.goto("/venda/pipeline");
+
+    const header = page.locator(".page-head .sub");
+    // Enquanto a 1ª chamada (que falhou) ainda está em retry, o header
+    // reflete "sem dados" — sem travar a tela nem mostrar erro no lugar dele.
+    await expect(header).toContainText("0 de 0 leads em andamento");
+
+    // O retry automático refaz a chamada sozinho — sem reload — e o header
+    // se corrige assim que a resposta boa chega.
+    await expect(header).not.toContainText("0 de 0 leads em andamento", { timeout: 15_000 });
+    expect(chamadas).toBeGreaterThan(1);
+  });
 });

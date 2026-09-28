@@ -125,6 +125,21 @@ export function moedaOuTraco(v: number | null | undefined): string {
   return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+/**
+ * "R$ total · Nx de R$ valor" (só o total quando à vista, sem parcelamento).
+ * Base do prêmio já é nº de parcelas × valor da parcela desde os ajustes
+ * pós-deploy V12 (item 2) — aqui é só a exibição do detalhamento.
+ */
+export function premioComParcelamento(
+  premio: number | null | undefined,
+  parcelasNum: number | null | undefined,
+  valorParcela: number | null | undefined,
+): string {
+  const total = moedaOuTraco(premio);
+  if (!parcelasNum || valorParcela == null) return total;
+  return `${total} · ${parcelasNum}x de ${moedaOuTraco(valorParcela)}`;
+}
+
 /** Aviso curto exibido nas ações que ainda dependem da integração com a seguradora. */
 export const AVISO_INTEGRACAO_PENDENTE =
   "Disponível quando a integração com a seguradora estiver ligada";

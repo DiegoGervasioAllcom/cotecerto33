@@ -20,6 +20,8 @@ export type TentativaRow = {
   mensagem: string | null;
   seguradora: string | null;
   premio: number | null;
+  parcelas_num: number | null;
+  valor_parcela: number | null;
   forma_pagamento: string | null;
   criado_em: string;
   proposta_id: string | null;
@@ -49,6 +51,8 @@ export type Row = {
   mensagem: string | null;
   seguradora: string | null;
   premio: number | null;
+  parcelasNum: number | null;
+  valorParcela: number | null;
   formaPagamento: string | null;
   criadoEm: string;
   propostaId: string | null;
@@ -80,7 +84,7 @@ export function fetchEmFinalizacaoRows(uid: string) {
   return supabase
     .from("cotacao_transmissoes")
     .select(
-      "id,cotacao_id,status,motivo,mensagem,seguradora,premio,forma_pagamento,criado_em,proposta_id," +
+      "id,cotacao_id,status,motivo,mensagem,seguradora,premio,parcelas_num,valor_parcela,forma_pagamento,criado_em,proposta_id," +
         "cotacoes!inner(numero,criado_em,responsavel_id,segurado:cotacao_segurado(nome),veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,placa))",
     )
     .eq("cotacoes.responsavel_id", uid)
@@ -109,6 +113,8 @@ export function dedupTentativas(data: readonly TentativaRow[] | null): Row[] {
       mensagem: t.mensagem,
       seguradora: t.seguradora,
       premio: t.premio,
+      parcelasNum: t.parcelas_num,
+      valorParcela: t.valor_parcela,
       formaPagamento: t.forma_pagamento,
       criadoEm: t.criado_em,
       propostaId: t.proposta_id,
