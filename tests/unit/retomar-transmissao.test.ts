@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  decidirAplicacaoRetomada,
   parseTransmissaoOfertaSnapshot,
   resolverEstadoTransmissao,
+  type EstadoTransmissaoRetomado,
   type TransmissaoOfertaSnapshot,
   type TransmissaoTentativaResumo,
 } from "@/components/venda/novo-lead/hooks/useRetomarTransmissao";
@@ -114,5 +116,24 @@ describe("parseTransmissaoOfertaSnapshot", () => {
 
   it("rejeita shape inesperado (ex.: string solta)", () => {
     expect(parseTransmissaoOfertaSnapshot("não é objeto")).toBeNull();
+  });
+});
+
+describe("decidirAplicacaoRetomada", () => {
+  const retomadaDados = resolverEstadoTransmissao(null, snapshot);
+  const retomadaNenhum: EstadoTransmissaoRetomado = { tipo: "nenhum" };
+
+  it("visibleStep === 6 (URL pediu a Etapa 7, ou nenhum step com step_atual=6): aplica a retomada", () => {
+    expect(decidirAplicacaoRetomada(6, retomadaDados)).toEqual(retomadaDados);
+    expect(decidirAplicacaoRetomada(6, retomadaNenhum)).toEqual(retomadaNenhum);
+  });
+
+  it("visibleStep explícito diferente de 6 (ex.: 'Abrir cálculo' manda step=5): nunca aplica, mesmo com oferta/tentativa pra retomar", () => {
+    expect(decidirAplicacaoRetomada(5, retomadaDados)).toBeNull();
+    expect(decidirAplicacaoRetomada(0, retomadaDados)).toBeNull();
+  });
+
+  it("visibleStep 5 com 'nenhum' pra retomar: também não aplica (nada a fazer mesmo)", () => {
+    expect(decidirAplicacaoRetomada(5, retomadaNenhum)).toBeNull();
   });
 });

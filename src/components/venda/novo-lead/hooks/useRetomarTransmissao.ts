@@ -132,6 +132,27 @@ export function resolverEstadoTransmissao(
   return { tipo: "nenhum" };
 }
 
+/**
+ * Função pura: decide se a retomada resolvida deve ser aplicada nesse
+ * instante, dado o passo que a navegação já resolveu (`visibleStep` — após
+ * o rascunho carregar, é `step` da URL ou, na ausência dele, `step_atual`
+ * persistido).
+ *
+ * A retomada só se aplica quando a Etapa 7 é de fato o destino: `step=6`
+ * explícito na URL, ou nenhum `step` com `step_atual` já em 6. Um passo
+ * explícito diferente precisa ser respeitado (retorna `null` — não mexe em
+ * oferta/snapshot) — ex.: "Abrir cálculo" (Em negociação, aviso "COTAÇÃO
+ * FINALIZADA") sempre manda `step=5`, mesmo numa cotação que já tem oferta
+ * escolhida ou transmissão em andamento; sem essa checagem, reabrir pra ver
+ * o Cálculo caía direto de volta na Transmissão.
+ */
+export function decidirAplicacaoRetomada(
+  visibleStep: number,
+  retomado: EstadoTransmissaoRetomado,
+): EstadoTransmissaoRetomado | null {
+  return visibleStep === 6 ? retomado : null;
+}
+
 function estadoInicialRetomada(
   cotacaoId: string | null,
   habilitado: boolean,
@@ -287,34 +308,40 @@ export function useAplicarRetomadaTransmissao(params: AplicarRetomadaParams) {
   useEffect(() => {
     if (resolvendo || !retomado) return;
     if (aplicouParaRef.current === cotacaoId) return;
-    aplicouParaRef.current = cotacaoId;
-    if (oferta) return;
+    if (oferta) {
+      aplicouParaRef.current = cotacaoId;
+      return;
+    }
 
-    if (retomado.tipo === "nenhum") {
+    // Só conta como "aplicada" quando a URL pede o passo da Transmissão:
+    // um step explícito diferente (ex. "Abrir cálculo") não consome a retomada.
+    const decisao = decidirAplicacaoRetomada(visibleStep, retomado);
+    if (!decisao) return;
+    aplicouParaRef.current = cotacaoId;
+
+    if (decisao.tipo === "nenhum") {
       // Etapa 7 só existe com uma oferta (é estado local, não persiste no
       // rascunho por si só). Sem isso, reabrir uma cotação salva com
       // `step_atual = 6` (autosave) ou clicar direto em "Transmissão" no
       // Stepper deixaria o wizard-card em branco.
-      if (visibleStep === 6) {
-        setVisibleStep(5);
-        sincronizarStepNaUrl?.(5);
-      }
+      setVisibleStep(5);
+      sincronizarStepNaUrl?.(5);
       return;
     }
 
-    setOferta(retomado.oferta);
-    if (retomado.tipo === "aguardando") {
+    setOferta(decisao.oferta);
+    if (decisao.tipo === "aguardando") {
       setFaseInicialTransmissao("resultado");
-      setTransmissaoEmAndamento({ tentativaId: retomado.tentativaId });
-      iniciarPollingTransmissao(retomado.tentativaId);
-    } else if (retomado.tipo === "resultado") {
+      setTransmissaoEmAndamento({ tentativaId: decisao.tentativaId });
+      iniciarPollingTransmissao(decisao.tentativaId);
+    } else if (decisao.tipo === "resultado") {
       setFaseInicialTransmissao("resultado");
-      setResultadoTransmissao(retomado.resultado);
+      setResultadoTransmissao(decisao.resultado);
     } else {
       setFaseInicialTransmissao("dados");
     }
     setVisibleStep(6);
     sincronizarStepNaUrl?.(6);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvendo, retomado, cotacaoId]);
+  }, [resolvendo, retomado, cotacaoId, visibleStep]);
 }

@@ -153,6 +153,12 @@ async function assertCalculoNuncaVisivel(page: Page) {
   await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toHaveCount(0);
 }
 
+/** Confirma que a Etapa 7 (Transmissão) nunca aparece — a retomada não deveria ter agido. */
+async function assertTransmissaoNuncaVisivel(page: Page) {
+  await expect(page.getByRole("heading", { name: "Dados complementares" })).toHaveCount(0);
+  await expect(page.getByText("Aguardando confirmação da seguradora…")).toHaveCount(0);
+}
+
 test.describe("Transmissão reabre no ponto certo (V12)", () => {
   test("só snapshot (antes de qualquer tentativa): reload reabre em Dados complementares com a mesma seguradora", async ({
     page,
@@ -324,6 +330,55 @@ test.describe("Transmissão reabre no ponto certo (V12)", () => {
         timeout: 10_000,
       });
       await expect(page.getByText(CARD_BETA.seguradora)).toBeVisible();
+    } finally {
+      await limparCotacaoTransmissaoFixture(fixture);
+    }
+  });
+
+  // ACHADO em CI (run 36466932163, quiver-webhook.spec.ts:30): links que
+  // mandam `step=5` explícito (ex.: "Abrir cálculo" — em-negociacao.tsx,
+  // cotacao-finalizada-aviso.tsx) precisam abrir o Cálculo de verdade, mesmo
+  // numa cotação que já tem oferta escolhida (snapshot) ou tentativa de
+  // transmissão — a retomada só pode agir quando `step` é 6 ou está ausente
+  // (com `step_atual=6` persistido). Ver `decidirAplicacaoRetomada`.
+  test("URL pede step=5 explicitamente (ex.: 'Abrir cálculo'): abre o Cálculo mesmo com oferta escolhida pra retomar, sem mexer no snapshot", async ({
+    page,
+  }) => {
+    const fixture = await prepararCotacaoCalculada(page);
+    try {
+      await escolherOfertaAlfa(page);
+      await esperarSnapshotSeguradora(fixture.cotacaoId, CARD_ALFA.seguradora);
+
+      // Simula "Abrir cálculo": uma navegação NOVA pra mesma cotação, mas
+      // pedindo explicitamente o Passo 5 — não o reload da Transmissão.
+      await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
+      await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+        timeout: 10_000,
+      });
+      await assertTransmissaoNuncaVisivel(page);
+
+      // O snapshot continua intacto — "Abrir cálculo" não limpa nem mexe
+      // na oferta escolhida, só respeita o passo pedido pela URL.
+      await esperarSnapshotSeguradora(fixture.cotacaoId, CARD_ALFA.seguradora);
+    } finally {
+      await limparCotacaoTransmissaoFixture(fixture);
+    }
+  });
+
+  test("URL pede step=5 explicitamente com tentativa 'enviada': também abre o Cálculo, não a Transmissão", async ({
+    page,
+  }) => {
+    const fixture = await prepararCotacaoCalculada(page);
+    try {
+      await escolherOfertaAlfa(page);
+      await gerarPropostaComTentativaReal(page, fixture);
+      await page.unroute("**/_serverFn/**");
+
+      await page.goto(`/venda/novo-lead?id=${fixture.cotacaoId}&step=5`);
+      await expect(page.getByText(/compare, personalize e escolha a seguradora/i)).toBeVisible({
+        timeout: 10_000,
+      });
+      await assertTransmissaoNuncaVisivel(page);
     } finally {
       await limparCotacaoTransmissaoFixture(fixture);
     }
