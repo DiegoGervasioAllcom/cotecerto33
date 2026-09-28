@@ -440,6 +440,89 @@ container. Smoke test manual da §6.5 (login como vendedor real, conferir os
 11 itens do menu, testar uma transmissão real pela Etapa 7 — primeira vez
 em produção) ainda pendente de confirmação nesta rodada.
 
+**28/09/2026 — migrations `20260925031355`/`20260925033524`/`20260925190208`/
+`20260928054400` aplicadas (PR #238, Frente 3 V12 · tutorial do vendedor):**
+produção já tinha `20260924020332` e `20260924162114` (PR #237) aplicadas em
+rodada anterior não registrada aqui. Antes, conferido que `ramo` só tinha
+`Automóvel` (o CHECK novo aceita Automóvel/Moto/Vida/Residencial/Celular).
+As 4 migrations foram aplicadas num **script único dentro de uma transação**
+(conteúdo dos 4 arquivos, em ordem, + o `insert` de cada versão em
+`supabase_migrations.schema_migrations`, entre `begin`/`commit`) — ensaiado
+antes no banco local com `rollback` no lugar do `commit`. Saída sem `ERROR`,
+`COMMIT` no fim e histórico com as 6 versões desde `20260917030000`;
+`UPDATE 9` é o backfill de `calculo_visto_em` das cotações já calculadas
+(evita o aviso "COTAÇÃO FINALIZADA" em massa). `supabase-rest` reiniciado.
+App publicado via `deploy.sh` com a tag `sha-5294247` (imagem anterior,
+para rollback: `sha-9015183`); health check do script OK (HTTP 200).
+Smoke test pelo navegador em 28/09/2026, logado como vendedor real, só
+navegando (nada criado nem transmitido), sem erro no console:
+- Início: fila "O que fazer agora" com 7 itens em ordem de urgência (negócio
+  em risco + pendência da seguradora com a mensagem real do robô), números
+  `COT-2026-…` com o ano de criação.
+- Tutorial: abertura "TUTORIAL · O DIA A DIA DO VENDEDOR · Vou te mostrar o
+  sistema inteiro"; cap. 1 (passos 1–3) e cap. 4 (passos 1–4, preview do
+  Cálculo com selo "Exemplo do tutorial", "(em breve)" em Mensagens/Prêmio,
+  Engrenagem só com "Análise do envio") conforme o protótipo.
+- Agenda: resumo 7 atrasados / 0 hoje / 7 no total, chips de filtro com
+  contagem (risco 5, seguradora 2).
+- Pipeline: colunas com rolagem interna e rodapé "mais N"; após reload,
+  cabeçalho "27 de 27 leads em andamento · 3 em negociação".
+- Em negociação: "Aguardando cotação — 0" × "Cotação finalizada — 5".
+- Cálculo: "Abrir cálculo" (`step=5`) de uma cotação com transmissão em
+  falha abre a lista comparativa (13 seguradoras, faixa de contexto real).
+- Transmissão: Em finalização → "Tentar novamente" (só navega, `step=6`)
+  abre o card da falha; **reload mantém o card** (não volta ao Cálculo).
+- Emissão: as 2 propostas em falha em "Aguardando a seguradora", "Concluídas"
+  vazia, Documentos/Consultar desabilitados.
+
+Observações (não bloqueiam, a investigar):
+- Na primeira abertura do Pipeline, logo após fechar o tutorial, o cabeçalho
+  mostrou "0 de 0 leads" e as colunas só a contagem carregada (5); a view
+  `pipeline_resumo_etapas` estava correta (22/3/2/1) e um reload mostrou os
+  números certos — não reproduzido de novo.
+- O Pipeline mostra a coluna "Perdido" com o filtro Status "todos"
+  (divergência documentada do PR #237), mas o cap. 7 do tutorial diz, como no
+  protótipo, que lead perdido não aparece no quadro.
+- Em finalização mostra o prêmio da tentativa (ex. R$ 429, PRP-00023) e a
+  Emissão o prêmio da proposta (R$ 1.287,74) para a mesma proposta —
+  provavelmente parcela × total; conferir e rotular.
+- Em negociação: cotações criadas em 18–19/08 aparecem com "Expira em: Hoje".
+
+**28/09/2026 (2ª rodada) — migration `20260928090000_premio_base_soma_parcelas`
+aplicada (PR #240, ajustes do smoke test):** antes, consulta só de leitura em
+`propostas` × `cotacao_transmissoes` mostrou uma proposta afetada pelo bug do
+prêmio só parcelado: **PRP-00001** com `premio = 623.92` (1 parcela de
+"em 12x de R$ 623,92"), sem `comissao_valor` e sem lançamentos em
+`comissao_lancamentos`; PRP-00023 e PRP-00046 corretas (à vista). Migration
+aplicada num script único em transação (conteúdo do arquivo + `insert` no
+histórico), ensaiado antes no banco local com `rollback`; saída sem `ERROR`,
+`COMMIT`, histórico com `20260928054400` e `20260928090000`. `supabase-rest`
+reiniciado. App publicado via `deploy.sh` com a tag `sha-e8eb361` (rollback:
+`sha-5294247`); health check do script OK (HTTP 200).
+
+Correções de dados (em transação, com trava):
+- **PRP-00001:** `premio = 7487.04`, `parcelas = 12`, `valor_parcela = 623.92`
+  (12 × 623,92), só se `premio` ainda fosse 623.92; conferido depois que
+  nenhum lançamento de comissão foi criado. Resultado `UPDATE 1`.
+- **Tentativas antigas em `cotacao_transmissoes`:** as 13 sem `parcelas_num` e
+  com texto de parcelamento legível (não à vista) receberam `premio` = soma
+  das parcelas, `parcelas_num` e `valor_parcela` via
+  `fn_premio_total_de_parcelas`, depois de uma prévia só de leitura conferida
+  linha a linha. Resultado `UPDATE 13`. São tentativas que não geraram
+  proposta nova — não afetam comissão.
+
+Gotcha: no bash do servidor, `!` dentro de aspas duplas dispara a expansão do
+histórico (`-bash: !~: event not found`) e o comando não roda. Passar SQL por
+heredoc com delimitador entre aspas (`<<'SQL'`) ou evitar `!~`.
+
+Smoke test pelo navegador (vendedor real, só navegando, sem erro no console):
+Pipeline abre em "Ativos" (sem a coluna Perdido) e o cabeçalho vem certo na
+primeira abertura ("27 de 27 leads em andamento"); Em negociação mostra
+"Vencida há 35/36 dias" nas cotações de agosto; Emissão mostra PRP-00001
+"R$ 7.487,04 · 12x R$ 623,92"; Em finalização mostra o total com o
+parcelamento das últimas tentativas ("R$ 1.287,75 · 3x de R$ 429,25",
+"R$ 4.025,76 · 12x de R$ 335,48").
+
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
