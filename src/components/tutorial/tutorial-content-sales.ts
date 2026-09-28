@@ -398,7 +398,7 @@ export const salesTutorialChapters = [
         body: "<p>Contratar no cálculo traz você para cá. A sequência é <strong>Dados complementares</strong>, <strong>Confirmação</strong> e, por fim, a proposta <strong>Transmitida</strong>. Quando a forma escolhida é <strong>cartão de crédito</strong>, entra um passo a mais entre eles: <strong>Pagamento</strong>.</p><p>No topo fica o resumo do que foi contratado — seguradora, forma de pagamento, vigência e modalidade — para você conferir sem voltar ao cálculo.</p>",
         tip: {
           label: "Sai e volta no mesmo lugar",
-          text: 'A transmissão guarda o passo de cada lead. Se você sair no meio do pagamento e voltar dias depois pela lista Em finalização, o sistema reabre exatamente ali — o botão da lista até muda de nome conforme o ponto: "Continuar: pagamento", "Consultar status".',
+          text: 'A transmissão guarda o passo de cada lead. Antes de efetivar, se você sair no meio (Dados complementares, Confirmação ou Pagamento) e voltar depois, o sistema reabre em Dados complementares com a mesma oferta escolhida. Depois de efetivar, o lead aparece na lista Em finalização e reabre exatamente no ponto — o botão muda entre "Consultar status" (aguardando a seguradora) e "Tentar novamente" (se deu falha).',
         },
         prepare: "lead-transmissao-dados",
       },

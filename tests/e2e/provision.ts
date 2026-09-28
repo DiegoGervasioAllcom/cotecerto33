@@ -169,6 +169,7 @@ export type VendedorComLead = {
   userId: string;
   empresaId: string;
   leadId: string;
+  leadNome: string;
 };
 
 export type VendedorComTutorial = VendedorComLead & {
@@ -220,10 +221,11 @@ export async function criarVendedorComLead(
     .insert({ user_id: userId, role: "vendedor" });
   if (eRole) throw new Error(`inserir role: ${eRole.message}`);
 
+  const leadNome = uniq("Cliente E2E");
   const { data: lead, error: eLead } = await admin
     .from("leads")
     .insert({
-      nome: uniq("Cliente E2E"),
+      nome: leadNome,
       contato: "(11) 99999-0000",
       origem: "teste-e2e",
       empresa_id: emp.id,
@@ -239,7 +241,7 @@ export async function criarVendedorComLead(
     .single();
   if (eLead || !lead) throw new Error(`criar lead: ${eLead?.message}`);
 
-  return { email, senha, userId, empresaId: emp.id, leadId: lead.id };
+  return { email, senha, userId, empresaId: emp.id, leadId: lead.id, leadNome };
 }
 
 /** Remove os dados criados por `criarVendedorComLead` (best-effort; `db reset` também resolve). */
@@ -2050,6 +2052,25 @@ export async function criarTentativaTransmissaoEnviada(opts: {
     .single();
   if (error || !data) throw new Error(`criar tentativa de transmissão: ${error?.message}`);
   return data.id as string;
+}
+
+/**
+ * Lê `step_atual` e `transmissao_oferta` direto do banco (admin — não usar em
+ * asserts de RLS). Usado por `retomar-transmissao.spec.ts` para: (1)
+ * confirmar que o snapshot best-effort (`gravarTransmissaoOfertaSnapshot`) foi
+ * mesmo persistido, e (2) esperar o autosave debounced (1,5s,
+ * `useCotacaoRascunho`) gravar `step_atual=6` antes de recarregar a página —
+ * sem isso, o reload dependeria só da corrida com `useRetomarTransmissao`
+ * pra decidir o ponto certo.
+ */
+export async function lerCotacaoRetomadaEstado(cotacaoId: string) {
+  const { data, error } = await admin
+    .from("cotacoes")
+    .select("step_atual, transmissao_oferta")
+    .eq("id", cotacaoId)
+    .maybeSingle();
+  if (error) throw new Error(`ler estado de retomada da cotação: ${error.message}`);
+  return data;
 }
 
 // ===========================================================================
