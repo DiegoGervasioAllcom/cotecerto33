@@ -8,6 +8,7 @@
 // card traz `mensagensRetorno`; Prêmio fica sempre desabilitado — Cliente VIP
 // é feature nova sem escopo fechado (decisão pendente nº 2 do plano V12, `PLANO_TASKS_V12.md`).
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicional";
 import { temMensagensRetorno } from "@/components/venda/cotacoes/quiver-resultado";
@@ -126,92 +127,107 @@ export function SegAcoes({
         </svg>
       </button>
 
-      {menuAberto && (
-        <div className="modal-host" onClick={() => setMenuAberto(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-h">
-              <svg width="18" height="18">
-                <use href="#i-settings" />
-              </svg>
-              <h3>Opções — {resultado.seguradora}</h3>
-              <div className="x" onClick={() => setMenuAberto(false)}>
-                ×
-              </div>
-            </div>
-            <div className="modal-b" style={{ paddingTop: 10 }}>
-              <button
-                type="button"
-                className="op-item"
-                onClick={() => {
-                  setMenuAberto(false);
-                  setAnaliseAberta(true);
-                }}
-              >
-                <span className="op-ic">
-                  <svg width="17" height="17">
-                    <use href="#i-search" />
-                  </svg>
-                </span>
-                <span className="op-tx">
-                  <strong>Análise do envio</strong>
-                  <small>O que foi enviado e o que a seguradora devolveu</small>
-                </span>
-                <svg width="14" height="14">
-                  <use href="#i-chevron-right" />
+      {/* Os modais vão para o <body>: dentro da célula da lista comparativa eles
+          herdavam o texto centralizado e sem quebra de linha da tabela. */}
+      {menuAberto &&
+        createPortal(
+          <div className="modal-host" onClick={() => setMenuAberto(false)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-h">
+                <svg width="18" height="18">
+                  <use href="#i-settings" />
                 </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {mensagensAbertas && temMensagens && (
-        <MensagensRetornoModal resultado={resultado} onClose={() => setMensagensAbertas(false)} />
-      )}
-
-      {analiseAberta && cotacaoId && (
-        <AnaliseEnvioModal
-          cotacaoId={cotacaoId}
-          resultado={resultado}
-          onClose={() => setAnaliseAberta(false)}
-        />
-      )}
-
-      {confirmarRecalculo && (
-        <div className="modal-host" onClick={() => setConfirmarRecalculo(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-h">
-              <svg width="18" height="18">
-                <use href="#i-refresh" />
-              </svg>
-              <h3>Recalcular — {resultado.seguradora}</h3>
-              <div className="x" onClick={() => setConfirmarRecalculo(false)}>
-                ×
+                <h3>Opções — {resultado.seguradora}</h3>
+                <div className="x" onClick={() => setMenuAberto(false)}>
+                  ×
+                </div>
+              </div>
+              <div className="modal-b" style={{ paddingTop: 10 }}>
+                <button
+                  type="button"
+                  className="op-item"
+                  onClick={() => {
+                    setMenuAberto(false);
+                    setAnaliseAberta(true);
+                  }}
+                >
+                  <span className="op-ic">
+                    <svg width="17" height="17">
+                      <use href="#i-search" />
+                    </svg>
+                  </span>
+                  <span className="op-tx">
+                    <strong>Análise do envio</strong>
+                    <small>O que foi enviado e o que a seguradora devolveu</small>
+                  </span>
+                  <svg width="14" height="14">
+                    <use href="#i-chevron-right" />
+                  </svg>
+                </button>
               </div>
             </div>
-            <div className="modal-b">{mensagemConfirmacao}</div>
-            <div className="modal-f">
-              <button
-                className="btn btn-ghost"
-                type="button"
-                onClick={() => setConfirmarRecalculo(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn btn-yellow"
-                type="button"
-                onClick={() => void confirmarERecalcular()}
-              >
-                <svg width="14" height="14">
+          </div>,
+          document.body,
+        )}
+
+      {mensagensAbertas &&
+        temMensagens &&
+        createPortal(
+          <MensagensRetornoModal
+            resultado={resultado}
+            onClose={() => setMensagensAbertas(false)}
+          />,
+          document.body,
+        )}
+
+      {analiseAberta &&
+        cotacaoId &&
+        createPortal(
+          <AnaliseEnvioModal
+            cotacaoId={cotacaoId}
+            resultado={resultado}
+            onClose={() => setAnaliseAberta(false)}
+          />,
+          document.body,
+        )}
+
+      {confirmarRecalculo &&
+        createPortal(
+          <div className="modal-host" onClick={() => setConfirmarRecalculo(false)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-h">
+                <svg width="18" height="18">
                   <use href="#i-refresh" />
-                </svg>{" "}
-                Recalcular
-              </button>
+                </svg>
+                <h3>Recalcular — {resultado.seguradora}</h3>
+                <div className="x" onClick={() => setConfirmarRecalculo(false)}>
+                  ×
+                </div>
+              </div>
+              <div className="modal-b">{mensagemConfirmacao}</div>
+              <div className="modal-f">
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() => setConfirmarRecalculo(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="btn btn-yellow"
+                  type="button"
+                  onClick={() => void confirmarERecalcular()}
+                >
+                  <svg width="14" height="14">
+                    <use href="#i-refresh" />
+                  </svg>{" "}
+                  Recalcular
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
