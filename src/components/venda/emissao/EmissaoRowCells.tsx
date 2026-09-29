@@ -32,7 +32,8 @@ export function PropostaCell({ row }: { row: PropostaEmissaoRow }) {
   return (
     <div className="mini-cell">
       <strong>{textoOuTraco(row.numero)}</strong>
-      <small>{textoOuTraco(row.protocolo_seguradora)}</small>
+      {/* O robô grava o texto do portal, que já traz o rótulo ("Protocolo Suhai 215575619"). */}
+      <small>{row.protocolo_seguradora || "protocolo —"}</small>
     </div>
   );
 }
