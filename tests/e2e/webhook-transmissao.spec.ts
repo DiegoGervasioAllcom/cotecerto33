@@ -173,6 +173,7 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
           cotacaoId: fixture.cotacaoId,
           transmitido: true,
           numeroCotacao: "N-E2E-123",
+          protocolo: "  Protocolo Suhai 215575619  ",
         },
       });
       expect(res.ok()).toBeTruthy();
@@ -191,7 +192,9 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       await expect(acoes.getByRole("button", { name: "Consultar protocolo" })).toBeDisabled();
 
       // Campos que a integração futura preenche continuam "—" hoje.
-      await expect(page.getByRole("cell", { name: "Protocolo" })).toBeVisible();
+      await expect(page.getByRole("cell", { name: "Protocolo", exact: true })).toBeVisible();
+      // V12.4.1: o protocolo do portal (texto completo, sem espaços nas bordas) aparece.
+      await expect(page.getByText("Protocolo Suhai 215575619")).toBeVisible();
       // Nome do segurado (embed 1:1 `cotacao_segurado` — `embed1a1` em
       // `useProposta`/`TransmissaoTransmitidaCard`): confirma que o PostgREST
       // devolve objeto (não array) e o card não trava em "—". Escopado em

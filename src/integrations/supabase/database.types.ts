@@ -5437,6 +5437,8 @@ export type Database = {
         Returns: boolean;
       };
       puxar_lead_de_volta: { Args: { p_lead: string }; Returns: undefined };
+      quiver_limpar_bruto_lote: { Args: { p_limite?: number }; Returns: number };
+      quiver_sem_bruto: { Args: { p: Json }; Returns: Json };
       recalcular_regua_performance: { Args: never; Returns: Json };
       recusar_empresa: {
         Args: { motivo?: string; p_empresa_id: string };
@@ -5457,6 +5459,7 @@ export type Database = {
           p_mensagem?: string;
           p_motivo?: string;
           p_numero_cotacao?: string;
+          p_protocolo?: string;
           p_tentativa_id: string;
           p_transmitido: boolean;
         };
