@@ -81,8 +81,9 @@ export const fmtBRL = (n: number) =>
  * campos que o app realmente tem hoje (segurado/veículo/seguro/perfil das
  * tabelas `cotacao_*`, ofertas do `quiver_resultado_raw`). Diferenças
  * deliberadas em relação ao protótipo:
- *  - Sem a linha "Controle interno" e sem "Comissão da corretora" nesta
- *    fatia (decisão do usuário — ver docs/v12/PLANO_TASKS_V12.md, linha "7a").
+ *  - "Controle interno" e "Comissão da corretora" só saem no documento
+ *    INTERNO (fatia B, `opcoes.interno` + `opcoes.pctComissao`); o PDF do
+ *    cliente nunca os traz (ver docs/v12/PLANO_TASKS_V12.md, linhas 7a/7b).
  *  - Sem os toggles de franquia 1ª/2ª opção/sem franquia: o app não calcula
  *    uma franquia sintética por seguradora — cada `opcao` que a seguradora
  *    devolveu já é o próprio nível de franquia, então o documento lista
@@ -158,6 +159,14 @@ export type DocDados = {
   seguro?: DocSeguro;
   veiculo?: DocVeiculo;
   perfil?: DocPerfil;
+  /** `cotacoes.id` — necessário para ler o % de comissão e registrar a
+   * impressão (fatia B). Sem ele o modal não oferece "Imprimir comissão". */
+  cotacaoId?: string;
+  /** `cotacao_seguro.grupo_producao` — só aparece no documento interno. */
+  grupoProducao?: string | null;
+  /** Padrão de cálculo — o app não tem esse dado hoje; só entra no documento
+   * interno quando alguma origem passar a fornecê-lo. */
+  padraoCalculo?: string | null;
   /** Universo de seguradoras com retorno — a config escolhe o subconjunto. */
   seguradoras: DocSeguradoraOferta[];
 };
@@ -173,6 +182,30 @@ export type DocConfigImpressao = {
   economia: boolean;
   colunado: boolean;
 };
+
+/** Opções do documento interno (fatia B). Só com `interno === true` E
+ * `pctComissao` definido sai comissão/controle interno/faixa de uso interno. */
+export type DocOpcoesInterno = { interno?: boolean; pctComissao?: number | null };
+
+export function docEhInterno(o?: DocOpcoesInterno): o is { interno: true; pctComissao: number } {
+  return o?.interno === true && o.pctComissao != null && Number.isFinite(o.pctComissao);
+}
+
+const FAIXA_INTERNO_STYLE =
+  "justify-content:center;text-align:center;font-weight:800;letter-spacing:.05em;background:var(--alert-soft);border-color:var(--alert);color:var(--alert)";
+
+function faixaInternoHtml(): string {
+  return `<div class="doc-aviso doc-uso-interno" style="${FAIXA_INTERNO_STYLE}">USO INTERNO — NÃO ENVIAR AO CLIENTE</div>`;
+}
+
+function controleInternoHtml(d: DocDados): string {
+  const partes = [
+    d.grupoProducao ? `Grupo de produção: ${escapeHtml(d.grupoProducao)}` : "",
+    d.padraoCalculo ? `Padrão de cálculo: ${escapeHtml(d.padraoCalculo)}` : "",
+  ].filter(Boolean);
+  if (partes.length === 0) return "";
+  return `<div class="doc-interno">Controle interno · ${partes.join(" | ")}</div>`;
+}
 
 function docLinha(rotulo: string, valor?: string | null): string {
   return `<div class="doc-li"><span>${escapeHtml(rotulo)}</span><strong>${escapeHtml(
@@ -293,10 +326,16 @@ function opcoesSeguradoraHtml(s: DocSeguradoraOferta, parcelas: number[]): strin
   return `<div class="doc-sec">${escapeHtml(s.seguradora)}</div><table class="doc-table"><tbody>${head}${rows}</tbody></table>`;
 }
 
-/** Monta o HTML do documento comparativo (fatia A — sem comissão, sem
- * "Controle interno"). Usado tanto na pré-visualização (dentro do modal,
+/** Monta o HTML do documento comparativo. Sem `opcoes` (ou sem % de
+ * comissão) é o PDF do cliente: sem comissão e sem "Controle interno". Com
+ * `interno` + `pctComissao` é o documento interno. Usado tanto na pré-visualização (dentro do modal,
  * via `dangerouslySetInnerHTML`) quanto no PDF/impressão local. */
-export function buildCotacaoDoc(dados: DocDados, config: DocConfigImpressao): string {
+export function buildCotacaoDoc(
+  dados: DocDados,
+  config: DocConfigImpressao,
+  opcoes?: DocOpcoesInterno,
+): string {
+  const interno = docEhInterno(opcoes);
   const selecionadas = dados.seguradoras.filter((s) =>
     config.seguradorasSelecionadas.includes(s.id),
   );
@@ -326,6 +365,15 @@ export function buildCotacaoDoc(dados: DocDados, config: DocConfigImpressao): st
     )}</strong>, você está recebendo as cotações para o seguro do seu veículo.</p>`;
 
   const cabecalho = config.tipo === "detalhada" ? detalhadaHtml(dados) : resumidaHtml(dados);
+  const comissao = interno
+    ? `<div class="doc-sec">Comissão</div><div class="doc-bloco">${docLinha(
+        "Comissão da corretora",
+        `${opcoes.pctComissao.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}%`,
+      )}</div>`
+    : "";
 
   const coberturaLabels = [
     ...new Set(
@@ -365,8 +413,10 @@ export function buildCotacaoDoc(dados: DocDados, config: DocConfigImpressao): st
       : "";
 
   return `<div class="doc${config.economia ? " economia" : ""}${config.colunado ? " colunado" : ""}">
+    ${interno ? faixaInternoHtml() : ""}
     ${topo}
     ${cabecalho}
+    ${comissao}
     <div class="doc-sec">Coberturas do seguro</div>
     ${
       coberturaLabels.length
@@ -376,7 +426,9 @@ export function buildCotacaoDoc(dados: DocDados, config: DocConfigImpressao): st
     <div class="doc-sec">Opções e parcelas</div>
     ${opcoesBlocos || `<div class="doc-obs">Nenhuma opção de pagamento disponível.</div>`}
     ${avisoModeloCia}
+    ${interno ? controleInternoHtml(dados) : ""}
     <div class="doc-rodape">Cotação gerada pelo CoteCerto · Supper Certo Seguros · valores válidos até ${dataValidade}</div>
+    ${interno ? faixaInternoHtml() : ""}
   </div>`;
 }
 
@@ -409,12 +461,13 @@ const DOC_CSS_RULES = `
   .doc-seg small{font-size:var(--fs-2xs);color:#7a8794}
   .doc.colunado .doc-table td{border-right:1px solid var(--cool-50)}
   .doc-aviso{display:flex;align-items:center;gap:8px;background:var(--cream-soft);border:1px solid var(--cream-border);border-radius:8px;padding:9px 12px;margin-top:14px;font-size:var(--fs-xs);color:var(--gold-ink)}
+  .doc-interno{font-size:var(--fs-2xs);color:#7a8794;margin-top:12px;padding-top:8px;border-top:1px solid var(--border-soft)}
   .doc-rodape{margin-top:18px;padding-top:10px;border-top:1px solid var(--border-soft);font-size:var(--fs-2xs);color:#7a8794;text-align:center}
 `;
 
 const DOC_PRINT_CSS = `
   :root{--slate:#425563;--muted:#7a8794;--yellow:#ffb600;--offwhite:#f6f4ee;
-    --border-soft:#efead9;--cream-hi:#fffdf5;--cream-soft:#fbf7e8;
+    --border-soft:#efead9;--alert:#c0392b;--alert-soft:#fdecea;--cream-hi:#fffdf5;--cream-soft:#fbf7e8;
     --cream-border:#f0e6c2;--gold-ink:#8a6d1a;--cool-100:#e3e8ec;--cool-50:#f4f6f8;
     --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px}
   *{box-sizing:border-box}

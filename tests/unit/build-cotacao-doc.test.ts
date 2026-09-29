@@ -169,4 +169,55 @@ describe("buildCotacaoDoc", () => {
     expect(html).not.toMatch(/<img src=x/i);
     expect(html).toContain("&lt;IMG");
   });
+
+  describe("documento interno (fatia B)", () => {
+    const interno = { ...DADOS, grupoProducao: "Equipe Alfa", padraoCalculo: "PADRÃO AUTOMÓVEL" };
+
+    for (const modelo of ["supper", "cia"] as const) {
+      test(`PDF do cliente (modelo ${modelo}) não traz comissão nem controle interno`, () => {
+        const html = buildCotacaoDoc(interno, config({ modelo }));
+        expect(html).not.toContain("Comissão");
+        expect(html).not.toContain("Controle interno");
+        expect(html).not.toContain("USO INTERNO");
+      });
+
+      test(`interno com pct (modelo ${modelo}) traz comissão, controle interno e faixa`, () => {
+        const html = buildCotacaoDoc(interno, config({ modelo }), {
+          interno: true,
+          pctComissao: 12.5,
+        });
+        expect(html).toContain("Comissão da corretora");
+        expect(html).toContain("12,50%");
+        expect(html).toContain("Controle interno · Grupo de produção: Equipe Alfa");
+        expect(html).toContain("Padrão de cálculo: PADRÃO AUTOMÓVEL");
+        expect(html).toContain("USO INTERNO — NÃO ENVIAR AO CLIENTE");
+      });
+    }
+
+    test("interno sem pct não ativa; pct sem interno também não", () => {
+      for (const opcoes of [
+        { interno: true },
+        { interno: true, pctComissao: null },
+        { interno: false, pctComissao: 12 },
+        { pctComissao: 12 },
+      ]) {
+        const html = buildCotacaoDoc(interno, config(), opcoes);
+        expect(html).not.toContain("Comissão");
+        expect(html).not.toContain("Controle interno");
+        expect(html).not.toContain("USO INTERNO");
+      }
+    });
+
+    test("controle interno omite o que o app não tem e escapa o que tem", () => {
+      const html = buildCotacaoDoc({ ...DADOS, grupoProducao: "<b>x</b>" }, config(), {
+        interno: true,
+        pctComissao: 10,
+      });
+      expect(html).toContain("Grupo de produção: &lt;b&gt;x&lt;/b&gt;");
+      expect(html).not.toContain("Padrão de cálculo");
+      const sem = buildCotacaoDoc(DADOS, config(), { interno: true, pctComissao: 10 });
+      expect(sem).not.toContain("Controle interno");
+      expect(sem).toContain("Comissão da corretora");
+    });
+  });
 });

@@ -67,7 +67,7 @@ async function fetchComparativo(id: string): Promise<ComparativoData> {
         "id,numero,status,criado_em,quiver_resultado_raw," +
           "segurado:cotacao_segurado(nome,cpf_cnpj,nascimento,sexo,estado_civil)," +
           "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,ano_fab,placa,chassi,combustivel)," +
-          "seguro:cotacao_seguro(tipo_seguro,vig_ini,vig_fim)," +
+          "seguro:cotacao_seguro(tipo_seguro,vig_ini,vig_fim,grupo_producao)," +
           "perfil:cotacao_perfil(condutor_mesmo,jovens_18_25,cep_pernoite)," +
           "premios:cotacao_premios(id,seguradora,cobertura,premio)",
       )
@@ -216,6 +216,7 @@ function Page() {
         onDescontoEnviado={() => void queryClient.invalidateQueries({ queryKey })}
         docCabecalho={{
           cotacaoNumero: `#${numero}`,
+          cotacaoId: data.id,
           segurado: data.segurado,
           veiculo: data.veiculo,
           seguro: data.seguro,

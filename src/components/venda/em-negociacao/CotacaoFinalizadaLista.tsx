@@ -22,6 +22,7 @@ function statusChip(s: string) {
 function docDadosDaLinha(r: CotacaoFinalizadaRow): DocDados {
   const cabecalho = {
     cotacaoNumero: `#${cotNum(r.numero, r.criado_em)}`,
+    cotacaoId: r.id,
     segurado: r.segurado,
     veiculo: r.veiculo,
   };

@@ -284,6 +284,7 @@ export function StepCalculo({
                   f,
                   ordenarResultados(resultados),
                   numeroImpressaoFormatado ? `#${numeroImpressaoFormatado}` : "—",
+                  cotacaoId,
                 ),
               )
             }

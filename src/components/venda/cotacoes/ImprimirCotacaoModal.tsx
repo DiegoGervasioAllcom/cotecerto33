@@ -3,11 +3,12 @@
 // ("Configurar impressão" e "Impressão expressa") levam ao mesmo preview do
 // documento comparativo (`buildCotacaoDoc`, em `src/lib/print.ts`).
 //
-// Fatia A (V12.1.31-33, 36): sem comissão, sem banco, sem envio externo —
-// "Imprimir comissão"/E-mail/SMS/WhatsApp/Gerar link ficam desabilitados com
-// aviso "disponível em breve" (mesmo padrão de `EmissaoRowCells.tsx`). Só
-// "Baixar PDF / imprimir local" funciona de verdade.
-import { useEffect, useMemo, useState } from "react";
+// Fatia A (V12.1.31-33, 36): E-mail/SMS/WhatsApp/Gerar link desabilitados
+// ("em breve"). Fatia B (V12.1.34-35, 37): "Imprimir comissão" com o % real
+// (`useComissaoImpressao`), documento interno, trava de envio externo e
+// registro imutável de cada "Baixar PDF" (`registrarImpressao`; com comissão
+// é fail-closed — sem trilha gravada o documento não sai).
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
@@ -23,9 +24,10 @@ import {
   type ImprimirCotacaoConfig,
 } from "@/lib/schemas/imprimirCotacao.schema";
 
-/** Aviso curto nos controles que a fatia A ainda não liga (envio externo e
- * comissão impressa — ver V12.1.34-35/37 na fatia B). */
-export const AVISO_IMPRESSAO_EM_BREVE = "Disponível em breve";
+import { ComissaoImpressaoBloco } from "./ComissaoImpressaoBloco";
+import { ImprimirEnvioLateral } from "./ImprimirEnvioLateral";
+import { registrarImpressao } from "./comissao-impressao";
+import { useComissaoImpressao } from "./useComissaoImpressao";
 
 type Etapa = "porta" | "config" | "preview";
 
@@ -37,6 +39,7 @@ function configPadrao(dados: DocDados): ImprimirCotacaoConfig {
     parcelas: IMPRIMIR_COTACAO_PARCELAS_PADRAO,
     economia: false,
     colunado: false,
+    comComissao: false,
   };
 }
 
@@ -57,6 +60,12 @@ export function ImprimirCotacaoModal({
   });
   const { watch, setValue, handleSubmit, formState, reset } = form;
   const config = watch();
+  const comissao = useComissaoImpressao(dadosRef?.cotacaoId, !!dadosRef);
+  const pctComissao = comissao.estado === "disponivel" ? comissao.pct : undefined;
+  const comComissao = config.comComissao === true && pctComissao !== undefined;
+  const [mensagem, setMensagem] = useState<{ tipo: "erro" | "aviso"; texto: string } | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const ocupadoRef = useRef(false);
 
   // Reabre sempre do zero (porta) com a config padrão daquela cotação —
   // este componente fica montado o tempo todo, só `dados` muda de null p/
@@ -64,6 +73,7 @@ export function ImprimirCotacaoModal({
   useEffect(() => {
     if (dadosRef) {
       setEtapa("porta");
+      setMensagem(null);
       reset(configPadrao(dadosRef));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,8 +89,8 @@ export function ImprimirCotacaoModal({
       economia: config.economia,
       colunado: config.colunado,
     };
-    return buildCotacaoDoc(dadosRef, cfg);
-  }, [dadosRef, etapa, config]);
+    return buildCotacaoDoc(dadosRef, cfg, { interno: comComissao, pctComissao });
+  }, [dadosRef, etapa, config, comComissao, pctComissao]);
 
   if (!dadosRef) return null;
   const dadosAbertos = dadosRef;
@@ -117,9 +127,32 @@ export function ImprimirCotacaoModal({
     setValue("parcelas", proximo, { shouldValidate: true });
   };
 
-  const baixarPdf = () => {
-    if (!doc) return;
-    printCotacaoDoc(`Cotação · ${dadosAbertos.cotacaoNumero}`, doc);
+  const baixarPdf = async () => {
+    if (!doc || ocupadoRef.current) return;
+    ocupadoRef.current = true;
+    setOcupado(true);
+    setMensagem(null);
+    try {
+      try {
+        await registrarImpressao(dadosAbertos, { ...config, comComissao }, "baixar");
+      } catch (e) {
+        if (comComissao) {
+          // Fail-closed: documento com comissão só sai com a trilha gravada.
+          setMensagem({
+            tipo: "erro",
+            texto: `Não foi possível registrar a impressão (${
+              e instanceof Error ? e.message : "erro"
+            }). O documento com comissão não foi gerado.`,
+          });
+          return;
+        }
+        setMensagem({ tipo: "aviso", texto: "Aviso: não foi possível registrar esta impressão." });
+      }
+      printCotacaoDoc(`Cotação · ${dadosAbertos.cotacaoNumero}`, doc);
+    } finally {
+      ocupadoRef.current = false;
+      setOcupado(false);
+    }
   };
 
   // `config` (via `watch()`) só reflete a cotação atual depois que o efeito
@@ -368,16 +401,11 @@ export function ImprimirCotacaoModal({
                   </span>
                   Resultado colunado
                 </label>
-                <label
-                  className="pr-chk"
-                  aria-disabled="true"
-                  title={`Imprimir comissão — ${AVISO_IMPRESSAO_EM_BREVE}`}
-                  style={{ opacity: 0.5, cursor: "not-allowed" }}
-                >
-                  <span className="pr-box" />
-                  Imprimir comissão
-                  <small>{AVISO_IMPRESSAO_EM_BREVE}</small>
-                </label>
+                <ComissaoImpressaoBloco
+                  comissao={comissao}
+                  marcado={comComissao}
+                  onToggle={() => setValue("comComissao", !config.comComissao)}
+                />
               </div>
             </div>
           </div>
@@ -416,68 +444,12 @@ export function ImprimirCotacaoModal({
             <div className="pv-doc">
               <div dangerouslySetInnerHTML={{ __html: doc }} />
             </div>
-            <div className="pv-lado">
-              <div className="pv-h">Como deseja enviar?</div>
-              {(
-                [
-                  ["mail", "E-mail", "com o PDF anexado"],
-                  ["message", "SMS", "com o link da cotação"],
-                  ["message", "WhatsApp", "o caminho mais usado"],
-                ] as const
-              ).map(([ico, rotulo, sub]) => (
-                <button
-                  type="button"
-                  key={rotulo}
-                  className="pv-env"
-                  disabled
-                  aria-disabled="true"
-                  title={`${rotulo} — ${AVISO_IMPRESSAO_EM_BREVE}`}
-                  style={{ opacity: 0.5, cursor: "not-allowed" }}
-                >
-                  <svg width={17} height={17}>
-                    <use href={`#i-${ico}`} />
-                  </svg>
-                  <span>
-                    <strong>{rotulo}</strong>
-                    <small>{sub}</small>
-                  </span>
-                </button>
-              ))}
-              <div className="pv-sep" />
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm pv-btn"
-                disabled
-                aria-disabled="true"
-                title={`Gerar link — ${AVISO_IMPRESSAO_EM_BREVE}`}
-                style={{ opacity: 0.5, cursor: "not-allowed" }}
-              >
-                <svg width={13} height={13}>
-                  <use href="#i-share" />
-                </svg>{" "}
-                Gerar link
-              </button>
-              <button type="button" className="btn btn-slate btn-sm pv-btn" onClick={baixarPdf}>
-                <svg width={13} height={13}>
-                  <use href="#i-download" />
-                </svg>{" "}
-                Baixar PDF
-              </button>
-              <div className="pv-resumo">
-                <div>
-                  <span>Versão</span>
-                  <strong>{config.tipo === "detalhada" ? "Detalhada" : "Resumida"}</strong>
-                </div>
-                <div>
-                  <span>Seguradoras</span>
-                  <strong>{config.seguradorasSelecionadas.length}</strong>
-                </div>
-                <div>
-                  <span>Parcelas</span>
-                  <strong>{config.parcelas.length}</strong>
-                </div>
-              </div>
-            </div>
+            <ImprimirEnvioLateral
+              config={{ ...config, comComissao }}
+              ocupado={ocupado}
+              mensagem={mensagem}
+              onBaixar={() => void baixarPdf()}
+            />
           </div>
           <div className="modal-f">
             <button type="button" className="btn btn-ghost" onClick={() => setEtapa("config")}>

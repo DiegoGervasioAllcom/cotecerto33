@@ -2464,3 +2464,23 @@ export async function semearConsultaPlacaMistaE2E(
   if (error || !data) throw new Error(`semear consulta de placa mista E2E: ${error?.message}`);
   return data.id;
 }
+
+/** Define `empresas.perc_comissao` (fonte do % que `rpc_comissao_para_impressao` devolve). */
+export async function definirPercComissaoEmpresaE2E(
+  empresaId: string,
+  pct: number | null,
+): Promise<void> {
+  const { error } = await admin.from("empresas").update({ perc_comissao: pct }).eq("id", empresaId);
+  if (error) throw new Error(`definir perc_comissao da empresa: ${error.message}`);
+}
+
+/** Linhas de `cotacao_impressoes` da cotação (registro imutável da impressão). */
+export async function listarImpressoesE2E(cotacaoId: string) {
+  const { data, error } = await admin
+    .from("cotacao_impressoes")
+    .select("acao,modelo,detalhada,com_comissao,pct_exibido,seguradoras")
+    .eq("cotacao_id", cotacaoId)
+    .order("criado_em");
+  if (error) throw new Error(`listar impressões: ${error.message}`);
+  return data ?? [];
+}

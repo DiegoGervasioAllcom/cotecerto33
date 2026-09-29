@@ -1581,8 +1581,8 @@ textarea.input:focus {
 /* Frente 3 V12 (7a · Impressão de cotação) — trazidas byte a byte de
    `cotecerto_prototipo_v12 - cópia.html`, linhas ~657-751 (blocos "IMPRESSÃO:
    configuração", "pré-visualização" e "o documento em si"). Só as classes que
-   o modal `ImprimirCotacaoModal` usa; `.doc-interno`/comissão ficam para a
-   fatia B (V12.1.34-35). */
+   o modal `ImprimirCotacaoModal` usa; `.doc-interno` (fatia B, V12.1.34-35)
+   trazida byte a byte no fim do arquivo. */
 .pr-grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -6135,3 +6135,4 @@ tr.foco-pisca > td{animation:focoPisca 2.2s ease-out}
 .msg-bloco .mb-h strong{font-size:var(--fs-md);color:var(--slate)}
 .msg-bloco .mb-val{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .msg-bloco .mb-lista{margin:0;padding-left:18px;font-size:var(--fs-sm);color:var(--slate);line-height:1.7}
+.doc-interno{font-size:var(--fs-2xs);color:#7A8794;margin-top:12px;padding-top:8px;border-top:1px solid var(--border-soft)}

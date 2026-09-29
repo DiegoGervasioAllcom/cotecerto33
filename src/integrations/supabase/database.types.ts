@@ -959,6 +959,51 @@ export type Database = {
           },
         ];
       };
+      cotacao_impressoes: {
+        Row: {
+          acao: string;
+          com_comissao: boolean;
+          cotacao_id: string;
+          criado_em: string;
+          destinatario: string | null;
+          detalhada: boolean;
+          empresa_id: string;
+          id: string;
+          modelo: string;
+          pct_exibido: number | null;
+          seguradoras: Json;
+          usuario_id: string;
+        };
+        Insert: {
+          acao: string;
+          com_comissao?: boolean;
+          cotacao_id: string;
+          criado_em?: string;
+          destinatario?: string | null;
+          detalhada?: boolean;
+          empresa_id: string;
+          id?: string;
+          modelo: string;
+          pct_exibido?: number | null;
+          seguradoras?: Json;
+          usuario_id?: string;
+        };
+        Update: {
+          acao?: string;
+          com_comissao?: boolean;
+          cotacao_id?: string;
+          criado_em?: string;
+          destinatario?: string | null;
+          detalhada?: boolean;
+          empresa_id?: string;
+          id?: string;
+          modelo?: string;
+          pct_exibido?: number | null;
+          seguradoras?: Json;
+          usuario_id?: string;
+        };
+        Relationships: [];
+      };
       cotacao_perfil: {
         Row: {
           cep_pernoite: string | null;
@@ -5502,6 +5547,22 @@ export type Database = {
       resolver_desligamento: {
         Args: { p_aprovar: boolean; p_id: string; p_observacao?: string };
         Returns: undefined;
+      };
+      rpc_comissao_para_impressao: {
+        Args: { p_cotacao_id: string };
+        Returns: number;
+      };
+      rpc_registrar_impressao: {
+        Args: {
+          p_acao: string;
+          p_com_comissao: boolean;
+          p_cotacao_id: string;
+          p_destinatario?: string;
+          p_detalhada: boolean;
+          p_modelo: string;
+          p_seguradoras: Json;
+        };
+        Returns: string;
       };
       saldo_comissao_visao_geral: {
         Args: { p_fim: string; p_inicio: string };

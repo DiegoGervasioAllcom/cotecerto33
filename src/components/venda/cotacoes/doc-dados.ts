@@ -31,9 +31,11 @@ export function docDadosDoForm(
   f: Form,
   resultadosOrdenados: ResultadoCalculo[],
   cotacaoNumero: string,
+  cotacaoId?: string | null,
 ): DocDados {
   return {
     cotacaoNumero,
+    cotacaoId: cotacaoId ?? undefined,
     segurado: {
       nome: f.nome,
       cpfCnpj: f.cpf,
@@ -69,6 +71,8 @@ export function docDadosDoForm(
  * são opcionais porque cada tela hoje seleciona um subconjunto diferente. */
 export type DocDadosCabecalho = {
   cotacaoNumero: string;
+  /** `cotacoes.id` — habilita "Imprimir comissão" e o registro da impressão. */
+  cotacaoId?: string;
   segurado?: {
     nome?: string | null;
     cpf_cnpj?: string | null;
@@ -89,6 +93,7 @@ export type DocDadosCabecalho = {
     tipo_seguro?: string | null;
     vig_ini?: string | null;
     vig_fim?: string | null;
+    grupo_producao?: string | null;
   } | null;
   perfil?: {
     condutor_mesmo?: boolean | null;
@@ -104,6 +109,8 @@ export function docDadosDoBanco(
   const veic = cabecalho.veiculo;
   return {
     cotacaoNumero: cabecalho.cotacaoNumero,
+    cotacaoId: cabecalho.cotacaoId,
+    grupoProducao: cabecalho.seguro?.grupo_producao ?? null,
     segurado: {
       nome: cabecalho.segurado?.nome ?? null,
       cpfCnpj: cabecalho.segurado?.cpf_cnpj ?? null,
