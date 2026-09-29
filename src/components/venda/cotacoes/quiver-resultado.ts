@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 
 const textoOpcional = z.string().trim().optional();
 
@@ -652,8 +653,10 @@ export function seguradorasSemRetorno(
     ...lista.map((l) => normalizar(l.seguradora)),
   ]);
   for (const sg of seguradorasSel) {
-    if (cobertas.has(normalizar(sg))) continue;
-    cobertas.add(normalizar(sg));
+    // Seleção usa nome de exibição ("HDI"); os cards, o canônico do robô ("hdi seguros").
+    const canon = normalizar(nomeCanonicoSeguradora(sg));
+    if (cobertas.has(canon) || cobertas.has(normalizar(sg))) continue;
+    cobertas.add(canon);
     lista.push({ chave: `sel|${normalizar(sg)}`, seguradora: sg });
   }
   return lista;
