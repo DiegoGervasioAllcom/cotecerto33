@@ -329,6 +329,7 @@ function Page() {
   const {
     calculando,
     resultados,
+    semRetorno,
     erro: erroCalculo,
     simularCalculo,
     recalcularSeguradora,
@@ -627,6 +628,7 @@ function Page() {
             <StepCalculo
               f={f}
               resultados={resultados}
+              semRetorno={semRetorno}
               calculando={calculando}
               erro={erroCalculo}
               podeCalcular={podeCalcular}

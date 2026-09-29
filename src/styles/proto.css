@@ -6123,3 +6123,15 @@ tr.foco-pisca > td{animation:focoPisca 2.2s ease-out}
   padding:7px 16px;border-radius:999px;cursor:pointer;transition:all .14s}
 .cob-chip:hover{color:var(--slate);border-color:var(--slate)}
 .cob-chip.on{background:var(--slate);border-color:var(--slate);color:#fff}
+.calc-card.sem-ret{opacity:.9}
+.sem-retorno{display:flex;align-items:center;gap:12px;background:var(--cream-soft);border:1px solid var(--cream-border);border-radius:12px;
+  padding:16px 18px;margin:14px 0;color:var(--gold-ink)}
+.sem-retorno strong{color:var(--slate);display:block;font-size:var(--fs-lg)}
+.sem-retorno .btn{margin-left:auto;flex:none}
+/* mensagens de retorno por franquia */
+.msg-bloco{border:1px solid var(--border-soft);border-radius:12px;padding:14px 16px;margin-bottom:12px;background:var(--offwhite)}
+.msg-bloco.erro{background:var(--cream-soft);border-color:var(--cream-border)}
+.msg-bloco .mb-h{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.msg-bloco .mb-h strong{font-size:var(--fs-md);color:var(--slate)}
+.msg-bloco .mb-val{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+.msg-bloco .mb-lista{margin:0;padding-left:18px;font-size:var(--fs-sm);color:var(--slate);line-height:1.7}

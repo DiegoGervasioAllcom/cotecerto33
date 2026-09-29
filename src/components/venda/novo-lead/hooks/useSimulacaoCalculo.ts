@@ -4,7 +4,9 @@ import { enviarCotacaoQuiver } from "@/lib/quiver.functions";
 import type { Form } from "../types";
 import {
   parseQuiverResultado,
+  parseQuiverSemRetorno,
   type ResultadoCalculo,
+  type SemRetornoItem,
 } from "@/components/venda/cotacoes/quiver-resultado";
 
 export {
@@ -28,6 +30,7 @@ export function useSimulacaoCalculo(
 ) {
   const [calculando, setCalculando] = useState(false);
   const [resultados, setResultados] = useState<ResultadoCalculo[]>([]);
+  const [semRetorno, setSemRetorno] = useState<SemRetornoItem[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -77,6 +80,7 @@ export function useSimulacaoCalculo(
       .eq("id", id)
       .maybeSingle();
     setResultados(parseQuiverResultado(data?.quiver_resultado_raw));
+    setSemRetorno(parseQuiverSemRetorno(data?.quiver_resultado_raw));
   }
 
   function iniciarPolling(id: string) {
@@ -109,6 +113,7 @@ export function useSimulacaoCalculo(
     }
     setErro(null);
     setResultados([]);
+    setSemRetorno([]);
     setCalculando(true);
     await persistirAntes(overrides);
     const { data: sess } = await supabase.auth.getSession();
@@ -166,6 +171,7 @@ export function useSimulacaoCalculo(
     calculando,
     resultados,
     setResultados,
+    semRetorno,
     erro,
     simularCalculo,
     recalcularSeguradora,

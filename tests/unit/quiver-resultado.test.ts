@@ -5,6 +5,10 @@ import {
   gruposOpcoesResultado,
   ordenarResultados,
   parseQuiverResultado,
+  parseQuiverSemRetorno,
+  semRetornoPorFaixa,
+  seguradorasSemRetorno,
+  temMensagensRetorno,
   premioNumerico,
   secoesDisponiveis,
   tituloResultado,
@@ -581,5 +585,105 @@ describe("secao (V12.4.4 / V12.3.12)", () => {
     expect(secoesDisponiveis(parseQuiverResultado({ cards: [card({})] }))).toEqual([]);
     expect(filtrarPorSecao(rs, "B")).toHaveLength(2);
     expect(filtrarPorSecao(rs, "")).toHaveLength(4);
+  });
+});
+
+describe("semRetorno e mensagensRetorno (V12.4.2/V12.4.5)", () => {
+  const card = (extra: object = {}) => ({
+    seguradora: "Alfa",
+    produto: "Auto",
+    opcoes: [],
+    ...extra,
+  });
+
+  it("payload antigo: sem semRetorno e sem mensagens", () => {
+    const [r] = parseQuiverResultado({ cards: [card()] });
+    expect(r.mensagensRetorno).toBeUndefined();
+    expect(temMensagensRetorno(r)).toBe(false);
+    expect(parseQuiverSemRetorno({ cards: [] })).toEqual([]);
+    expect(parseQuiverSemRetorno(null)).toEqual([]);
+  });
+
+  it("mensagensRetorno válido é mantido", () => {
+    const [r] = parseQuiverResultado({
+      cards: [card({ mensagensRetorno: [{ faixa: "Normal", mensagens: [" a ", "b"] }] })],
+    });
+    expect(r.mensagensRetorno).toEqual([{ faixa: "Normal", mensagens: ["a", "b"] }]);
+    expect(temMensagensRetorno(r)).toBe(true);
+  });
+
+  it("mensagensRetorno inválido é descartado sem derrubar o card", () => {
+    const [a] = parseQuiverResultado({ cards: [card({ mensagensRetorno: "x" })] });
+    expect(a.seguradora).toBe("Alfa");
+    expect(a.mensagensRetorno).toBeUndefined();
+    const [b] = parseQuiverResultado({
+      cards: [
+        card({
+          mensagensRetorno: [
+            { mensagens: [1, "", "ok"] },
+            { faixa: "Vazia", mensagens: [] },
+            42,
+            { faixa: "Longa", mensagens: ["x".repeat(400)] },
+          ],
+        }),
+      ],
+    });
+    expect(b.mensagensRetorno?.[0]).toEqual({ faixa: undefined, mensagens: ["ok"] });
+    expect(b.mensagensRetorno).toHaveLength(2);
+    expect(b.mensagensRetorno?.[1].mensagens[0]).toHaveLength(300);
+  });
+
+  it("limita a 20 mensagens por faixa", () => {
+    const [r] = parseQuiverResultado({
+      cards: [
+        card({ mensagensRetorno: [{ mensagens: Array.from({ length: 30 }, (_, i) => `m${i}`) }] }),
+      ],
+    });
+    expect(r.mensagensRetorno?.[0].mensagens).toHaveLength(20);
+  });
+
+  it("semRetorno descarta entradas inválidas e limita o motivo", () => {
+    const itens = parseQuiverSemRetorno({
+      semRetorno: [
+        { seguradora: "Beta", motivo: "Sem retorno da cotação" },
+        { seguradora: "Beta" },
+        { seguradora: "Gama", motivo: "x".repeat(301) },
+        "lixo",
+        { seguradora: 5, motivo: "m" },
+      ],
+    });
+    expect(itens).toEqual([
+      { seguradora: "Beta", motivo: "Sem retorno da cotação" },
+      { seguradora: undefined, motivo: "m" },
+    ]);
+    expect(parseQuiverSemRetorno({ semRetorno: "x" })).toEqual([]);
+  });
+
+  it("seguradorasSemRetorno: entrada sem card vira coluna com motivo; com card não", () => {
+    const resultados = parseQuiverResultado({ cards: [card()] });
+    const semRetorno = parseQuiverSemRetorno({
+      semRetorno: [
+        { seguradora: "Beta", motivo: "Recusou o perfil" },
+        { seguradora: "Alfa", motivo: "Sem retorno da cotação" },
+        { seguradora: "Alfa", faixa: "Reduzida", motivo: "Franquia indisponível" },
+      ],
+    });
+    expect(seguradorasSemRetorno(semRetorno, resultados, ["Alfa", "beta", "Delta"])).toEqual([
+      { chave: "beta|", seguradora: "Beta", produto: undefined, motivo: "Recusou o perfil" },
+      { chave: "sel|delta", seguradora: "Delta" },
+    ]);
+    expect(seguradorasSemRetorno([], resultados)).toEqual([]);
+  });
+
+  it("semRetornoPorFaixa casa por seguradora e produto", () => {
+    const [r] = parseQuiverResultado({ cards: [card({ produtoId: "1_2" })] });
+    const semRetorno = parseQuiverSemRetorno({
+      semRetorno: [
+        { seguradora: "alfa", faixa: "Reduzida", motivo: "m1" },
+        { seguradora: "Alfa", produtoId: "9_9", faixa: "Normal", motivo: "m2" },
+        { seguradora: "Beta", faixa: "Normal", motivo: "m3" },
+      ],
+    });
+    expect(semRetornoPorFaixa(semRetorno, r)).toEqual([{ faixa: "Reduzida", motivo: "m1" }]);
   });
 });

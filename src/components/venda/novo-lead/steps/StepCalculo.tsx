@@ -19,6 +19,7 @@ import {
   premioNumerico,
   type FaixaPrecoCalculo,
   type OrdemCalculo,
+  type SemRetornoItem,
 } from "@/components/venda/cotacoes/quiver-resultado";
 import { CalculoContexto } from "./calculo/CalculoContexto";
 import { CalculoFiltroSecao } from "./calculo/CalculoFiltroSecao";
@@ -45,6 +46,7 @@ export type OfertaTransmissao = {
 type Props = {
   f: Form;
   resultados: ResultadoCalculo[];
+  semRetorno: SemRetornoItem[];
   calculando: boolean;
   erro: string | null;
   podeCalcular: boolean;
@@ -62,6 +64,7 @@ type Props = {
 export function StepCalculo({
   f,
   resultados,
+  semRetorno,
   calculando,
   erro,
   podeCalcular,
@@ -297,6 +300,7 @@ export function StepCalculo({
               f={f}
               resultados={resultadosExibidos}
               todosResultados={resultados}
+              semRetorno={semRetorno}
               cotacaoId={cotacaoId}
               erroGlobal={erro}
               escolhaDoCard={escolhaDoCard}
@@ -310,6 +314,8 @@ export function StepCalculo({
           ) : (
             <CalculoCardsGrid
               resultados={resultadosExibidos}
+              todosResultados={resultados}
+              semRetorno={semRetorno}
               cotacaoId={cotacaoId}
               escolhaDoCard={escolhaDoCard}
               setEscolha={setEscolha}
