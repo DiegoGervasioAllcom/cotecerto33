@@ -6118,3 +6118,8 @@ tr.em-foco + tr.em-foco > td:last-child{box-shadow:inset 0 -1.5px 0 var(--yellow
 .foco-pisca{animation:focoPisca 2.2s ease-out}
 tr.foco-pisca > td{animation:focoPisca 2.2s ease-out}
 .kcard.em-foco{border-color:var(--yellow) !important;box-shadow:0 0 0 3px rgba(255,182,0,.32) !important;background:var(--cream-hi) !important}
+.cob-filtro{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.cob-chip{border:1.5px solid var(--border-soft);background:#fff;color:var(--muted);font-weight:700;font-size:var(--fs-sm);
+  padding:7px 16px;border-radius:999px;cursor:pointer;transition:all .14s}
+.cob-chip:hover{color:var(--slate);border-color:var(--slate)}
+.cob-chip.on{background:var(--slate);border-color:var(--slate);color:#fff}

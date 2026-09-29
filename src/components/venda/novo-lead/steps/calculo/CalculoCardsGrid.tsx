@@ -52,6 +52,7 @@ export function CalculoCardsGrid({
                 <SeguradoraBadge nome={r.seguradora} tam="sm" /> {r.seguradora}
               </div>
               <span className="chip chip-slate">{tituloResultado(r)}</span>
+              {r.secao && <span className="chip chip-slate">{r.secao}</span>}
             </div>
             <div className="calc-tiers">
               {opcoesExibidas.map((o, opcaoIndex) => (

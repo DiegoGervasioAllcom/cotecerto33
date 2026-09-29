@@ -172,6 +172,22 @@ Robô: `/Users/diego.gervasio/Documents/playwright` (tem `CLAUDE.md` próprio). 
 | 7 | V12.4.6 Prêmios por cobertura | `premiosPorCobertura` via `PremiosCoberturas` | item na Engrenagem | ver regra de custo abaixo |
 | 8 | V12.4.7 Documentos (spike) | só navegar para descobrir onde fica a cotação transmitida e se há PDF da proposta/boleto | — | sem clicar em Comprar/Efetivar |
 
+**Mapeamento ao vivo (V12.4.3) feito em 28/09/2026** — cotação 158223 (9 seguradoras, 2,7 min, 23/25 cards; extração 12 s). Mapa em `doc/selectors/pagina6-premios.md` no repo do robô (gitignored). Resultado:
+- Sem clique (custo zero): seção Comp/Demais de todos os cards (V12.4.4), texto do "Sem retorno" por faixa (V12.4.2), mensagens por faixa em tooltip (V12.4.5), número da cotação.
+- Com clique: prêmios por cobertura (V12.4.6, menu "Opções" do card) — custo ainda não medido; precisa de 1 leitura ao vivo do `onclick`.
+- Não existem na P6: protocolo, PDF, proposta, boleto (V12.4.1 segue pela transmissão; V12.4.7 segue como spike).
+
+Achados novos no robô (entram antes dos itens acima):
+
+| Ordem | Task | Robô | CoteCerto | Obs. |
+|---|---|---|---|---|
+| 0a | V12.4.8 Seguradora sem modelo do veículo | na P3, cia em "Seguradoras que não retornaram modelo" (ex.: HDI "Veículo não encontrado") deixa vazio o campo "Lista de veículos para cálculo" e o portal não libera o Cálculo para nenhuma cia — hoje vira timeout genérico. Tentar recarregar uma vez; persistindo, desmarcar a cia, seguir com as outras e devolver o motivo; se todas ficarem sem modelo, encerrar com mensagem clara | exibir como "Sem retorno" com o motivo (junto do V12.4.2) | 3 cotações perdidas em 28/09 por isso |
+| 0b | V12.4.9 Forma de pagamento lida do select errado | `locator('select').first()` pega o select de plano (`CbProds`) em cards como Allianz `15_1`/Mapfre `10013_1`; usar `select[id^="CbPagto"]` | nada (dado passa a vir certo) | JSON de 28/09 trouxe "Básico, Ampliado…" como formas de pagamento |
+| 0d | V12.4.11 Transmissão: select de pagamento do card | `TransmissaoPage.ts:339` usa `[id^="select2-CbPagto"], .select2-container` `.first()` — em cards com plano (`CbProds`, ex. Allianz/Mapfre) pode pegar o Select2 do plano | nada | mesmo bug do V12.4.9, no fluxo de transmissão; task própria (só valida com transmissão real) |
+| 0c | V12.4.10 Troca de forma de pagamento grava no portal | a troca dispara `GetMultCalculoSetPadrao2000` (106 POSTs na extração) e altera plano/marca recálculo no servidor; avaliar ler os valores sem trocar o select | nada | o comentário "sem AJAX" do extrator está errado |
+
+**Plano aprovado em 28/09/2026 — ordem A → C → B → D:** A = V12.4.9 + V12.4.4; C = V12.4.2 + V12.4.5; B = V12.4.10; D = V12.4.8. Nenhuma fatia pede migration (a RPC `registrar_premios_quiver` já guarda o payload inteiro em `quiver_resultado_raw`; campo novo entra como opcional no zod). Decisões do usuário: sem teste unitário no robô (validação ao vivo com `tests/cotacao.spec.ts`, cada rodada autorizada); `secao` leva o **rótulo literal do portal** (texto de `#TitComp`/`#TitDemais`), não um enum; mensagens com filtro de dado pessoal (CPF, telefone, e-mail, placa, chassi), 300 caracteres por mensagem e até 20 por card.
+
 **Regra de custo (decisão do usuário):** medir no mapeamento ao vivo quanto cada captura com clique (mensagens, prêmios por cobertura) aumenta o tempo da cotação; se o aumento for grande, não capturar; se for pequeno, capturar; e procurar primeiro um jeito de obter o dado sem clique (texto já presente no card).
 **Fora:** comissão, desconto e Código Afinidade por seguradora (dado sensível; o CoteCerto tem motor de comissão e fluxo de desconto próprios).
 

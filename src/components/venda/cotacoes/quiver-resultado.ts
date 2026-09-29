@@ -42,6 +42,9 @@ export const resultadoCalculoSchema = z.object({
   coberturasBasicas: z.record(z.string()).optional(),
   coberturasAdicionais: z.record(z.string()).optional(),
   premiosPorFormaPagamento: z.array(premioPorFormaPagamentoSchema).optional(),
+  // Rótulo literal da seção no portal (ex.: "Ofertas adicionais"). Opcional:
+  // robô/cotações antigas não enviam; valor inválido é ignorado sem derrubar o card.
+  secao: z.string().trim().min(1).max(150).optional().catch(undefined),
 });
 
 const payloadSchema = z.object({ cards: z.array(z.unknown()).default([]) });
@@ -520,4 +523,19 @@ export function vincularPremiosQuiver<T extends PremioVinculavel>(
     }
   }
   return vinculados;
+}
+
+/** Seções distintas (texto literal do portal), na ordem em que aparecem. */
+export function secoesDisponiveis(resultados: readonly ResultadoCalculo[]): string[] {
+  const vistas = new Set<string>();
+  for (const r of resultados) if (r.secao) vistas.add(r.secao);
+  return [...vistas];
+}
+
+/** `secao` vazia = "Todas". */
+export function filtrarPorSecao(
+  resultados: readonly ResultadoCalculo[],
+  secao: string,
+): ResultadoCalculo[] {
+  return secao ? resultados.filter((r) => r.secao === secao) : [...resultados];
 }

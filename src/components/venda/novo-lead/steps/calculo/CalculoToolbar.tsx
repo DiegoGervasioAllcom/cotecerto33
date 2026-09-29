@@ -4,9 +4,7 @@
  * ordenação, alternância lista/cartões (`.calc-toolset`) e as ações
  * Imprimir/Recalcular que já existiam no topo da tela.
  *
- * O filtro de tipo de cobertura (`.cob-filtro` Compreensiva/Demais/Todas) do
- * protótipo fica fora — decisão do usuário (V12.3.12): não há dado real de
- * tipo de cobertura por oferta hoje.
+ * O filtro de seção (`.cob-filtro`) fica em `CalculoFiltroSecao` (V12.3.12).
  */
 import {
   FAIXAS_PRECO_CALCULO,

@@ -232,6 +232,9 @@ export function CalculoLista({
                           ? tituloResultado(coluna.resultado)
                           : "sem retorno"}
                       </small>
+                      {coluna.tipo === "oferta" && coluna.resultado.secao && (
+                        <small>{coluna.resultado.secao}</small>
+                      )}
                     </div>
                   </th>
                 );

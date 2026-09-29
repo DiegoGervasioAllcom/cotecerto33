@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  filtrarPorSecao,
   formasPagamentoResultado,
   gruposOpcoesResultado,
   ordenarResultados,
   parseQuiverResultado,
   premioNumerico,
+  secoesDisponiveis,
   tituloResultado,
   vincularPremiosQuiver,
 } from "@/components/venda/cotacoes/quiver-resultado";
@@ -545,5 +547,39 @@ describe("resultado detalhado da Quiver", () => {
     const premio = { id: "p1", seguradora: "Seguradora Alfa", ...contraditorio };
 
     expect(vincularPremiosQuiver([resultado], [premio]).size).toBe(0);
+  });
+});
+
+describe("secao (V12.4.4 / V12.3.12)", () => {
+  const card = (extra: Record<string, unknown>) => ({ seguradora: "Alfa", opcoes: [], ...extra });
+
+  it("aceita secao literal, ausente e ignora inválida sem derrubar o card", () => {
+    const r = parseQuiverResultado({
+      cards: [
+        card({ secao: "  Ofertas adicionais " }),
+        card({}),
+        card({ secao: 42 }),
+        card({ secao: "" }),
+        card({ secao: "x".repeat(151) }),
+      ],
+    });
+    expect(r).toHaveLength(5);
+    expect(r.map((c) => c.secao)).toEqual([
+      "Ofertas adicionais",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it("opções na ordem de aparição, sem repetir; vazio sem secao", () => {
+    const rs = parseQuiverResultado({
+      cards: [card({ secao: "B" }), card({}), card({ secao: "A" }), card({ secao: "B" })],
+    });
+    expect(secoesDisponiveis(rs)).toEqual(["B", "A"]);
+    expect(secoesDisponiveis(parseQuiverResultado({ cards: [card({})] }))).toEqual([]);
+    expect(filtrarPorSecao(rs, "B")).toHaveLength(2);
+    expect(filtrarPorSecao(rs, "")).toHaveLength(4);
   });
 });
