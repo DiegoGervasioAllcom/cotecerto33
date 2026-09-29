@@ -675,6 +675,32 @@ describe("semRetorno e mensagensRetorno (V12.4.2/V12.4.5)", () => {
     expect(seguradorasSemRetorno([], resultados)).toEqual([]);
   });
 
+  it("seguradorasSemRetorno: seleção por nome de exibição casa com card canônico", () => {
+    const cards = (...nomes: string[]) =>
+      parseQuiverResultado({ cards: nomes.map((seguradora) => card({ seguradora })) });
+    expect(seguradorasSemRetorno([], cards("hdi seguros"), ["HDI"])).toEqual([]);
+    expect(
+      seguradorasSemRetorno([], cards("porto", "azul", "bradesco"), [
+        "Porto Seguro",
+        "Azul Seguros",
+        "Bradesco Auto",
+      ]),
+    ).toEqual([]);
+    expect(seguradorasSemRetorno([], [], ["HDI"])).toEqual([
+      { chave: "sel|hdi", seguradora: "HDI" },
+    ]);
+    expect(seguradorasSemRetorno([], cards("porto"), ["Xyz"])).toEqual([
+      { chave: "sel|xyz", seguradora: "Xyz" },
+    ]);
+    const semRetorno = parseQuiverSemRetorno({
+      semRetorno: [
+        { seguradora: "hdi seguros", produtoId: "10051", faixa: "Reduzida", motivo: "m" },
+        { seguradora: "hdi seguros", produtoId: "10052", faixa: "Normal", motivo: "n" },
+      ],
+    });
+    expect(seguradorasSemRetorno(semRetorno, cards("hdi seguros"), ["HDI"])).toEqual([]);
+  });
+
   it("semRetornoPorFaixa casa por seguradora e produto", () => {
     const [r] = parseQuiverResultado({ cards: [card({ produtoId: "1_2" })] });
     const semRetorno = parseQuiverSemRetorno({
