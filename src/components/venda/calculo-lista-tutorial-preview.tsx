@@ -19,7 +19,7 @@ const COBERTURAS = [
 function SegAcoesPreview() {
   return (
     <div className="seg-acoes" data-tour="seg-acoes" aria-readonly="true">
-      <button type="button" className="ic-btn" title="Mensagens — em breve" disabled>
+      <button type="button" className="ic-btn" title="Mensagens de retorno da seguradora" disabled>
         <svg width="15" height="15">
           <use href="#i-message" />
         </svg>
@@ -70,6 +70,18 @@ export function CalculoListaTutorialPreview() {
             <strong>28/09/2026</strong>
           </span>
           <span className="chip chip-outline">Exemplo do tutorial</span>
+        </div>
+
+        <div className="cob-filtro" data-tour="cob-filtro">
+          <button type="button" className="cob-chip" disabled>
+            Cotações para a cobertura Compreensiva
+          </button>
+          <button type="button" className="cob-chip" disabled>
+            Ofertas adicionais
+          </button>
+          <button type="button" className="cob-chip on" disabled>
+            Todas
+          </button>
         </div>
 
         <div className="calc-bar">
