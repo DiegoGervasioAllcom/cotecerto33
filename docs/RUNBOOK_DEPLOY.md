@@ -523,6 +523,38 @@ primeira abertura ("27 de 27 leads em andamento"); Em negociação mostra
 parcelamento das últimas tentativas ("R$ 1.287,75 · 3x de R$ 429,25",
 "R$ 4.025,76 · 12x de R$ 335,48").
 
+**29/09/2026 — Frente 4 V12 (PRs #242 e #243 no app; #42 e #43 no robô):**
+três migrations aplicadas pelo usuário com o roteiro único do deploy (cada
+uma num bloco em transação, com o `insert` no histórico), ensaiado antes no
+banco local com `rollback`, sem erro:
+`20260929043546_v12_quiver_raw_sem_bruto` (a RPC `registrar_premios_quiver`
+grava o raw sem `htmlSnippet`/`rawText`), `20260929043548_v12_quiver_raw_limpa_bruto`
+(limpeza em lotes do que já estava gravado — `pg_dump -t public.cotacoes`
+antes, porque não tem volta) e `20260929045643_v12_transmissao_protocolo`
+(`registrar_resultado_transmissao_quiver` com `p_protocolo`). App publicado
+via `deploy.sh` com a tag `sha-594aaa5` (rollback: `sha-e8eb361`). Robô
+atualizado na máquina dele (§6.8). Deploy executado e informado pelo usuário;
+o smoke test abaixo confirma no navegador as funções entregues.
+
+Smoke test pelo navegador (vendedor real; lead manual novo com os dados da
+cotação de exemplo do robô → **COT-2026-00107**, 29 colunas, sem transmissão):
+filtro de seção com os rótulos do portal ("Cotações para a cobertura
+Compreensiva", "Ofertas adicionais", "Todas") e filtro funcionando; rótulo da
+seção sob cada seguradora; "Sem retorno" com o motivo real do portal (Mapfre
+faixa reduzida 50% "Risco Restrito", Pier erro 400, Itaú "Calculo Não
+realizado"); botão Mensagens habilitado e abrindo as mensagens por faixa;
+Allianz e Mapfre com as formas de pagamento reais; Bradesco com preço só em
+"Débito em Conta" (as outras formas "—", antes vinham copiadas); Emissão com
+"protocolo —" nas propostas antigas. O protocolo real só aparece na primeira
+venda depois do deploy.
+
+Achados do smoke test: a janela de Mensagens herdava da tabela o texto
+centralizado e sem quebra de linha (corrigido no PR deste registro — os
+modais da barra de ações vão para o `<body>`); vieram 2 "Sem retorno" de
+produtos HDI não pedidos ("Falha no acionamento de cálculo, necessário
+calculo da HDI") — conferir no log do robô de produção as linhas de
+"desmarc" da seleção de seguradoras.
+
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
@@ -543,6 +575,27 @@ Confirme depois: `select id, nome, email, diretor from public.profiles where dir
 deve retornar exatamente 2 linhas.
 
 ---
+
+### 6.8 Robô Quiver (outra máquina)
+
+O robô que cota e transmite no portal Quiver roda em **outra máquina da AWS**
+("cotecerto"), não no servidor do app. É ele que responde em
+`https://quiver-bot.sandboxallcom.com` (`SELF_QUIVER_API_URL` do app, §4). Não
+há CI publicando imagem do robô: o deploy é no checkout do repositório
+`playwright` nessa máquina.
+
+```bash
+git pull && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build api
+```
+
+- Faça em horário sem cotação nem transmissão em andamento: o `--build`
+  recria o container e derruba o que estiver rodando.
+- Confira a versão com `git log --oneline -1` (o commit de merge do PR).
+- Os campos novos do webhook do robô são opcionais: robô e app podem subir em
+  qualquer ordem. Variáveis novas, quando houver, entram no `.env` dessa
+  máquina (ver `.env.example` do robô).
+- A conta do portal é de produção: cada cotação é real. Nunca rodar
+  `transmissao.spec.ts` nem `npm run test` para testar.
 
 ## 7. Rollback
 
