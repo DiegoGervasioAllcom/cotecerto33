@@ -193,6 +193,8 @@ Achados novos no robô (entram antes dos itens acima):
 
 **Decisões de 29/09/2026:** V12.4.12 remove `htmlSnippet` e `rawText` (robô para de mandar; a RPC descarta no servidor; limpeza do que já existe em migration separada, em lotes). V12.4.1 guarda e mostra o **texto completo** do protocolo como o portal devolve (ex.: "Protocolo Suhai 215575619").
 
+**V12.4.1 (29/09/2026):** robô devolve o texto completo do protocolo no webhook de transmissão (regex restrita, sem filtro de dado pessoal, até 60 caracteres); RPC `registrar_resultado_transmissao_quiver` ganha `p_protocolo` opcional e grava em `propostas.protocolo_seguradora` (reenvio sem protocolo mantém o gravado); Emissão sem o prefixo duplicado. Validação ao vivo só na primeira venda real depois do deploy.
+
 **Regra de custo (decisão do usuário):** medir no mapeamento ao vivo quanto cada captura com clique (mensagens, prêmios por cobertura) aumenta o tempo da cotação; se o aumento for grande, não capturar; se for pequeno, capturar; e procurar primeiro um jeito de obter o dado sem clique (texto já presente no card).
 **Fora:** comissão, desconto e Código Afinidade por seguradora (dado sensível; o CoteCerto tem motor de comissão e fluxo de desconto próprios).
 

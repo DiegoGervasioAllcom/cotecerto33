@@ -94,6 +94,9 @@ export async function handleQuiverTransmissaoWebhook(request: Request): Promise<
   const numeroCotacao = typeof payload.numeroCotacao === "string" ? payload.numeroCotacao : null;
   const capturadoEm = typeof payload.capturadoEm === "string" ? payload.capturadoEm : undefined;
 
+  const protocolo =
+    typeof payload.protocolo === "string" ? payload.protocolo.trim().slice(0, 60) : "";
+
   const rpcArgs: Record<string, unknown> = {
     p_tentativa_id: tentativa.id,
     p_transmitido: transmitido,
@@ -102,6 +105,7 @@ export async function handleQuiverTransmissaoWebhook(request: Request): Promise<
     p_numero_cotacao: numeroCotacao,
   };
   if (capturadoEm !== undefined) rpcArgs.p_capturado_em = capturadoEm;
+  if (protocolo !== "") rpcArgs.p_protocolo = protocolo;
 
   const { error } = await admin.rpc("registrar_resultado_transmissao_quiver", rpcArgs);
   if (error) {

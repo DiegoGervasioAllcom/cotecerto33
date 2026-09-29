@@ -32,7 +32,7 @@ export function PropostaCell({ row }: { row: PropostaEmissaoRow }) {
   return (
     <div className="mini-cell">
       <strong>{textoOuTraco(row.numero)}</strong>
-      <small>protocolo {textoOuTraco(row.protocolo_seguradora)}</small>
+      <small>{textoOuTraco(row.protocolo_seguradora)}</small>
     </div>
   );
 }
