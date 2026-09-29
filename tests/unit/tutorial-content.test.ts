@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { tutorialDefinitions } from "@/components/tutorial/tutorial-content";
 
 const CONTRACT = {
-  sales: { content: 61, endings: 10, total: 71, spotlights: 55 },
+  sales: { content: 62, endings: 10, total: 72, spotlights: 56 },
   matriz: { content: 44, endings: 10, total: 54, spotlights: 41 },
   group: { content: 16, endings: 5, total: 21, spotlights: 14 },
 } as const;
@@ -21,7 +21,7 @@ describe("contrato dos três roteiros do tutorial V10", () => {
     },
   );
 
-  it("soma 148 momentos e 111 spotlights sem completar o roteiro artificialmente", () => {
+  it("soma 147 momentos e 111 spotlights sem completar o roteiro artificialmente", () => {
     const definitions = Object.values(tutorialDefinitions);
     const steps = definitions.flatMap((definition) =>
       definition.chapters.flatMap((chapter) => chapter.steps),
@@ -30,8 +30,8 @@ describe("contrato dos três roteiros do tutorial V10", () => {
       definition.chapters.map((chapter) => chapter.outro),
     );
 
-    expect(steps.length + endings.length).toBe(146);
-    expect(steps.filter((step) => step.target)).toHaveLength(110);
+    expect(steps.length + endings.length).toBe(147);
+    expect(steps.filter((step) => step.target)).toHaveLength(111);
     expect(steps.some((step) => step.target === ".page")).toBe(false);
   });
 

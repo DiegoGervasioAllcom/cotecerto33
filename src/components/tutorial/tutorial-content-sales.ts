@@ -5,15 +5,16 @@
 //
 // Três ajustes aprovados (decisão do usuário, V12.3.10):
 // 1) Onde a função está desabilitada no app hoje, o texto ganha só
-//    " (em breve)" junto do nome dela: Mensagens e Prêmio/VIP (cap. 4,
-//    "As cinco ferramentas") e Documentos/Consultar (cap. 5 e 6). Na
+//    " (em breve)" junto do nome dela: Prêmio/VIP (cap. 4, "As cinco
+//    ferramentas") e Documentos/Consultar (cap. 5 e 6); Mensagens perdeu o
+//    "(em breve)" em V12.4.5, quando passou a abrir as mensagens da seguradora. Na
 //    Engrenagem, só "Análise do envio" (sem "prêmios por cobertura" nem
 //    "personalizar coberturas" — não existem, ver AnaliseEnvioModal.tsx).
-// 2) Dois passos do cap. 4 ficam RESERVADOS (fora deste roteiro): "Filtrar
-//    por tipo de cobertura" (`.cob-filtro`) e "Personalizar uma seguradora
-//    sem sair daqui" — dependem de uma investigação com o robô ainda em
-//    andamento (entram em V12.3.12 / V12.3.7). O passo "Cliente VIP" (cap. 4)
-//    foi removido: não há Cliente VIP implementado.
+// 2) "Filtrar por tipo de cobertura" (`.cob-filtro`) entrou em V12.3.12, com
+//    o dado real de seção do robô. Um passo do cap. 4 segue RESERVADO (fora
+//    deste roteiro): "Personalizar uma seguradora sem sair daqui" (entra em
+//    V12.3.7). O passo "Cliente VIP" (cap. 4) foi removido: não há Cliente
+//    VIP implementado.
 // 3) "E depois personalize por seguradora" (cap. 3, `.seg-perso`) também
 //    ficou de fora: é a mesma função de personalização por seguradora acima
 //    — não existe hoje em Coberturas (StepCoberturas.tsx aplica um único
@@ -330,15 +331,22 @@ export const salesTutorialChapters = [
         body: "<p>São até nove — a tela não mostra todas de uma vez. As setas rolam para os lados e o contador diz <strong>quantas ficaram de fora da visão</strong>, para você não fechar negócio achando que viu tudo.</p>",
         prepare: "lead-calculo-lista",
       },
-      // Reservado (não entra nesta task): "Filtrar por tipo de cobertura"
-      // (`.cob-filtro` — Compreensiva/Demais/Todas), depende de investigação
-      // com o robô ainda em andamento. Entra em V12.3.12.
+      // "Filtrar por tipo de cobertura" (V12.3.12): texto do protótipo V12; o
+      // portal chama a segunda seção de "Ofertas adicionais" (o protótipo, "Demais").
+      {
+        page: "lead",
+        target: ".cob-filtro",
+        pos: "bottom",
+        title: "Filtrar por tipo de cobertura",
+        body: "<p><strong>Compreensiva</strong> mostra as coberturas principais; <strong>Ofertas adicionais</strong>, os adicionais; <strong>Todas</strong>, a lista inteira. Serve para encurtar a conversa quando o cliente só quer saber de uma coisa.</p>",
+        prepare: "lead-calculo-lista",
+      },
       {
         page: "lead",
         target: ".seg-acoes",
         pos: "left",
         title: "As cinco ferramentas de cada seguradora",
-        body: "<p>Toda seguradora do comparativo traz a mesma fileira de cinco botões — e eles agem <strong>só naquela cia</strong>, não no cálculo inteiro:</p><p><strong>Mensagens (em breve)</strong> — o que ela respondeu sobre o risco.<br><strong>%</strong> — solicitar desconto adicional nesta seguradora.<br><strong>Prêmio (em breve)</strong> — pedir atendimento VIP para este cliente.<br><strong>Engrenagem</strong> — análise do envio.<br><strong>Recalcular</strong> — refazer o cálculo só desta cia.</p>",
+        body: "<p>Toda seguradora do comparativo traz a mesma fileira de cinco botões — e eles agem <strong>só naquela cia</strong>, não no cálculo inteiro:</p><p><strong>Mensagens</strong> — o que ela respondeu sobre o risco.<br><strong>%</strong> — solicitar desconto adicional nesta seguradora.<br><strong>Prêmio (em breve)</strong> — pedir atendimento VIP para este cliente.<br><strong>Engrenagem</strong> — análise do envio.<br><strong>Recalcular</strong> — refazer o cálculo só desta cia.</p>",
         tip: {
           label: '"Sem retorno" não é erro',
           text: "Seguradora pode recusar o perfil, estar fora do ar ou não operar naquela região. Quando aparece o aviso de sem retorno, vale ler o motivo: às vezes é um dado que você corrige e recota ali mesmo, pelo botão Recalcular.",
