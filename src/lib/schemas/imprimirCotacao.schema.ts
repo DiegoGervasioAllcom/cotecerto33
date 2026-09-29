@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Formulário "Configurar impressão" do modal `ImprimirCotacaoModal`
  * (Frente 3 V12 · 7a). Espelha `printCfg()` do protótipo V12, sem os campos
- * de comissão/envio (fora de escopo desta fatia — ver `src/lib/print.ts`).
+ * de envio; `comComissao` liga o documento interno (fatia B).
  */
 export const imprimirCotacaoConfigSchema = z.object({
   modelo: z.enum(["supper", "cia"]),
@@ -12,6 +12,8 @@ export const imprimirCotacaoConfigSchema = z.object({
   parcelas: z.array(z.number().int().min(1).max(12)).min(1, "Escolha ao menos uma parcela"),
   economia: z.boolean(),
   colunado: z.boolean(),
+  /** Documento interno com o % da corretora — nunca vai a cliente. */
+  comComissao: z.boolean(),
 });
 
 export type ImprimirCotacaoConfig = z.infer<typeof imprimirCotacaoConfigSchema>;

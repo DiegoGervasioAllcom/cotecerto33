@@ -14,6 +14,7 @@ function docDadosDaLinha(r: Row): DocDados {
   return docDadosDaTransmissao(
     {
       cotacaoNumero: `#${cotNum(r.numero, r.cotacaoCriadoEm)}`,
+      cotacaoId: r.cotacaoId,
       segurado: r.segurado !== "—" ? { nome: r.segurado } : null,
       veiculo: r.veiculoRaw,
     },
