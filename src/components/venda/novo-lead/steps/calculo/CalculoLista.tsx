@@ -17,13 +17,14 @@ import {
   coberturaEntries,
   coberturaLabelsUnion,
   gruposOpcoesResultado,
+  semRetornoPorFaixa,
+  seguradorasSemRetorno,
   tituloResultado,
+  type SemRetornoItem,
+  type SeguradoraSemRetorno,
 } from "@/components/venda/cotacoes/quiver-resultado";
 import { SegAcoes } from "./SegAcoes";
 import type { EscolhaCard } from "./types";
-
-const normalizar = (texto: string | null | undefined) =>
-  (texto ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLocaleLowerCase("pt-BR");
 
 type Props = {
   f: Form;
@@ -32,6 +33,8 @@ type Props = {
   // "sem retorno" de verdade — uma oferta escondida pela faixa não pode virar
   // "sem retorno" (ela voltou, só está fora da faixa escolhida).
   todosResultados: ResultadoCalculo[];
+  // Contrato opcional do robô (V12.4.2): motivo real de quem não voltou preço.
+  semRetorno: SemRetornoItem[];
   cotacaoId: string | null;
   erroGlobal: string | null;
   escolhaDoCard: (r: ResultadoCalculo) => EscolhaCard;
@@ -46,7 +49,7 @@ type Props = {
 };
 
 type ColunaOferta = { tipo: "oferta"; resultado: ResultadoCalculo };
-type ColunaSemRetorno = { tipo: "sem-retorno"; seguradora: string };
+type ColunaSemRetorno = { tipo: "sem-retorno" } & SeguradoraSemRetorno;
 type Coluna = ColunaOferta | ColunaSemRetorno;
 
 type Nav = { n: number; esq: number; dir: number; colW: number };
@@ -56,6 +59,7 @@ export function CalculoLista({
   f,
   resultados,
   todosResultados,
+  semRetorno,
   cotacaoId,
   erroGlobal,
   escolhaDoCard,
@@ -73,17 +77,17 @@ export function CalculoLista({
   // nenhum card no retorno da Quiver — real (comparação com `todosResultados`,
   // a lista cheia, não a já filtrada por faixa de preço), nunca uma lista
   // fixa inventada como no protótipo (`SEG_SEM_RETORNO`).
-  const seguradorasSemRetorno = useMemo(() => {
-    const retornadas = new Set(todosResultados.map((r) => normalizar(r.seguradora)));
-    return (f.seguradorasSel ?? []).filter((sg) => !retornadas.has(normalizar(sg)));
-  }, [f.seguradorasSel, todosResultados]);
+  const semRetornoInteiro = useMemo(
+    () => seguradorasSemRetorno(semRetorno, todosResultados, f.seguradorasSel ?? []),
+    [semRetorno, f.seguradorasSel, todosResultados],
+  );
 
   const colunas: Coluna[] = useMemo(
     () => [
       ...resultados.map((resultado): Coluna => ({ tipo: "oferta", resultado })),
-      ...seguradorasSemRetorno.map((seguradora): Coluna => ({ tipo: "sem-retorno", seguradora })),
+      ...semRetornoInteiro.map((item): Coluna => ({ tipo: "sem-retorno", ...item })),
     ],
-    [resultados, seguradorasSemRetorno],
+    [resultados, semRetornoInteiro],
   );
 
   const coberturaLabels = useMemo(() => coberturaLabelsUnion(resultados), [resultados]);
@@ -149,6 +153,14 @@ export function CalculoLista({
   const rotuloParcela = (idx: number) =>
     gruposSelecionados.find((item) => item.grupo?.opcoes[idx])?.grupo?.opcoes[idx]?.tipo ||
     `Opção ${idx + 1}`;
+
+  // Faixas sem retorno dentro de cards que voltaram (rótulo real do robô).
+  const faixasSemRetorno = useMemo(
+    () => [
+      ...new Set(resultados.flatMap((r) => semRetornoPorFaixa(semRetorno, r).map((i) => i.faixa))),
+    ],
+    [resultados, semRetorno],
+  );
 
   if (colunas.length === 0) {
     return (
@@ -219,8 +231,7 @@ export function CalculoLista({
             <tr>
               <th className="cl-lbl">Coberturas</th>
               {colunas.map((coluna) => {
-                const chave =
-                  coluna.tipo === "oferta" ? coluna.resultado.cardId : coluna.seguradora;
+                const chave = coluna.tipo === "oferta" ? coluna.resultado.cardId : coluna.chave;
                 const nome =
                   coluna.tipo === "oferta" ? coluna.resultado.seguradora : coluna.seguradora;
                 return (
@@ -232,6 +243,9 @@ export function CalculoLista({
                           ? tituloResultado(coluna.resultado)
                           : "sem retorno"}
                       </small>
+                      {coluna.tipo === "oferta" && coluna.resultado.secao && (
+                        <small>{coluna.resultado.secao}</small>
+                      )}
                     </div>
                   </th>
                 );
@@ -243,8 +257,7 @@ export function CalculoLista({
               <tr key={label}>
                 <td className="cl-lbl">{label}</td>
                 {colunas.map((coluna) => {
-                  const chave =
-                    coluna.tipo === "oferta" ? coluna.resultado.cardId : coluna.seguradora;
+                  const chave = coluna.tipo === "oferta" ? coluna.resultado.cardId : coluna.chave;
                   const valor =
                     coluna.tipo === "oferta"
                       ? coberturaEntries(coluna.resultado).find(
@@ -260,7 +273,7 @@ export function CalculoLista({
               {colunas.map((coluna) => {
                 if (coluna.tipo === "sem-retorno")
                   return (
-                    <td key={coluna.seguradora}>
+                    <td key={coluna.chave}>
                       <span className="nc">—</span>
                     </td>
                   );
@@ -298,8 +311,7 @@ export function CalculoLista({
               <tr className="cl-sec">
                 <td className="cl-lbl">Parcelamento</td>
                 {colunas.map((coluna) => {
-                  const chave =
-                    coluna.tipo === "oferta" ? coluna.resultado.cardId : coluna.seguradora;
+                  const chave = coluna.tipo === "oferta" ? coluna.resultado.cardId : coluna.chave;
                   return (
                     <td key={chave}>
                       {coluna.tipo === "oferta" && (
@@ -316,7 +328,7 @@ export function CalculoLista({
                 {colunas.map((coluna) => {
                   if (coluna.tipo === "sem-retorno")
                     return (
-                      <td key={coluna.seguradora}>
+                      <td key={coluna.chave}>
                         <span className="nc">—</span>
                       </td>
                     );
@@ -371,10 +383,35 @@ export function CalculoLista({
                 })}
               </tr>
             ))}
+            {faixasSemRetorno.map((faixa) => (
+              <tr className="cl-parc" key={`sem-faixa-${faixa}`}>
+                <td className="cl-lbl">Sem retorno · {faixa}</td>
+                {colunas.map((coluna) => {
+                  if (coluna.tipo === "sem-retorno")
+                    return (
+                      <td key={coluna.chave}>
+                        <span className="nc">—</span>
+                      </td>
+                    );
+                  const motivo = semRetornoPorFaixa(semRetorno, coluna.resultado).find(
+                    (item) => item.faixa === faixa,
+                  )?.motivo;
+                  return (
+                    <td key={coluna.resultado.cardId}>
+                      {motivo ? (
+                        <div className="small muted">{motivo}</div>
+                      ) : (
+                        <span className="nc">—</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
             <tr>
               <td className="cl-lbl">Ações</td>
               {colunas.map((coluna) => {
-                if (coluna.tipo === "sem-retorno") return <td key={coluna.seguradora} />;
+                if (coluna.tipo === "sem-retorno") return <td key={coluna.chave} />;
                 const { resultado } = coluna;
                 const outrasSeguradoras = colunas
                   .filter(
@@ -401,9 +438,13 @@ export function CalculoLista({
               {colunas.map((coluna) => {
                 if (coluna.tipo === "sem-retorno")
                   return (
-                    <td key={coluna.seguradora}>
+                    <td key={coluna.chave}>
                       <span className="nc">Sem retorno</span>
-                      {erroGlobal && <div className="small muted u-mt-4">{erroGlobal}</div>}
+                      {coluna.motivo ? (
+                        <div className="small muted u-mt-4">{coluna.motivo}</div>
+                      ) : (
+                        erroGlobal && <div className="small muted u-mt-4">{erroGlobal}</div>
+                      )}
                     </td>
                   );
                 const { resultado } = coluna;

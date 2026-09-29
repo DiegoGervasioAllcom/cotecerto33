@@ -6,14 +6,21 @@ import { type ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSim
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import {
   gruposOpcoesResultado,
+  semRetornoPorFaixa,
+  seguradorasSemRetorno,
   tituloResultado,
+  type SemRetornoItem,
 } from "@/components/venda/cotacoes/quiver-resultado";
 import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicional";
 import { SegAcoes } from "./SegAcoes";
 import type { EscolhaCard } from "./types";
+import { CardSeguradoraSemRetorno, FaixasSemRetorno } from "./SemRetornoBlocos";
 
 type Props = {
   resultados: ResultadoCalculo[];
+  // Lista completa (sem filtros) — só para decidir quem é "sem retorno" de verdade.
+  todosResultados: ResultadoCalculo[];
+  semRetorno: SemRetornoItem[];
   cotacaoId: string | null;
   escolhaDoCard: (r: ResultadoCalculo) => EscolhaCard;
   setEscolha: (cardId: string, escolha: EscolhaCard) => void;
@@ -25,6 +32,8 @@ type Props = {
 
 export function CalculoCardsGrid({
   resultados,
+  todosResultados,
+  semRetorno,
   cotacaoId,
   escolhaDoCard,
   setEscolha,
@@ -52,6 +61,7 @@ export function CalculoCardsGrid({
                 <SeguradoraBadge nome={r.seguradora} tam="sm" /> {r.seguradora}
               </div>
               <span className="chip chip-slate">{tituloResultado(r)}</span>
+              {r.secao && <span className="chip chip-slate">{r.secao}</span>}
             </div>
             <div className="calc-tiers">
               {opcoesExibidas.map((o, opcaoIndex) => (
@@ -64,6 +74,7 @@ export function CalculoCardsGrid({
                 </div>
               ))}
             </div>
+            <FaixasSemRetorno faixas={semRetornoPorFaixa(semRetorno, r)} />
             <div className="calc-cobs">
               <div className="cob-col">
                 <div className="cob-h">Coberturas básicas</div>
@@ -155,6 +166,9 @@ export function CalculoCardsGrid({
           </div>
         );
       })}
+      {seguradorasSemRetorno(semRetorno, todosResultados).map((item) => (
+        <CardSeguradoraSemRetorno key={item.chave} item={item} />
+      ))}
     </div>
   );
 }

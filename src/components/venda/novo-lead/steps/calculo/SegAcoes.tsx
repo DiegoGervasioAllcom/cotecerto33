@@ -4,14 +4,15 @@
 // quanto no rodapé do cartão (`CalculoCardsGrid`).
 //
 // Ordem e ícones do protótipo: Mensagens, % (desconto), Prêmio (VIP),
-// Engrenagem (opções), Recalcular. Mensagens e Prêmio ficam sempre
-// desabilitados nesta task — não há retorno estruturado por franquia da
-// seguradora hoje (Mensagens) e Cliente VIP é feature nova sem escopo
-// fechado (decisão pendente nº 2 do plano V12, `PLANO_TASKS_V12.md`).
+// Engrenagem (opções), Recalcular. Mensagens (V12.4.5) só habilita quando o
+// card traz `mensagensRetorno`; Prêmio fica sempre desabilitado — Cliente VIP
+// é feature nova sem escopo fechado (decisão pendente nº 2 do plano V12, `PLANO_TASKS_V12.md`).
 import { useState } from "react";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicional";
+import { temMensagensRetorno } from "@/components/venda/cotacoes/quiver-resultado";
 import { AnaliseEnvioModal } from "./AnaliseEnvioModal";
+import { MensagensRetornoModal } from "./MensagensRetornoModal";
 
 type Props = {
   resultado: ResultadoCalculo;
@@ -35,6 +36,8 @@ export function SegAcoes({
 }: Props) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [analiseAberta, setAnaliseAberta] = useState(false);
+  const [mensagensAbertas, setMensagensAbertas] = useState(false);
+  const temMensagens = temMensagensRetorno(resultado);
   const [confirmarRecalculo, setConfirmarRecalculo] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
 
@@ -67,9 +70,12 @@ export function SegAcoes({
       <button
         type="button"
         className="ic-btn"
-        title="Sem retorno da seguradora ainda"
-        aria-disabled="true"
-        disabled
+        title={
+          temMensagens ? "Mensagens de retorno da seguradora" : "Sem retorno da seguradora ainda"
+        }
+        aria-disabled={!temMensagens}
+        disabled={!temMensagens}
+        onClick={() => setMensagensAbertas(true)}
       >
         <svg width="15" height="15">
           <use href="#i-message" />
@@ -157,6 +163,10 @@ export function SegAcoes({
             </div>
           </div>
         </div>
+      )}
+
+      {mensagensAbertas && temMensagens && (
+        <MensagensRetornoModal resultado={resultado} onClose={() => setMensagensAbertas(false)} />
       )}
 
       {analiseAberta && cotacaoId && (

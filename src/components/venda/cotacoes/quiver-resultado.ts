@@ -2,6 +2,46 @@ import { z } from "zod";
 
 const textoOpcional = z.string().trim().optional();
 
+// V12.4.2/V12.4.5 — contratos opcionais do robô. Cada entrada inválida é
+// descartada individualmente: nunca derruba o card nem o payload.
+const MOTIVO_MAX = 300;
+const MENSAGENS_MAX_POR_CARD = 20;
+
+const textoCurtoOpcional = z.string().trim().min(1).max(150).optional().catch(undefined);
+
+const semRetornoItemSchema = z.object({
+  seguradora: textoCurtoOpcional,
+  produtoId: textoCurtoOpcional,
+  produto: textoCurtoOpcional,
+  faixa: textoCurtoOpcional,
+  motivo: z.string().trim().min(1).max(MOTIVO_MAX),
+});
+
+const mensagensFaixaSchema = z.object({
+  faixa: textoCurtoOpcional,
+  mensagens: z
+    .array(z.unknown())
+    .transform((itens) =>
+      itens
+        .flatMap((m) => (typeof m === "string" && m.trim() ? [m.trim().slice(0, MOTIVO_MAX)] : []))
+        .slice(0, MENSAGENS_MAX_POR_CARD),
+    ),
+});
+
+export type SemRetornoItem = z.infer<typeof semRetornoItemSchema>;
+export type MensagensFaixa = { faixa?: string; mensagens: string[] };
+
+const mensagensRetornoSchema = z
+  .array(z.unknown())
+  .transform((itens): MensagensFaixa[] =>
+    itens.flatMap((item) => {
+      const r = mensagensFaixaSchema.safeParse(item);
+      return r.success && r.data.mensagens.length > 0 ? [r.data] : [];
+    }),
+  )
+  .optional()
+  .catch(undefined);
+
 export const opcaoPremioSchema = z.object({
   tipo: textoOpcional,
   avista: textoOpcional,
@@ -42,6 +82,11 @@ export const resultadoCalculoSchema = z.object({
   coberturasBasicas: z.record(z.string()).optional(),
   coberturasAdicionais: z.record(z.string()).optional(),
   premiosPorFormaPagamento: z.array(premioPorFormaPagamentoSchema).optional(),
+  // Rótulo literal da seção no portal (ex.: "Ofertas adicionais"). Opcional:
+  // robô/cotações antigas não enviam; valor inválido é ignorado sem derrubar o card.
+  secao: z.string().trim().min(1).max(150).optional().catch(undefined),
+  // Mensagens da seguradora por faixa (V12.4.5). Ausente/vazio = sem mensagens.
+  mensagensRetorno: mensagensRetornoSchema,
 });
 
 const payloadSchema = z.object({ cards: z.array(z.unknown()).default([]) });
@@ -79,6 +124,17 @@ export function parseQuiverResultado(payload: unknown): ResultadoCalculo[] {
         cardId: `quiver-card-${position}`,
       },
     ];
+  });
+}
+
+/** Lê `semRetorno` da raiz do payload; entradas inválidas são descartadas. */
+export function parseQuiverSemRetorno(payload: unknown): SemRetornoItem[] {
+  if (typeof payload !== "object" || payload === null) return [];
+  const bruto = (payload as { semRetorno?: unknown }).semRetorno;
+  if (!Array.isArray(bruto)) return [];
+  return bruto.flatMap((item) => {
+    const r = semRetornoItemSchema.safeParse(item);
+    return r.success ? [r.data] : [];
   });
 }
 
@@ -520,4 +576,90 @@ export function vincularPremiosQuiver<T extends PremioVinculavel>(
     }
   }
   return vinculados;
+}
+
+/** Seções distintas (texto literal do portal), na ordem em que aparecem. */
+export function secoesDisponiveis(resultados: readonly ResultadoCalculo[]): string[] {
+  const vistas = new Set<string>();
+  for (const r of resultados) if (r.secao) vistas.add(r.secao);
+  return [...vistas];
+}
+
+/** `secao` vazia = "Todas". */
+export function filtrarPorSecao(
+  resultados: readonly ResultadoCalculo[],
+  secao: string,
+): ResultadoCalculo[] {
+  return secao ? resultados.filter((r) => r.secao === secao) : [...resultados];
+}
+
+function mesmoProduto(
+  item: Pick<SemRetornoItem, "seguradora" | "produtoId" | "produto">,
+  alvo: { seguradora: string; produtoId?: string; produto?: string },
+): boolean {
+  if (normalizar(item.seguradora) !== normalizar(alvo.seguradora)) return false;
+  if (item.produtoId) return item.produtoId === (alvo.produtoId ?? "");
+  if (item.produto) return normalizar(item.produto) === normalizar(alvo.produto);
+  return true;
+}
+
+/** Faixas (dentro de um card retornado) que a seguradora não precificou. */
+export function semRetornoPorFaixa(
+  semRetorno: readonly SemRetornoItem[],
+  resultado: Pick<ResultadoCalculo, "seguradora" | "produtoId" | "produto">,
+): Array<{ faixa: string; motivo: string }> {
+  return semRetorno.flatMap((item) =>
+    item.faixa && mesmoProduto(item, resultado) ? [{ faixa: item.faixa, motivo: item.motivo }] : [],
+  );
+}
+
+export type SeguradoraSemRetorno = {
+  chave: string;
+  seguradora: string;
+  produto?: string;
+  /** Mensagem real do portal; ausente quando só sabemos que não voltou card. */
+  motivo?: string;
+};
+
+/**
+ * Seguradoras/produtos que não voltaram preço nenhum: entradas de
+ * `semRetorno` sem `faixa` que não têm card correspondente, mais as
+ * seguradoras selecionadas sem card e sem entrada (sem motivo, como antes).
+ */
+export function seguradorasSemRetorno(
+  semRetorno: readonly SemRetornoItem[],
+  resultados: readonly ResultadoCalculo[],
+  seguradorasSel: readonly string[] = [],
+): SeguradoraSemRetorno[] {
+  const lista: SeguradoraSemRetorno[] = [];
+  const vistas = new Set<string>();
+  for (const item of semRetorno) {
+    if (item.faixa || !item.seguradora) continue;
+    const seguradora = item.seguradora;
+    const semProduto = !item.produtoId && !item.produto;
+    // Seguradora que voltou com algum card e a entrada não aponta produto:
+    // ambíguo, não inventa coluna.
+    if (semProduto && resultados.some((r) => normalizar(r.seguradora) === normalizar(seguradora)))
+      continue;
+    if (!semProduto && resultados.some((r) => mesmoProduto(item, r))) continue;
+    const chave = `${normalizar(seguradora)}|${item.produtoId ?? normalizar(item.produto)}`;
+    if (vistas.has(chave)) continue;
+    vistas.add(chave);
+    lista.push({ chave, seguradora, produto: item.produto, motivo: item.motivo });
+  }
+  const cobertas = new Set([
+    ...resultados.map((r) => normalizar(r.seguradora)),
+    ...lista.map((l) => normalizar(l.seguradora)),
+  ]);
+  for (const sg of seguradorasSel) {
+    if (cobertas.has(normalizar(sg))) continue;
+    cobertas.add(normalizar(sg));
+    lista.push({ chave: `sel|${normalizar(sg)}`, seguradora: sg });
+  }
+  return lista;
+}
+
+/** Card tem mensagens da seguradora para exibir? */
+export function temMensagensRetorno(resultado: Pick<ResultadoCalculo, "mensagensRetorno">) {
+  return (resultado.mensagensRetorno?.length ?? 0) > 0;
 }

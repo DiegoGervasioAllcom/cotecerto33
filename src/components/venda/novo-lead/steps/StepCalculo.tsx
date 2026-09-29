@@ -11,14 +11,18 @@ import {
 } from "@/components/venda/novo-lead/hooks/useNumeroCotacao";
 import {
   filtrarPorFaixaDePreco,
+  filtrarPorSecao,
+  secoesDisponiveis,
   gruposOpcoesResultado,
   ordenarPorEscolha,
   ordenarResultados,
   premioNumerico,
   type FaixaPrecoCalculo,
   type OrdemCalculo,
+  type SemRetornoItem,
 } from "@/components/venda/cotacoes/quiver-resultado";
 import { CalculoContexto } from "./calculo/CalculoContexto";
+import { CalculoFiltroSecao } from "./calculo/CalculoFiltroSecao";
 import { CalculoToolbar, type CalcView } from "./calculo/CalculoToolbar";
 import { CalculoLista } from "./calculo/CalculoLista";
 import { CalculoCardsGrid } from "./calculo/CalculoCardsGrid";
@@ -42,6 +46,7 @@ export type OfertaTransmissao = {
 type Props = {
   f: Form;
   resultados: ResultadoCalculo[];
+  semRetorno: SemRetornoItem[];
   calculando: boolean;
   erro: string | null;
   podeCalcular: boolean;
@@ -59,6 +64,7 @@ type Props = {
 export function StepCalculo({
   f,
   resultados,
+  semRetorno,
   calculando,
   erro,
   podeCalcular,
@@ -79,6 +85,7 @@ export function StepCalculo({
   const [calcView, setCalcView] = useState<CalcView>("lista");
   const [calcOrdem, setCalcOrdem] = useState<OrdemCalculo>("menor");
   const [calcFaixa, setCalcFaixa] = useState<FaixaPrecoCalculo>("");
+  const [calcSecao, setCalcSecao] = useState("");
   const imprimir = useImprimirCotacaoModal();
   // Mesmo dado de `CalculoContexto` (react-query dedupe por `queryKey`) — o
   // documento impresso precisa do número real da cotação, não de um pedaço
@@ -87,9 +94,14 @@ export function StepCalculo({
   const numeroImpressaoFormatado = formatarNumeroCotacao(cotacaoNumero, cotacaoCriadoEm);
 
   const resultadosExibidos = useMemo(
-    () => filtrarPorFaixaDePreco(ordenarPorEscolha(resultados, calcOrdem), calcFaixa),
-    [resultados, calcOrdem, calcFaixa],
+    () =>
+      filtrarPorSecao(
+        filtrarPorFaixaDePreco(ordenarPorEscolha(resultados, calcOrdem), calcFaixa),
+        calcSecao,
+      ),
+    [resultados, calcOrdem, calcFaixa, calcSecao],
   );
+  const secoes = useMemo(() => secoesDisponiveis(resultados), [resultados]);
 
   function escolhaDoCard(r: ResultadoCalculo): EscolhaCard {
     const primeiroGrupo = gruposOpcoesResultado(r)[0];
@@ -257,6 +269,7 @@ export function StepCalculo({
 
       {resultados.length > 0 && (
         <>
+          <CalculoFiltroSecao secoes={secoes} atual={calcSecao} onChange={setCalcSecao} />
           <CalculoToolbar
             view={calcView}
             onSetView={setCalcView}
@@ -287,6 +300,7 @@ export function StepCalculo({
               f={f}
               resultados={resultadosExibidos}
               todosResultados={resultados}
+              semRetorno={semRetorno}
               cotacaoId={cotacaoId}
               erroGlobal={erro}
               escolhaDoCard={escolhaDoCard}
@@ -300,6 +314,8 @@ export function StepCalculo({
           ) : (
             <CalculoCardsGrid
               resultados={resultadosExibidos}
+              todosResultados={resultados}
+              semRetorno={semRetorno}
               cotacaoId={cotacaoId}
               escolhaDoCard={escolhaDoCard}
               setEscolha={setEscolha}
