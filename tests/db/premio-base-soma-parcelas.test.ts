@@ -25,6 +25,25 @@ describe("fn_premio_total_de_parcelas — extração pura de texto de parcelamen
     expect(data).toEqual([{ parcelas_num: 3, valor_parcela: 429.25, premio_total: 1287.75 }]);
   });
 
+  // Regressão com os textos reais vistos em produção (cotacao_transmissoes.parcelas,
+  // 28/09/2026). Passam pela mesma regex dos casos acima — o valor aqui é
+  // travar esses formatos exatos, não exercitar outro caminho da função.
+  it("extrai quantidade e valor de 'em Nx de R$ X,XX' (produção, sem 'sem juros')", async () => {
+    const { data, error } = await admin.rpc("fn_premio_total_de_parcelas", {
+      p_texto: "em 12x de R$ 623,92",
+    } as never);
+    if (error) throw error;
+    expect(data).toEqual([{ parcelas_num: 12, valor_parcela: 623.92, premio_total: 7487.04 }]);
+  });
+
+  it("extrai quantidade e valor de 'Nx R$ X,XX *' (produção, sem 'de', com asterisco)", async () => {
+    const { data, error } = await admin.rpc("fn_premio_total_de_parcelas", {
+      p_texto: "3x R$ 429,25 *",
+    } as never);
+    if (error) throw error;
+    expect(data).toEqual([{ parcelas_num: 3, valor_parcela: 429.25, premio_total: 1287.75 }]);
+  });
+
   it("sem quantidade de parcelas identificável não retorna linha (conservador)", async () => {
     const { data, error } = await admin.rpc("fn_premio_total_de_parcelas", {
       p_texto: "sem juros de R$ 429,25",
