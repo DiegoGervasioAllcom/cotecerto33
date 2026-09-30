@@ -142,8 +142,10 @@ export function useSimulacaoCalculo(
     iniciarPolling(cotacaoId);
   }
 
-  async function simularCalculo() {
-    await enviarECalcular();
+  /** `overrides.seguradorasSel` persiste a seleção restaurada sem depender do
+   * timing do `setF` (mesmo mecanismo do recálculo único). */
+  async function simularCalculo(overrides?: { seguradorasSel?: string[] }) {
+    await enviarECalcular(overrides);
   }
 
   /** "Recalcular esta seguradora" (SegAcoes · V12.3.6) — descarta as ofertas

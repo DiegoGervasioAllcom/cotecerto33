@@ -5,6 +5,7 @@ import {
   useDescontoAdicionalDados,
 } from "@/components/venda/cotacoes/useDescontoAdicional";
 import type { ResultadoCalculo } from "./useSimulacaoCalculo";
+import { useRecalculoUnico } from "./useRecalculoUnico";
 
 /**
  * Orquestração de "Recalcular esta seguradora" (`.seg-acoes` · V12.3.6):
@@ -18,11 +19,13 @@ import type { ResultadoCalculo } from "./useSimulacaoCalculo";
  */
 export function useRecalcularSeguradora(params: {
   cotacaoId: string | null;
+  seguradorasSel: string[];
   resultados: ResultadoCalculo[];
   setF: React.Dispatch<React.SetStateAction<Form>>;
   recalcularSeguradora: (seguradora: string) => Promise<void>;
 }) {
-  const { cotacaoId, resultados, setF, recalcularSeguradora } = params;
+  const { cotacaoId, seguradorasSel, resultados, setF, recalcularSeguradora } = params;
+  const recalculoUnico = useRecalculoUnico(cotacaoId, seguradorasSel);
 
   const descontoDados = useDescontoAdicionalDados(cotacaoId);
   const desconto = useDescontoAdicional({
@@ -47,6 +50,7 @@ export function useRecalcularSeguradora(params: {
       return;
     }
     if (resultadoCancelamento.canceladas > 0) void descontoDados.invalidate();
+    recalculoUnico.registrar(resultado.seguradora);
     setF((prev) => ({ ...prev, seguradorasSel: [resultado.seguradora] }));
     await recalcularSeguradora(resultado.seguradora);
   }
@@ -57,6 +61,11 @@ export function useRecalcularSeguradora(params: {
     descontoModal: desconto.modal,
     erroRecalculo,
     onRecalcularSeguradora,
+    avisoRecalculoGeral: recalculoUnico.aviso,
+    limparRecalculoUnico: recalculoUnico.limpar,
+    /** Restaura EXATAMENTE a seleção de antes do recálculo único. */
+    restaurarSelecao: (anterior: string[]) =>
+      setF((prev) => ({ ...prev, seguradorasSel: [...anterior] })),
   };
 }
 

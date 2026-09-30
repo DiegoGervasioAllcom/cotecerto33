@@ -203,6 +203,19 @@ test.describe("Cálculo — lista comparativa como visão padrão (V12.3.5)", ()
     await expect(celulaSemRetorno).toBeVisible();
   });
 
+  test("faixa própria aparece só na coluna cuja faixa difere do rótulo da linha", async ({
+    page,
+  }) => {
+    await abrirCalculoComListaCarregada(page);
+
+    const linha = page.locator(".calc-table tr.cl-preco");
+    await expect(linha.locator("td.cl-lbl")).toHaveText(/Compreensiva/);
+    const celulaAlfa = linha.locator("td.cl-cell").filter({ hasText: "10x de R$ 251,90" });
+    const celulaBeta = linha.locator("td.cl-cell").filter({ hasText: "12x de R$ 385,00" });
+    await expect(celulaAlfa.getByTestId("cl-faixa-propria")).toHaveCount(0);
+    await expect(celulaBeta.getByTestId("cl-faixa-propria")).toHaveText("Compreensiva Plus");
+  });
+
   test("Contratar pela lista (célula de parcela no hover) chega ao sub-passo de Transmissão", async ({
     page,
   }) => {

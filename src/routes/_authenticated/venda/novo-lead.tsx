@@ -339,6 +339,7 @@ function Page() {
   // `.seg-acoes` · V12.3.6 — extraído em `useRecalcularSeguradora.ts` (regra 9).
   const descontoAcoes = useRecalcularSeguradora({
     cotacaoId,
+    seguradorasSel: f.seguradorasSel,
     resultados,
     setF,
     recalcularSeguradora,
@@ -356,10 +357,16 @@ function Page() {
   } = useClassificarPerda(cotacaoId, persistir);
 
   function doSimularCalculo() {
+    doSimularCalculoCom();
+  }
+
+  function doSimularCalculoCom(overrides?: { seguradorasSel?: string[] }) {
     // Best-effort: os resultados anteriores (e a oferta escolhida sobre
     // eles) deixam de valer quando o cálculo é refeito.
     if (cotacaoId) void limparTransmissaoOfertaSnapshot(cotacaoId);
-    void simularCalculo();
+    // Qualquer envio geral encerra o aviso do "recálculo só de uma seguradora".
+    descontoAcoes.limparRecalculoUnico();
+    void simularCalculo(overrides);
   }
 
   // Etapa 7 (Transmissão) — subiu de StepCalculo.tsx pra cá porque a oferta
@@ -637,6 +644,7 @@ function Page() {
               camposFaltantes={camposFaltantes}
               cotacaoId={cotacaoId}
               doSimularCalculo={doSimularCalculo}
+              doSimularCalculoCom={doSimularCalculoCom}
               onEscolherOferta={onEscolherOferta}
               descontoAcoes={descontoAcoes}
             />
