@@ -16,6 +16,7 @@ import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicio
 import {
   coberturaEntries,
   coberturaLabelsUnion,
+  faixaDivergenteDaCelula,
   gruposOpcoesResultado,
   semRetornoPorFaixa,
   seguradorasSemRetorno,
@@ -355,6 +356,7 @@ export function CalculoLista({
                     );
                   const selecionada = item?.escolha.opcaoId === opcao.id;
                   const texto = opcao.parcelas || opcao.avista || "—";
+                  const faixaPropria = faixaDivergenteDaCelula(rotuloParcela(idx), opcao.tipo);
                   return (
                     <td
                       key={resultado.cardId}
@@ -369,6 +371,14 @@ export function CalculoLista({
                     >
                       <span className="cl-v">
                         {texto}
+                        {faixaPropria && (
+                          <>
+                            <br />
+                            <small className="muted" data-testid="cl-faixa-propria">
+                              {faixaPropria}
+                            </small>
+                          </>
+                        )}
                         {selecionada && (
                           <span className="cl-mark">
                             <svg width="10" height="10">

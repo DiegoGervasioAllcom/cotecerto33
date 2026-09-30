@@ -23,6 +23,7 @@ import {
 } from "@/components/venda/cotacoes/quiver-resultado";
 import { CalculoContexto } from "./calculo/CalculoContexto";
 import { CalculoFiltroSecao } from "./calculo/CalculoFiltroSecao";
+import { RecalculoGeralAvisoModal } from "./calculo/RecalculoGeralAvisoModal";
 import { CalculoToolbar, type CalcView } from "./calculo/CalculoToolbar";
 import { CalculoLista } from "./calculo/CalculoLista";
 import { CalculoCardsGrid } from "./calculo/CalculoCardsGrid";
@@ -53,6 +54,8 @@ type Props = {
   camposFaltantes: string[];
   cotacaoId: string | null;
   doSimularCalculo: () => void;
+  /** Recálculo geral persistindo uma seleção explícita (volta do recálculo único). */
+  doSimularCalculoCom: (overrides: { seguradorasSel: string[] }) => void;
   onEscolherOferta: (oferta: OfertaTransmissao) => void;
   // Ações por seguradora (`.seg-acoes` · V12.3.6) — dados e orquestração
   // (fetch de seguradoras/prêmios/solicitações, cancelamento de pedidos de
@@ -71,11 +74,25 @@ export function StepCalculo({
   camposFaltantes,
   cotacaoId,
   doSimularCalculo,
+  doSimularCalculoCom,
   onEscolherOferta,
   descontoAcoes,
 }: Props) {
-  const { infoDescontoFor, onAbrirDesconto, onRecalcularSeguradora, erroRecalculo, descontoModal } =
-    descontoAcoes;
+  const {
+    infoDescontoFor,
+    onAbrirDesconto,
+    onRecalcularSeguradora,
+    erroRecalculo,
+    descontoModal,
+    avisoRecalculoGeral,
+    restaurarSelecao,
+  } = descontoAcoes;
+  const [avisoAberto, setAvisoAberto] = useState(false);
+  // "Recalcular" da barra: se o último recálculo foi de uma cia só, pergunta antes.
+  function onRecalcularBarra() {
+    if (avisoRecalculoGeral) setAvisoAberto(true);
+    else doSimularCalculo();
+  }
   // Escolha de forma de pagamento/parcelas por card — o robô precisa das duas
   // para clicar na célula certa do modal do portal. Compartilhada entre a
   // lista comparativa e o grid de cartões (só uma visão fica visível por
@@ -242,6 +259,21 @@ export function StepCalculo({
       )}
 
       {descontoModal}
+      {avisoAberto && avisoRecalculoGeral && (
+        <RecalculoGeralAvisoModal
+          aviso={avisoRecalculoGeral}
+          onCancelar={() => setAvisoAberto(false)}
+          onSoEla={() => {
+            setAvisoAberto(false);
+            doSimularCalculo();
+          }}
+          onVoltar={() => {
+            setAvisoAberto(false);
+            restaurarSelecao(avisoRecalculoGeral.anterior);
+            doSimularCalculoCom({ seguradorasSel: avisoRecalculoGeral.anterior });
+          }}
+        />
+      )}
 
       {calculando && (
         <div style={{ padding: "12px 0", marginBottom: 8 }}>
@@ -296,7 +328,7 @@ export function StepCalculo({
             }
             podeRecalcular={podeCalcular}
             calculando={calculando}
-            onRecalcular={doSimularCalculo}
+            onRecalcular={onRecalcularBarra}
             tituloRecalcular={
               !podeCalcular ? `Faltam preencher: ${camposFaltantes.join(", ")}` : undefined
             }

@@ -530,6 +530,20 @@ const normalizar = (texto: string | null | undefined) =>
     .toLocaleLowerCase("pt-BR");
 
 /**
+ * Faixa própria da célula de parcelamento quando diverge do rótulo da linha
+ * (o rótulo vem da primeira coluna; cada produto pode ter faixas diferentes).
+ * Devolve `null` quando é igual ao rótulo (comparação sem acento/caixa) ou vazia.
+ */
+export function faixaDivergenteDaCelula(
+  rotuloLinha: string | null | undefined,
+  tipoCelula: string | null | undefined,
+): string | null {
+  const tipo = (tipoCelula ?? "").trim();
+  if (!tipo) return null;
+  return normalizar(tipo) === normalizar(rotuloLinha) ? null : tipo;
+}
+
+/**
  * Resolve o vínculo global 1:1 entre cards detalhados e linhas financeiras.
  * Todos os discriminadores disponíveis no card precisam ser consistentes;
  * candidatos contraditórios, disputados ou não resolvidos permanecem sem vínculo.

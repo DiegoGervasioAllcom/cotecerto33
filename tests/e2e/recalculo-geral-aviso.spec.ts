@@ -7,13 +7,14 @@ import {
   limparCotacaoQuiverFixture,
   marcarCalculoVistoE2E,
   preencherCamposCalculoE2E,
+  seguradorasSelE2E,
   QUIVER_WEBHOOK_HEADERS,
   type CotacaoQuiverFixture,
 } from "./provision";
 
 /**
- * E2E de "Personalizar coberturas" (V12.3.7): engrenagem → modal (só Coberturas
- * funcional) → "Aplicar e recalcular" → o robô recebe UM `cobertura` ajustado.
+ * E2E do aviso do "Recalcular" da barra depois de "Recalcular só esta seguradora"
+ * (a seleção fica reduzida): cancelar / só ela / voltar às N de antes.
  *
  * TRAVA: o servidor da app faz o POST /cotacao; se apontasse para o robô real,
  * criaria cotação REAL no portal. Por isso o spec só roda com opt-in
@@ -58,7 +59,7 @@ type CorpoRobo = {
   cobertura?: Record<string, unknown>;
 };
 
-test.describe("Personalizar coberturas por seguradora (V12.3.7)", () => {
+test.describe("Aviso do recálculo geral após recálculo único", () => {
   let fixture: CotacaoQuiverFixture | undefined;
   let robo: Server | undefined;
   const corpos: CorpoRobo[] = [];
@@ -117,70 +118,83 @@ test.describe("Personalizar coberturas por seguradora (V12.3.7)", () => {
     });
   }
 
-  test("personaliza a Porto, recalcula só ela e o robô recebe os valores ajustados", async ({
-    page,
-  }) => {
-    await abrir(page);
-    const acoesPorto = page.locator(".seg-acoes").nth(1);
-    await acoesPorto.getByTitle("Opções: análise do envio").click();
-    await page.getByText("Personalizar coberturas").click();
-
-    await expect(page.getByRole("heading", { name: "Personalizar Porto" })).toBeVisible();
-    // Só "Coberturas" funcional; as outras três "(em breve)".
-    for (const nome of [
-      /Assistências \(em breve\)/,
-      /Descontos \(em breve\)/,
-      /Comissões \(em breve\)/,
-    ])
-      await expect(page.getByRole("button", { name: nome })).toBeDisabled();
-    await expect(page.getByRole("button", { name: /Coberturas$/ })).toBeEnabled();
-    await expect(page.getByText(/vale só para Porto/)).toBeVisible();
-
-    await page.getByLabel("1ª opção de franquia").selectOption("Reduzida 25%");
-    await page.getByLabel("Vidros, faróis e retrovisores").selectOption("Superior");
-    await page.getByRole("button", { name: /Aplicar e recalcular Porto/ }).click();
-
-    await expect(page.getByRole("heading", { name: "Recalcular — Porto" })).toBeVisible();
-    await expect(
-      page.getByText(/com as coberturas ajustadas: franquia Reduzida 25%, vidros Superior/),
-    ).toBeVisible();
+  async function recalcularSoPorto(page: Page) {
+    await page.getByTitle("Recalcular só esta seguradora").nth(1).click();
     await page.locator(".modal-f").getByRole("button", { name: "Recalcular", exact: true }).click();
-
     await expect.poll(() => corpos.length, { timeout: 15_000 }).toBe(1);
     expect(corpos[0].seguro?.seguradorasDisponiveis).toEqual(["porto"]);
-    expect(corpos[0].cobertura).toMatchObject({
-      franquiaPrimeiraOpcao: "Reduzida 25%",
-      vidrosFarosRetrovisores: "Superior",
-    });
-
-    // Retorno do robô: só a Porto → selo "personalizada" no comparativo.
-    const r2 = await page.request.post("/api/webhooks/quiver", {
+    await expect
+      .poll(() => seguradorasSelE2E(fixture?.cotacaoId ?? ""), { timeout: 10_000 })
+      .toEqual(["Porto"]);
+    const r = await page.request.post("/api/webhooks/quiver", {
       headers: QUIVER_WEBHOOK_HEADERS,
       data: { cotacaoId: fixture?.cotacaoId, temPremios: true, cards: [cards()[1]] },
     });
-    expect(r2.ok()).toBeTruthy();
+    expect(r.ok()).toBeTruthy();
     await expect(page.locator(".calc-table thead .seg-item.on .seg-nome")).toHaveText(["Porto"], {
       timeout: 15_000,
     });
-    await expect(page.getByTestId("selo-personalizada")).toBeVisible();
+  }
 
-    // Recálculo geral (toolbar) marca o ajuste como não aplicado: selo some.
-    const geral = page.getByRole("button", { name: "Recalcular", exact: true });
-    await expect(geral).toBeEnabled();
-    await geral.click();
-    // O último recálculo foi só da Porto: a barra avisa antes de repetir só ela.
-    await page.getByRole("button", { name: "Recalcular só Porto" }).click();
-    await expect.poll(() => corpos.length, { timeout: 15_000 }).toBe(2);
-    expect(corpos[1].cobertura?.franquiaPrimeiraOpcao).not.toBe("Reduzida 25%");
-    await expect(page.getByTestId("selo-personalizada")).toHaveCount(0);
+  const barra = (page: Page) => page.getByRole("button", { name: "Recalcular", exact: true });
+  const texto = /O último recálculo foi só da Porto, então só ela está no cálculo agora\./;
+
+  test("aviso abre; Cancelar não envia nada", async ({ page }) => {
+    await abrir(page);
+    await recalcularSoPorto(page);
+    await barra(page).click();
+    await expect(page.getByText(texto)).toBeVisible();
+    await page.locator(".modal-f").getByRole("button", { name: "Cancelar" }).click();
+    await expect(page.getByText(texto)).toHaveCount(0);
+    expect(corpos).toHaveLength(1);
   });
 
-  test("Cancelar o modal não salva nem envia nada", async ({ page }) => {
+  test("Voltar às 2 seguradoras restaura a seleção e recalcula com as duas", async ({ page }) => {
     await abrir(page);
-    await page.locator(".seg-acoes").first().getByTitle("Opções: análise do envio").click();
-    await page.getByText("Personalizar coberturas").click();
-    await page.getByRole("button", { name: "Cancelar" }).click();
-    await expect(page.getByRole("heading", { name: /Personalizar/ })).toHaveCount(0);
-    expect(corpos).toHaveLength(0);
+    await recalcularSoPorto(page);
+    await barra(page).click();
+    await expect(page.getByText(texto)).toBeVisible();
+    await page
+      .getByRole("button", { name: "Voltar às 2 seguradoras de antes e recalcular" })
+      .click();
+    await expect.poll(() => corpos.length, { timeout: 15_000 }).toBe(2);
+    expect([...(corpos[1].seguro?.seguradorasDisponiveis ?? [])].sort()).toEqual([
+      "mapfre",
+      "porto",
+    ]);
+    await expect
+      .poll(async () => (await seguradorasSelE2E(fixture?.cotacaoId ?? "")).sort())
+      .toEqual(["Mapfre", "Porto"]);
+    await expect(page.getByText(texto)).toHaveCount(0);
+  });
+
+  test("Recalcular só a Porto envia só ela; depois não avisa mais", async ({ page }) => {
+    await abrir(page);
+    await recalcularSoPorto(page);
+    await barra(page).click();
+    await page.getByRole("button", { name: "Recalcular só Porto" }).click();
+    await expect.poll(() => corpos.length, { timeout: 15_000 }).toBe(2);
+    expect(corpos[1].seguro?.seguradorasDisponiveis).toEqual(["porto"]);
+    expect(await seguradorasSelE2E(fixture?.cotacaoId ?? "")).toEqual(["Porto"]);
+    const r = await page.request.post("/api/webhooks/quiver", {
+      headers: QUIVER_WEBHOOK_HEADERS,
+      data: { cotacaoId: fixture?.cotacaoId, temPremios: true, cards: [cards()[1]] },
+    });
+    expect(r.ok()).toBeTruthy();
+    await expect(barra(page)).toBeEnabled({ timeout: 15_000 });
+    await barra(page).click();
+    await expect.poll(() => corpos.length, { timeout: 15_000 }).toBe(3);
+    await expect(page.getByText(texto)).toHaveCount(0);
+  });
+
+  test("sem recálculo único prévio, Recalcular não pergunta", async ({ page }) => {
+    await abrir(page);
+    await barra(page).click();
+    await expect.poll(() => corpos.length, { timeout: 15_000 }).toBe(1);
+    await expect(page.getByText(/O último recálculo foi só da/)).toHaveCount(0);
+    expect([...(corpos[0].seguro?.seguradorasDisponiveis ?? [])].sort()).toEqual([
+      "mapfre",
+      "porto",
+    ]);
   });
 });

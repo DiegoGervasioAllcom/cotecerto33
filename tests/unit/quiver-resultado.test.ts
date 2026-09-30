@@ -713,3 +713,15 @@ describe("semRetorno e mensagensRetorno (V12.4.2/V12.4.5)", () => {
     expect(semRetornoPorFaixa(semRetorno, r)).toEqual([{ faixa: "Reduzida", motivo: "m1" }]);
   });
 });
+
+describe("faixaDivergenteDaCelula", () => {
+  it("devolve a faixa própria só quando difere do rótulo da linha", async () => {
+    const { faixaDivergenteDaCelula } =
+      await import("@/components/venda/cotacoes/quiver-resultado");
+    expect(faixaDivergenteDaCelula("Sem Franquia", "Reduzida 75%")).toBe("Reduzida 75%");
+    expect(faixaDivergenteDaCelula("Normal 100%", "normal 100%")).toBeNull();
+    expect(faixaDivergenteDaCelula("Reduzida", "  REDUZIDA ")).toBeNull();
+    expect(faixaDivergenteDaCelula("Normal", "")).toBeNull();
+    expect(faixaDivergenteDaCelula("Normal", undefined)).toBeNull();
+  });
+});
