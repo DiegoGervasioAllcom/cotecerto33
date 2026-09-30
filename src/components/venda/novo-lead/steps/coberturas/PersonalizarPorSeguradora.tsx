@@ -2,6 +2,7 @@
 // `segPersonalizacao()` do protótipo V12, sem as marcas de foco nem a linha
 // "(todas)". Uma linha por seguradora do Passo 2; o ajuste é gravado ao
 // alterar (debounce curto) e só vale ao recalcular aquela seguradora.
+import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { useEffect, useRef, useState } from "react";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
@@ -156,7 +157,7 @@ export function PersonalizarPorSeguradora({ cotacaoId, seguradoras, global }: Pr
               seguradora={s}
               cotacaoId={cotacaoId}
               global={global}
-              guardado={ajustes[s]}
+              guardado={ajustes[nomeCanonicoSeguradora(s)]}
               desabilitado={desabilitado}
             />
           ))}

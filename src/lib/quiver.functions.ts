@@ -9,7 +9,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { normalizePlaca } from "@/lib/masks";
-import { SEGURADORA_QUIVER } from "@/lib/seguradora-canonica";
+import {
+  SEGURADORA_QUIVER,
+  acharAjusteCanonico,
+  nomeCanonicoSeguradora,
+} from "@/lib/seguradora-canonica";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
 import {
   calcularPremioTransmissao,
@@ -556,16 +560,21 @@ export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
     if (cotErr) throw new Error(cotErr.message);
     if (!cot) throw new Error("Cotação não encontrada.");
 
+    // Busca tolerante: compara o canônico de cada linha da cotação com o do
+    // pedido (aceita linhas antigas gravadas com nome de exibição, ex. "Porto").
     let ajuste: AjusteCoberturaQuiver | null = null;
+    let seguradoraLinha: string | undefined;
     if (data.seguradoraAjuste) {
-      const { data: aj, error: ajErr } = await admin
+      const { data: linhas, error: ajErr } = await admin
         .from("cotacao_seguradora_ajustes")
-        .select("franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva")
-        .eq("cotacao_id", data.cotacaoId)
-        .eq("seguradora", data.seguradoraAjuste)
-        .maybeSingle();
+        .select("seguradora,franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva")
+        .eq("cotacao_id", data.cotacaoId);
       if (ajErr) throw new Error(ajErr.message);
-      ajuste = aj;
+      const achada = acharAjusteCanonico(linhas ?? [], data.seguradoraAjuste);
+      if (achada) {
+        seguradoraLinha = achada.seguradora;
+        ajuste = achada;
+      }
     }
     const payload = montarPayloadQuiver(cot as unknown as CotacaoRow, ajuste);
 
@@ -618,7 +627,9 @@ export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
       ajustesMarcados = await marcarAjustesAposEnvio(
         getComoUsuario(data.caller_token) as unknown as RpcCliente,
         data.cotacaoId,
-        data.seguradoraAjuste,
+        // nome exato da linha achada (a RPC casa por igualdade); sem ajuste, o canônico
+        seguradoraLinha ??
+          (data.seguradoraAjuste ? nomeCanonicoSeguradora(data.seguradoraAjuste) : undefined),
         !!ajuste,
       );
     } catch {

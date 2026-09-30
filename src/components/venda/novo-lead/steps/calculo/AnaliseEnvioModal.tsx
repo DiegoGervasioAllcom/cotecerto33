@@ -7,6 +7,7 @@
 // `quiver_resultado_raw`). Sem "Prêmios por cobertura" nem "Personalizar
 // coberturas" — fora do escopo desta task (ver V12.3.7 e a decisão
 // pendente nº 2 do plano V12).
+import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterPayloadQuiverAtual } from "@/lib/quiver.functions";
@@ -63,7 +64,7 @@ export function AnaliseEnvioModal({ cotacaoId, resultado, onClose }: Props) {
     };
   }, [cotacaoId]);
 
-  const ajuste = useAjustesSeguradora(cotacaoId)[resultado.seguradora];
+  const ajuste = useAjustesSeguradora(cotacaoId)[nomeCanonicoSeguradora(resultado.seguradora)];
   const resumo = ajuste ? resumoAjuste(ajuste) : "";
   const segurado = payload?.segurado ?? {};
   const seguro = payload?.seguro ?? {};

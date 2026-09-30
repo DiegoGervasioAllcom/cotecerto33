@@ -1,6 +1,7 @@
 // Selo "personalizada" (V12.3.7) — só quando o ajuste da seguradora já foi
 // aplicado no último envio (`aplicado_em` preenchido). Ajuste guardado mas não
 // aplicado não ganha selo. Classe existente do proto.css (`.chip`).
+import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { useAjustesSeguradora } from "@/components/venda/novo-lead/hooks/useAjustesSeguradora";
 
 export function SeloPersonalizada({
@@ -10,7 +11,7 @@ export function SeloPersonalizada({
   cotacaoId: string | null;
   seguradora: string;
 }) {
-  const ajuste = useAjustesSeguradora(cotacaoId)[seguradora];
+  const ajuste = useAjustesSeguradora(cotacaoId)[nomeCanonicoSeguradora(seguradora)];
   if (!ajuste?.aplicadoEm) return null;
   return (
     <span

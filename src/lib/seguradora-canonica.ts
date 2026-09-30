@@ -30,3 +30,33 @@ export function nomeCanonicoSeguradora(nome: string): string {
   const k = nome.trim().toLowerCase();
   return SEGURADORA_QUIVER[k] ?? k;
 }
+
+/**
+ * Escolhe, entre as linhas de ajuste de uma cotação, a da seguradora pedida
+ * comparando pelo nome CANÔNICO (aceita linhas antigas gravadas com nome de
+ * exibição, ex. "Porto"). Se houver duas que colapsam no mesmo canônico,
+ * prefere a já gravada com a chave canônica exata.
+ */
+export function acharAjusteCanonico<T extends { seguradora: string }>(
+  linhas: readonly T[],
+  seguradora: string,
+): T | null {
+  const alvo = nomeCanonicoSeguradora(seguradora);
+  const iguais = linhas.filter((l) => nomeCanonicoSeguradora(l.seguradora) === alvo);
+  return iguais.find((l) => l.seguradora === alvo) ?? iguais[0] ?? null;
+}
+
+/**
+ * Agrupa linhas por nome canônico; se duas colapsam no mesmo canônico, fica a
+ * gravada com a chave canônica exata (a mesma regra da busca no servidor).
+ */
+export function agruparPorCanonico<T extends { seguradora: string }>(
+  linhas: readonly T[],
+): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const c of new Set(linhas.map((l) => nomeCanonicoSeguradora(l.seguradora)))) {
+    const achada = acharAjusteCanonico(linhas, c);
+    if (achada) out[c] = achada;
+  }
+  return out;
+}

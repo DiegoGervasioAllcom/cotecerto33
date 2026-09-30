@@ -7,6 +7,7 @@
 // Engrenagem (opções), Recalcular. Mensagens (V12.4.5) só habilita quando o
 // card traz `mensagensRetorno`; Prêmio fica sempre desabilitado — Cliente VIP
 // é feature nova sem escopo fechado (decisão pendente nº 2 do plano V12, `PLANO_TASKS_V12.md`).
+import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
@@ -51,7 +52,7 @@ export function SegAcoes({
   const [personalizarAberto, setPersonalizarAberto] = useState(false);
   // Resumo do ajuste recém-salvo: a confirmação do recálculo passa a citá-lo.
   const [resumoConfirmacao, setResumoConfirmacao] = useState<string | null>(null);
-  const guardado = useAjustesSeguradora(cotacaoId)[resultado.seguradora];
+  const guardado = useAjustesSeguradora(cotacaoId)[nomeCanonicoSeguradora(resultado.seguradora)];
 
   const descontoDisabledTitle = !info.disponivel
     ? (info.indisponivelMotivo ?? "Indisponível")
