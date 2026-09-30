@@ -24,6 +24,8 @@ import {
   type SeguradoraSemRetorno,
 } from "@/components/venda/cotacoes/quiver-resultado";
 import { SegAcoes } from "./SegAcoes";
+import { SeloPersonalizada } from "./SeloPersonalizada";
+import type { CoberturaGlobal } from "./PersonalizarSeguradoraModal";
 import type { EscolhaCard } from "./types";
 
 type Props = {
@@ -46,6 +48,7 @@ type Props = {
   infoDescontoFor: (r: ResultadoCalculo) => DescontoInfo;
   onAbrirDesconto: (r: ResultadoCalculo) => void;
   onRecalcularSeguradora: (r: ResultadoCalculo) => Promise<void>;
+  coberturaGlobal: CoberturaGlobal;
 };
 
 type ColunaOferta = { tipo: "oferta"; resultado: ResultadoCalculo };
@@ -69,6 +72,7 @@ export function CalculoLista({
   infoDescontoFor,
   onAbrirDesconto,
   onRecalcularSeguradora,
+  coberturaGlobal,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [nav, setNav] = useState<Nav>(NAV_VAZIO);
@@ -245,6 +249,12 @@ export function CalculoLista({
                       </small>
                       {coluna.tipo === "oferta" && coluna.resultado.secao && (
                         <small>{coluna.resultado.secao}</small>
+                      )}
+                      {coluna.tipo === "oferta" && (
+                        <SeloPersonalizada
+                          cotacaoId={cotacaoId}
+                          seguradora={coluna.resultado.seguradora}
+                        />
                       )}
                     </div>
                   </th>
@@ -428,6 +438,7 @@ export function CalculoLista({
                       onAbrirDesconto={() => onAbrirDesconto(resultado)}
                       outrasSeguradoras={outrasSeguradoras}
                       onRecalcular={() => onRecalcularSeguradora(resultado)}
+                      coberturaGlobal={coberturaGlobal}
                     />
                   </td>
                 );

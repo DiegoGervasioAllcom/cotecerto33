@@ -146,7 +146,32 @@ function nivelCoberturaValido(valor: unknown): string {
     : "Não contratada";
 }
 
-export function montarPayloadQuiver(cot: CotacaoRow) {
+/** Ajuste de coberturas de UMA seguradora (V12.3.7) — só os campos não nulos
+ * sobrepõem o `cobertura` global; valores fora do enum são ignorados. */
+export type AjusteCoberturaQuiver = {
+  franquia_primeira_opcao?: string | null;
+  franquia_segunda_opcao?: string | null;
+  vidros?: string | null;
+  carro_reserva?: string | null;
+};
+
+const nivelAjusteValido = (v: unknown): v is string =>
+  NIVEL_COBERTURA_OPCOES.includes(v as (typeof NIVEL_COBERTURA_OPCOES)[number]);
+
+function sobreporAjuste<T extends object>(
+  cobertura: T,
+  ajuste: AjusteCoberturaQuiver | null | undefined,
+): T {
+  if (!ajuste) return cobertura;
+  const out: Record<string, unknown> = { ...(cobertura as Record<string, unknown>) };
+  if (ajuste.franquia_primeira_opcao) out.franquiaPrimeiraOpcao = ajuste.franquia_primeira_opcao;
+  if (ajuste.franquia_segunda_opcao) out.franquiaSegundaOpcao = ajuste.franquia_segunda_opcao;
+  if (nivelAjusteValido(ajuste.vidros)) out.vidrosFarosRetrovisores = ajuste.vidros;
+  if (nivelAjusteValido(ajuste.carro_reserva)) out.carroReserva = ajuste.carro_reserva;
+  return out as T;
+}
+
+export function montarPayloadQuiver(cot: CotacaoRow, ajuste?: AjusteCoberturaQuiver | null) {
   const s = cot.segurado ?? {};
   const sg = cot.seguro ?? {};
   const v = cot.veiculo ?? {};
@@ -376,66 +401,137 @@ export function montarPayloadQuiver(cot: CotacaoRow) {
           }
         : {}),
     },
-    cobertura: {
-      plano: (c.tipo_cobertura as string) || "Fácil",
-      ...(c.modalidade ? { modalidade: c.modalidade as string } : {}),
-      ...(c.percentual_ajuste ? { percentualAjuste: c.percentual_ajuste as string } : {}),
-      ...(c.franquia_primeira_opcao
-        ? { franquiaPrimeiraOpcao: c.franquia_primeira_opcao as string }
-        : {}),
-      ...(c.franquia_segunda_opcao
-        ? { franquiaSegundaOpcao: c.franquia_segunda_opcao as string }
-        : {}),
-      danosMateriaisTerceiros: c.rcf_dm === "" ? undefined : (c.rcf_dm ?? undefined),
-      danosCorporaisTerceiros: c.rcf_dc === "" ? undefined : (c.rcf_dc ?? undefined),
-      ...(c.app_morte ? { appMortePorPassageiro: semPrefixoMoeda(c.app_morte as string) } : {}),
-      ...(c.app_invalidez
-        ? { appInvalidezPorPassageiro: semPrefixoMoeda(c.app_invalidez as string) }
-        : {}),
-      ...(c.danos_morais ? { danosMorais: semPrefixoMoeda(c.danos_morais as string) } : {}),
-      ...(c.despesas_extras ? { despesasExtras: c.despesas_extras as string } : {}),
-      // cobertura.valorDeterminado só é aceito pela Quiver com
-      // modalidade="Valor Determinado" (reaproveita a coluna casco_valor,
-      // ver Onda 2 do plano de integração dos 7 campos — 2026-08).
-      ...(c.modalidade === "Valor Determinado" && c.casco_valor
-        ? { valorDeterminado: semPrefixoMoeda(c.casco_valor as string) }
-        : {}),
-      // pequenosReparos: boolean no CoteCerto, string na Quiver.
-      pequenosReparos: (c.pequenos_reparos as boolean) ? "Contratado" : "Não contratada",
-      ...(c.vidros != null ? { vidrosFarosRetrovisores: c.vidros as string } : {}),
-      // Enum obrigatório na Quiver (aceita só "Não contratada"/"Básico"/
-      // "Intermediário"/"Superior") — diferente dos demais campos opcionais
-      // acima, não pode ficar ausente do payload quando vazio/nulo no banco
-      // (rascunho não visitado na etapa Coberturas, ou string vazia salva por
-      // engano): a Quiver rejeita a cotação inteira com "deve ser um dos
-      // valores: ..." quando a chave simplesmente não existe no JSON. Mesmo
-      // padrão de fallback explícito já usado em `pequenosReparos` acima.
-      assistencia24h: nivelCoberturaValido(c.assist_24),
-      carroReserva: nivelCoberturaValido(c.carro_reserva),
-      ...(c.mais_assistencias
-        ? {
-            maisAssistencias: "Sim",
-            ...(() => {
-              // maisAssistenciasSeguradoras exige que a seguradora esteja em
-              // seguro.seguradorasDisponiveis (quando enviado) — omitir em vez
-              // de arriscar HTTP 422 se não conseguir canonicalizar/validar.
-              const canon = mapSeguradoras([c.mais_assistencias_seguradora as string])[0];
-              if (!canon) return {};
-              if (seguradorasQuiver.length && !seguradorasQuiver.includes(canon)) return {};
-              return { maisAssistenciasSeguradoras: canon };
-            })(),
-          }
-        : {}),
-    },
+    cobertura: sobreporAjuste(
+      {
+        plano: (c.tipo_cobertura as string) || "Fácil",
+        ...(c.modalidade ? { modalidade: c.modalidade as string } : {}),
+        ...(c.percentual_ajuste ? { percentualAjuste: c.percentual_ajuste as string } : {}),
+        ...(c.franquia_primeira_opcao
+          ? { franquiaPrimeiraOpcao: c.franquia_primeira_opcao as string }
+          : {}),
+        ...(c.franquia_segunda_opcao
+          ? { franquiaSegundaOpcao: c.franquia_segunda_opcao as string }
+          : {}),
+        danosMateriaisTerceiros: c.rcf_dm === "" ? undefined : (c.rcf_dm ?? undefined),
+        danosCorporaisTerceiros: c.rcf_dc === "" ? undefined : (c.rcf_dc ?? undefined),
+        ...(c.app_morte ? { appMortePorPassageiro: semPrefixoMoeda(c.app_morte as string) } : {}),
+        ...(c.app_invalidez
+          ? { appInvalidezPorPassageiro: semPrefixoMoeda(c.app_invalidez as string) }
+          : {}),
+        ...(c.danos_morais ? { danosMorais: semPrefixoMoeda(c.danos_morais as string) } : {}),
+        ...(c.despesas_extras ? { despesasExtras: c.despesas_extras as string } : {}),
+        // cobertura.valorDeterminado só é aceito pela Quiver com
+        // modalidade="Valor Determinado" (reaproveita a coluna casco_valor,
+        // ver Onda 2 do plano de integração dos 7 campos — 2026-08).
+        ...(c.modalidade === "Valor Determinado" && c.casco_valor
+          ? { valorDeterminado: semPrefixoMoeda(c.casco_valor as string) }
+          : {}),
+        // pequenosReparos: boolean no CoteCerto, string na Quiver.
+        pequenosReparos: (c.pequenos_reparos as boolean) ? "Contratado" : "Não contratada",
+        ...(c.vidros != null ? { vidrosFarosRetrovisores: c.vidros as string } : {}),
+        // Enum obrigatório na Quiver (aceita só "Não contratada"/"Básico"/
+        // "Intermediário"/"Superior") — diferente dos demais campos opcionais
+        // acima, não pode ficar ausente do payload quando vazio/nulo no banco
+        // (rascunho não visitado na etapa Coberturas, ou string vazia salva por
+        // engano): a Quiver rejeita a cotação inteira com "deve ser um dos
+        // valores: ..." quando a chave simplesmente não existe no JSON. Mesmo
+        // padrão de fallback explícito já usado em `pequenosReparos` acima.
+        assistencia24h: nivelCoberturaValido(c.assist_24),
+        carroReserva: nivelCoberturaValido(c.carro_reserva),
+        ...(c.mais_assistencias
+          ? {
+              maisAssistencias: "Sim",
+              ...(() => {
+                // maisAssistenciasSeguradoras exige que a seguradora esteja em
+                // seguro.seguradorasDisponiveis (quando enviado) — omitir em vez
+                // de arriscar HTTP 422 se não conseguir canonicalizar/validar.
+                const canon = mapSeguradoras([c.mais_assistencias_seguradora as string])[0];
+                if (!canon) return {};
+                if (seguradorasQuiver.length && !seguradorasQuiver.includes(canon)) return {};
+                return { maisAssistenciasSeguradoras: canon };
+              })(),
+            }
+          : {}),
+      },
+      ajuste,
+    ),
   };
 }
 
-type EnviarCotacaoPayload = { cotacaoId: string; caller_token: string };
+type EnviarCotacaoPayload = {
+  cotacaoId: string;
+  caller_token: string;
+  /** Recálculo de uma seguradora só: aplica o ajuste guardado dela (V12.3.7). */
+  seguradoraAjuste?: string;
+};
+
+/** Cliente com o JWT do usuário (`caller_token`, já validado por
+ * `assertDonoCotacao` antes de ser usado): as RPCs do ajuste dependem de
+ * `auth.uid()`. Usa só a anon key — não precisa da service_role. */
+function getComoUsuario(token: string) {
+  const url =
+    import.meta.env?.VITE_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SELF_SUPABASE_URL;
+  const anonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) throw new Error("Configuração do servidor ausente.");
+  return createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+}
+
+type RpcCliente = {
+  rpc: (
+    fn: "marcar_ajuste_aplicado" | "marcar_ajustes_nao_aplicados",
+    args: { p_cotacao_id: string; p_seguradora?: string },
+  ) => PromiseLike<{ error: { message: string } | null }>;
+};
+
+/**
+ * Marca aplicado/não aplicado DEPOIS do envio ao robô ter dado certo. Falha
+ * aqui NUNCA propaga: o envio já aconteceu e um erro na UI faria o vendedor
+ * reenviar (cotação duplicada no portal). Devolve `false` se não conseguiu.
+ */
+export async function marcarAjustesAposEnvio(
+  cliente: RpcCliente,
+  cotacaoId: string,
+  seguradoraAjuste: string | undefined,
+  temAjuste: boolean,
+): Promise<boolean> {
+  try {
+    if (seguradoraAjuste && !temAjuste) return true;
+    const { error } = seguradoraAjuste
+      ? await cliente.rpc("marcar_ajuste_aplicado", {
+          p_cotacao_id: cotacaoId,
+          p_seguradora: seguradoraAjuste,
+        })
+      : await cliente.rpc("marcar_ajustes_nao_aplicados", { p_cotacao_id: cotacaoId });
+    if (error) {
+      console.error("[quiver] envio ok, mas falhou marcar ajustes:", error.message);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error(
+      "[quiver] envio ok, mas falhou marcar ajustes:",
+      e instanceof Error ? e.message : "erro",
+    );
+    return false;
+  }
+}
 
 export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
   .inputValidator((data: EnviarCotacaoPayload) => {
     if (!data?.cotacaoId) throw new Error("cotacaoId obrigatório.");
     if (!data?.caller_token) throw new Error("Sem token.");
+    if (
+      data.seguradoraAjuste !== undefined &&
+      (typeof data.seguradoraAjuste !== "string" ||
+        data.seguradoraAjuste.length < 1 ||
+        data.seguradoraAjuste.length > 60)
+    )
+      throw new Error("seguradoraAjuste inválida.");
     return data;
   })
   .handler(async ({ data }) => {
@@ -460,7 +556,18 @@ export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
     if (cotErr) throw new Error(cotErr.message);
     if (!cot) throw new Error("Cotação não encontrada.");
 
-    const payload = montarPayloadQuiver(cot as unknown as CotacaoRow);
+    let ajuste: AjusteCoberturaQuiver | null = null;
+    if (data.seguradoraAjuste) {
+      const { data: aj, error: ajErr } = await admin
+        .from("cotacao_seguradora_ajustes")
+        .select("franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva")
+        .eq("cotacao_id", data.cotacaoId)
+        .eq("seguradora", data.seguradoraAjuste)
+        .maybeSingle();
+      if (ajErr) throw new Error(ajErr.message);
+      ajuste = aj;
+    }
+    const payload = montarPayloadQuiver(cot as unknown as CotacaoRow, ajuste);
 
     let res: Response;
     try {
@@ -504,7 +611,21 @@ export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
       .eq("id", data.cotacaoId);
     if (updErr) throw new Error(updErr.message);
 
-    return { ok: true };
+    // V12.3.7: só depois do envio dar certo. Recálculo de uma seguradora marca
+    // o ajuste dela como aplicado; recálculo geral marca todos como não aplicados.
+    let ajustesMarcados = true;
+    try {
+      ajustesMarcados = await marcarAjustesAposEnvio(
+        getComoUsuario(data.caller_token) as unknown as RpcCliente,
+        data.cotacaoId,
+        data.seguradoraAjuste,
+        !!ajuste,
+      );
+    } catch {
+      ajustesMarcados = false;
+    }
+
+    return { ok: true, ajustesMarcados };
   });
 
 type Segurado = {

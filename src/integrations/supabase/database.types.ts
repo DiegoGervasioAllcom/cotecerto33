@@ -1238,6 +1238,63 @@ export type Database = {
           },
         ];
       };
+      cotacao_seguradora_ajustes: {
+        Row: {
+          aplicado_em: string | null;
+          carro_reserva: string | null;
+          cotacao_id: string;
+          empresa_id: string;
+          franquia_primeira_opcao: string | null;
+          franquia_segunda_opcao: string | null;
+          id: string;
+          seguradora: string;
+          updated_at: string;
+          updated_by: string | null;
+          vidros: string | null;
+        };
+        Insert: {
+          aplicado_em?: string | null;
+          carro_reserva?: string | null;
+          cotacao_id: string;
+          empresa_id: string;
+          franquia_primeira_opcao?: string | null;
+          franquia_segunda_opcao?: string | null;
+          id?: string;
+          seguradora: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          vidros?: string | null;
+        };
+        Update: {
+          aplicado_em?: string | null;
+          carro_reserva?: string | null;
+          cotacao_id?: string;
+          empresa_id?: string;
+          franquia_primeira_opcao?: string | null;
+          franquia_segunda_opcao?: string | null;
+          id?: string;
+          seguradora?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          vidros?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cotacao_seguradora_ajustes_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "cotacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cotacao_seguradora_ajustes_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
+        ];
+      };
       cotacao_seguro: {
         Row: {
           apolice_atual: string | null;
@@ -5063,6 +5120,10 @@ export type Database = {
       };
       fn_confirmar_senha_diretor: { Args: { _senha: string }; Returns: boolean };
       fn_convite_codigo: { Args: never; Returns: string };
+      fn_cot_seg_ajuste_acesso: {
+        Args: { p_cotacao_id: string };
+        Returns: string;
+      };
       fn_dentro_alcada_desconto: {
         Args: { p_aprovador: string; p_pct: number; p_seguradora: string };
         Returns: boolean;
@@ -5423,6 +5484,14 @@ export type Database = {
           vendas_mes: number;
         }[];
       };
+      marcar_ajuste_aplicado: {
+        Args: { p_cotacao_id: string; p_seguradora: string };
+        Returns: undefined;
+      };
+      marcar_ajustes_nao_aplicados: {
+        Args: { p_cotacao_id: string };
+        Returns: undefined;
+      };
       marcar_apolice_emitida: {
         Args: {
           p_apolice: string;
@@ -5570,6 +5639,17 @@ export type Database = {
           quantidade: number;
           saldo: number;
         }[];
+      };
+      salvar_ajuste_seguradora: {
+        Args: {
+          p_carro_reserva: string;
+          p_cotacao_id: string;
+          p_franquia_1: string;
+          p_franquia_2: string;
+          p_seguradora: string;
+          p_vidros: string;
+        };
+        Returns: string;
       };
       salvar_cotacao_rascunho: {
         Args: { p_cotacao_id: string; p_origem?: string; p_payload: Json };

@@ -6136,3 +6136,8 @@ tr.foco-pisca > td{animation:focoPisca 2.2s ease-out}
 .msg-bloco .mb-val{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .msg-bloco .mb-lista{margin:0;padding-left:18px;font-size:var(--fs-sm);color:var(--slate);line-height:1.7}
 .doc-interno{font-size:var(--fs-2xs);color:#7A8794;margin-top:12px;padding-top:8px;border-top:1px solid var(--border-soft)}
+.pm-preco{margin-left:auto;text-align:right;flex:none}
+.pm-preco span{display:block;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.pm-preco strong{font-size:var(--fs-2xl);color:var(--slate);font-weight:800}
+/* topo dos modais por seguradora */
+.seg-modal-topo{display:flex;align-items:center;gap:14px;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--border-soft)}

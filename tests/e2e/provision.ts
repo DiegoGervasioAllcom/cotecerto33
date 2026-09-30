@@ -1623,6 +1623,32 @@ export async function marcarCalculoVistoE2E(cotacaoId: string): Promise<void> {
   if (error) throw new Error(`marcar calculo_visto_em: ${error.message}`);
 }
 
+/** Preenche os campos exigidos pelo gate do Recalcular geral (`podeCalcular`). */
+export async function preencherCamposCalculoE2E(cotacaoId: string): Promise<void> {
+  const seg = await admin.from("cotacao_segurado").upsert({
+    cotacao_id: cotacaoId,
+    cpf_cnpj: "529.982.247-25",
+    nome: "Cliente Personalizar E2E",
+    sexo: "Masculino",
+    estado_civil: "Solteiro",
+    email: "cliente-perso@teste.local",
+    cep: "01310-100",
+    celular: "(11) 99999-9999",
+  });
+  if (seg.error) throw new Error(`preencher segurado: ${seg.error.message}`);
+  const vei = await admin.from("cotacao_veiculo").upsert({
+    cotacao_id: cotacaoId,
+    placa: "ABC1D23",
+    cep_circulacao: "01310-100",
+    km_mensal: "1000",
+  });
+  if (vei.error) throw new Error(`preencher veículo: ${vei.error.message}`);
+  const per = await admin
+    .from("cotacao_perfil")
+    .upsert({ cotacao_id: cotacaoId, cep_pernoite: "01310-100" });
+  if (per.error) throw new Error(`preencher perfil: ${per.error.message}`);
+}
+
 /** Remove os dados criados por `criarCotacaoQuiverFixture` (best-effort; `db reset` também resolve). */
 export async function limparCotacaoQuiverFixture(f: CotacaoQuiverFixture): Promise<void> {
   await admin.from("cotacoes").delete().eq("id", f.cotacaoId);

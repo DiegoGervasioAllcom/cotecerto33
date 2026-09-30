@@ -191,6 +191,10 @@ jobs:
           # Segredo do webhook da Quiver (Fase 1/G1.5) — só usado pelos testes
           # E2E deste job pra simular o callback da Quiver (tests/e2e/quiver-webhook.spec.ts);
           # sem valor real de produção nenhum, é fixo/local só pra CI.
+          # Robô Quiver MOCKADO (tests/e2e/personalizar-seguradora.spec.ts sobe um
+          # servidor HTTP local nesta porta); o webServer do Playwright herda o env.
+          echo "SELF_QUIVER_API_URL=http://127.0.0.1:3999" >> "$GITHUB_ENV"
+          echo "E2E_ROBO_MOCK=1" >> "$GITHUB_ENV"
           echo "SELF_QUIVER_WEBHOOK_CLIENT_KEY=ci-teste-key" >> "$GITHUB_ENV"
           echo "SELF_QUIVER_WEBHOOK_CLIENT_SECRET=ci-teste-secret" >> "$GITHUB_ENV"
 

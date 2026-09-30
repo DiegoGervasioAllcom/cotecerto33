@@ -11,6 +11,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { obterPayloadQuiverAtual } from "@/lib/quiver.functions";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
+import { useAjustesSeguradora } from "@/components/venda/novo-lead/hooks/useAjustesSeguradora";
+import { resumoAjuste } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
   coberturaEntries,
   formasPagamentoResultado,
@@ -61,6 +63,8 @@ export function AnaliseEnvioModal({ cotacaoId, resultado, onClose }: Props) {
     };
   }, [cotacaoId]);
 
+  const ajuste = useAjustesSeguradora(cotacaoId)[resultado.seguradora];
+  const resumo = ajuste ? resumoAjuste(ajuste) : "";
   const segurado = payload?.segurado ?? {};
   const seguro = payload?.seguro ?? {};
   const veiculo = payload?.veiculo ?? {};
@@ -125,6 +129,16 @@ export function AnaliseEnvioModal({ cotacaoId, resultado, onClose }: Props) {
                       <td className="ff-k">Plano/cobertura</td>
                       <td className="ff-v">{cobertura.plano || "—"}</td>
                     </tr>
+                    {ajuste && resumo && (
+                      <tr>
+                        <td className="ff-k">Personalização</td>
+                        <td className="ff-v" data-testid="analise-ajuste">
+                          {ajuste.aplicadoEm
+                            ? `Ajustada para ${resultado.seguradora}: ${resumo}`
+                            : "Ajuste guardado, não aplicado"}
+                        </td>
+                      </tr>
+                    )}
                     <tr>
                       <td className="ff-k">Seguradoras selecionadas</td>
                       <td className="ff-v">
