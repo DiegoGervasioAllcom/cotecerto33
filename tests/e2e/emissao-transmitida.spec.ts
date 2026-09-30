@@ -283,9 +283,18 @@ test.describe("Sub-passo Transmitida do wizard (V12.1.13 parcial)", () => {
       // Captura o window.open (a aba nova não é o foco do teste).
       await page.addInitScript(() => {
         (window as unknown as { __abertos: string[] }).__abertos = [];
-        window.open = (url?: string | URL) => {
-          (window as unknown as { __abertos: string[] }).__abertos.push(String(url));
-          return null;
+        // A aba é aberta em branco no clique e recebe a URL depois (evita bloqueio de pop-up).
+        window.open = () => {
+          const aba = {
+            opener: {} as unknown,
+            close: () => {},
+            location: {
+              set href(v: string) {
+                (window as unknown as { __abertos: string[] }).__abertos.push(String(v));
+              },
+            },
+          };
+          return aba as unknown as Window;
         };
       });
       await page.reload();
