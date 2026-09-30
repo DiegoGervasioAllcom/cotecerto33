@@ -587,6 +587,42 @@ Matriz não tem `perc_comissao` nem modelo. O percentual não tem tela no app: �
 `empresas.perc_comissao` (por empresa) ou `modelos_franquia.perc_comissao_padrao`
 (por modelo; modelos criados pela tela nascem com 0%) e só se altera pelo banco.
 
+**30/09/2026 — V12.3.7 Personalizar coberturas por seguradora (PRs #251 e
+#252):** uma migration aplicada pelo usuário com o roteiro em psql (numa
+transação, com o `insert` em `schema_migrations`), ensaiada antes do zero no
+banco local num bloco desfeito com `rollback`:
+`20260929060000_v12_seguradora_ajustes` (tabela `cotacao_seguradora_ajustes`,
+RPCs `salvar_ajuste_seguradora`, `marcar_ajuste_aplicado`,
+`marcar_ajustes_nao_aplicados` e a função interna `fn_cot_seg_ajuste_acesso`,
+sem EXECUTE para `authenticated`). Sem `pg_dump`: só cria objetos novos. Imagens
+do app publicadas pelo usuário via `deploy.sh`: o merge do #251 (`98d5adc`) e,
+depois, o do #252 (`0ededf7`), sem migration. Nada muda no robô.
+
+Teste de ponta a ponta em produção, com autorização explícita do usuário, na
+COT-2026-00107 (lead de teste): (1) "Personalizar coberturas" da Porto com a
+1ª opção de franquia em "Reduzida 75%" → a confirmação citou o ajuste; foi enviada
+**uma cotação real só para a Porto** (resultado em 3 min 37 s); a "Análise do envio"
+mostrou "Ajustada para porto: franquia Reduzida 75%" e "Seguradoras selecionadas:
+porto"; a janela de Mensagens listou a faixa "reduzida 75%" (antes a 1ª opção era
+"normal 100%"), e o selo "personalizada" apareceu nas colunas da Porto. O portal
+devolve o grupo inteiro ao pedir "porto" (Porto, Azul, Itaú e Pier), então vieram
+também as colunas da Azul e da Itaú, e a Pier "sem retorno". (2) Recálculo geral
+com as 10 seguradoras (3 min 47 s, 28 colunas) → o selo "personalizada" sumiu e o
+ajuste ficou guardado como "não aplicado".
+
+Achados: (a) o ajuste era lido e gravado com nomes diferentes nas duas entradas —
+o modal do Cálculo usa o nome do robô (`porto`) e o bloco de Coberturas o nome do
+formulário (`Porto`, `HDI`) — e o servidor busca por igualdade exata, então um
+ajuste feito no bloco nunca seria encontrado ao recalcular pelo Cálculo; corrigido
+no #252 com o nome canônico como chave (o servidor também acha linhas antigas
+com nome de exibição), e conferido em produção: o bloco passou a mostrar a Porto
+com "Reduzida 75%". (b) "Recalcular só esta seguradora" deixa só ela marcada no
+passo Seguro; um "Recalcular" geral em seguida repete só essa seguradora até o
+vendedor marcar as outras de novo (comportamento da V12.3.6, ainda não tratado).
+(c) O rótulo da primeira linha de parcelas na lista comparativa vem da primeira
+coluna, e não de cada coluna, e pode mostrar "Sem Franquia" para colunas que estão
+em "reduzida 75%" (ainda não tratado).
+
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
