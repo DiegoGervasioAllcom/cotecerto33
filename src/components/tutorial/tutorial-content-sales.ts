@@ -8,19 +8,13 @@
 //    " (em breve)" junto do nome dela: Prêmio/VIP (cap. 4, "As cinco
 //    ferramentas") e Documentos/Consultar (cap. 5 e 6); Mensagens perdeu o
 //    "(em breve)" em V12.4.5, quando passou a abrir as mensagens da seguradora. Na
-//    Engrenagem, só "Análise do envio" (sem "prêmios por cobertura" nem
-//    "personalizar coberturas" — não existem, ver AnaliseEnvioModal.tsx).
+//    Engrenagem, "Análise do envio" e "Personalizar coberturas" (V12.3.7);
+//    sem "prêmios por cobertura" — não existe, ver AnaliseEnvioModal.tsx.
 // 2) "Filtrar por tipo de cobertura" (`.cob-filtro`) entrou em V12.3.12, com
-//    o dado real de seção do robô. Um passo do cap. 4 segue RESERVADO (fora
-//    deste roteiro): "Personalizar uma seguradora sem sair daqui" (entra em
-//    V12.3.7). O passo "Cliente VIP" (cap. 4) foi removido: não há Cliente
-//    VIP implementado.
-// 3) "E depois personalize por seguradora" (cap. 3, `.seg-perso`) também
-//    ficou de fora: é a mesma função de personalização por seguradora acima
-//    — não existe hoje em Coberturas (StepCoberturas.tsx aplica um único
-//    conjunto de coberturas para todas as seguradoras). Chamada de
-//    engenharia feita nesta task, não um item explicitamente aprovado —
-//    sinalizado no handoff para o `revisor`.
+//    o dado real de seção do robô. "Personalizar uma seguradora sem sair
+//    daqui" (cap. 4) e "E depois personalize por seguradora" (cap. 3,
+//    `.seg-perso`) entraram em V12.3.7. O passo "Cliente VIP" (cap. 4) foi
+//    removido: não há Cliente VIP implementado.
 //
 // O passo "Os documentos originais" (cap. 5) também precisou de um ajuste
 // de conteúdo: no protótipo ele descreve arquivos (proposta original,
@@ -290,6 +284,14 @@ export const salesTutorialChapters = [
       },
       {
         page: "lead",
+        target: ".seg-perso",
+        pos: "top",
+        title: "E depois personalize por seguradora",
+        body: "<p>Aqui você ajusta o que é diferente em cada uma — franquia, carro reserva, vidros — sem mexer no pacote das outras.</p><p>Mas o normal é <strong>calcular primeiro</strong> e só personalizar depois de ver os preços. Você personaliza para resolver uma objeção concreta do cliente, não no escuro.</p>",
+        prepare: "lead-step-4",
+      },
+      {
+        page: "lead",
         target: "#resumoCard",
         pos: "left",
         title: "O resumo lateral acompanha tudo",
@@ -346,16 +348,21 @@ export const salesTutorialChapters = [
         target: ".seg-acoes",
         pos: "left",
         title: "As cinco ferramentas de cada seguradora",
-        body: "<p>Toda seguradora do comparativo traz a mesma fileira de cinco botões — e eles agem <strong>só naquela cia</strong>, não no cálculo inteiro:</p><p><strong>Mensagens</strong> — o que ela respondeu sobre o risco.<br><strong>%</strong> — solicitar desconto adicional nesta seguradora.<br><strong>Prêmio (em breve)</strong> — pedir atendimento VIP para este cliente.<br><strong>Engrenagem</strong> — análise do envio.<br><strong>Recalcular</strong> — refazer o cálculo só desta cia.</p>",
+        body: "<p>Toda seguradora do comparativo traz a mesma fileira de cinco botões — e eles agem <strong>só naquela cia</strong>, não no cálculo inteiro:</p><p><strong>Mensagens</strong> — o que ela respondeu sobre o risco.<br><strong>%</strong> — solicitar desconto adicional nesta seguradora.<br><strong>Prêmio (em breve)</strong> — pedir atendimento VIP para este cliente.<br><strong>Engrenagem</strong> — opções: análise do envio e personalizar coberturas.<br><strong>Recalcular</strong> — refazer o cálculo só desta cia.</p>",
         tip: {
           label: '"Sem retorno" não é erro',
           text: "Seguradora pode recusar o perfil, estar fora do ar ou não operar naquela região. Quando aparece o aviso de sem retorno, vale ler o motivo: às vezes é um dado que você corrige e recota ali mesmo, pelo botão Recalcular.",
         },
         prepare: "lead-calculo-lista",
       },
-      // Reservado (não entra nesta task): "Personalizar uma seguradora sem
-      // sair daqui" — mesma investigação com o robô do item acima. Entra em
-      // V12.3.7.
+      {
+        page: "lead",
+        target: ".seg-acoes",
+        pos: "left",
+        title: "Personalizar uma seguradora sem sair daqui",
+        body: "<p>Se o cliente quer só a franquia de uma delas mais baixa, abra a <strong>engrenagem</strong> daquela seguradora e escolha <strong>Personalizar coberturas</strong>: você ajusta num modal e recalcula só ela.</p><p>Não precisa voltar para a etapa Coberturas e refazer as nove — isso quebrava o fluxo da conversa e derrubava o resto do comparativo.</p>",
+        prepare: "lead-calculo-lista",
+      },
       {
         page: "lead",
         target: ".calc-toolset",

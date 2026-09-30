@@ -2510,3 +2510,20 @@ export async function listarImpressoesE2E(cotacaoId: string) {
   if (error) throw new Error(`listar impressões: ${error.message}`);
   return data ?? [];
 }
+
+/** Ajustes por seguradora gravados na cotação (V12.3.7), por seguradora. */
+export async function lerAjustesSeguradoraE2E(cotacaoId: string) {
+  const { data, error } = await admin
+    .from("cotacao_seguradora_ajustes")
+    .select("seguradora,franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva")
+    .eq("cotacao_id", cotacaoId)
+    .order("seguradora");
+  if (error) throw new Error(`ler ajustes: ${error.message}`);
+  return data ?? [];
+}
+
+/** Marca a cotação como já virada em proposta (o RPC de ajuste passa a recusar, 22023). */
+export async function virarPropostaE2E(cotacaoId: string): Promise<void> {
+  const { error } = await admin.from("cotacoes").update({ status: "proposta" }).eq("id", cotacaoId);
+  if (error) throw new Error(`virar proposta: ${error.message}`);
+}

@@ -5,44 +5,24 @@
 // aparecem desabilitadas "(em breve)".
 import { useState } from "react";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
+import { AbasPersonalizacao } from "../coberturas/AbasPersonalizacao";
 import {
-  FRANQUIA_OPCOES,
-  FRANQUIA_SEGUNDA_OPCOES,
-  NIVEL_COBERTURA_OPCOES,
-} from "@/components/venda/novo-lead/enumsCoberturas";
+  CAMPOS_AJUSTE as CAMPOS,
+  entradaDoAjuste,
+  valoresIniciais,
+  type Campo,
+  type CoberturaGlobal,
+} from "../coberturas/camposAjuste";
 import {
   ajusteSeguradoraSchema,
   type AjusteSeguradora,
-  type AjusteSeguradoraEntrada,
 } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
   useSalvarAjusteSeguradora,
   type AjusteGuardado,
 } from "@/components/venda/novo-lead/hooks/useAjustesSeguradora";
 
-/** Coberturas globais do Passo 5 (valor inicial dos selects). */
-export type CoberturaGlobal = {
-  franquia1: string;
-  franquia2: string;
-  vidros: string;
-  carroReserva: string;
-};
-
-const ABAS = [
-  ["assist", "+ Assistências"],
-  ["cob", "+ Coberturas"],
-  ["desc", "% Descontos"],
-  ["com", "+ Comissões"],
-] as const;
-
-type Campo = keyof AjusteSeguradoraEntrada;
-
-const CAMPOS: { k: Campo; label: string; opcoes: readonly string[] }[] = [
-  { k: "franquia1", label: "1ª opção de franquia", opcoes: FRANQUIA_OPCOES },
-  { k: "franquia2", label: "2ª opção de franquia", opcoes: FRANQUIA_SEGUNDA_OPCOES },
-  { k: "vidros", label: "Vidros, faróis e retrovisores", opcoes: NIVEL_COBERTURA_OPCOES },
-  { k: "carroReserva", label: "Carro reserva", opcoes: NIVEL_COBERTURA_OPCOES },
-];
+export type { CoberturaGlobal };
 
 type Props = {
   seguradora: string;
@@ -55,8 +35,6 @@ type Props = {
   onSalvo: (ajuste: AjusteSeguradora) => void;
 };
 
-const validoOuVazio = (v: string, opcoes: readonly string[]) => (opcoes.includes(v) ? v : "");
-
 export function PersonalizarSeguradoraModal({
   seguradora,
   plano,
@@ -67,26 +45,15 @@ export function PersonalizarSeguradoraModal({
   onSalvo,
 }: Props) {
   const salvar = useSalvarAjusteSeguradora(cotacaoId);
-  const [valores, setValores] = useState<Record<Campo, string>>(
-    () =>
-      Object.fromEntries(
-        CAMPOS.map((c) => [c.k, validoOuVazio(guardado?.[c.k] ?? global[c.k], c.opcoes)]),
-      ) as Record<Campo, string>,
+  const [valores, setValores] = useState<Record<Campo, string>>(() =>
+    valoresIniciais(global, guardado),
   );
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   async function aplicar() {
     setErro(null);
-    // Só vira ajuste o que difere do Passo 5 (ou já estava ajustado): o resto
-    // segue valendo o global e não sobrescreve nada no envio.
-    const entrada = Object.fromEntries(
-      CAMPOS.map((c) => {
-        const v = valores[c.k];
-        const igualGlobal = v === global[c.k] && !guardado?.[c.k];
-        return [c.k, v === "" || igualGlobal ? null : v];
-      }),
-    );
+    const entrada = entradaDoAjuste(valores, global, guardado);
     const r = ajusteSeguradoraSchema.safeParse(entrada);
     if (!r.success) {
       setErro(r.error.issues[0]?.message ?? "Ajuste inválido.");
@@ -124,23 +91,7 @@ export function PersonalizarSeguradoraModal({
               </div>
             </div>
           </div>
-          <div className="toggle toggle-sub u-mb-14">
-            {ABAS.map(([id, rotulo]) => {
-              const ativa = id === "cob";
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className={ativa ? "on" : ""}
-                  disabled={!ativa}
-                  title={ativa ? undefined : "Em breve"}
-                >
-                  {rotulo}
-                  {ativa ? "" : " (em breve)"}
-                </button>
-              );
-            })}
-          </div>
+          <AbasPersonalizacao className="u-mb-14" />
           <div className="wizard-grid cols-2">
             {CAMPOS.map((c) => (
               <div className="field-group" key={c.k}>
