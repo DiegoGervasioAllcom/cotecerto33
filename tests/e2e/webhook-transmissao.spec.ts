@@ -188,7 +188,7 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
 
       // Ações desabilitadas — dependem da integração que ainda não devolve
       // protocolo/documentos (nunca simular, V12.1.28).
-      await expect(acoes.getByRole("button", { name: "Documentos e envio" })).toBeDisabled();
+      await expect(acoes.getByRole("button", { name: "Preparando documento…" })).toBeDisabled();
       await expect(acoes.getByRole("button", { name: "Consultar protocolo" })).toBeDisabled();
 
       // Campos que a integração futura preenche continuam "—" hoje.
