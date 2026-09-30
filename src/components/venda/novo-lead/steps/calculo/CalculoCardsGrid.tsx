@@ -13,6 +13,8 @@ import {
 } from "@/components/venda/cotacoes/quiver-resultado";
 import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicional";
 import { SegAcoes } from "./SegAcoes";
+import { SeloPersonalizada } from "./SeloPersonalizada";
+import type { CoberturaGlobal } from "./PersonalizarSeguradoraModal";
 import type { EscolhaCard } from "./types";
 import { CardSeguradoraSemRetorno, FaixasSemRetorno } from "./SemRetornoBlocos";
 
@@ -28,6 +30,7 @@ type Props = {
   infoDescontoFor: (r: ResultadoCalculo) => DescontoInfo;
   onAbrirDesconto: (r: ResultadoCalculo) => void;
   onRecalcularSeguradora: (r: ResultadoCalculo) => Promise<void>;
+  coberturaGlobal: CoberturaGlobal;
 };
 
 export function CalculoCardsGrid({
@@ -41,6 +44,7 @@ export function CalculoCardsGrid({
   infoDescontoFor,
   onAbrirDesconto,
   onRecalcularSeguradora,
+  coberturaGlobal,
 }: Props) {
   return (
     <div className="calc-grid">
@@ -62,6 +66,7 @@ export function CalculoCardsGrid({
               </div>
               <span className="chip chip-slate">{tituloResultado(r)}</span>
               {r.secao && <span className="chip chip-slate">{r.secao}</span>}
+              <SeloPersonalizada cotacaoId={cotacaoId} seguradora={r.seguradora} />
             </div>
             <div className="calc-tiers">
               {opcoesExibidas.map((o, opcaoIndex) => (
@@ -147,6 +152,7 @@ export function CalculoCardsGrid({
                   .filter((outro) => outro.cardId !== r.cardId)
                   .map((outro) => outro.seguradora)}
                 onRecalcular={() => onRecalcularSeguradora(r)}
+                coberturaGlobal={coberturaGlobal}
               />
               <button
                 className="ic-btn ok"

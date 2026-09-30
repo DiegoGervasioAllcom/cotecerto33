@@ -1623,6 +1623,32 @@ export async function marcarCalculoVistoE2E(cotacaoId: string): Promise<void> {
   if (error) throw new Error(`marcar calculo_visto_em: ${error.message}`);
 }
 
+/** Preenche os campos exigidos pelo gate do Recalcular geral (`podeCalcular`). */
+export async function preencherCamposCalculoE2E(cotacaoId: string): Promise<void> {
+  const seg = await admin.from("cotacao_segurado").upsert({
+    cotacao_id: cotacaoId,
+    cpf_cnpj: "529.982.247-25",
+    nome: "Cliente Personalizar E2E",
+    sexo: "Masculino",
+    estado_civil: "Solteiro",
+    email: "cliente-perso@teste.local",
+    cep: "01310-100",
+    celular: "(11) 99999-9999",
+  });
+  if (seg.error) throw new Error(`preencher segurado: ${seg.error.message}`);
+  const vei = await admin.from("cotacao_veiculo").upsert({
+    cotacao_id: cotacaoId,
+    placa: "ABC1D23",
+    cep_circulacao: "01310-100",
+    km_mensal: "1000",
+  });
+  if (vei.error) throw new Error(`preencher veículo: ${vei.error.message}`);
+  const per = await admin
+    .from("cotacao_perfil")
+    .upsert({ cotacao_id: cotacaoId, cep_pernoite: "01310-100" });
+  if (per.error) throw new Error(`preencher perfil: ${per.error.message}`);
+}
+
 /** Remove os dados criados por `criarCotacaoQuiverFixture` (best-effort; `db reset` também resolve). */
 export async function limparCotacaoQuiverFixture(f: CotacaoQuiverFixture): Promise<void> {
   await admin.from("cotacoes").delete().eq("id", f.cotacaoId);
@@ -2483,4 +2509,21 @@ export async function listarImpressoesE2E(cotacaoId: string) {
     .order("criado_em");
   if (error) throw new Error(`listar impressões: ${error.message}`);
   return data ?? [];
+}
+
+/** Ajustes por seguradora gravados na cotação (V12.3.7), por seguradora. */
+export async function lerAjustesSeguradoraE2E(cotacaoId: string) {
+  const { data, error } = await admin
+    .from("cotacao_seguradora_ajustes")
+    .select("seguradora,franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva")
+    .eq("cotacao_id", cotacaoId)
+    .order("seguradora");
+  if (error) throw new Error(`ler ajustes: ${error.message}`);
+  return data ?? [];
+}
+
+/** Marca a cotação como já virada em proposta (o RPC de ajuste passa a recusar, 22023). */
+export async function virarPropostaE2E(cotacaoId: string): Promise<void> {
+  const { error } = await admin.from("cotacoes").update({ status: "proposta" }).eq("id", cotacaoId);
+  if (error) throw new Error(`virar proposta: ${error.message}`);
 }

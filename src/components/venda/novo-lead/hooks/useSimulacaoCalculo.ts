@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ajustesKey } from "./useAjustesSeguradora";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarCotacaoQuiver } from "@/lib/quiver.functions";
 import type { Form } from "../types";
@@ -28,6 +30,7 @@ export function useSimulacaoCalculo(
   cotacaoId: string | null,
   persistirAntes: (overrides?: { seguradorasSel?: string[] }) => Promise<void>,
 ) {
+  const queryClient = useQueryClient();
   const [calculando, setCalculando] = useState(false);
   const [resultados, setResultados] = useState<ResultadoCalculo[]>([]);
   const [semRetorno, setSemRetorno] = useState<SemRetornoItem[]>([]);
@@ -106,7 +109,11 @@ export function useSimulacaoCalculo(
     }, POLL_MS);
   }
 
-  async function enviarECalcular(overrides?: { seguradorasSel?: string[] }) {
+  async function enviarECalcular(overrides?: {
+    seguradorasSel?: string[];
+    /** V12.3.7: recálculo de uma seguradora só — aplica o ajuste guardado dela. */
+    seguradoraAjuste?: string;
+  }) {
     if (!cotacaoId) {
       setErro("Salve os dados da cotação antes de calcular.");
       return;
@@ -115,17 +122,23 @@ export function useSimulacaoCalculo(
     setResultados([]);
     setSemRetorno([]);
     setCalculando(true);
-    await persistirAntes(overrides);
+    await persistirAntes(overrides ? { seguradorasSel: overrides.seguradorasSel } : undefined);
     const { data: sess } = await supabase.auth.getSession();
     try {
       await enviarCotacaoQuiver({
-        data: { cotacaoId, caller_token: sess.session?.access_token ?? "" },
+        data: {
+          cotacaoId,
+          caller_token: sess.session?.access_token ?? "",
+          ...(overrides?.seguradoraAjuste ? { seguradoraAjuste: overrides.seguradoraAjuste } : {}),
+        },
       });
     } catch (e) {
       setCalculando(false);
       setErro(e instanceof Error ? e.message : "Falha ao enviar cotação para cálculo.");
       return;
     }
+    // o servidor marcou os ajustes como aplicados/não aplicados
+    void queryClient.invalidateQueries({ queryKey: ajustesKey(cotacaoId) });
     iniciarPolling(cotacaoId);
   }
 
@@ -139,7 +152,7 @@ export function useSimulacaoCalculo(
    * chamar isto (bloqueio quando algum não pode ser cancelado). Aqui só
    * força `seguradorasSel = [seguradora]` na persistência e reenvia. */
   async function recalcularSeguradora(seguradora: string) {
-    await enviarECalcular({ seguradorasSel: [seguradora] });
+    await enviarECalcular({ seguradorasSel: [seguradora], seguradoraAjuste: seguradora });
   }
 
   // R.9 (revisão form vs robô Quiver, 2026-08): o gate reflete os campos que

@@ -8,12 +8,14 @@ import {
   DESPESAS_EXTRAS_OPCOES,
   NIVEL_COBERTURA_OPCOES,
 } from "@/components/venda/novo-lead/enumsCoberturas";
+import { PersonalizarPorSeguradora } from "./coberturas/PersonalizarPorSeguradora";
 import type { Form } from "@/components/venda/novo-lead/types";
 
 type Props = {
   f: Form;
   up: <K extends keyof Form>(k: K, v: Form[K]) => void;
   erros: Record<string, string>;
+  cotacaoId: string | null;
 };
 
 const PLANO_ICONE: Record<(typeof PLANO_COBERTURA)[number], string> = {
@@ -94,7 +96,7 @@ const PLANO_PRESETS: Record<
   },
 };
 
-export function StepCoberturas({ f, up, erros }: Props) {
+export function StepCoberturas({ f, up, erros, cotacaoId }: Props) {
   return (
     <>
       <h2>Coberturas</h2>
@@ -338,6 +340,16 @@ export function StepCoberturas({ f, up, erros }: Props) {
           </div>
         </div>
       </div>
+      <PersonalizarPorSeguradora
+        cotacaoId={cotacaoId}
+        seguradoras={f.seguradorasSel}
+        global={{
+          franquia1: f.franquiaPrimeiraOpcao,
+          franquia2: f.franquiaSegundaOpcao,
+          vidros: f.vidros,
+          carroReserva: f.carroReserva,
+        }}
+      />
     </>
   );
 }

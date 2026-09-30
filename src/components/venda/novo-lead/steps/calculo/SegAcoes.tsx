@@ -13,6 +13,10 @@ import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSim
 import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicional";
 import { temMensagensRetorno } from "@/components/venda/cotacoes/quiver-resultado";
 import { AnaliseEnvioModal } from "./AnaliseEnvioModal";
+import { PersonalizarSeguradoraModal, type CoberturaGlobal } from "./PersonalizarSeguradoraModal";
+import { resumoAjuste } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
+import { useAjustesSeguradora } from "@/components/venda/novo-lead/hooks/useAjustesSeguradora";
+import { tituloResultado } from "@/components/venda/cotacoes/quiver-resultado";
 import { MensagensRetornoModal } from "./MensagensRetornoModal";
 
 type Props = {
@@ -25,6 +29,8 @@ type Props = {
    * N seguradoras"). */
   outrasSeguradoras: string[];
   onRecalcular: () => Promise<void>;
+  /** Coberturas do Passo 5 — valor inicial do "Personalizar coberturas". */
+  coberturaGlobal: CoberturaGlobal;
 };
 
 export function SegAcoes({
@@ -34,6 +40,7 @@ export function SegAcoes({
   onAbrirDesconto,
   outrasSeguradoras,
   onRecalcular,
+  coberturaGlobal,
 }: Props) {
   const [menuAberto, setMenuAberto] = useState(false);
   const [analiseAberta, setAnaliseAberta] = useState(false);
@@ -41,6 +48,10 @@ export function SegAcoes({
   const temMensagens = temMensagensRetorno(resultado);
   const [confirmarRecalculo, setConfirmarRecalculo] = useState(false);
   const [recalculando, setRecalculando] = useState(false);
+  const [personalizarAberto, setPersonalizarAberto] = useState(false);
+  // Resumo do ajuste recém-salvo: a confirmação do recálculo passa a citá-lo.
+  const [resumoConfirmacao, setResumoConfirmacao] = useState<string | null>(null);
+  const guardado = useAjustesSeguradora(cotacaoId)[resultado.seguradora];
 
   const descontoDisabledTitle = !info.disponivel
     ? (info.indisponivelMotivo ?? "Indisponível")
@@ -50,13 +61,19 @@ export function SegAcoes({
   const descontoDisabled = !info.disponivel || info.emAndamento;
 
   const n = outrasSeguradoras.length;
+  const comAjuste = resumoConfirmacao ? ` com as coberturas ajustadas: ${resumoConfirmacao}` : "";
   const mensagemConfirmacao =
     n > 0
-      ? `Recalcular só a ${resultado.seguradora} descarta as ofertas das outras ${n} seguradora${n === 1 ? "" : "s"} desta cotação. Continuar?`
-      : `Recalcular a ${resultado.seguradora}?`;
+      ? `Recalcular só a ${resultado.seguradora}${comAjuste} descarta as ofertas das outras ${n} seguradora${n === 1 ? "" : "s"} desta cotação. Continuar?`
+      : `Recalcular a ${resultado.seguradora}${comAjuste}?`;
+
+  function fecharConfirmacao() {
+    setConfirmarRecalculo(false);
+    setResumoConfirmacao(null);
+  }
 
   async function confirmarERecalcular() {
-    setConfirmarRecalculo(false);
+    fecharConfirmacao();
     if (!cotacaoId || recalculando) return;
     setRecalculando(true);
     try {
@@ -108,7 +125,7 @@ export function SegAcoes({
       <button
         type="button"
         className="ic-btn"
-        title="Opções: análise do envio"
+        title="Opções: análise do envio e personalização"
         onClick={() => setMenuAberto(true)}
       >
         <svg width="15" height="15">
@@ -120,7 +137,10 @@ export function SegAcoes({
         className="ic-btn"
         title="Recalcular só esta seguradora"
         disabled={!cotacaoId || recalculando}
-        onClick={() => setConfirmarRecalculo(true)}
+        onClick={() => {
+          setResumoConfirmacao(guardado ? resumoAjuste(guardado) || null : null);
+          setConfirmarRecalculo(true);
+        }}
       >
         <svg width="15" height="15">
           <use href="#i-refresh" />
@@ -164,6 +184,28 @@ export function SegAcoes({
                     <use href="#i-chevron-right" />
                   </svg>
                 </button>
+                <button
+                  type="button"
+                  className="op-item"
+                  disabled={!cotacaoId}
+                  onClick={() => {
+                    setMenuAberto(false);
+                    setPersonalizarAberto(true);
+                  }}
+                >
+                  <span className="op-ic">
+                    <svg width="17" height="17">
+                      <use href="#i-settings" />
+                    </svg>
+                  </span>
+                  <span className="op-tx">
+                    <strong>Personalizar coberturas</strong>
+                    <small>Ajustar e recalcular só esta cia, sem sair do comparativo</small>
+                  </span>
+                  <svg width="14" height="14">
+                    <use href="#i-chevron-right" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>,
@@ -191,26 +233,40 @@ export function SegAcoes({
           document.body,
         )}
 
+      {personalizarAberto &&
+        createPortal(
+          <PersonalizarSeguradoraModal
+            seguradora={resultado.seguradora}
+            plano={tituloResultado(resultado)}
+            cotacaoId={cotacaoId}
+            global={coberturaGlobal}
+            guardado={guardado}
+            onClose={() => setPersonalizarAberto(false)}
+            onSalvo={(ajuste) => {
+              setPersonalizarAberto(false);
+              setResumoConfirmacao(resumoAjuste(ajuste));
+              setConfirmarRecalculo(true);
+            }}
+          />,
+          document.body,
+        )}
+
       {confirmarRecalculo &&
         createPortal(
-          <div className="modal-host" onClick={() => setConfirmarRecalculo(false)}>
+          <div className="modal-host" onClick={() => fecharConfirmacao()}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-h">
                 <svg width="18" height="18">
                   <use href="#i-refresh" />
                 </svg>
                 <h3>Recalcular — {resultado.seguradora}</h3>
-                <div className="x" onClick={() => setConfirmarRecalculo(false)}>
+                <div className="x" onClick={() => fecharConfirmacao()}>
                   ×
                 </div>
               </div>
               <div className="modal-b">{mensagemConfirmacao}</div>
               <div className="modal-f">
-                <button
-                  className="btn btn-ghost"
-                  type="button"
-                  onClick={() => setConfirmarRecalculo(false)}
-                >
+                <button className="btn btn-ghost" type="button" onClick={() => fecharConfirmacao()}>
                   Cancelar
                 </button>
                 <button

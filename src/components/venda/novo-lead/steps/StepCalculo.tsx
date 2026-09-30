@@ -80,6 +80,12 @@ export function StepCalculo({
   // para clicar na célula certa do modal do portal. Compartilhada entre a
   // lista comparativa e o grid de cartões (só uma visão fica visível por
   // vez, mas a escolha do vendedor não deve se perder ao trocar).
+  const coberturaGlobal = {
+    franquia1: f.franquiaPrimeiraOpcao,
+    franquia2: f.franquiaSegundaOpcao,
+    vidros: f.vidros,
+    carroReserva: f.carroReserva,
+  };
   const [escolhas, setEscolhas] = useState<Record<string, EscolhaCard>>({});
   const [erroSelecao, setErroSelecao] = useState<string | null>(null);
   const [calcView, setCalcView] = useState<CalcView>("lista");
@@ -311,6 +317,7 @@ export function StepCalculo({
               infoDescontoFor={infoDescontoFor}
               onAbrirDesconto={onAbrirDesconto}
               onRecalcularSeguradora={(r) => onRecalcularSeguradora(r)}
+              coberturaGlobal={coberturaGlobal}
             />
           ) : (
             <CalculoCardsGrid
@@ -324,6 +331,7 @@ export function StepCalculo({
               infoDescontoFor={infoDescontoFor}
               onAbrirDesconto={onAbrirDesconto}
               onRecalcularSeguradora={(r) => onRecalcularSeguradora(r)}
+              coberturaGlobal={coberturaGlobal}
             />
           )}
         </>

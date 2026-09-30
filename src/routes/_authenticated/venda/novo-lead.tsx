@@ -622,7 +622,9 @@ function Page() {
 
           {visibleStep === 3 && <StepPerfil f={f} up={up} erros={erros} />}
 
-          {visibleStep === 4 && <StepCoberturas f={f} up={up} erros={erros} />}
+          {visibleStep === 4 && (
+            <StepCoberturas f={f} up={up} erros={erros} cotacaoId={cotacaoId} />
+          )}
 
           {visibleStep === 5 && (
             <StepCalculo

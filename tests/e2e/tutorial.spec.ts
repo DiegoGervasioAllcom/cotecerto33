@@ -235,7 +235,7 @@ test.describe("roteiro de vendas", () => {
     const mutations = await monitorSupabaseMutations(page);
 
     await posicionarTutorial(page, vendedor.userId, "sales", 2, 0);
-    let dialog = await esperarPasso(page, "A trilha inteira, sempre à vista", "1 / 11");
+    let dialog = await esperarPasso(page, "A trilha inteira, sempre à vista", "1 / 12");
     await expect(page).toHaveURL(/\/venda\/novo-lead$/);
     await expectSpotlightAround(page, page.locator(".stepper"));
 
@@ -243,25 +243,41 @@ test.describe("roteiro de vendas", () => {
     dialog = await esperarPasso(
       page,
       "Registros & agendamentos — a memória do atendimento",
-      "2 / 11",
+      "2 / 12",
     );
     const historico = page.getByRole("button", { name: "Histórico", exact: true });
     await expect(historico).toHaveAttribute("data-tour", "lead-historico");
     await expectSpotlightAround(page, historico);
 
     await dialog.getByRole("button", { name: "Próximo" }).click();
-    dialog = await esperarPasso(page, "Etapa 1 — comece pelo CPF", "3 / 11");
+    dialog = await esperarPasso(page, "Etapa 1 — comece pelo CPF", "3 / 12");
     await expectSpotlightAround(
       page,
       page.locator('.wizard-grid input[placeholder="000.000.000-00"]'),
     );
 
     await dialog.getByRole("button", { name: "Próximo" }).click();
-    dialog = await esperarPasso(page, "O CEP muda o preço", "4 / 11");
+    dialog = await esperarPasso(page, "O CEP muda o preço", "4 / 12");
     await expectSpotlightAround(page, page.locator('.wizard-grid input[placeholder="00000-000"]'));
 
     await page.waitForTimeout(1_700);
     expect(mutations, "o capítulo 3 não pode persistir rascunho nem chamar RPC").toEqual([]);
+    await dialog.getByRole("button", { name: "Sair", exact: true }).click();
+  });
+
+  test("passo 'E depois personalize por seguradora' destaca .seg-perso no preview de Coberturas, sem escrita", async ({
+    page,
+  }) => {
+    await loginAs(page, vendedor.email, vendedor.senha);
+    await expect(page).not.toHaveURL(/\/auth/, { timeout: 15_000 });
+    const mutations = await monitorSupabaseMutations(page);
+
+    await posicionarTutorial(page, vendedor.userId, "sales", 2, 10);
+    const dialog = await esperarPasso(page, "E depois personalize por seguradora", "11 / 12");
+    await expectSpotlightAround(page, page.locator(".seg-perso"));
+
+    await page.waitForTimeout(1_700);
+    expect(mutations, "o preview de Coberturas não pode gravar nem chamar RPC").toEqual([]);
     await dialog.getByRole("button", { name: "Sair", exact: true }).click();
   });
 });
@@ -482,49 +498,55 @@ const CAP2_AGENDA: PassoEsperado[] = [
 const CAP4_CALCULO: PassoEsperado[] = [
   {
     title: "A barra de contexto",
-    progress: "1 / 8",
+    progress: "1 / 9",
     route: /\/venda\/novo-lead$/,
     target: ".calc-ctx",
   },
   {
     title: "A lista comparativa é a visão de venda",
-    progress: "2 / 8",
+    progress: "2 / 9",
     route: /\/venda\/novo-lead$/,
     target: ".calc-lista",
   },
   {
     title: "Ver as seguradoras que não couberam na tela",
-    progress: "3 / 8",
+    progress: "3 / 9",
     route: /\/venda\/novo-lead$/,
     target: ".cl-nav",
   },
   {
     title: "Filtrar por tipo de cobertura",
-    progress: "4 / 8",
+    progress: "4 / 9",
     route: /\/venda\/novo-lead$/,
     target: ".cob-filtro",
   },
   {
     title: "As cinco ferramentas de cada seguradora",
-    progress: "5 / 8",
+    progress: "5 / 9",
+    route: /\/venda\/novo-lead$/,
+    target: ".seg-acoes",
+  },
+  {
+    title: "Personalizar uma seguradora sem sair daqui",
+    progress: "6 / 9",
     route: /\/venda\/novo-lead$/,
     target: ".seg-acoes",
   },
   {
     title: "Lista ou cards",
-    progress: "6 / 8",
+    progress: "7 / 9",
     route: /\/venda\/novo-lead$/,
     target: ".calc-toolset",
   },
   {
     title: "Desconto: até onde você vai sozinho",
-    progress: "7 / 8",
+    progress: "8 / 9",
     route: /\/venda\/novo-lead$/,
     target: ".seg-acoes",
   },
   {
     title: "Imprimir e mandar para o cliente",
-    progress: "8 / 8",
+    progress: "9 / 9",
     route: /\/venda\/novo-lead$/,
     target: ".calc-bar-r",
   },
@@ -821,13 +843,13 @@ test.describe("tour completo V12.3.10 (vendedor)", () => {
     // Cap.3 ("A jornada em 7 etapas") depende do wizard real com um rascunho
     // em cada etapa — coberto separadamente pelo teste "previews do Novo
     // lead..." acima. Aqui só confirmamos que o capítulo abre e navega para
-    // o Lead Manual, sem percorrer os 11 passos (evita duplicar fixture).
+    // o Lead Manual, sem percorrer os 12 passos (evita duplicar fixture).
     await page.locator(".tour-end").getByRole("button", { name: "Próximo capítulo" }).click();
     dialog = page.locator(".tour-tip");
     await expect(
       dialog.getByRole("heading", { name: "A trilha inteira, sempre à vista" }),
     ).toBeVisible();
-    await expect(dialog.locator(".progress")).toHaveText("1 / 11");
+    await expect(dialog.locator(".progress")).toHaveText("1 / 12");
     await expect(page).toHaveURL(/\/venda\/novo-lead$/);
     const capitulo3Alvo = await trySpotlightAround(page, ".stepper");
     if (!capitulo3Alvo)
