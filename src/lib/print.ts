@@ -366,13 +366,14 @@ export function buildCotacaoDoc(
 
   const cabecalho = config.tipo === "detalhada" ? detalhadaHtml(dados) : resumidaHtml(dados);
   const comissao = interno
-    ? `<div class="doc-sec">Comissão</div><div class="doc-bloco">${docLinha(
+    ? // A grade `.doc-bloco` tem 3 colunas; a linha ocupa 2 para o rótulo não quebrar.
+      `<div class="doc-sec">Comissão</div><div class="doc-bloco"><div style="grid-column:1 / span 2">${docLinha(
         "Comissão da corretora",
         `${opcoes.pctComissao.toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}%`,
-      )}</div>`
+      )}</div></div>`
     : "";
 
   const coberturaLabels = [
