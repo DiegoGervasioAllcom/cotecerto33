@@ -458,7 +458,7 @@ export const salesTutorialChapters = [
         target: ".acc-pills",
         pos: "right",
         title: "Os documentos originais",
-        body: "<p>Aqui ficam os atalhos para os documentos desta proposta: <strong>Documentos e envio (em breve)</strong> e <strong>Consultar protocolo (em breve)</strong>. Quando prontos, você vai poder visualizar os arquivos que a seguradora devolveu — a proposta original, o boleto — e <strong>encaminhar direto ao cliente</strong>.</p>",
+        body: "<p>Aqui ficam os atalhos desta proposta: <strong>Proposta (PDF)</strong> e <strong>Consultar protocolo (em breve)</strong>. O PDF chega sozinho alguns minutos depois da transmissão; enquanto isso o botão mostra <em>Preparando documento…</em>. Para enviar ao cliente, use o <strong>seu WhatsApp</strong> — o CoteCerto não reenvia o arquivo.</p>",
         prepare: "lead-transmitida",
       },
       {
@@ -499,7 +499,7 @@ export const salesTutorialChapters = [
         target: ".table-pipe",
         pos: "top",
         title: "Documentos e consulta de status",
-        body: '<p><strong>Documentos (em breve)</strong> abre os arquivos originais da proposta, para reenviar ao cliente quando ele pedir. <strong>Consultar (em breve)</strong> pergunta o status atual à seguradora pelo protocolo — é o que responde "saiu ou não saiu" sem telefonema.</p>',
+        body: '<p><strong>Proposta (PDF)</strong> abre o PDF original da proposta, que chega sozinho depois da transmissão; para reenviar ao cliente, use o seu WhatsApp. Se aparecer <em>Documento indisponível</em>, o responsável pela cotação ou a Matriz pode usar <strong>Tentar de novo</strong>. <strong>Consultar (em breve)</strong> pergunta o status atual à seguradora pelo protocolo — é o que responde "saiu ou não saiu" sem telefonema.</p>',
       },
     ],
     outro: { hook: '"Ciclo completo. Vamos ao painel onde tudo isso aparece junto."' },

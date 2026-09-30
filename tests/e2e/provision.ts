@@ -2548,3 +2548,47 @@ export async function virarPropostaE2E(cotacaoId: string): Promise<void> {
   const { error } = await admin.from("cotacoes").update({ status: "proposta" }).eq("id", cotacaoId);
   if (error) throw new Error(`virar proposta: ${error.message}`);
 }
+
+/**
+ * Documento PDF da proposta já capturado (V12.4.7): sobe um PDF mínimo no
+ * bucket privado `propostas-docs` e grava a linha `status = ok`.
+ * Retorna o storage_path para a limpeza.
+ */
+export async function criarDocumentoPropostaOk(cotacaoId: string): Promise<string> {
+  const { data: prop, error: eProp } = await admin
+    .from("propostas")
+    .select("id, empresa_id")
+    .eq("cotacao_id", cotacaoId)
+    .maybeSingle();
+  if (eProp || !prop) throw new Error(`proposta da cotação E2E: ${eProp?.message}`);
+
+  const corpo = "%PDF-1.4\n" + "% e2e documento da proposta\n".repeat(60) + "%%EOF\n";
+  const bytes = new TextEncoder().encode(corpo);
+  const path = `${prop.empresa_id}/${prop.id}/proposta-e2e.pdf`;
+  const { error: eUp } = await admin.storage
+    .from("propostas-docs")
+    .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+  if (eUp) throw new Error(`upload PDF E2E: ${eUp.message}`);
+
+  const { error: eDoc } = await admin.from("proposta_documentos").upsert(
+    {
+      proposta_id: prop.id,
+      empresa_id: prop.empresa_id,
+      tipo: "proposta_pdf",
+      status: "ok",
+      storage_path: path,
+      nome: "proposta-e2e.pdf",
+      tamanho_bytes: bytes.length,
+      sha256: "a".repeat(64),
+      capturado_em: new Date().toISOString(),
+      tentado_em: new Date().toISOString(),
+    },
+    { onConflict: "proposta_id,tipo" },
+  );
+  if (eDoc) throw new Error(`linha proposta_documentos E2E: ${eDoc.message}`);
+  return path;
+}
+
+export async function limparDocumentoPropostaOk(path: string): Promise<void> {
+  await admin.storage.from("propostas-docs").remove([path]);
+}
