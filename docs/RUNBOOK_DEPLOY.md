@@ -555,6 +555,38 @@ produtos HDI não pedidos ("Falha no acionamento de cálculo, necessário
 calculo da HDI") — conferir no log do robô de produção as linhas de
 "desmarc" da seleção de seguradoras.
 
+**29/09/2026 (2ª rodada do dia) — Impressão com comissão (fatia B) e tutorial
+(PRs #245, #247, #248):** duas migrations aplicadas pelo usuário com o roteiro
+em psql (cada uma numa transação, com o `insert` em `schema_migrations`),
+ensaiado antes do zero no banco local num bloco desfeito com `rollback`:
+`20260929050000_v12_impressao_registro` (tabela `cotacao_impressoes`,
+imutável, sem FK para a cotação, e `rpc_registrar_impressao`) e
+`20260929050100_v12_impressao_rpc_comissao` (`rpc_comissao_para_impressao`).
+Sem `pg_dump`: as duas só criam objetos novos. Conferência esperada e
+confirmada: as duas versões no histórico, a tabela criada, as duas funções e
+`fn_pct_comissao_efetivo` ainda **sem** EXECUTE para `authenticated`. Imagem do
+app publicada pelo usuário via `deploy.sh` (o merge do #248 é `d98096f`, tag
+informada como já publicada; ele inclui o #245, a correção da coluna "HDI sem retorno" duplicada, e o #247, o
+passo do filtro de cobertura no tutorial).
+
+Smoke test pelo navegador (vendedor real, COT-2026-00107, sem gravar nada):
+com a Matriz **sem** percentual, "Imprimir comissão" aparece desabilitado com
+"% de comissão não cadastrado" (a função devolve NULL em vez do 16 de reserva).
+Depois de cadastrar `perc_comissao = 16` na Matriz (mesmo valor que o motor já
+usa como reserva, então nenhuma comissão muda) o checkbox habilita, a
+pré-visualização vira o documento interno (faixa "USO INTERNO — NÃO ENVIAR AO
+CLIENTE" e "Comissão da corretora 16,00%") e E-mail, SMS, WhatsApp e Gerar link
+ficam desabilitados com o aviso. Depois do teste o usuário desfez o cadastro
+(`perc_comissao = null`): a Matriz voltou a ficar sem percentual, como antes.
+"Baixar PDF" não foi acionado em produção (grava uma linha de auditoria
+imutável); a gravação e o caso de falha estão cobertos pelos testes
+automáticos.
+
+Achado: hoje as propostas da Matriz são comissionadas pelo 16% de reserva — a
+Matriz não tem `perc_comissao` nem modelo. O percentual não tem tela no app: é
+`empresas.perc_comissao` (por empresa) ou `modelos_franquia.perc_comissao_padrao`
+(por modelo; modelos criados pela tela nascem com 0%) e só se altera pelo banco.
+
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
