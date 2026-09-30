@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { agruparPorCanonico, nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { supabase } from "@/integrations/supabase/client";
 import type { AjusteSeguradora } from "../ajusteSeguradora.schema";
 
@@ -14,7 +15,7 @@ export type AjusteGuardado = {
 
 export const ajustesKey = (cotacaoId: string | null) => ["ajustes-seguradora", cotacaoId] as const;
 
-/** Ajustes por seguradora da cotação (V12.3.7), por seguradora. A RLS escopa. */
+/** Ajustes por seguradora da cotação (V12.3.7), chaveado pelo nome canônico (`nomeCanonicoSeguradora`). A RLS escopa. */
 export function useAjustesSeguradora(cotacaoId: string | null) {
   const q = useQuery({
     queryKey: ajustesKey(cotacaoId),
@@ -27,18 +28,17 @@ export function useAjustesSeguradora(cotacaoId: string | null) {
         )
         .eq("cotacao_id", cotacaoId ?? "");
       if (error) throw new Error(error.message);
-      return Object.fromEntries(
-        (data ?? []).map((r) => [
-          r.seguradora,
-          {
+      return agruparPorCanonico(
+        (data ?? []).map(
+          (r): AjusteGuardado => ({
             seguradora: r.seguradora,
             franquia1: r.franquia_primeira_opcao,
             franquia2: r.franquia_segunda_opcao,
             vidros: r.vidros,
             carroReserva: r.carro_reserva,
             aplicadoEm: r.aplicado_em,
-          },
-        ]),
+          }),
+        ),
       );
     },
   });
@@ -62,7 +62,7 @@ export function useSalvarAjusteSeguradora(cotacaoId: string | null) {
     if (!cotacaoId) return { ok: false, erro: "Salve a cotação antes de personalizar." };
     const { error } = await supabase.rpc("salvar_ajuste_seguradora", {
       p_cotacao_id: cotacaoId,
-      p_seguradora: seguradora,
+      p_seguradora: nomeCanonicoSeguradora(seguradora),
       // O gerador tipa os parâmetros como `string`, mas a função aceita null
       // (campo não ajustado).
       p_franquia_1: a.franquia1 as string,

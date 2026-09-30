@@ -2522,6 +2522,27 @@ export async function lerAjustesSeguradoraE2E(cotacaoId: string) {
   return data ?? [];
 }
 
+/** Grava um ajuste por seguradora direto no banco (admin), com a chave EXATA informada. */
+export async function gravarAjusteSeguradoraE2E(
+  cotacaoId: string,
+  seguradora: string,
+  franquia1: string,
+): Promise<void> {
+  const { data: cot, error: e1 } = await admin
+    .from("cotacoes")
+    .select("empresa_id")
+    .eq("id", cotacaoId)
+    .single();
+  if (e1) throw new Error(`ler cotação: ${e1.message}`);
+  const { error } = await admin.from("cotacao_seguradora_ajustes").insert({
+    cotacao_id: cotacaoId,
+    empresa_id: cot.empresa_id,
+    seguradora,
+    franquia_primeira_opcao: franquia1,
+  });
+  if (error) throw new Error(`gravar ajuste: ${error.message}`);
+}
+
 /** Marca a cotação como já virada em proposta (o RPC de ajuste passa a recusar, 22023). */
 export async function virarPropostaE2E(cotacaoId: string): Promise<void> {
   const { error } = await admin.from("cotacoes").update({ status: "proposta" }).eq("id", cotacaoId);
