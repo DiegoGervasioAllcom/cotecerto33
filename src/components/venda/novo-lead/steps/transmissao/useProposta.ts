@@ -21,6 +21,7 @@ export type PropostaCompleta = {
   cotacao_id: string | null;
   cotacoes: {
     numero: number | null;
+    responsavel_id: string | null;
     // 1:1 (`cotacao_id` é PK) — o PostgREST devolve objeto, não array.
     segurado: { nome: string | null } | null;
   } | null;
@@ -44,7 +45,7 @@ export function useProposta(propostaId: string | null) {
           "id,numero,protocolo_seguradora,orcamento_cia,apolice_numero,seguradora,premio,valor," +
             "parcelas,valor_parcela,forma_pagamento,vigencia_inicio,vigencia_fim,vigencia_aceita," +
             "transmitida_em,transmissao_status,cotacao_id," +
-            "cotacoes(numero,segurado:cotacao_segurado(nome))",
+            "cotacoes(numero,responsavel_id,segurado:cotacao_segurado(nome))",
         )
         .eq("id", propostaId as string)
         .single();

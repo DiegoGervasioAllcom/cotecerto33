@@ -21,6 +21,8 @@ export type Fase = "dados" | "confirmacao" | "pagamento" | "resultado";
 
 type Props = {
   f: Form;
+  // Valor FIPE da tabela (estado de `useFipe`, fora do `Form`) — só exibição.
+  fipeValor?: string;
   oferta: OfertaTransmissao;
   enviando: boolean;
   erroEnvio: string | null;
@@ -42,6 +44,7 @@ type Props = {
 
 export function StepTransmissao({
   f,
+  fipeValor,
   oferta,
   enviando,
   erroEnvio,
@@ -131,6 +134,8 @@ export function StepTransmissao({
       <TransmissaoConfirmacao
         f={f}
         resultado={oferta.resultado}
+        dados={dadosComplementares}
+        fipeValor={fipeValor}
         formaPagamento={oferta.formaPagamento}
         parcelas={oferta.parcelas}
         premio={oferta.premio}

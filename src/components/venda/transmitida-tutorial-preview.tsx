@@ -96,7 +96,7 @@ export function TransmitidaTutorialPreview() {
             <svg width={13} height={13}>
               <use href="#i-file" />
             </svg>{" "}
-            Documentos e envio (em breve)
+            Proposta (PDF)
           </button>
           <button type="button" className="acc-pill" disabled title={AVISO_EM_BREVE}>
             <svg width={13} height={13}>

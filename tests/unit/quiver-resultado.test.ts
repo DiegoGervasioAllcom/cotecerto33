@@ -714,14 +714,25 @@ describe("semRetorno e mensagensRetorno (V12.4.2/V12.4.5)", () => {
   });
 });
 
-describe("faixaDivergenteDaCelula", () => {
-  it("devolve a faixa própria só quando difere do rótulo da linha", async () => {
-    const { faixaDivergenteDaCelula } =
+describe("agruparParcelamento", () => {
+  it("rotula À vista / N parcelas e agrupa por faixa em ordem crescente", async () => {
+    const { agruparParcelamento, rotuloParcelamento, parcelaSemJuros } =
       await import("@/components/venda/cotacoes/quiver-resultado");
-    expect(faixaDivergenteDaCelula("Sem Franquia", "Reduzida 75%")).toBe("Reduzida 75%");
-    expect(faixaDivergenteDaCelula("Normal 100%", "normal 100%")).toBeNull();
-    expect(faixaDivergenteDaCelula("Reduzida", "  REDUZIDA ")).toBeNull();
-    expect(faixaDivergenteDaCelula("Normal", "")).toBeNull();
-    expect(faixaDivergenteDaCelula("Normal", undefined)).toBeNull();
+    expect(rotuloParcelamento({ parcelas: "à vista R$ 10", avista: "" }).rotulo).toBe("À vista");
+    expect(rotuloParcelamento({ parcelas: "3x sem juros de R$ 5" }).rotulo).toBe("3 parcelas");
+    expect(parcelaSemJuros({ parcelas: "3x sem juros de R$ 5" })).toBe(true);
+    const blocos = agruparParcelamento([
+      [
+        { tipo: "normal 100%", parcelas: "12x de R$ 1" },
+        { tipo: "normal 100%", parcelas: "à vista R$ 9" },
+        { tipo: "reduzida 50%", parcelas: "2x de R$ 4" },
+      ],
+      [{ tipo: "Normal 100%", parcelas: "12x de R$ 2" }],
+    ]);
+    expect(blocos.map((b) => b.faixa)).toEqual(["normal 100%", "reduzida 50%"]);
+    expect(blocos[0].linhas.map((l) => l.rotulo)).toEqual(["À vista", "12 parcelas"]);
+    expect(blocos[0].linhas[1].opcoes[1]?.parcelas).toBe("12x de R$ 2");
+    expect(blocos[0].linhas[0].opcoes[1]).toBeUndefined();
+    expect(blocos[1].linhas[0].opcoes[1]).toBeUndefined();
   });
 });

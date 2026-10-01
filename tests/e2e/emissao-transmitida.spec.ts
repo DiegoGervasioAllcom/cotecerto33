@@ -3,10 +3,12 @@ import { confirmarDadosComplementaresTransmissao, loginAs } from "./helpers";
 import {
   criarColegaComPropostaEmissao,
   criarCotacaoTransmissaoFixture,
+  criarDocumentoPropostaOk,
   criarTentativaTransmissaoEnviada,
   criarVendedorComPropostasEmissao,
   limparColegaComPropostaEmissao,
   limparCotacaoTransmissaoFixture,
+  limparDocumentoPropostaOk,
   limparVendedorComPropostasEmissao,
   QUIVER_TRANSMISSAO_WEBHOOK_HEADERS,
   QUIVER_WEBHOOK_HEADERS,
@@ -88,10 +90,10 @@ test.describe("Emissão & histórico — lista (V12.1.25 parcial)", () => {
     await expect(linhaTransmitida.getByText("Transmitida", { exact: true })).toBeVisible();
     await expect(linhaFalha.getByText("Pendência da seguradora")).toBeVisible();
 
-    // Ações desabilitadas — clicar não navega nem dispara request (sem
-    // integração ligada, nada de "Documentos"/"Consultar" funcional ainda).
+    // Sem PDF capturado ainda: "Preparando documento…" desabilitado (V12.4.7);
+    // "Consultar" (protocolo) segue sem integração.
     for (const linha of [linhaTransmitida, linhaFalha]) {
-      const docs = linha.getByRole("button", { name: "Documentos" });
+      const docs = linha.getByRole("button", { name: "Preparando documento…" });
       const consultar = linha.getByRole("button", { name: "Consultar" });
       await expect(docs).toBeDisabled();
       await expect(consultar).toBeDisabled();
@@ -103,9 +105,53 @@ test.describe("Emissão & histórico — lista (V12.1.25 parcial)", () => {
         requisicaoDisparada = true;
       }
     });
-    await linhaTransmitida.getByRole("button", { name: "Documentos" }).click({ force: true });
+    await linhaTransmitida.getByRole("button", { name: "Preparando documento…" }).click({
+      force: true,
+    });
     await expect(page).toHaveURL(/\/venda\/emissao/);
     expect(requisicaoDisparada).toBe(false);
+  });
+
+  test("documento capturado (status ok): 'Proposta (PDF)' habilita na linha e abre a URL assinada (V12.4.7)", async ({
+    page,
+  }) => {
+    const pdfPath = await criarDocumentoPropostaOk(vendedor.cotacaoTransmitidaId);
+    try {
+      await page.addInitScript(() => {
+        (window as unknown as { __abertos: string[] }).__abertos = [];
+        window.open = () =>
+          ({
+            opener: {} as unknown,
+            close: () => {},
+            location: {
+              set href(v: string) {
+                (window as unknown as { __abertos: string[] }).__abertos.push(String(v));
+              },
+            },
+          }) as unknown as Window;
+      });
+      await loginAs(page, vendedor.email, vendedor.senha);
+      await page.goto("/venda/emissao");
+      const linha = page.locator("tr").filter({ hasText: "PRP-E2E-EMISSAO-TRANSMITIDA" });
+      const botao = linha.getByRole("button", { name: "Proposta (PDF)" });
+      await expect(botao).toBeEnabled({ timeout: 20_000 });
+      // A outra proposta (sem documento) continua em "Preparando".
+      await expect(
+        page
+          .locator("tr")
+          .filter({ hasText: "PRP-E2E-EMISSAO-FALHA" })
+          .getByRole("button", { name: "Preparando documento…" }),
+      ).toBeDisabled();
+
+      await botao.click();
+      await expect
+        .poll(() =>
+          page.evaluate(() => (window as unknown as { __abertos: string[] }).__abertos[0] ?? ""),
+        )
+        .toMatch(/\/storage\/v1\/object\/sign\/propostas-docs\//);
+    } finally {
+      await limparDocumentoPropostaOk(pdfPath);
+    }
   });
 
   test("?foco=seguradora:<id> destaca e leva a rolagem até a proposta (V12.3.11)", async ({
@@ -240,7 +286,7 @@ test.describe("Sub-passo Transmitida do wizard (V12.1.13 parcial)", () => {
       await expect(linhaOrcamento.getByText("—")).toBeVisible();
 
       // Ações desabilitadas — clicar não navega nem dispara nada.
-      const botaoDocs = acoes.getByRole("button", { name: "Documentos e envio" });
+      const botaoDocs = acoes.getByRole("button", { name: "Preparando documento…" });
       const botaoConsultar = acoes.getByRole("button", { name: "Consultar protocolo" });
       await expect(botaoDocs).toBeDisabled();
       await expect(botaoConsultar).toBeDisabled();
@@ -259,6 +305,61 @@ test.describe("Sub-passo Transmitida do wizard (V12.1.13 parcial)", () => {
         .click();
       await expect(page).toHaveURL(/\/venda\/novo-lead/);
     } finally {
+      await limparCotacaoTransmissaoFixture(fixture);
+    }
+  });
+
+  test("documento capturado (status ok): 'Proposta (PDF)' fica habilitado e abre a URL assinada pela server function (V12.4.7)", async ({
+    page,
+  }) => {
+    const fixture = await prepararCotacaoCalculada(page);
+    let pdfPath: string | null = null;
+    try {
+      await gerarPropostaComTentativaReal(page, fixture);
+      const res = await page.request.post("/api/webhooks/quiver-transmissao", {
+        headers: QUIVER_TRANSMISSAO_WEBHOOK_HEADERS,
+        data: { cotacaoId: fixture.cotacaoId, transmitido: true, numeroCotacao: "N-E2E-DOC-1" },
+      });
+      expect(res.ok()).toBeTruthy();
+
+      pdfPath = await criarDocumentoPropostaOk(fixture.cotacaoId);
+
+      // Captura o window.open (a aba nova não é o foco do teste).
+      await page.addInitScript(() => {
+        (window as unknown as { __abertos: string[] }).__abertos = [];
+        // A aba é aberta em branco no clique e recebe a URL depois (evita bloqueio de pop-up).
+        window.open = () => {
+          const aba = {
+            opener: {} as unknown,
+            close: () => {},
+            location: {
+              set href(v: string) {
+                (window as unknown as { __abertos: string[] }).__abertos.push(String(v));
+              },
+            },
+          };
+          return aba as unknown as Window;
+        };
+      });
+      await page.reload();
+
+      const acoes = page.locator('[data-tour="transmitida-acoes"]');
+      const botao = acoes.getByRole("button", { name: "Proposta (PDF)" });
+      await expect(botao).toBeEnabled({ timeout: 20_000 });
+      await expect(acoes.getByRole("button", { name: "Preparando documento…" })).toHaveCount(0);
+
+      const chamada = page.waitForResponse(
+        (r) => r.url().includes("/_serverFn/") && r.request().method() === "POST",
+      );
+      await botao.click();
+      expect((await chamada).ok()).toBeTruthy();
+      await expect
+        .poll(() =>
+          page.evaluate(() => (window as unknown as { __abertos: string[] }).__abertos[0] ?? ""),
+        )
+        .toMatch(/\/storage\/v1\/object\/sign\/propostas-docs\//);
+    } finally {
+      if (pdfPath) await limparDocumentoPropostaOk(pdfPath);
       await limparCotacaoTransmissaoFixture(fixture);
     }
   });

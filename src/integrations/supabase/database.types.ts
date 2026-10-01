@@ -4216,6 +4216,68 @@ export type Database = {
           },
         ];
       };
+      proposta_documentos: {
+        Row: {
+          capturado_em: string | null;
+          created_at: string;
+          empresa_id: string;
+          erro_codigo: string | null;
+          id: string;
+          nome: string | null;
+          proposta_id: string;
+          sha256: string | null;
+          status: string;
+          storage_path: string | null;
+          tamanho_bytes: number | null;
+          tentado_em: string | null;
+          tentativas: number;
+          tipo: string;
+          updated_at: string;
+        };
+        Insert: {
+          capturado_em?: string | null;
+          created_at?: string;
+          empresa_id: string;
+          erro_codigo?: string | null;
+          id?: string;
+          nome?: string | null;
+          proposta_id: string;
+          sha256?: string | null;
+          status: string;
+          storage_path?: string | null;
+          tamanho_bytes?: number | null;
+          tentado_em?: string | null;
+          tentativas?: number;
+          tipo: string;
+          updated_at?: string;
+        };
+        Update: {
+          capturado_em?: string | null;
+          created_at?: string;
+          empresa_id?: string;
+          erro_codigo?: string | null;
+          id?: string;
+          nome?: string | null;
+          proposta_id?: string;
+          sha256?: string | null;
+          status?: string;
+          storage_path?: string | null;
+          tamanho_bytes?: number | null;
+          tentado_em?: string | null;
+          tentativas?: number;
+          tipo?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "proposta_documentos_proposta_id_fkey";
+            columns: ["proposta_id"];
+            isOneToOne: false;
+            referencedRelation: "propostas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       proposta_versoes: {
         Row: {
           criado_em: string;
@@ -5563,6 +5625,19 @@ export type Database = {
         Returns: undefined;
       };
       reenviar_link_acesso: { Args: { p_empresa_id: string }; Returns: string };
+      registrar_documento_proposta: {
+        Args: {
+          p_cotacao_id: string;
+          p_erro_codigo: string;
+          p_nome: string;
+          p_sha256: string;
+          p_status: string;
+          p_storage_path: string;
+          p_tamanho: number;
+          p_tipo: string;
+        };
+        Returns: string;
+      };
       registrar_premios_quiver: {
         Args: { p_cotacao_id: string; p_payload: Json };
         Returns: undefined;
@@ -5669,6 +5744,10 @@ export type Database = {
       };
       solicitar_pendencia_acesso: {
         Args: { p_empresa_id: string; p_pendencia: string };
+        Returns: string;
+      };
+      solicitar_recaptura_documento_proposta: {
+        Args: { p_proposta_id: string; p_uid: string };
         Returns: string;
       };
       transmitir_proposta: {

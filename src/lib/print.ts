@@ -1,5 +1,7 @@
 // Open a popup window with printable HTML and trigger print.
 // Used to produce real printable layouts instead of capturing the on-screen UI.
+import logoSupper from "@/assets/logo-supper-doc.png?inline";
+import { SEG_MARCAS } from "@/lib/seguradora-marcas";
 
 const BASE_CSS = `
   *{box-sizing:border-box}
@@ -229,10 +231,34 @@ function simNao(v?: boolean | null, textoSim = "Sim", textoNao = "Não"): string
   return v ? textoSim : textoNao;
 }
 
+const ICONE_COL = {
+  user: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  car: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>',
+  shield:
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.7 8.9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></svg>',
+};
+
+const ICONE_INFO =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>';
+
+function seloSeguradoraHtml(nome: string, tam: "sm" | "xs"): string {
+  const m = SEG_MARCAS[nome] ?? { cor: "#5B6770", wm: nome, sub: "" };
+  return `<span class="seg-badge ${tam}"><span class="wm" style="color:${m.cor}">${escapeHtml(m.wm)}${
+    m.sub ? `<small>${escapeHtml(m.sub)}</small>` : ""
+  }</span></span>`;
+}
+
+/** Valor da parcela como o protótipo mostra: só o "R$ …", com " *" quando é sem juros. */
+function parcelaCelula(texto: string | null, parcela: number): string {
+  if (!texto) return "—";
+  const valor = texto.match(/R\$\s*[\d.]+,\d{2}/)?.[0] ?? texto;
+  return escapeHtml(valor) + (parcela > 1 && /sem juros/i.test(texto) ? " *" : "");
+}
+
 function resumidaHtml(d: DocDados): string {
   const { segurado: seg, veiculo: veic, seguro } = d;
   return `<div class="doc-cols3">
-    <div><div class="doc-col-t">Segurado</div>
+    <div><div class="doc-col-t">${ICONE_COL.user} Segurado</div>
       ${docLinha("CPF/CNPJ", seg.cpfCnpj)}
       ${docLinha("Nascimento", fmtDataOuBruto(seg.nascimento))}
       ${docLinha("Sexo", seg.sexo)}
@@ -240,7 +266,7 @@ function resumidaHtml(d: DocDados): string {
       ${docLinha("Telefone", seg.telefone)}
       ${docLinha("E-mail", seg.email)}
     </div>
-    <div><div class="doc-col-t">Veículo</div>
+    <div><div class="doc-col-t">${ICONE_COL.car} Veículo</div>
       ${docLinha("Modelo", veic?.descricao)}
       ${docLinha("Ano fab./modelo", veic ? `${veic.anoFab || "—"} / ${veic.anoModelo || "—"}` : "—")}
       ${docLinha("Placa", veic?.placa)}
@@ -248,7 +274,7 @@ function resumidaHtml(d: DocDados): string {
       ${docLinha("Combustível", veic?.combustivel)}
       ${docLinha("CEP pernoite", veic?.cepPernoite)}
     </div>
-    <div><div class="doc-col-t">Seguro</div>
+    <div><div class="doc-col-t">${ICONE_COL.shield} Seguro</div>
       ${docLinha("Tipo", seguro?.tipo)}
       ${docLinha("Início vigência", fmtDataOuBruto(seguro?.vigIni))}
       ${docLinha("Final vigência", fmtDataOuBruto(seguro?.vigFim))}
@@ -309,23 +335,6 @@ function parcelaValor(op: DocOpcaoOferta, parcela: number): string | null {
   return achado ?? null;
 }
 
-function opcoesSeguradoraHtml(s: DocSeguradoraOferta, parcelas: number[]): string {
-  if (s.opcoes.length === 0) return "";
-  const head = `<tr><td class="doc-k"></td>${parcelas
-    .map((n) => `<td>${n === 1 ? "À vista" : `${n}x`}</td>`)
-    .join("")}</tr>`;
-  const rows = s.opcoes
-    .map((op) => {
-      const rotulo = [op.tipo, op.franquia].filter(Boolean).join(" · ") || "Opção";
-      const cols = parcelas
-        .map((n) => `<td>${escapeHtml(parcelaValor(op, n) || "—")}</td>`)
-        .join("");
-      return `<tr><td class="doc-k">${escapeHtml(rotulo)}</td>${cols}</tr>`;
-    })
-    .join("");
-  return `<div class="doc-sec">${escapeHtml(s.seguradora)}</div><table class="doc-table"><tbody>${head}${rows}</tbody></table>`;
-}
-
 /** Monta o HTML do documento comparativo. Sem `opcoes` (ou sem % de
  * comissão) é o PDF do cliente: sem comissão e sem "Controle interno". Com
  * `interno` + `pctComissao` é o documento interno. Usado tanto na pré-visualização (dentro do modal,
@@ -347,10 +356,12 @@ export function buildCotacaoDoc(
 
   const marca =
     config.modelo === "supper"
-      ? `<div class="doc-logo-cia"><span>Supper Certo Seguros</span><small>Comparativo de cotação</small></div>`
-      : `<div class="doc-logo-cia"><span>${escapeHtml(
-          selecionadas[0]?.seguradora || "Seguradora",
-        )}</span><small>Orçamento de Seguro Auto</small></div>`;
+      ? `<img class="doc-logo" src="${logoSupper}" alt="Supper Certo Seguros">`
+      : selecionadas[0]
+        ? `<div class="doc-logo-cia">${seloSeguradoraHtml(selecionadas[0].seguradora, "sm")}<span>${escapeHtml(
+            selecionadas[0].seguradora,
+          )}</span><small>Orçamento de Seguro Auto</small></div>`
+        : `<div class="doc-logo-cia"><span>Seguradora</span></div>`;
 
   const topo = `<div class="doc-topo">${marca}
       <div class="doc-meta">Cotação <strong>${escapeHtml(
@@ -365,17 +376,6 @@ export function buildCotacaoDoc(
     )}</strong>, você está recebendo as cotações para o seguro do seu veículo.</p>`;
 
   const cabecalho = config.tipo === "detalhada" ? detalhadaHtml(dados) : resumidaHtml(dados);
-  const comissao = interno
-    ? // A grade `.doc-bloco` tem 3 colunas; a linha ocupa 2 para o rótulo não quebrar.
-      `<div class="doc-sec">Comissão</div><div class="doc-bloco"><div style="grid-column:1 / span 2">${docLinha(
-        "Comissão da corretora",
-        `${opcoes.pctComissao.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}%`,
-      )}</div></div>`
-    : "";
-
   const coberturaLabels = [
     ...new Set(
       selecionadas.flatMap((s) => [
@@ -387,7 +387,7 @@ export function buildCotacaoDoc(
   const headCoberturas = `<tr><td class="doc-k"></td>${selecionadas
     .map(
       (s) =>
-        `<td><div class="doc-seg"><strong>${escapeHtml(s.seguradora)}</strong>${
+        `<td><div class="doc-seg">${seloSeguradoraHtml(s.seguradora, "xs")}<strong>${escapeHtml(s.seguradora)}</strong>${
           s.planoNome ? `<small>${escapeHtml(s.planoNome)}</small>` : ""
         }</div></td>`,
     )
@@ -404,11 +404,62 @@ export function buildCotacaoDoc(
     })
     .join("");
 
-  const opcoesBlocos = selecionadas.map((s) => opcoesSeguradoraHtml(s, config.parcelas)).join("");
+  const col = (fn: (s: DocSeguradoraOferta) => string) =>
+    selecionadas.map((s) => `<td>${fn(s)}</td>`).join("");
+  const titulo = (rotulo: string) =>
+    `<tr class="doc-tit"><td class="doc-k">${rotulo}</td>${col(() => "")}</tr>`;
+  const maxOpcoes = Math.max(0, ...selecionadas.map((s) => s.opcoes.length));
+  const sufixoOpcao = (i: number) => (maxOpcoes > 1 ? ` · ${i + 1}ª opção` : "");
+
+  const franquiaRows = Array.from({ length: maxOpcoes }, (_, i) => {
+    const cols = col((s) => {
+      const op = s.opcoes[i];
+      if (!op) return "—";
+      return `${escapeHtml(op.franquia || "—")}${
+        op.tipo ? `<div class="doc-obs">${escapeHtml(op.tipo)}</div>` : ""
+      }`;
+    });
+    return `<tr><td class="doc-k">${i + 1}ª opção de franquia</td>${cols}</tr>`;
+  }).join("");
+
+  const parcelaRows = Array.from({ length: maxOpcoes }, (_, i) =>
+    config.parcelas
+      .map((n) => {
+        const cols = col((s) => {
+          const op = s.opcoes[i];
+          return op ? parcelaCelula(parcelaValor(op, n), n) : "—";
+        });
+        const rotulo = (n === 1 ? "À vista" : `${n} parcelas`) + sufixoOpcao(i);
+        return `<tr${n === 1 ? ' class="doc-vista"' : ""}><td class="doc-k">${rotulo}</td>${cols}</tr>`;
+      })
+      .join(""),
+  ).join("");
+
+  // A comissão é o % efetivo da corretora (um só), repetido em cada coluna.
+  const comissaoRow = interno
+    ? `<tr class="doc-com"><td class="doc-k">Comissão da corretora</td>${col(
+        () =>
+          `${opcoes.pctComissao.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}%`,
+      )}</tr>`
+    : "";
+
+  const temTabela = coberturaLabels.length > 0 || maxOpcoes > 0;
+  const tabela = temTabela
+    ? `<table class="doc-table"><tbody>${headCoberturas}${coberturaRows}${
+        maxOpcoes
+          ? `${titulo("Franquias do veículo")}${franquiaRows}${titulo(
+              "Parcelas (* sem juros)",
+            )}${parcelaRows}`
+          : ""
+      }${comissaoRow}</tbody></table>`
+    : `<div class="doc-obs">Nenhuma cobertura ou opção de pagamento retornada pela seguradora.</div>`;
 
   const avisoModeloCia =
     config.modelo === "cia" && selecionadas.length > 1
-      ? `<div class="doc-aviso">No modelo da seguradora sai um documento por cia. Aqui você vê o de <strong>${escapeHtml(
+      ? `<div class="doc-aviso">${ICONE_INFO} No modelo da seguradora sai um documento por cia. Aqui você vê o de <strong>${escapeHtml(
           selecionadas[0]?.seguradora ?? "",
         )}</strong>; os outros ${selecionadas.length - 1} seguem no mesmo PDF.</div>`
       : "";
@@ -417,15 +468,8 @@ export function buildCotacaoDoc(
     ${interno ? faixaInternoHtml() : ""}
     ${topo}
     ${cabecalho}
-    ${comissao}
-    <div class="doc-sec">Coberturas do seguro</div>
-    ${
-      coberturaLabels.length
-        ? `<table class="doc-table"><tbody>${headCoberturas}${coberturaRows}</tbody></table>`
-        : `<div class="doc-obs">Nenhuma cobertura detalhada retornada pela seguradora.</div>`
-    }
-    <div class="doc-sec">Opções e parcelas</div>
-    ${opcoesBlocos || `<div class="doc-obs">Nenhuma opção de pagamento disponível.</div>`}
+    <div class="doc-sec">Coberturas e valores do seguro</div>
+    ${tabela}
     ${avisoModeloCia}
     ${interno ? controleInternoHtml(dados) : ""}
     <div class="doc-rodape">Cotação gerada pelo CoteCerto · Supper Certo Seguros · valores válidos até ${dataValidade}</div>
@@ -441,6 +485,8 @@ const DOC_CSS_RULES = `
   .doc{background:#fff;padding:0;font-size:var(--fs-xs);color:#2f3d48;line-height:1.5}
   .doc.economia{line-height:1.38}
   .doc-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:2px solid var(--slate);padding-bottom:14px;margin-bottom:14px}
+  .doc-logo{width:96px;height:auto;flex:none}
+  .doc.economia .doc-logo{width:76px}
   .doc-logo-cia{display:flex;flex-direction:column;align-items:flex-start;gap:4px;flex:none}
   .doc-logo-cia span{font-weight:800;font-size:var(--fs-lg);color:var(--slate);letter-spacing:.02em}
   .doc-logo-cia small{font-size:var(--fs-2xs);color:#7a8794;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
@@ -457,6 +503,19 @@ const DOC_CSS_RULES = `
   .doc-table{width:100%;border-collapse:collapse;margin-top:4px}
   .doc-table td{padding:5px 9px;border-bottom:1px dotted var(--cool-100);text-align:center;vertical-align:middle}
   .doc-table .doc-k{text-align:left;color:#7a8794;width:210px;font-weight:600}
+  .doc-table tr.doc-tit td{background:var(--offwhite);font-weight:800;text-transform:uppercase;font-size:var(--fs-2xs);letter-spacing:.05em;border-bottom:0;padding-top:9px}
+  .doc-table tr.doc-tit .doc-k{color:var(--slate)}
+  .doc-table tr.doc-vista td{background:var(--cream-hi);font-weight:800}
+  .doc-table tr.doc-com td{background:var(--cream-soft);font-weight:700}
+  .seg-badge{width:62px;height:62px;flex:none;border-radius:50%;background:#fff;border:1.5px solid var(--border-soft);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(18,28,36,.09);padding:7px;box-sizing:border-box;overflow:hidden;color:var(--muted)}
+  .seg-badge .wm{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-align:center;font-size:var(--fs-sm);white-space:normal;word-break:break-word;max-width:100%}
+  .seg-badge .wm small{display:block;font-size:6.5px;font-weight:700;letter-spacing:.02em;opacity:.78;margin-top:2px;white-space:nowrap;max-width:100%;overflow:hidden}
+  .seg-badge.sm{width:50px;height:50px;padding:6px}
+  .seg-badge.sm .wm{font-size:var(--fs-2xs)}
+  .seg-badge.sm .wm small{font-size:5.5px}
+  .seg-badge.xs{width:38px;height:38px;padding:4px}
+  .seg-badge.xs .wm{font-size:8px}
+  .seg-badge.xs .wm small{display:none}
   .doc-seg{display:flex;flex-direction:column;align-items:center;gap:2px}
   .doc-seg strong{font-size:var(--fs-xs)}
   .doc-seg small{font-size:var(--fs-2xs);color:#7a8794}
@@ -471,7 +530,7 @@ const DOC_PRINT_CSS = `
     --border-soft:#efead9;--alert:#c0392b;--alert-soft:#fdecea;--cream-hi:#fffdf5;--cream-soft:#fbf7e8;
     --cream-border:#f0e6c2;--gold-ink:#8a6d1a;--cool-100:#e3e8ec;--cool-50:#f4f6f8;
     --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px}
-  *{box-sizing:border-box}
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:24px}
   ${DOC_CSS_RULES}
   @page{size:A4;margin:14mm}

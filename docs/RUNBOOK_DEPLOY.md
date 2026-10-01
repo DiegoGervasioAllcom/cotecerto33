@@ -456,6 +456,7 @@ App publicado via `deploy.sh` com a tag `sha-5294247` (imagem anterior,
 para rollback: `sha-9015183`); health check do script OK (HTTP 200).
 Smoke test pelo navegador em 28/09/2026, logado como vendedor real, só
 navegando (nada criado nem transmitido), sem erro no console:
+
 - Início: fila "O que fazer agora" com 7 itens em ordem de urgência (negócio
   em risco + pendência da seguradora com a mensagem real do robô), números
   `COT-2026-…` com o ano de criação.
@@ -476,6 +477,7 @@ navegando (nada criado nem transmitido), sem erro no console:
   vazia, Documentos/Consultar desabilitados.
 
 Observações (não bloqueiam, a investigar):
+
 - Na primeira abertura do Pipeline, logo após fechar o tutorial, o cabeçalho
   mostrou "0 de 0 leads" e as colunas só a contagem carregada (5); a view
   `pipeline_resumo_etapas` estava correta (22/3/2/1) e um reload mostrou os
@@ -501,6 +503,7 @@ reiniciado. App publicado via `deploy.sh` com a tag `sha-e8eb361` (rollback:
 `sha-5294247`); health check do script OK (HTTP 200).
 
 Correções de dados (em transação, com trava):
+
 - **PRP-00001:** `premio = 7487.04`, `parcelas = 12`, `valor_parcela = 623.92`
   (12 × 623,92), só se `premio` ainda fosse 623.92; conferido depois que
   nenhum lançamento de comissão foi criado. Resultado `UPDATE 1`.
@@ -665,6 +668,44 @@ git pull && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -
 - A conta do portal é de produção: cada cotação é real. Nunca rodar
   `transmissao.spec.ts` nem `npm run test` para testar.
 
+### 6.9 V12.4.7 fatia 2 — documento (PDF) da proposta
+
+Ordem: **migration antes da imagem** (§6.3).
+
+1. Aplicar `20260930185711_v12_proposta_documentos.sql` (tabela `proposta_documentos`,
+   bucket privado `propostas-docs`, RPCs só `service_role`) e registrar no histórico (§3.5).
+2. Acrescentar ao `.env` protegido do app (sem commitar valores):
+   `SELF_QUIVER_DOCUMENTO_WEBHOOK_CLIENT_KEY` e `SELF_QUIVER_DOCUMENTO_WEBHOOK_CLIENT_SECRET`
+   (gere valores novos e longos; distintos dos demais webhooks).
+3. **nginx**: o PDF chega em base64 (até ~14 MB). Liberar 15 MB **somente** nesta rota,
+   no bloco `cote-certo` (443), acima do `location /`; o resto do site mantém o limite padrão:
+
+```nginx
+location = /api/webhooks/quiver-documento {
+    client_max_body_size 15m;
+    proxy_pass http://127.0.0.1:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 60s;
+}
+```
+
+Depois: `sudo nginx -t && sudo systemctl reload nginx`.
+
+4. Publicar a imagem (§6.4). O app chama o robô em `POST {SELF_QUIVER_API_URL}/documento/capturar`
+   (`{cotacaoId, numeroCotacao}`, espera 202) com as mesmas `SELF_QUIVER_TRANSMISSAO_CLIENT_KEY/SECRET`
+   da transmissão.
+5. **Robô** (outra máquina, §6.8): o `.env` dele precisa das **mesmas** chaves do webhook
+   novo (valores iguais aos do passo 2) e da URL `https://cote-certo.sandboxallcom.com/api/webhooks/quiver-documento`.
+   **Ordem:** migration → **robô** (`git pull` + `docker compose … up -d --build api`, com as envs
+   `WEBHOOK_DOCUMENTO_*`) → imagem do app. Com o app no ar e o robô antigo, a recaptura falha ao chamar
+   `/documento/capturar` e o documento fica pendente até o limite de 5 min para tentar de novo.
+6. Smoke: webhook sem credenciais responde 401; com credenciais e corpo vazio, 400.
+   Não enviar PDF real de teste para produção.
+
 ## 7. Rollback
 
 **App:**
@@ -692,12 +733,12 @@ sudo docker exec -i supabase-db psql -U postgres -d postgres < ~/backup_prod_XXX
 
 ## 8. Gotchas conhecidos (aprendidos no deploy real)
 
-| Sintoma                                                                    | Causa                                                                                                                                                          | Correção                                                                                                                                                                                      |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `permission denied for table job` na migration 030                         | `postgres` sem acesso a `cron.*` no self-hosted                                                                                                                | GRANTs como `supabase_admin` (§3.3)                                                                                                                                                           |
-| `invalid command \restrict` / `unrecognized parameter transaction_timeout` | `pg_dump` (cliente PG17) gera SQL incompatível com Postgres 15                                                                                                 | não vendorizar a seção do `pg_dump`; gerar histórico à mão (§3.5)                                                                                                                             |
-| `unauthorized` no `docker pull`                                            | login no GHCR não feito / PAT sem `read:packages`                                                                                                              | `docker login ghcr.io` com PAT correto (§4)                                                                                                                                                   |
-| porta 3000 ocupada                                                         | Kong (Supabase) já usa a 3000 do host                                                                                                                          | publicar o app em **3001**                                                                                                                                                                    |
-| login não conecta                                                          | anon key embutida ≠ anon key do Supabase                                                                                                                       | conferir fingerprint (§4)                                                                                                                                                                     |
-| `MAILER_OTP_EXP` no `.env` não muda a validade do link                     | a distribuição self-hosted não mapeia `GOTRUE_MAILER_OTP_EXP` no `docker-compose.yml` — só `GOTRUE_SITE_URL` e `GOTRUE_URI_ALLOW_LIST` vêm mapeados por padrão | adicionar `GOTRUE_MAILER_OTP_EXP: ${MAILER_OTP_EXP}` no serviço `auth` do `docker-compose.yml` (mesmo lugar do §6.2), antes de `--force-recreate auth` — confirmado em produção em 01/08/2026 |
+| Sintoma                                                                    | Causa                                                                                                                                                                                                                                          | Correção                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `permission denied for table job` na migration 030                         | `postgres` sem acesso a `cron.*` no self-hosted                                                                                                                                                                                                | GRANTs como `supabase_admin` (§3.3)                                                                                                                                                                                                                                                                                                                                                                                           |
+| `invalid command \restrict` / `unrecognized parameter transaction_timeout` | `pg_dump` (cliente PG17) gera SQL incompatível com Postgres 15                                                                                                                                                                                 | não vendorizar a seção do `pg_dump`; gerar histórico à mão (§3.5)                                                                                                                                                                                                                                                                                                                                                             |
+| `unauthorized` no `docker pull`                                            | login no GHCR não feito / PAT sem `read:packages`                                                                                                                                                                                              | `docker login ghcr.io` com PAT correto (§4)                                                                                                                                                                                                                                                                                                                                                                                   |
+| porta 3000 ocupada                                                         | Kong (Supabase) já usa a 3000 do host                                                                                                                                                                                                          | publicar o app em **3001**                                                                                                                                                                                                                                                                                                                                                                                                    |
+| login não conecta                                                          | anon key embutida ≠ anon key do Supabase                                                                                                                                                                                                       | conferir fingerprint (§4)                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `MAILER_OTP_EXP` no `.env` não muda a validade do link                     | a distribuição self-hosted não mapeia `GOTRUE_MAILER_OTP_EXP` no `docker-compose.yml` — só `GOTRUE_SITE_URL` e `GOTRUE_URI_ALLOW_LIST` vêm mapeados por padrão                                                                                 | adicionar `GOTRUE_MAILER_OTP_EXP: ${MAILER_OTP_EXP}` no serviço `auth` do `docker-compose.yml` (mesmo lugar do §6.2), antes de `--force-recreate auth` — confirmado em produção em 01/08/2026                                                                                                                                                                                                                                 |
 | `column ... does not exist` ao aplicar uma migration incremental atrasada  | PRs mergeados fora de ordem: uma migration mais antiga (ex. `20260821010000`) fica pendente enquanto uma mais nova (ex. `20260822000000`) já foi aplicada — e a mais antiga recria uma função referenciando colunas que a mais nova já removeu | não aplicar os arquivos crus em sequência; monte um script combinado que pula o `CREATE OR REPLACE FUNCTION` das migrations intermediárias (mantendo só a DDL de cada uma) e usa a função da migration **mais recente** por último. Registre todas as versões no histórico mesmo assim (§3.5) — validado num banco local simulando o estado real da produção antes de rodar de verdade (confirmado em produção em 22/08/2026) |

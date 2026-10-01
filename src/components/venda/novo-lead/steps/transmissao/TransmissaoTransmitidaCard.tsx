@@ -11,6 +11,9 @@ import {
   textoOuTraco,
 } from "@/lib/proposta-situacao";
 import { salvarFocoMotivo, serializeFoco } from "@/lib/use-foco-ao-chegar";
+import { useAuth } from "@/lib/auth";
+import { podeTentarDeNovo } from "@/lib/proposta-documento-estado";
+import { useDocumentoProposta } from "./useDocumentoProposta";
 import { useProposta } from "./useProposta";
 
 const linhaFf = (k: string, v: ReactNode) => (
@@ -34,6 +37,8 @@ type Props = {
 // Nunca simular status (V12.1.28).
 export function TransmissaoTransmitidaCard({ propostaId, f }: Props) {
   const { data: proposta, isLoading, error } = useProposta(propostaId);
+  const { session, role } = useAuth();
+  const doc = useDocumentoProposta(propostaId, proposta?.transmitida_em ?? null);
 
   if (isLoading) {
     return (
@@ -176,18 +181,48 @@ export function TransmissaoTransmitidaCard({ propostaId, f }: Props) {
         Nesta proposta
       </div>
       <div className="acc-pills" data-tour="transmitida-acoes">
-        <button
-          type="button"
-          className="acc-pill"
-          disabled
-          aria-disabled="true"
-          title={AVISO_INTEGRACAO_PENDENTE}
-        >
-          <svg width={13} height={13}>
-            <use href="#i-file" />
-          </svg>{" "}
-          Documentos e envio
-        </button>
+        {doc.estado === "ok" ? (
+          <button
+            type="button"
+            className="acc-pill"
+            disabled={doc.abrir.isPending}
+            onClick={() => doc.abrir.mutate()}
+          >
+            <svg width={13} height={13}>
+              <use href="#i-file" />
+            </svg>{" "}
+            Proposta (PDF)
+          </button>
+        ) : doc.estado === "preparando" ? (
+          <button type="button" className="acc-pill" disabled aria-disabled="true">
+            <svg width={13} height={13}>
+              <use href="#i-file" />
+            </svg>{" "}
+            Preparando documento…
+          </button>
+        ) : (
+          <>
+            <button type="button" className="acc-pill" disabled aria-disabled="true">
+              <svg width={13} height={13}>
+                <use href="#i-file" />
+              </svg>{" "}
+              Documento indisponível
+            </button>
+            {podeTentarDeNovo(session?.user.id, role, proposta.cotacoes?.responsavel_id) && (
+              <button
+                type="button"
+                className="acc-pill"
+                disabled={doc.tentarDeNovo.isPending}
+                onClick={() => doc.tentarDeNovo.mutate()}
+              >
+                <svg width={13} height={13}>
+                  <use href="#i-refresh" />
+                </svg>{" "}
+                Tentar de novo
+              </button>
+            )}
+          </>
+        )}
         <button
           type="button"
           className="acc-pill"

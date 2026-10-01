@@ -479,7 +479,7 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
 
     // "Imprimir comparativo" agora abre o modal "Imprimir cotação" (Frente 3
     // V12 · 7a) em vez de disparar o popup direto — "Impressão expressa" pega
-    // todas as seguradoras na versão resumida e monta o preview do documento
+    // as 3 primeiras seguradoras na versão resumida e monta o preview do documento
     // dentro do próprio modal; só "Baixar PDF" abre a janela de impressão
     // (`printCotacaoDoc`, em `src/lib/print.ts`).
     await page.getByRole("button", { name: "Imprimir comparativo" }).click();
@@ -490,7 +490,9 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
     await page.getByRole("button", { name: "Baixar PDF" }).click();
     const popup = await popupPromise;
     await expect(popup.locator("body")).toContainText("Seguradora Alfa");
-    await expect(popup.locator("body")).toContainText("Seguradora Beta");
+    // A expressa agora marca só as 3 primeiras seguradoras (limite do documento).
+    await expect(popup.locator(".doc-seg")).toHaveCount(3);
+    await expect(popup.locator("body")).not.toContainText("Seguradora Beta");
     await expect(popup.locator("body")).toContainText("R$ 2.345,67");
     await expect(popup.locator("body")).toContainText("R$ 150.000,00");
     // Documento nunca traz controle interno nem comissão (decisão do usuário
