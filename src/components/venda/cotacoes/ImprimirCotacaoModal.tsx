@@ -19,6 +19,7 @@ import {
   type DocConfigImpressao,
 } from "@/lib/print";
 import {
+  IMPRIMIR_COTACAO_MAX_SEGURADORAS,
   IMPRIMIR_COTACAO_PARCELAS_PADRAO,
   imprimirCotacaoConfigSchema,
   type ImprimirCotacaoConfig,
@@ -35,7 +36,9 @@ function configPadrao(dados: DocDados): ImprimirCotacaoConfig {
   return {
     modelo: "supper",
     tipo: "resumida",
-    seguradorasSelecionadas: dados.seguradoras.map((s) => s.id),
+    seguradorasSelecionadas: dados.seguradoras
+      .slice(0, IMPRIMIR_COTACAO_MAX_SEGURADORAS)
+      .map((s) => s.id),
     parcelas: IMPRIMIR_COTACAO_PARCELAS_PADRAO,
     economia: false,
     colunado: false,
@@ -115,6 +118,7 @@ export function ImprimirCotacaoModal({
 
   const toggleSeguradora = (id: string) => {
     const atual = config.seguradorasSelecionadas;
+    if (!atual.includes(id) && atual.length >= IMPRIMIR_COTACAO_MAX_SEGURADORAS) return;
     const proximo = atual.includes(id) ? atual.filter((s) => s !== id) : [...atual, id];
     setValue("seguradorasSelecionadas", proximo, { shouldValidate: true });
   };
@@ -163,9 +167,8 @@ export function ImprimirCotacaoModal({
   // em toda renderização, não só na etapa "config" — quebra a rota inteira no
   // primeiro clique em qualquer um dos 3 pontos de entrada.
   const seguradorasSelecionadasSeguro = config.seguradorasSelecionadas ?? [];
-  const todasSelecionadas =
-    dadosRef.seguradoras.length > 0 &&
-    dadosRef.seguradoras.every((s) => seguradorasSelecionadasSeguro.includes(s.id));
+  const temSelecao = seguradorasSelecionadasSeguro.length > 0;
+  const limiteAtingido = seguradorasSelecionadasSeguro.length >= IMPRIMIR_COTACAO_MAX_SEGURADORAS;
 
   return (
     <div
@@ -291,7 +294,7 @@ export function ImprimirCotacaoModal({
               Seguradoras no documento
               <span className="lbl-soft">
                 {config.seguradorasSelecionadas.length} de {dadosRef.seguradoras.length}{" "}
-                selecionadas
+                selecionadas (máx. {IMPRIMIR_COTACAO_MAX_SEGURADORAS})
               </span>
               <button
                 type="button"
@@ -300,12 +303,16 @@ export function ImprimirCotacaoModal({
                 onClick={() =>
                   setValue(
                     "seguradorasSelecionadas",
-                    todasSelecionadas ? [] : dadosRef.seguradoras.map((s) => s.id),
+                    temSelecao
+                      ? []
+                      : dadosRef.seguradoras
+                          .slice(0, IMPRIMIR_COTACAO_MAX_SEGURADORAS)
+                          .map((s) => s.id),
                     { shouldValidate: true },
                   )
                 }
               >
-                {todasSelecionadas ? "Nenhuma" : "Todas"}
+                {temSelecao ? "Nenhuma" : `Primeiras ${IMPRIMIR_COTACAO_MAX_SEGURADORAS}`}
               </button>
             </div>
             <div className="pr-cards">
@@ -315,6 +322,9 @@ export function ImprimirCotacaoModal({
                   <div
                     key={s.id}
                     className={`pr-card${on ? " on" : ""}`}
+                    style={
+                      !on && limiteAtingido ? { opacity: 0.5, cursor: "not-allowed" } : undefined
+                    }
                     onClick={() => toggleSeguradora(s.id)}
                   >
                     <SeguradoraBadge nome={s.seguradora} tam="sm" />
