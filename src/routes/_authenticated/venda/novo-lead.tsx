@@ -653,6 +653,7 @@ function Page() {
           {visibleStep === 6 && oferta && (
             <StepTransmissao
               f={f}
+              fipeValor={fipeValor}
               oferta={oferta}
               enviando={enviandoProposta}
               erroEnvio={erroProposta}

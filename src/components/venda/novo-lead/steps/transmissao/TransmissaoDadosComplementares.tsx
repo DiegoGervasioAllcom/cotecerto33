@@ -228,6 +228,16 @@ export function TransmissaoDadosComplementares({
         </div>
       </div>
 
+      <div className="clt-note" style={{ marginBottom: 14 }}>
+        <svg width="15" height="15">
+          <use href="#i-info" />
+        </svg>
+        <div>
+          Telefone residencial, telefone comercial e e-mail do segurado vêm do cadastro do próprio
+          Quiver — o robô não os preenche.
+        </div>
+      </div>
+
       <div className="acc-sec-t">Endereço residencial</div>
       <div className="wizard-grid cols-3">
         {field("cepResidencial", "CEP", "00000-000", "numeric")}
@@ -260,6 +270,19 @@ export function TransmissaoDadosComplementares({
         </div>
       ) : (
         <>
+          <div
+            className="clt-note"
+            style={{ marginBottom: 10 }}
+            data-testid="aviso-correspondencia"
+          >
+            <svg width="15" height="15">
+              <use href="#i-info" />
+            </svg>
+            <div>
+              Atenção: o robô envia sempre o <strong>endereço residencial</strong> também como
+              correspondência. O endereço abaixo fica só registrado aqui.
+            </div>
+          </div>
           <div className="acc-sec-t">Endereço de correspondência</div>
           <div className="wizard-grid cols-3">
             {fieldCorresp("cep", "CEP", "00000-000")}

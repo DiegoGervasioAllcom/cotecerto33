@@ -2,10 +2,14 @@ import type { ReactNode } from "react";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
+import type { DadosComplementaresTransmissao } from "../TransmissaoDadosComplementares.schema";
+import { formatarDataBr, montarConfirmacaoQuiver } from "./confirmacao-quiver";
 
 type Props = {
   f: Form;
   resultado: ResultadoCalculo;
+  dados: DadosComplementaresTransmissao | null;
+  fipeValor?: string;
   formaPagamento: string;
   parcelas: string;
   premio: number | undefined;
@@ -22,12 +26,6 @@ function money(v: number | undefined) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function moneyDeTexto(raw: string) {
-  if (!raw) return "—";
-  const n = Number(raw);
-  return Number.isFinite(n) ? money(n) : raw;
-}
-
 const linha = (k: string, v: ReactNode) => (
   <tr key={k}>
     <td className="ff-k">{k}</td>
@@ -35,14 +33,14 @@ const linha = (k: string, v: ReactNode) => (
   </tr>
 );
 
-// A tela de Confirmação do protótipo mostra um "retorno da seguradora"
-// (protocolo, orçamento) fabricado como dado de demonstração antes de
-// transmitir — o sistema real só sabe isso depois do webhook do robô. Aqui
-// mostramos só a recapitulação real do que será enviado + o prêmio já
-// calculado, sem inventar retorno da seguradora.
+// Recapitulação fiel à tela "Confirmação" do Quiver (Dados do veículo, Perfil,
+// Coberturas), só com dados nossos. O bloco "Retorno" do portal (protocolo,
+// orçamento, fator de ajuste) só existe depois do "Efetivar" e não é simulado.
 export function TransmissaoConfirmacao({
   f,
   resultado,
+  dados,
+  fipeValor,
   formaPagamento,
   parcelas,
   premio,
@@ -53,12 +51,15 @@ export function TransmissaoConfirmacao({
   onAvancarPagamento,
   onConfirmarTransmitir,
 }: Props) {
+  const conf = montarConfirmacaoQuiver(f, resultado, dados, { fipeValor });
+  const vigencia = `${formatarDataBr(f.vigIni)} até ${formatarDataBr(f.vigFim)}`;
   return (
     <>
       <div style={{ marginBottom: 18 }}>
-        <h2 style={{ margin: 0 }}>Confirmação</h2>
+        <h2 style={{ margin: 0 }}>{conf.titulo}</h2>
         <div className="sub" style={{ margin: "4px 0 0" }}>
-          Confira antes de transmitir — depois disso a seguradora assume o processo.
+          Informações enviadas — confira antes de transmitir; depois disso a seguradora assume o
+          processo.
         </div>
       </div>
 
@@ -87,20 +88,34 @@ export function TransmissaoConfirmacao({
           <div>
             <span className="muted small">Vigência</span>
             <br />
-            <strong>
-              {f.vigIni || "—"} a {f.vigFim || "—"}
-            </strong>
+            <strong>{vigencia}</strong>
           </div>
           <div>
             <span className="muted small">Modalidade</span>
             <br />
-            <strong>
-              {f.modalidade || "—"}
-              {f.percentualAjuste ? ` · ${f.percentualAjuste}% FIPE` : ""}
-            </strong>
+            <strong>{f.modalidade || "—"}</strong>
+          </div>
+          <div>
+            <span className="muted small">Fator de ajuste solicitado</span>
+            <br />
+            <strong>{f.percentualAjuste ? `${f.percentualAjuste}%` : "—"}</strong>
           </div>
         </div>
       </div>
+
+      {conf.avisos.map((aviso) => (
+        <div
+          key={aviso}
+          className="clt-note"
+          style={{ marginBottom: 10 }}
+          data-testid="aviso-confirmacao"
+        >
+          <svg width="15" height="15">
+            <use href="#i-info" />
+          </svg>
+          <div>{aviso}</div>
+        </div>
+      ))}
 
       <div
         className="wizard-grid"
@@ -108,18 +123,14 @@ export function TransmissaoConfirmacao({
         style={{ gridTemplateColumns: "1fr 1fr", gap: 18 }}
       >
         <div>
-          <div className="acc-sec-t">Informações que serão enviadas</div>
-          <table className="table-pipe ff-table">
-            <tbody>
-              {linha("Modelo", [f.marca, f.modelo, f.anoModelo].filter(Boolean).join(" ") || "—")}
-              {linha("Placa", f.placa || "—")}
-              {linha("Uso do veículo", f.tipoUso || "—")}
-              {linha("Garagem", f.tipoGaragem || "—")}
-              {linha("Plano de coberturas", f.tipoCobertura || "—")}
-              {linha("Danos materiais a terceiros", moneyDeTexto(f.rcfDm))}
-              {linha("Danos corporais a terceiros", moneyDeTexto(f.rcfDc))}
-            </tbody>
-          </table>
+          {conf.blocos.map((bloco) => (
+            <div key={bloco.titulo}>
+              <div className="acc-sec-t">{bloco.titulo}</div>
+              <table className="table-pipe ff-table">
+                <tbody>{bloco.linhas.map((l) => linha(l.rotulo, l.valor))}</tbody>
+              </table>
+            </div>
+          ))}
         </div>
         <div>
           <div className="acc-sec-t">Prêmio</div>
@@ -130,6 +141,15 @@ export function TransmissaoConfirmacao({
               {linha("Prêmio", <strong>{money(premio)}</strong>)}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="clt-note" style={{ marginTop: 14 }}>
+        <svg width="15" height="15">
+          <use href="#i-info" />
+        </svg>
+        <div>
+          Protocolo, orçamento e fator de ajuste do portal só aparecem depois da transmissão.
         </div>
       </div>
 

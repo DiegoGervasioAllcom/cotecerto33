@@ -225,6 +225,14 @@ Achados novos no robô (entram antes dos itens acima):
 **Regra de custo (decisão do usuário):** medir no mapeamento ao vivo quanto cada captura com clique (mensagens, prêmios por cobertura) aumenta o tempo da cotação; se o aumento for grande, não capturar; se for pequeno, capturar; e procurar primeiro um jeito de obter o dado sem clique (texto já presente no card).
 **Fora:** comissão, desconto e Código Afinidade por seguradora (dado sensível; o CoteCerto tem motor de comissão e fluxo de desconto próprios).
 
+**V12.4.13 Confirmação fiel ao Quiver (01/10/2026, feito — opção A).** Sub-passo Confirmação da Etapa 7 passa a espelhar a tela "Confirmação" do portal (blocos Dados do veículo, Perfil, Coberturas + Prêmio), só com dados nossos. Código: `steps/transmissao/confirmacao-quiver.ts` (função pura `montarConfirmacaoQuiver`), `TransmissaoConfirmacao.tsx`, avisos em `TransmissaoDadosComplementares.tsx`. Testes: `tests/unit/confirmacao-quiver.test.ts`, `tests/e2e/confirmacao-quiver.spec.ts`.
+
+- **Decisões do usuário:** (1) sem bloco Retorno (Protocolo/Orçamento/Valor IS/Fator de ajuste só existem depois do "Efetivar"), com nota na tela; (2) endereço de correspondência diferente: manter o formulário e avisar que o robô usa o residencial; (3) Perfil com a forma curta nossa (ex.: "Sim, com portão manual"), sem espelhar o texto longo do portal.
+- **Achados da inspeção:** "Efetivar" na Suhai já gera protocolo/orçamento no portal (a Confirmação do portal é pós-Efetivar, não pré-envio); Retorno fica fora do escopo; divergências: "Fator de ajuste" do portal (ex.: 80% V.R. FIPE) vs. o percentual que pedimos (agora rotulado "Fator de ajuste solicitado") e vigência exibida como dd/mm/aaaa até dd/mm/aaaa; o robô força correspondência igual à residencial e envia Renavam 00000000000 só quando recebe vazio (ex.: chamadas sem o formulário); o Renavam já é obrigatório pelo schema do formulário (9–11 dígitos), então a Confirmação não tem aviso de Renavam e as transmissões pelo CoteCerto não saem zeradas. Telefones residencial/comercial e e-mail vêm do cadastro do Quiver.
+- **Lacunas de dado:** o `Form` não guarda o Código Fipe (fica "—"); o Valor Fipe vem do estado do `useFipe`, passado como prop. "Veículo utilizado para" do portal não tem campo nosso (mostramos "Uso comercial 2+ dias/semana" quando Particular).
+- **Opção B (não feita):** tela com dados lidos do portal antes de transmitir exigiria uma ida extra ao portal real (lenta, de produção, risco de efeito colateral no Efetivar) só para repetir o que já sabemos; descartada em favor da recapitulação local.
+- **Protótipo V12** (`cotecerto_prototipo_v12 - cópia.html`, `transmConfirma()`): mostra Retorno simulado e não tem o bloco Perfil — divergência intencional aceita; protótipo a atualizar.
+
 ---
 
 ## Decisões pendentes que bloqueiam o início
