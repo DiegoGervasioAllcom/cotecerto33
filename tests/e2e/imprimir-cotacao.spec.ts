@@ -222,7 +222,7 @@ test.describe("Imprimir cotação — modal comum aos 3 pontos de entrada", () =
       await expect(
         preview.getByText("SEGURADO EM FINALIZAÇÃO PRINT", { exact: true }),
       ).toBeVisible();
-      await expect(preview.getByText("Seguradora do exemplo")).toBeVisible();
+      await expect(preview.locator("strong", { hasText: "Seguradora do exemplo" })).toBeVisible();
     } finally {
       await limparCotacaoComStatusExtra(extra);
     }
