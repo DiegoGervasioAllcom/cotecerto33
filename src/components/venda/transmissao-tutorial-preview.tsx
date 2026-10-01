@@ -101,7 +101,7 @@ export function TransmissaoConfirmacaoTutorialPreview() {
     <div className="lead-shell">
       <div className="wizard-card" aria-readonly="true">
         <div style={{ marginBottom: 18 }}>
-          <h2 style={{ margin: 0 }}>Confirmação</h2>
+          <h2 style={{ margin: 0 }}>Confirmação — Auto Completo</h2>
           <div className="sub" style={{ margin: "4px 0 0" }}>
             Confira antes de transmitir — depois disso a seguradora assume o processo.
           </div>
@@ -115,33 +115,93 @@ export function TransmissaoConfirmacaoTutorialPreview() {
           style={{ gridTemplateColumns: "1fr 1fr", gap: 18 }}
         >
           <div>
-            <div className="acc-sec-t">Informações que serão enviadas</div>
-            <table className="table-pipe ff-table">
-              <tbody>
-                <tr>
-                  <td className="muted small">Modelo</td>
-                  <td>VW Polo Comfortline 2023</td>
-                </tr>
-                <tr>
-                  <td className="muted small">Placa</td>
-                  <td>FRX-2H08</td>
-                </tr>
-                <tr>
-                  <td className="muted small">Uso do veículo</td>
-                  <td>Particular</td>
-                </tr>
-                <tr>
-                  <td className="muted small">Garagem</td>
-                  <td>Fechada</td>
-                </tr>
-                <tr>
-                  <td className="muted small">Plano de coberturas</td>
-                  <td>Fácil</td>
-                </tr>
-              </tbody>
-            </table>
+            <div>
+              <div className="acc-sec-t">Dados do veículo</div>
+              <table className="table-pipe ff-table">
+                <tbody>
+                  <tr>
+                    <td className="ff-k">Modelo</td>
+                    <td className="ff-v">VW Polo Comfortline 2023</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Código Fipe</td>
+                    <td className="ff-v">—</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Placa</td>
+                    <td className="ff-v">FRX-2H08</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Chassi</td>
+                    <td className="ff-v">—</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Valor Fipe</td>
+                    <td className="ff-v">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div className="acc-sec-t">Coberturas</div>
+              <table className="table-pipe ff-table">
+                <tbody>
+                  <tr>
+                    <td className="ff-k">Danos Materiais</td>
+                    <td className="ff-v">R$ 100.000,00</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Danos Corporais</td>
+                    <td className="ff-v">R$ 100.000,00</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Danos Morais</td>
+                    <td className="ff-v">R$ 10.000,00</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
           <div>
+            <div>
+              <div className="acc-sec-t">Perfil</div>
+              <table className="table-pipe ff-table">
+                <tbody>
+                  <tr>
+                    <td className="ff-k">Sexo do segurado</td>
+                    <td className="ff-v">Masculino</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Estado civil</td>
+                    <td className="ff-v">Casado</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Sexo do condutor</td>
+                    <td className="ff-v">Masculino</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Garagem na residência</td>
+                    <td className="ff-v">Sim, com portão manual</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Garagem ao ir ao trabalho</td>
+                    <td className="ff-v">Não trabalha</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Garagem ao ir à faculdade/colégio</td>
+                    <td className="ff-v">Não estuda</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Tipo de uso</td>
+                    <td className="ff-v">Particular</td>
+                  </tr>
+                  <tr>
+                    <td className="ff-k">Utilização do veículo</td>
+                    <td className="ff-v">Particular</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <div className="acc-sec-t">Prêmio</div>
             <table className="table-pipe ff-table">
               <tbody>
@@ -161,6 +221,15 @@ export function TransmissaoConfirmacaoTutorialPreview() {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div className="clt-note" style={{ marginTop: 14 }}>
+          <svg width="15" height="15">
+            <use href="#i-info" />
+          </svg>
+          <div>
+            Protocolo, orçamento e fator de ajuste do portal só aparecem depois da transmissão.
           </div>
         </div>
 
