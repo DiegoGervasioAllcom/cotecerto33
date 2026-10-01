@@ -5,6 +5,7 @@ import { DadosComplementaresFold } from "@/components/venda/novo-lead/steps/veic
 import { AcessoriosFold } from "@/components/venda/novo-lead/steps/veiculo/AcessoriosFold";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { StatusPlaca } from "@/components/venda/novo-lead/hooks/useConsultaPlaca";
+import { usoExigeCepCirculacao } from "@/lib/cepCirculacao";
 import type { PrecificadorFipe } from "@/lib/placa-decodificador";
 
 type Props = {
@@ -339,16 +340,18 @@ export function StepVeiculo({
             placeholder="1.000 km"
           />
         </div>
-        <div className="field-group">
-          <label>CEP de circulação</label>
-          <input
-            className="input"
-            value={f.cepCirculacao}
-            inputMode="numeric"
-            onChange={(e) => up("cepCirculacao", maskCep(e.target.value))}
-            placeholder="00000-000"
-          />
-        </div>
+        {usoExigeCepCirculacao(f.tipoUso) && (
+          <div className="field-group">
+            <label>CEP de circulação</label>
+            <input
+              className="input"
+              value={f.cepCirculacao}
+              inputMode="numeric"
+              onChange={(e) => up("cepCirculacao", maskCep(e.target.value))}
+              placeholder="00000-000"
+            />
+          </div>
+        )}
       </div>
 
       <UsoVeiculoFields f={f} up={up} />

@@ -4,6 +4,7 @@ import { ajustesKey } from "./useAjustesSeguradora";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarCotacaoQuiver } from "@/lib/quiver.functions";
 import type { Form } from "../types";
+import { camposFaltantesCalculo } from "../calculoGate";
 import {
   parseQuiverResultado,
   parseQuiverSemRetorno,
@@ -157,28 +158,7 @@ export function useSimulacaoCalculo(
     await enviarECalcular({ seguradorasSel: [seguradora], seguradoraAjuste: seguradora });
   }
 
-  // R.9 (revisão form vs robô Quiver, 2026-08): o gate reflete os campos que
-  // o robô Playwright exige de fato — ele identifica o veículo pela placa via
-  // FIPE do portal da seguradora, não usa marca/modelo/anoModelo (que
-  // continuam sendo coletados na tela, só não bloqueiam mais o cálculo).
-  const CAMPOS_OBRIGATORIOS_CALCULO: { campo: keyof Form; label: string }[] = [
-    { campo: "cpf", label: "CPF" },
-    { campo: "nome", label: "Nome completo" },
-    { campo: "sexo", label: "Sexo" },
-    { campo: "estadoCivil", label: "Estado civil" },
-    { campo: "placa", label: "Placa" },
-    { campo: "email", label: "E-mail" },
-    { campo: "cep", label: "CEP" },
-    { campo: "celular", label: "Telefone celular" },
-    { campo: "cepPernoite", label: "CEP de pernoite" },
-    { campo: "cepCirculacao", label: "CEP de circulação" },
-    { campo: "kmMensal", label: "Km mensal" },
-  ];
-
-  const camposFaltantes = CAMPOS_OBRIGATORIOS_CALCULO.filter((c) => !f[c.campo]).map(
-    (c) => c.label,
-  );
-  if ((f.seguradorasSel?.length ?? 0) === 0) camposFaltantes.push("Seguradoras selecionadas");
+  const camposFaltantes = camposFaltantesCalculo(f);
 
   const podeCalcular = camposFaltantes.length === 0;
 

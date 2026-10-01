@@ -9,6 +9,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { normalizePlaca } from "@/lib/masks";
+import { usoExigeCepCirculacao } from "@/lib/cepCirculacao";
 import {
   SEGURADORA_QUIVER,
   acharAjusteCanonico,
@@ -250,7 +251,13 @@ export function montarPayloadQuiver(cot: CotacaoRow, ajuste?: AjusteCoberturaQui
         ? { possuiAntifurtoPorto: simNao(v.possui_antifurto_porto as boolean) }
         : {}),
       cepPernoite: onlyDigits(p.cep_pernoite as string),
-      cepCirculacao: onlyDigits((v.cep_circulacao as string) || (p.cep_pernoite as string)),
+      // Particular/vazio: o portal não tem o campo, vale o pernoite (mesmo que
+      // haja circulação antiga guardada no rascunho).
+      cepCirculacao: onlyDigits(
+        usoExigeCepCirculacao(v.tipo_uso as string)
+          ? (v.cep_circulacao as string) || (p.cep_pernoite as string)
+          : (p.cep_pernoite as string),
+      ),
       kmMes: onlyDigits(v.km_mensal as string),
       tipoUso: (v.tipo_uso as string) || "Particular",
       usoTrabalho: (v.uso_trabalho as string) || "Não trabalha",
