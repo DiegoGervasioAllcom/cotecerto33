@@ -190,7 +190,10 @@ export function montarPayloadQuiver(cot: CotacaoRow, ajuste?: AjusteCoberturaQui
     id: cot.id,
     segurado: {
       cpf: onlyDigits(s.cpf_cnpj as string),
-      nomeSocial: (s.nome_social as string) || (s.nome as string) || "",
+      // Opcional (V12.x): só envia quando houver valor; nunca copia o nome.
+      ...(((s.nome_social as string) ?? "").trim()
+        ? { nomeSocial: ((s.nome_social as string) ?? "").trim() }
+        : {}),
       telefone: onlyDigits((s.celular as string) || (s.tel_res as string)),
       email: s.email ?? "",
       cep: onlyDigits(s.cep as string),

@@ -2,8 +2,8 @@
 // Espelha as constraints reais do banco (D1 tamanho + D3 formato) para avisar
 // o usuário ANTES de avançar, sem serem mais restritivos: todo campo é
 // opcional (mesma lógica dos checks `col is null or col = '' or ...`) e só
-// valida formato/tamanho se o campo estiver preenchido — exceto `nomeSocial`,
-// `celular`, `email` e `numero`, obrigatórios via superRefine abaixo (decisão
+// valida formato/tamanho se o campo estiver preenchido — exceto `celular`,
+// `email` e `numero`, obrigatórios via superRefine abaixo (decisão
 // de negócio, não vem do protótipo). `nome`, `estadoCivil` e `sexo` não
 // bloqueiam o avanço de etapa — são exigidos só para liberar o Calcular
 // (useSimulacaoCalculo.ts), não aqui.
@@ -57,10 +57,8 @@ export const seguradoSchema = z
     cidade: optionalMax(150, "Cidade muito longa."),
     uf: optionalMax(2, "UF inválida."),
   })
-  // Nome social é a única exceção à regra "todo campo é opcional" desta etapa:
-  // decisão de negócio (não vem do protótipo) — obrigatório, diferente do
-  // Nome e composto (nome + sobrenome), pra não aceitar um nome social vazio
-  // de fato ou copiado do Nome civil.
+  // Nome social é OPCIONAL (V12.x): vazio passa. Só quando preenchido valem
+  // as regras: diferente do Nome e composto (nome + sobrenome).
   .superRefine((v, ctx) => {
     // R.10 (revisão form vs robô Quiver, 2026-08): o robô só cota para
     // Pessoa Física (validarCpf.ts do robô usa módulo 11, 11 dígitos).
@@ -97,14 +95,7 @@ export const seguradoSchema = z
       });
     }
     const nomeSocial = (v.nomeSocial ?? "").trim();
-    if (!nomeSocial) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["nomeSocial"],
-        message: "Nome social é obrigatório.",
-      });
-      return;
-    }
+    if (!nomeSocial) return;
     if (nome && nomeSocial.toLowerCase() === nome.toLowerCase()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

@@ -162,7 +162,6 @@ const goldenSemAjuste = {
   id: "cot-golden",
   segurado: {
     cpf: "52998224725",
-    nomeSocial: "Maria Teste",
     telefone: "11999999999",
     email: "m@t.local",
     cep: "01310100",
@@ -231,6 +230,27 @@ describe("payload golden", () => {
         carroReserva: "Superior",
       },
     });
+  });
+});
+
+describe("nome social opcional no payload", () => {
+  it("sem nome social, omite o campo e não copia o nome", () => {
+    for (const nome_social of [undefined, null, "", "   "]) {
+      const { segurado } = montarPayloadQuiver({
+        ...cotGolden,
+        segurado: { ...cotGolden.segurado, nome_social },
+      });
+      expect(segurado).not.toHaveProperty("nomeSocial");
+      expect(segurado.nome).toBe("Maria Teste");
+    }
+  });
+
+  it("com nome social, envia aparado", () => {
+    const { segurado } = montarPayloadQuiver({
+      ...cotGolden,
+      segurado: { ...cotGolden.segurado, nome_social: "  Maria Souza " },
+    });
+    expect(segurado.nomeSocial).toBe("Maria Souza");
   });
 });
 

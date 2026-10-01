@@ -89,14 +89,14 @@ export function StepSegurado({
         </div>
         <div className="field-group full">
           <label>
-            Nome social<span className="req">*</span>
+            Nome social <span className="hint">(opcional)</span>
           </label>
           <input
             className="input"
             value={f.nomeSocial}
             maxLength={150}
             onChange={(e) => up("nomeSocial", e.target.value)}
-            placeholder="Nome e sobrenome"
+            placeholder="Opcional — nome e sobrenome"
           />
           {erros.nomeSocial && (
             <span className="hint" style={{ color: "var(--alert)", display: "block" }}>

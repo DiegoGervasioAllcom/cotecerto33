@@ -2,16 +2,14 @@ import { describe, it, expect } from "vitest";
 import { seguradoSchema } from "@/lib/schemas/cotacaoSegurado.schema";
 import { seguroSchema } from "@/lib/schemas/cotacaoSeguro.schema";
 
-// `nomeSocial`, `email`, `numero` e `celular` são exceções à regra "todo
-// campo é opcional" desta etapa (ver comentário no schema) — por isso todo
-// caso abaixo que testa OUTRO campo precisa incluir valores válidos para
-// esses quatro, senão falha por um motivo que não é o que o teste quer
-// verificar. `nome` e `estadoCivil` não bloqueiam o avanço de etapa (só o
-// Calcular, via useSimulacaoCalculo.ts) — continuam opcionais aqui.
-const NOME_SOCIAL_VALIDO = "Nome Social Válido";
+// `email`, `numero` e `celular` são exceções à regra "todo campo é opcional"
+// desta etapa (ver comentário no schema) — por isso todo caso abaixo que testa
+// OUTRO campo precisa incluir valores válidos para esses três, senão falha por
+// um motivo que não é o que o teste quer verificar. `nomeSocial` é opcional
+// (só é validado quando preenchido). `nome` e `estadoCivil` não bloqueiam o
+// avanço de etapa (só o Calcular, via useSimulacaoCalculo.ts).
 const CAMPOS_OBRIGATORIOS_VALIDOS = {
   nome: "Fulano de Tal",
-  nomeSocial: NOME_SOCIAL_VALIDO,
   estadoCivil: "Solteiro(a)",
   email: "fulano@email.com",
   numero: "123",
@@ -19,8 +17,12 @@ const CAMPOS_OBRIGATORIOS_VALIDOS = {
 };
 
 describe("seguradoSchema", () => {
-  it("rejeita objeto vazio (nomeSocial, email, número e celular são obrigatórios)", () => {
+  it("rejeita objeto vazio (email, número e celular são obrigatórios)", () => {
     expect(seguradoSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("aceita nomeSocial ausente (campo opcional)", () => {
+    expect(seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS }).success).toBe(true);
   });
 
   it("aceita nome vazio (não bloqueia etapa; obrigatoriedade fica no gate de Calcular)", () => {
@@ -41,17 +43,19 @@ describe("seguradoSchema", () => {
     ).toBe(true);
   });
 
-  it("rejeita nomeSocial vazio", () => {
-    expect(
-      seguradoSchema.safeParse({
-        ...CAMPOS_OBRIGATORIOS_VALIDOS,
-        nome: "Fulano de Tal",
-        nomeSocial: "",
-      }).success,
-    ).toBe(false);
+  it("aceita nomeSocial vazio ou só espaços (opcional)", () => {
+    for (const nomeSocial of ["", "   "]) {
+      expect(
+        seguradoSchema.safeParse({
+          ...CAMPOS_OBRIGATORIOS_VALIDOS,
+          nome: "Fulano de Tal",
+          nomeSocial,
+        }).success,
+      ).toBe(true);
+    }
   });
 
-  it("rejeita nomeSocial igual ao nome (case-insensitive)", () => {
+  it("rejeita nomeSocial preenchido igual ao nome (case-insensitive)", () => {
     expect(
       seguradoSchema.safeParse({
         ...CAMPOS_OBRIGATORIOS_VALIDOS,
@@ -61,7 +65,7 @@ describe("seguradoSchema", () => {
     ).toBe(false);
   });
 
-  it("rejeita nomeSocial de uma palavra só (não é composto)", () => {
+  it("rejeita nomeSocial preenchido de uma palavra só (não é composto)", () => {
     expect(
       seguradoSchema.safeParse({
         ...CAMPOS_OBRIGATORIOS_VALIDOS,
