@@ -547,18 +547,76 @@ const normalizar = (texto: string | null | undefined) =>
     .trim()
     .toLocaleLowerCase("pt-BR");
 
+/** Rótulo da linha de parcelamento como o protótipo: "À vista" ou "N parcelas". */
+export function rotuloParcelamento(opcao: Pick<OpcaoPremio, "parcelas" | "avista">): {
+  rotulo: string;
+  ordem: number;
+} {
+  const texto = opcao.parcelas || opcao.avista || "";
+  const n = /(\d+)\s*x\b/i.exec(texto)?.[1];
+  if (n) {
+    const qtd = Number(n);
+    return qtd <= 1 ? { rotulo: "À vista", ordem: 1 } : { rotulo: `${qtd} parcelas`, ordem: qtd };
+  }
+  if (isVista(texto)) return { rotulo: "À vista", ordem: 1 };
+  return { rotulo: texto || "—", ordem: 0 };
+}
+
+export const parcelaSemJuros = (opcao: Pick<OpcaoPremio, "parcelas">) =>
+  /sem juros/i.test(opcao.parcelas ?? "");
+
+export type LinhaParcelamento<T extends OpcaoPremio = OpcaoPremio> = {
+  rotulo: string;
+  /** Uma entrada por lista de entrada (mesma ordem); undefined = sem a parcela. */
+  opcoes: Array<T | undefined>;
+};
+export type BlocoParcelamento<T extends OpcaoPremio = OpcaoPremio> = {
+  faixa: string;
+  linhas: Array<LinhaParcelamento<T>>;
+};
+
 /**
- * Faixa própria da célula de parcelamento quando diverge do rótulo da linha
- * (o rótulo vem da primeira coluna; cada produto pode ter faixas diferentes).
- * Devolve `null` quando é igual ao rótulo (comparação sem acento/caixa) ou vazia.
+ * Agrupa as opções de várias ofertas (uma lista por coluna) em blocos por
+ * faixa (`tipo`, sem acento/caixa), cada um com linhas por quantidade de
+ * parcelas, em ordem crescente. Repetições do mesmo rótulo na mesma faixa
+ * e coluna viram linhas extras.
  */
-export function faixaDivergenteDaCelula(
-  rotuloLinha: string | null | undefined,
-  tipoCelula: string | null | undefined,
-): string | null {
-  const tipo = (tipoCelula ?? "").trim();
-  if (!tipo) return null;
-  return normalizar(tipo) === normalizar(rotuloLinha) ? null : tipo;
+export function agruparParcelamento<T extends OpcaoPremio>(
+  listas: ReadonlyArray<readonly T[]>,
+): Array<BlocoParcelamento<T>> {
+  const blocos = new Map<
+    string,
+    {
+      faixa: string;
+      linhas: Map<string, { rotulo: string; ordem: number; opcoes: Array<T | undefined> }>;
+    }
+  >();
+  listas.forEach((lista, col) => {
+    const vistos = new Map<string, number>();
+    for (const opcao of lista) {
+      const faixa = (opcao.tipo ?? "").trim();
+      const chaveFaixa = normalizar(faixa);
+      const { rotulo, ordem } = rotuloParcelamento(opcao);
+      const seq = vistos.get(`${chaveFaixa}|${rotulo}`) ?? 0;
+      vistos.set(`${chaveFaixa}|${rotulo}`, seq + 1);
+      const bloco = blocos.get(chaveFaixa) ?? { faixa, linhas: new Map() };
+      blocos.set(chaveFaixa, bloco);
+      const chaveLinha = `${rotulo}#${seq}`;
+      const linha = bloco.linhas.get(chaveLinha) ?? {
+        rotulo,
+        ordem,
+        opcoes: listas.map(() => undefined),
+      };
+      bloco.linhas.set(chaveLinha, linha);
+      linha.opcoes[col] = opcao;
+    }
+  });
+  return [...blocos.values()].map((b) => ({
+    faixa: b.faixa,
+    linhas: [...b.linhas.values()]
+      .sort((a, c) => a.ordem - c.ordem)
+      .map(({ rotulo, opcoes }) => ({ rotulo, opcoes })),
+  }));
 }
 
 /**
