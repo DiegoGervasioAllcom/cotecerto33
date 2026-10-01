@@ -1,5 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DOC_REFETCH_MS,
+  estadoDocumentoProposta,
+  type DocumentoLinha,
+} from "@/lib/proposta-documento-estado";
 import { PROPOSTA_SITUACAO_STATUSES } from "@/lib/proposta-situacao";
 import type { PropostaEmissaoRow } from "./types";
 
@@ -21,7 +26,7 @@ export function fetchEmissaoRows(uid: string) {
       "id,numero,protocolo_seguradora,orcamento_cia,apolice_numero,seguradora,premio,valor," +
         "parcelas,valor_parcela,transmitida_em,emitida_em," +
         "transmissao_status,transmissao_motivo,transmissao_mensagem,cotacao_id," +
-        "cotacoes(numero,ramo,segurado:cotacao_segurado(nome))",
+        "cotacoes(numero,ramo,responsavel_id,segurado:cotacao_segurado(nome))",
     )
     .eq("responsavel_id", uid)
     .in("transmissao_status", PROPOSTA_SITUACAO_STATUSES)
@@ -38,5 +43,48 @@ export function useEmissaoRows(uid: string | null) {
       if (error) throw error;
       return (data ?? []) as unknown as PropostaEmissaoRow[];
     },
+  });
+}
+
+/**
+ * Documento (PDF) de TODAS as propostas da lista numa única query (em vez de
+ * uma por linha — a lista chega a 200). A RLS de `proposta_documentos` já
+ * escopa; só `proposta_pdf`. Refetch leve enquanto alguma ainda "prepara".
+ */
+export function useDocumentosEmissao(rows: PropostaEmissaoRow[]) {
+  const ids = rows.map((r) => r.id).sort();
+  return useQuery({
+    queryKey: ["proposta-documentos-lote", ids],
+    enabled: ids.length > 0,
+    queryFn: async (): Promise<Record<string, NonNullable<DocumentoLinha>>> => {
+      // Em blocos de 100 ids: o `.in()` com 200 uuids passa de ~7 KB na URL e
+      // chega perto do limite de cabeçalho do nginx.
+      const blocos: string[][] = [];
+      for (let i = 0; i < ids.length; i += 100) blocos.push(ids.slice(i, i + 100));
+      const respostas = await Promise.all(
+        blocos.map((bloco) =>
+          supabase
+            .from("proposta_documentos")
+            .select("proposta_id, status, tentado_em, updated_at")
+            .eq("tipo", "proposta_pdf")
+            .in("proposta_id", bloco),
+        ),
+      );
+      const linhas = respostas.flatMap((r) => {
+        if (r.error) throw r.error;
+        return r.data ?? [];
+      });
+      return Object.fromEntries(linhas.map((d) => [d.proposta_id, d]));
+    },
+    // Mantém o mapa anterior enquanto a lista muda, para o botão não piscar.
+    placeholderData: keepPreviousData,
+    refetchInterval: (q) =>
+      q.state.data !== undefined &&
+      rows.every(
+        (r) =>
+          estadoDocumentoProposta(q.state.data?.[r.id] ?? null, r.transmitida_em) !== "preparando",
+      )
+        ? false
+        : DOC_REFETCH_MS,
   });
 }

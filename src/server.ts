@@ -8,6 +8,11 @@ import {
   handleQuiverTransmissaoWebhook,
 } from "./lib/quiver-transmissao-webhook";
 
+import {
+  QUIVER_DOCUMENTO_WEBHOOK_PATH,
+  handleQuiverDocumentoWebhook,
+} from "./lib/quiver-documento-webhook";
+
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
@@ -50,6 +55,9 @@ export default {
     }
     if (request.method === "POST" && url.pathname === QUIVER_TRANSMISSAO_WEBHOOK_PATH) {
       return handleQuiverTransmissaoWebhook(request);
+    }
+    if (request.method === "POST" && url.pathname === QUIVER_DOCUMENTO_WEBHOOK_PATH) {
+      return handleQuiverDocumentoWebhook(request);
     }
     try {
       const handler = await getServerEntry();

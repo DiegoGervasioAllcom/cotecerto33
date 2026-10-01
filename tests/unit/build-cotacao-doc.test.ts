@@ -86,7 +86,8 @@ describe("buildCotacaoDoc", () => {
 
   test("modelo Marca da seguradora usa o nome da 1ª seguradora selecionada e avisa sobre as demais", () => {
     const html = buildCotacaoDoc(DADOS, config({ modelo: "cia" }));
-    expect(html).toContain('<div class="doc-logo-cia"><span>Porto</span>');
+    expect(html).toContain('<div class="doc-logo-cia">');
+    expect(html).toContain("<span>Porto</span><small>Orçamento de Seguro Auto</small>");
     expect(html).toContain("um documento por cia");
     expect(html).toContain("os outros 1 seguem no mesmo PDF");
   });
@@ -129,27 +130,33 @@ describe("buildCotacaoDoc", () => {
     expect(html).not.toContain("um documento por cia");
   });
 
-  test("seguradora sem opções mostra o aviso de 'nenhuma opção disponível' em vez de tabela vazia", () => {
+  test("seguradora sem opções não gera as seções de franquias e parcelas", () => {
     const semOpcoes: DocDados = {
       ...DADOS,
       seguradoras: [{ ...DADOS.seguradoras[0], opcoes: [] }],
     };
     const html = buildCotacaoDoc(semOpcoes, config({ seguradorasSelecionadas: ["card-porto"] }));
-    expect(html).toContain("Nenhuma opção de pagamento disponível.");
+    expect(html).not.toContain("Parcelas (* sem juros)");
+    expect(html).not.toContain("Franquias do veículo");
   });
 
-  test("seguradora sem coberturas mostra o aviso de 'nenhuma cobertura retornada' em vez de tabela vazia", () => {
+  test("seguradora sem coberturas nem opções mostra o aviso em vez de tabela vazia", () => {
     const semCoberturas: DocDados = {
       ...DADOS,
       seguradoras: [
-        { ...DADOS.seguradoras[0], coberturasBasicas: undefined, coberturasAdicionais: undefined },
+        {
+          ...DADOS.seguradoras[0],
+          coberturasBasicas: undefined,
+          coberturasAdicionais: undefined,
+          opcoes: [],
+        },
       ],
     };
     const html = buildCotacaoDoc(
       semCoberturas,
       config({ seguradorasSelecionadas: ["card-porto"] }),
     );
-    expect(html).toContain("Nenhuma cobertura detalhada retornada pela seguradora.");
+    expect(html).toContain("Nenhuma cobertura ou opção de pagamento retornada pela seguradora.");
   });
 
   test("economia e colunado aplicam as classes correspondentes no bloco raiz do documento", () => {

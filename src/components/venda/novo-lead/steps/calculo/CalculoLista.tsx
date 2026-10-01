@@ -16,7 +16,6 @@ import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicio
 import {
   coberturaEntries,
   coberturaLabelsUnion,
-  faixaDivergenteDaCelula,
   gruposOpcoesResultado,
   semRetornoPorFaixa,
   seguradorasSemRetorno,
@@ -24,6 +23,7 @@ import {
   type SemRetornoItem,
   type SeguradoraSemRetorno,
 } from "@/components/venda/cotacoes/quiver-resultado";
+import { CalculoParcelamento } from "./CalculoParcelamento";
 import { SegAcoes } from "./SegAcoes";
 import { SeloPersonalizada } from "./SeloPersonalizada";
 import type { CoberturaGlobal } from "./PersonalizarSeguradoraModal";
@@ -138,26 +138,16 @@ export function CalculoLista({
     setTimeout(atualizarNav, 300);
   }
 
-  // Maior nº de opções de parcela entre as formas de pagamento atualmente
-  // selecionadas — cada linha da seção "Parcelamento" é um índice dessa
-  // lista; o rótulo vem da primeira oferta que tiver aquele índice.
+  // Escolha e grupo de pagamento atuais de cada oferta.
   const gruposSelecionados = useMemo(
     () =>
       resultados.map((resultado) => {
         const escolha = escolhaDoCard(resultado);
-        const grupos = gruposOpcoesResultado(resultado);
-        const grupo = grupos.find((item) => item.id === escolha.grupoId);
-        return { resultado, escolha, grupos, grupo };
+        const grupo = gruposOpcoesResultado(resultado).find((item) => item.id === escolha.grupoId);
+        return { resultado, escolha, grupo };
       }),
     [resultados, escolhaDoCard],
   );
-  const maxOpcoes = Math.max(
-    0,
-    ...gruposSelecionados.map((item) => item.grupo?.opcoes.length ?? 0),
-  );
-  const rotuloParcela = (idx: number) =>
-    gruposSelecionados.find((item) => item.grupo?.opcoes[idx])?.grupo?.opcoes[idx]?.tipo ||
-    `Opção ${idx + 1}`;
 
   // Faixas sem retorno dentro de cards que voltaram (rótulo real do robô).
   const faixasSemRetorno = useMemo(
@@ -318,91 +308,12 @@ export function CalculoLista({
                 );
               })}
             </tr>
-            {maxOpcoes > 0 && (
-              <tr className="cl-sec">
-                <td className="cl-lbl">Parcelamento</td>
-                {colunas.map((coluna) => {
-                  const chave = coluna.tipo === "oferta" ? coluna.resultado.cardId : coluna.chave;
-                  return (
-                    <td key={chave}>
-                      {coluna.tipo === "oferta" && (
-                        <small className="muted">passe o mouse e contrate direto</small>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            )}
-            {Array.from({ length: maxOpcoes }, (_, idx) => (
-              <tr className={`cl-parc${idx === 0 ? " cl-preco" : ""}`} key={`parc-${idx}`}>
-                <td className="cl-lbl">{rotuloParcela(idx)}</td>
-                {colunas.map((coluna) => {
-                  if (coluna.tipo === "sem-retorno")
-                    return (
-                      <td key={coluna.chave}>
-                        <span className="nc">—</span>
-                      </td>
-                    );
-                  const { resultado } = coluna;
-                  const item = gruposSelecionados.find(
-                    (g) => g.resultado.cardId === resultado.cardId,
-                  );
-                  const opcao = item?.grupo?.opcoes[idx];
-                  if (!opcao)
-                    return (
-                      <td key={resultado.cardId}>
-                        <span className="nc">—</span>
-                      </td>
-                    );
-                  const selecionada = item?.escolha.opcaoId === opcao.id;
-                  const texto = opcao.parcelas || opcao.avista || "—";
-                  const faixaPropria = faixaDivergenteDaCelula(rotuloParcela(idx), opcao.tipo);
-                  return (
-                    <td
-                      key={resultado.cardId}
-                      className={`cl-cell${selecionada ? " on" : ""}`}
-                      onClick={() =>
-                        setEscolha(resultado.cardId, {
-                          grupoId: item?.grupo?.id ?? "",
-                          opcaoId: opcao.id,
-                        })
-                      }
-                      title={`Escolher ${texto.toLowerCase()}`}
-                    >
-                      <span className="cl-v">
-                        {texto}
-                        {faixaPropria && (
-                          <>
-                            <br />
-                            <small className="muted" data-testid="cl-faixa-propria">
-                              {faixaPropria}
-                            </small>
-                          </>
-                        )}
-                        {selecionada && (
-                          <span className="cl-mark">
-                            <svg width="10" height="10">
-                              <use href="#i-check" />
-                            </svg>
-                          </span>
-                        )}
-                      </span>
-                      <button
-                        type="button"
-                        className="cl-buy"
-                        title={`Contratar ${resultado.seguradora}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onContratarParcela(resultado, item?.grupo?.id ?? "", opcao.id);
-                        }}
-                      >
-                        <span className="buy-v">{texto}</span>
-                      </button>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            <CalculoParcelamento
+              colunas={colunas}
+              escolhaDoCard={escolhaDoCard}
+              setEscolha={setEscolha}
+              onContratarParcela={onContratarParcela}
+            />
             {faixasSemRetorno.map((faixa) => (
               <tr className="cl-parc" key={`sem-faixa-${faixa}`}>
                 <td className="cl-lbl">Sem retorno · {faixa}</td>
