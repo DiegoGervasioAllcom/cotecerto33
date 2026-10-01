@@ -1,4 +1,3 @@
-import { usoExigeCepCirculacao } from "@/lib/cepCirculacao";
 import type { Form } from "./types";
 
 // R.9 (revisão form vs robô Quiver, 2026-08): o gate reflete os campos que
@@ -18,14 +17,11 @@ export const CAMPOS_OBRIGATORIOS_CALCULO: { campo: keyof Form; label: string }[]
   { campo: "kmMensal", label: "Km mensal" },
 ];
 
-/** Rótulos dos campos que faltam para liberar o Calcular. "CEP de circulação"
- * só é exigido quando o tipo de uso não é Particular. */
-export function camposFaltantesCalculo(
-  f: Pick<Form, "tipoUso" | "cepCirculacao" | "seguradorasSel"> & Partial<Form>,
-): string[] {
+/** Rótulos dos campos que faltam para liberar o Calcular. O portal não usa
+ * "CEP circulação" (invisível em todos os usos), então nunca é exigido. */
+export function camposFaltantesCalculo(f: Pick<Form, "seguradorasSel"> & Partial<Form>): string[] {
   const full = f as Form;
   const faltantes = CAMPOS_OBRIGATORIOS_CALCULO.filter((c) => !full[c.campo]).map((c) => c.label);
-  if (usoExigeCepCirculacao(f.tipoUso) && !f.cepCirculacao) faltantes.push("CEP de circulação");
   if ((f.seguradorasSel?.length ?? 0) === 0) faltantes.push("Seguradoras selecionadas");
   return faltantes;
 }
