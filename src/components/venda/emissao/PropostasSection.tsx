@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import type { DocumentoLinha } from "@/lib/proposta-documento-estado";
 import { dataHoraOuTraco } from "@/lib/proposta-situacao";
 import type { PropostaEmissaoRow } from "./types";
 import {
@@ -22,6 +23,8 @@ export function PropostasSection({
   tourId,
   rowRefs,
   focoClasse,
+  documentos,
+  carregandoDocumentos,
 }: {
   titulo: string;
   chipTexto: string;
@@ -32,6 +35,9 @@ export function PropostasSection({
   rowRefs: RefObject<Record<string, HTMLTableRowElement | null>>;
   /** V12.3.11 — classes `em-foco`/`foco-pisca` de `useFocoAoChegar` (proto.css). */
   focoClasse: (id: string) => string;
+  /** Documento (PDF) por proposta — vem em lote de `useDocumentosEmissao`. */
+  documentos: Record<string, NonNullable<DocumentoLinha>> | undefined;
+  carregandoDocumentos: boolean;
 }) {
   return (
     <div className="card">
@@ -93,7 +99,11 @@ export function PropostasSection({
                     <small className="muted">{dataHoraOuTraco(r.transmitida_em)}</small>
                   </td>
                   <td>
-                    <AcoesCell />
+                    <AcoesCell
+                      row={r}
+                      documento={documentos?.[r.id] ?? null}
+                      carregandoDocumento={carregandoDocumentos}
+                    />
                   </td>
                 </tr>
               ))}

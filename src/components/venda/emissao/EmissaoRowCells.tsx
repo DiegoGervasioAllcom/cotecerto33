@@ -4,6 +4,13 @@ import {
   propostaSituacaoInfo,
   textoOuTraco,
 } from "@/lib/proposta-situacao";
+import { useAuth } from "@/lib/auth";
+import {
+  estadoDocumentoProposta,
+  podeTentarDeNovo,
+  type DocumentoLinha,
+} from "@/lib/proposta-documento-estado";
+import { useAcoesDocumentoProposta } from "@/components/venda/novo-lead/steps/transmissao/useDocumentoProposta";
 import { embed1a1 } from "@/lib/postgrest-embed";
 import type { PropostaEmissaoRow } from "./types";
 
@@ -65,21 +72,61 @@ export function SituacaoCell({ row }: { row: PropostaEmissaoRow }) {
   );
 }
 
-export function AcoesCell() {
+export function AcoesCell({
+  row,
+  documento,
+  carregandoDocumento,
+}: {
+  row: PropostaEmissaoRow;
+  /** Linha de `proposta_documentos` desta proposta (lote em `useDocumentosEmissao`). */
+  documento: DocumentoLinha;
+  carregandoDocumento: boolean;
+}) {
+  const { session, role } = useAuth();
+  const { abrir, tentarDeNovo } = useAcoesDocumentoProposta(row.id);
+  const estado = carregandoDocumento
+    ? "preparando"
+    : estadoDocumentoProposta(documento, row.transmitida_em);
+  const icone = (
+    <svg width={13} height={13}>
+      <use href="#i-file" />
+    </svg>
+  );
   return (
     <div className="row-actions">
-      <button
-        type="button"
-        className="btn btn-ghost btn-sm"
-        disabled
-        aria-disabled="true"
-        title={AVISO_INTEGRACAO_PENDENTE}
-      >
-        <svg width={13} height={13}>
-          <use href="#i-file" />
-        </svg>{" "}
-        Documentos
-      </button>
+      {estado === "ok" ? (
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          disabled={abrir.isPending}
+          onClick={() => abrir.mutate()}
+        >
+          {icone} Proposta (PDF)
+        </button>
+      ) : estado === "preparando" ? (
+        <button type="button" className="btn btn-ghost btn-sm" disabled aria-disabled="true">
+          {icone} Preparando documento…
+        </button>
+      ) : (
+        <>
+          <button type="button" className="btn btn-ghost btn-sm" disabled aria-disabled="true">
+            {icone} Documento indisponível
+          </button>
+          {podeTentarDeNovo(session?.user.id, role, row.cotacoes?.responsavel_id) && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              disabled={tentarDeNovo.isPending}
+              onClick={() => tentarDeNovo.mutate()}
+            >
+              <svg width={13} height={13}>
+                <use href="#i-refresh" />
+              </svg>{" "}
+              Tentar de novo
+            </button>
+          )}
+        </>
+      )}
       <button
         type="button"
         className="btn btn-yellow btn-sm"

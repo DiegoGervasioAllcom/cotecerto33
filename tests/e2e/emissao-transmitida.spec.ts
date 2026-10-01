@@ -90,10 +90,10 @@ test.describe("Emissão & histórico — lista (V12.1.25 parcial)", () => {
     await expect(linhaTransmitida.getByText("Transmitida", { exact: true })).toBeVisible();
     await expect(linhaFalha.getByText("Pendência da seguradora")).toBeVisible();
 
-    // Ações desabilitadas — clicar não navega nem dispara request (sem
-    // integração ligada, nada de "Documentos"/"Consultar" funcional ainda).
+    // Sem PDF capturado ainda: "Preparando documento…" desabilitado (V12.4.7);
+    // "Consultar" (protocolo) segue sem integração.
     for (const linha of [linhaTransmitida, linhaFalha]) {
-      const docs = linha.getByRole("button", { name: "Documentos" });
+      const docs = linha.getByRole("button", { name: "Preparando documento…" });
       const consultar = linha.getByRole("button", { name: "Consultar" });
       await expect(docs).toBeDisabled();
       await expect(consultar).toBeDisabled();
@@ -105,9 +105,53 @@ test.describe("Emissão & histórico — lista (V12.1.25 parcial)", () => {
         requisicaoDisparada = true;
       }
     });
-    await linhaTransmitida.getByRole("button", { name: "Documentos" }).click({ force: true });
+    await linhaTransmitida.getByRole("button", { name: "Preparando documento…" }).click({
+      force: true,
+    });
     await expect(page).toHaveURL(/\/venda\/emissao/);
     expect(requisicaoDisparada).toBe(false);
+  });
+
+  test("documento capturado (status ok): 'Proposta (PDF)' habilita na linha e abre a URL assinada (V12.4.7)", async ({
+    page,
+  }) => {
+    const pdfPath = await criarDocumentoPropostaOk(vendedor.cotacaoTransmitidaId);
+    try {
+      await page.addInitScript(() => {
+        (window as unknown as { __abertos: string[] }).__abertos = [];
+        window.open = () =>
+          ({
+            opener: {} as unknown,
+            close: () => {},
+            location: {
+              set href(v: string) {
+                (window as unknown as { __abertos: string[] }).__abertos.push(String(v));
+              },
+            },
+          }) as unknown as Window;
+      });
+      await loginAs(page, vendedor.email, vendedor.senha);
+      await page.goto("/venda/emissao");
+      const linha = page.locator("tr").filter({ hasText: "PRP-E2E-EMISSAO-TRANSMITIDA" });
+      const botao = linha.getByRole("button", { name: "Proposta (PDF)" });
+      await expect(botao).toBeEnabled({ timeout: 20_000 });
+      // A outra proposta (sem documento) continua em "Preparando".
+      await expect(
+        page
+          .locator("tr")
+          .filter({ hasText: "PRP-E2E-EMISSAO-FALHA" })
+          .getByRole("button", { name: "Preparando documento…" }),
+      ).toBeDisabled();
+
+      await botao.click();
+      await expect
+        .poll(() =>
+          page.evaluate(() => (window as unknown as { __abertos: string[] }).__abertos[0] ?? ""),
+        )
+        .toMatch(/\/storage\/v1\/object\/sign\/propostas-docs\//);
+    } finally {
+      await limparDocumentoPropostaOk(pdfPath);
+    }
   });
 
   test("?foco=seguradora:<id> destaca e leva a rolagem até a proposta (V12.3.11)", async ({
