@@ -213,7 +213,7 @@ export function ImprimirCotacaoModal({
               </span>
               <span className="op-tx">
                 <strong>Impressão expressa</strong>
-                <small>Sai na hora com todas as seguradoras e a versão resumida</small>
+                <small>Sai na hora com as 3 primeiras seguradoras e a versão resumida</small>
               </span>
               <svg width={14} height={14}>
                 <use href="#i-chevron-right" />
