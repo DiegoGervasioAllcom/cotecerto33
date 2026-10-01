@@ -197,6 +197,24 @@ function extrairAVista(texto?: string | null): number | null {
 }
 
 /**
+ * Valor do próprio texto de parcelas "À vista R$ 3.193,82" (Suhai: o campo
+ * `avista` da faixa vem vazio e o preço à vista só existe como variante de
+ * parcelamento). Exige vírgula decimal (nunca confunde "12x"/quantidade) e
+ * valor > 0.
+ */
+function extrairAVistaDeParcelas(texto?: string | null): number | null {
+  if (!texto) return null;
+  // Prefere o valor logo após "R$" (ignora percentuais como "5,5% desc." antes
+  // do preço); sem "R$", usa o último valor com vírgula decimal do texto.
+  const comMoeda = texto.match(/R\$\s*([\d.]*\d,\d{1,2})/);
+  const todos = texto.match(/[\d.]*\d,\d{1,2}/g);
+  const bruto = comMoeda?.[1] ?? todos?.[todos.length - 1];
+  if (!bruto) return null;
+  const numero = Number(bruto.replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(numero) && numero > 0 ? numero : null;
+}
+
+/**
  * Espelha `fn_premio_total_de_parcelas` (SQL,
  * `supabase/migrations/20260928090000_premio_base_soma_parcelas.sql`): exige
  * a quantidade (1–12) E o valor da parcela extraíveis com segurança do
@@ -282,7 +300,7 @@ export function calcularPremioTransmissao(
   const parcelasTexto = (params.parcelasEscolhidas ?? "").trim();
 
   if (!parcelasTexto || isVista(parcelasTexto)) {
-    const valor = extrairAVista(opcao.avista);
+    const valor = extrairAVista(opcao.avista) ?? extrairAVistaDeParcelas(parcelasTexto);
     if (valor === null) {
       return {
         ok: false,

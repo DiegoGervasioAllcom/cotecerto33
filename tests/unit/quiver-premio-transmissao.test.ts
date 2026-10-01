@@ -289,4 +289,75 @@ describe("calcularPremioTransmissao", () => {
     });
     expect(resultado.ok).toBe(false);
   });
+  describe("à vista sem `avista` (Suhai: preço só na variante de parcelas)", () => {
+    const cardSuhai = (parcelas: string) => ({
+      seguradora: "Suhai",
+      produto: "Auto Suhai",
+      produtoId: "suhai-auto",
+      opcoes: [{ tipo: "Compreensiva", franquia: "Normal", parcelas }],
+      formaPagamento: "Boleto",
+    });
+    const chamar = (parcelas: string, avista?: string) =>
+      calcularPremioTransmissao(raw([cardSuhai(parcelas)]), {
+        seguradora: "Suhai",
+        produtoId: "suhai-auto",
+        formaPagamento: "Boleto",
+        parcelasEscolhidas: parcelas,
+        opcao: { tipo: "Compreensiva", franquia: "Normal", ...(avista ? { avista } : {}) },
+      });
+
+    it("`avista` vazio e parcelas 'À vista R$ 3.193,82': usa o valor do texto, 1 parcela", () => {
+      expect(chamar("À vista R$ 3.193,82")).toEqual({
+        ok: true,
+        premio: 3193.82,
+        parcelasNum: null,
+        valorParcela: null,
+      });
+    });
+
+    it("percentual antes do preço não vira o valor: 'À vista (5,5% desc.) R$ 3.193,82'", () => {
+      expect(chamar("À vista (5,5% desc.) R$ 3.193,82")).toEqual({
+        ok: true,
+        premio: 3193.82,
+        parcelasNum: null,
+        valorParcela: null,
+      });
+    });
+
+    it("`avista` preenchido continua valendo sobre o texto", () => {
+      const r = calcularPremioTransmissao(
+        raw([
+          {
+            ...cardSuhai("À vista R$ 999,00"),
+            opcoes: [
+              {
+                tipo: "Compreensiva",
+                franquia: "Normal",
+                avista: "R$ 1.000,00",
+                parcelas: "À vista R$ 999,00",
+              },
+            ],
+          },
+        ]),
+        {
+          seguradora: "Suhai",
+          produtoId: "suhai-auto",
+          formaPagamento: "Boleto",
+          parcelasEscolhidas: "À vista R$ 999,00",
+          opcao: { tipo: "Compreensiva", franquia: "Normal", avista: "R$ 1.000,00" },
+        },
+      );
+      expect(r).toEqual({ ok: true, premio: 1000, parcelasNum: null, valorParcela: null });
+    });
+
+    it("sem nenhum valor extraível: recusa", () => {
+      expect(chamar("À vista").ok).toBe(false);
+    });
+
+    it("texto sem vírgula decimal ou valor zero: recusa (nunca confunde quantidade)", () => {
+      expect(chamar("À vista 12").ok).toBe(false);
+      expect(chamar("À vista em 12x").ok).toBe(false);
+      expect(chamar("À vista R$ 0,00").ok).toBe(false);
+    });
+  });
 });

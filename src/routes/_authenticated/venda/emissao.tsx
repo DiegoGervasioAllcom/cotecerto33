@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { FocoBarra } from "@/components/venda/foco-barra";
 import { PropostasSection } from "@/components/venda/emissao/PropostasSection";
-import { useEmissaoRows } from "@/components/venda/emissao/queries";
+import { useDocumentosEmissao, useEmissaoRows } from "@/components/venda/emissao/queries";
 import { useAuth } from "@/lib/auth";
 import { embed1a1 } from "@/lib/postgrest-embed";
 import { FOCO_SCROLL_DELAY_MS, useFocoAoChegar } from "@/lib/use-foco-ao-chegar";
@@ -34,6 +34,7 @@ function Page() {
   const uid = session?.user.id ?? null;
   const { data, isLoading, error } = useEmissaoRows(uid);
   const rows = useMemo(() => data ?? [], [data]);
+  const documentosQ = useDocumentosEmissao(rows);
   const loading = isLoading;
   const err = error ? error.message : null;
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
@@ -206,6 +207,8 @@ function Page() {
             tourId="emissao-aguardando"
             rowRefs={rowRefs}
             focoClasse={foco.classe}
+            documentos={documentosQ.data}
+            carregandoDocumentos={documentosQ.isLoading}
           />
 
           <div style={{ marginTop: 16 }}>
@@ -218,6 +221,8 @@ function Page() {
               tourId="emissao-concluidas"
               rowRefs={rowRefs}
               focoClasse={foco.classe}
+              documentos={documentosQ.data}
+              carregandoDocumentos={documentosQ.isLoading}
             />
           </div>
         </div>

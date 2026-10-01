@@ -16,31 +16,9 @@ async function token(): Promise<string> {
   return data.session?.access_token ?? "";
 }
 
-/** Documento (PDF) da proposta via RLS; refetch leve enquanto "Preparando". */
-export function useDocumentoProposta(propostaId: string, transmitidaEm: string | null) {
+/** Abrir (URL assinada) e "Tentar de novo" — compartilhado entre o card Transmitida e a lista de Emissão. */
+export function useAcoesDocumentoProposta(propostaId: string) {
   const qc = useQueryClient();
-  const queryKey = ["proposta-documento", propostaId];
-
-  const query = useQuery({
-    queryKey,
-    queryFn: async (): Promise<DocumentoLinha> => {
-      const { data, error } = await supabase
-        .from("proposta_documentos")
-        .select("status, tentado_em, updated_at")
-        .eq("proposta_id", propostaId)
-        .eq("tipo", "proposta_pdf")
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    refetchInterval: (q) =>
-      q.state.data === undefined ||
-      estadoDocumentoProposta(q.state.data, transmitidaEm) === "preparando"
-        ? DOC_REFETCH_MS
-        : false,
-  });
-
-  const estado = estadoDocumentoProposta(query.data ?? null, transmitidaEm);
 
   const abrir = useMutation({
     mutationFn: async () => {
@@ -73,8 +51,42 @@ export function useDocumentoProposta(propostaId: string, transmitidaEm: string |
     onError: (e) =>
       toast.error(e instanceof Error ? e.message : "Não foi possível solicitar o documento."),
     // Sucesso ou não, relê o estado real (o servidor marca pendente).
-    onSettled: () => qc.invalidateQueries({ queryKey }),
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ["proposta-documento", propostaId] }),
+        qc.invalidateQueries({ queryKey: ["proposta-documentos-lote"] }),
+      ]),
   });
+
+  return { abrir, tentarDeNovo };
+}
+
+/** Documento (PDF) da proposta via RLS; refetch leve enquanto "Preparando". */
+export function useDocumentoProposta(propostaId: string, transmitidaEm: string | null) {
+  const queryKey = ["proposta-documento", propostaId];
+
+  const query = useQuery({
+    queryKey,
+    queryFn: async (): Promise<DocumentoLinha> => {
+      const { data, error } = await supabase
+        .from("proposta_documentos")
+        .select("status, tentado_em, updated_at")
+        .eq("proposta_id", propostaId)
+        .eq("tipo", "proposta_pdf")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: (q) =>
+      q.state.data === undefined ||
+      estadoDocumentoProposta(q.state.data, transmitidaEm) === "preparando"
+        ? DOC_REFETCH_MS
+        : false,
+  });
+
+  const estado = estadoDocumentoProposta(query.data ?? null, transmitidaEm);
+
+  const { abrir, tentarDeNovo } = useAcoesDocumentoProposta(propostaId);
 
   return { estado, carregando: query.isLoading, abrir, tentarDeNovo };
 }
