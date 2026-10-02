@@ -95,7 +95,7 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
         </div>
       </div>
 
-      <div className="wizard-grid cols-3">
+      <div className="wizard-grid">
         <div className="field-group">
           <label>
             Tipo de seguro<span className="req">*</span>
@@ -141,23 +141,6 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
               "Quinquenal",
               "Plurianual",
               "Prazo curto",
-            ].map((o) => (
-              <option key={o}>{o}</option>
-            ))}
-          </select>
-        </div>
-        <div className="field-group">
-          <label>Tipo de cobertura</label>
-          <select
-            className="input"
-            value={f.categoriaCoberturaLegado}
-            onChange={(e) => up("categoriaCoberturaLegado", e.target.value)}
-          >
-            {[
-              "Compreensiva",
-              "Casco (Incêndio, Roubo e Furto)",
-              "Casco (Colisão e Incêndio)",
-              "RCF (Somente terceiros)",
             ].map((o) => (
               <option key={o}>{o}</option>
             ))}
