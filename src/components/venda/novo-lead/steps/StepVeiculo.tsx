@@ -339,16 +339,6 @@ export function StepVeiculo({
             placeholder="1.000 km"
           />
         </div>
-        <div className="field-group">
-          <label>CEP de circulação</label>
-          <input
-            className="input"
-            value={f.cepCirculacao}
-            inputMode="numeric"
-            onChange={(e) => up("cepCirculacao", maskCep(e.target.value))}
-            placeholder="00000-000"
-          />
-        </div>
       </div>
 
       <UsoVeiculoFields f={f} up={up} />
