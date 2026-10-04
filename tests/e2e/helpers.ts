@@ -43,6 +43,8 @@ export async function preencherDadosComplementaresAteConfirmacao(page: Page) {
   await page.getByLabel("RG", { exact: true }).fill("123456789");
   await page.getByLabel("Data de emissão", { exact: true }).fill("13/05/2020");
   await page.getByLabel("Órgão emissor", { exact: true }).fill("SSP");
+  // E-mail é obrigatório na transmissão (V12: opcional no passo 1, exigido no passo 7).
+  await page.getByLabel("E-mail", { exact: true }).fill("cliente.e2e@teste.local");
   await page.getByLabel("CEP", { exact: true }).fill("04567-090");
   await page.getByLabel("Número", { exact: true }).fill("123");
   await page.getByLabel("Renavam", { exact: true }).fill("12345678901");
