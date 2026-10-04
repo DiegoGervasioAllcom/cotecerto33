@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { enviarCotacaoQuiver } from "@/lib/quiver.functions";
 import type { Form } from "../types";
 import { camposFaltantesCalculo } from "../calculoGate";
+import { gravouAntesDeCalcular, MSG_FALHA_GRAVAR } from "../calculoGravacao";
 import {
   parseQuiverResultado,
   parseQuiverSemRetorno,
@@ -29,7 +30,7 @@ const POLL_MS = 4000;
 export function useSimulacaoCalculo(
   f: Form,
   cotacaoId: string | null,
-  persistirAntes: (overrides?: { seguradorasSel?: string[] }) => Promise<void>,
+  persistirAntes: (overrides?: { seguradorasSel?: string[] }) => Promise<boolean>,
 ) {
   const queryClient = useQueryClient();
   const [calculando, setCalculando] = useState(false);
@@ -123,7 +124,15 @@ export function useSimulacaoCalculo(
     setResultados([]);
     setSemRetorno([]);
     setCalculando(true);
-    await persistirAntes(overrides ? { seguradorasSel: overrides.seguradorasSel } : undefined);
+    const gravou = await gravouAntesDeCalcular(
+      persistirAntes,
+      overrides ? { seguradorasSel: overrides.seguradorasSel } : undefined,
+    );
+    if (!gravou) {
+      setCalculando(false);
+      setErro(MSG_FALHA_GRAVAR);
+      return;
+    }
     const { data: sess } = await supabase.auth.getSession();
     try {
       await enviarCotacaoQuiver({

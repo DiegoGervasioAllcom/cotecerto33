@@ -14,7 +14,7 @@ export type PerdaSubmotivo = {
  * Subsistema de "classificar perda" da tela Lead Manual.
  * Depende de `cotacaoId` e `persistir` (produzidos por useCotacaoRascunho).
  */
-export function useClassificarPerda(cotacaoId: string | null, persistir: () => Promise<void>) {
+export function useClassificarPerda(cotacaoId: string | null, persistir: () => Promise<boolean>) {
   const navigate = useNavigate();
 
   const [perdaOpen, setPerdaOpen] = useState(false);
