@@ -206,34 +206,45 @@ export function useCotacaoRascunho(params: {
   // persistência sem depender do timing de `setF` (o autosave debounced usa
   // o estado `f` normal — este parâmetro é só para quem precisa garantir a
   // gravação ANTES de reenviar à Quiver, no mesmo clique).
-  async function persistir(overrides?: { seguradorasSel?: string[] }) {
+  //
+  // Devolve `true` quando gravou; `false` quando não gravou (sem dados mínimos
+  // para criar a cotação, erro do RPC ou exceção). Quem depende do banco
+  // (Calcular) deve checar; o autosave ignora o retorno.
+  async function persistir(overrides?: { seguradorasSel?: string[] }): Promise<boolean> {
     // só persiste se tiver algo identificador mínimo
-    if (!f.cpf && !f.nome && !cotacaoId) return;
+    if (!f.cpf && !f.nome && !cotacaoId) return false;
     setSaveState("saving");
     // `buildPayload()` monta um objeto NOVO a cada chamada (não reaproveita
     // referência entre invocações) — por isso é seguro mutar `payload.seguro`
     // abaixo com o override sem risco de vazar pro autosave normal (que
     // chama `buildPayload()` de novo, sem overrides, em cada disparo dele).
-    const payload = buildPayload();
-    if (overrides?.seguradorasSel) {
-      payload.seguro.seguradoras_sel = overrides.seguradorasSel;
-    }
-    const { data, error } = await supabase.rpc("salvar_cotacao_rascunho", {
-      p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
-      p_payload: payload as never,
-      // Canal capturado no gate "Lead Manual — origem" (só importa na criação
-      // do lead; a RPC ignora em updates). Sempre explícito — nunca undefined,
-      // pra não depender de resolução de overload no PostgREST.
-      p_origem: f.canalOrigem || "cotacao",
-    });
-    if (error) {
-      console.error("[cotacao] save error", error);
+    try {
+      const payload = buildPayload();
+      if (overrides?.seguradorasSel) {
+        payload.seguro.seguradoras_sel = overrides.seguradorasSel;
+      }
+      const { data, error } = await supabase.rpc("salvar_cotacao_rascunho", {
+        p_cotacao_id: cotacaoId as string, // a RPC aceita null: cria rascunho novo
+        p_payload: payload as never,
+        // Canal capturado no gate "Lead Manual — origem" (só importa na criação
+        // do lead; a RPC ignora em updates). Sempre explícito — nunca undefined,
+        // pra não depender de resolução de overload no PostgREST.
+        p_origem: f.canalOrigem || "cotacao",
+      });
+      if (error) {
+        console.error("[cotacao] save error", error);
+        setSaveState("error");
+        return false;
+      }
+      if (data && !cotacaoId) setCotacaoId(data as string);
+      setSaveState("saved");
+      setLastSavedAt(new Date());
+      return true;
+    } catch (e) {
+      console.error("[cotacao] save exception", e);
       setSaveState("error");
-      return;
+      return false;
     }
-    if (data && !cotacaoId) setCotacaoId(data as string);
-    setSaveState("saved");
-    setLastSavedAt(new Date());
   }
 
   // auto-save com debounce
