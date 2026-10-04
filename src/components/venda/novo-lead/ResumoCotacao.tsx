@@ -9,7 +9,7 @@ type Props = {
   camposFaltantes: string[];
   setStep: React.Dispatch<React.SetStateAction<number>>;
   doSimularCalculo: () => void;
-  persistir: (overrides?: { seguradorasSel?: string[] }) => Promise<void>;
+  persistir: (overrides?: { seguradorasSel?: string[] }) => Promise<boolean>;
   saveState: "idle" | "saving" | "saved" | "error";
   lastSavedAt: Date | null;
   cotacaoId: string | null;

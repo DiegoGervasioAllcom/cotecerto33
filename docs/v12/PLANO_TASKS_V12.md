@@ -284,3 +284,9 @@ Achados novos no robô (entram antes dos itens acima):
 Inclui as 11 tasks acrescentadas após a verificação ao vivo do protótipo (correções de pré-preenchimento, o fluxo completo de Impressão de cotações e o bloqueio de vazamento de comissão). A 30h úteis/semana por dev: **≈ 10 semanas** com 1 dev; **≈ 5 semanas** com 2 devs em paralelo (banco+integração / front), respeitando a dependência de V12.1.1-1.2 antes do front começar a consumir o modelo de dados real.
 
 A Frente 2 (as outras 7 personas) ainda não tem estimativa — é levantamento, não plano de execução; a estimativa vem depois que cada cluster passar pelo mesmo aprofundamento dado à Etapa 7.
+
+---
+
+## V12.x Calcular não envia se a gravação do rascunho falhar
+
+`persistir` (useCotacaoRascunho) engolia o erro do RPC `salvar_cotacao_rascunho` (só `console.error` + `saveState=error`) e o Calcular seguia para `enviarCotacaoQuiver`, que no servidor lê o banco: dados antigos iam ao robô sem aviso. Evidência: a cotação 158617 foi ao robô com as 5 seguradoras padrão mesmo com "Marcar todas" marcado; causa exata desse caso ainda NÃO confirmada no banco (consulta por nome do cliente pendente). Correção: `persistir` devolve `Promise<boolean>`; `enviarECalcular` aborta com mensagem clara se não gravou (retorno `false` ou exceção). Helper puro `calculoGravacao.ts` + `tests/unit/calculo-gravacao.test.ts`.
