@@ -168,7 +168,7 @@ export function AcessoriosFold({ f, up }: Props) {
           )}
 
           <div className="field-group">
-            <label>Blindagem/kit gás/acessórios (expandir seção)</label>
+            <label>Acessórios</label>
             <SimNaoSelect value={f.acessoriosAtivo} onChange={toggleAcessorios} />
           </div>
         </div>
