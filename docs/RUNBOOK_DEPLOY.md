@@ -706,6 +706,48 @@ Depois: `sudo nginx -t && sudo systemctl reload nginx`.
 6. Smoke: webhook sem credenciais responde 401; com credenciais e corpo vazio, 400.
    Não enviar PDF real de teste para produção.
 
+### 6.10 Deploy de 04/10/2026 — nome social/e-mail opcionais, seleção de seguradoras e ajustes de formulário
+
+**Versões publicadas:** robô `master` em `5b70bbe` (PRs #46, #47, #48, #49 do `playwright`) e app em
+`sha-105411f` (PRs #262, #264, #265, #266, #267, #269, #270, #271 do `cotecerto33`). **Sem migration** e
+sem env nova. Ordem seguida: **robô primeiro**, depois o app (o app novo deixa de exigir e-mail e envia
+`email` na transmissão; o robô antigo recusaria cotação sem e-mail e ignoraria o `email` da Efetivação).
+
+| Frente                    | Robô                                                                                                           | App                                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Nome social opcional      | #46: `nomeSocial` ausente aceito; a Página 1 deixa o campo em branco                                           | #264: rótulo "(opcional)"; o payload nunca manda o nome civil como nome social                                 |
+| CEP de circulação         | #47: espera de 8 s cai para ~1 s (o portal só mostra Residencial e Pernoite)                                   | #265: campo removido; o envio manda o pernoite nos dois campos                                                 |
+| E-mail e número opcionais | #48: `email` opcional na cotação; a Efetivação preenche o e-mail quando vem                                    | #269: opcionais no passo 1, obrigatórios no passo 7, validação no servidor e gravação de volta                 |
+| Seleção de seguradoras    | #49: marca as pedidas, desmarca as demais (inclui a **Pier**, que era sempre calculada) e loga as fora do mapa | #270: o Calcular não envia se a gravação do rascunho falhar                                                    |
+| Formulário                | —                                                                                                              | #266 tipo de cobertura legado, #267 gate do zero km, #271 rótulo "Acessórios", #262 Confirmação fiel ao Quiver |
+
+**Conferência em produção** (feita depois dos dois no ar; resultado na tabela abaixo):
+
+| #   | Teste                                                                         | Como conferir                                                                                  |
+| --- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Cotação sem e-mail e sem nome social calcula normalmente                      | Resultado volta com ofertas; log do robô: "E-mail não informado" e "Nome social não informado" |
+| 2   | "Marcar todas" no passo 2 e calcular: o robô recebe as 10                     | `grep "Seguradoras solicitadas" logs/<arquivo da cotação>.txt` na máquina do robô              |
+| 3   | Pedido só da Suhai: a Pier não aparece como "sem retorno"                     | Comparativo sem a coluna da Pier; log "Estado final das seguradoras"                           |
+| 4   | Transmissão de lead sem e-mail: o passo 7 pede o e-mail e a Efetivação o leva | Passo 7 com E-mail editável e obrigatório; proposta transmitida                                |
+
+**Resultados (04/10/2026, produção, lead de teste `COT-2026-00114`, seu CPF e placa FTP4J82, sem e-mail, sem nome social e sem número):**
+
+| #   | Resultado                    | Evidência                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | OK                           | Passo 1 avançou com os três campos em branco ("(opcional)" nos rótulos); o Calcular enviou sem erro e o resultado voltou com 25 colunas de oferta de 11 seguradoras. O passo 3 já não tem "CEP de circulação"                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 2   | OK                           | "Marcar todas" mostrou "10 de 10"; o log do robô confirma `Seguradoras solicitadas` com as **10** (mapfre, aliro, yelum, hdi seguros, suhai, porto, azul, tokio, allianz, bradesco) e ofertas voltaram de 11 seguradoras. Pier desmarcada nas duas passagens de seleção                                                                                                                                                                                                                                                                                                                                                                          |
+| 3   | OK                           | Nenhuma coluna da Pier no comparativo (antes aparecia "pier sem retorno" até em cotação só da Suhai)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 4   | OK (falta só o aviso do log) | Lead sem e-mail e sem número: o passo 7 exigiu os dois ("Informe o e-mail." / "Informe o número.") e bloqueou o Efetivar; depois de preenchidos, a transmissão real na Suhai concluiu em poucos minutos (PRP-00114, protocolo capturado) e o "Proposta (PDF)" ficou pronto (PDF válido de ~250 KB). Banco: `cotacao_segurado` ficou com número 121 e e-mail gravados de volta. Robô: o pedido de transmissão recebido (`data/requests/transmissao-*.json`) traz `email` e `numeroEndereco: 121`. **Falta** só ver que o log da transmissão não tem aviso de campo de e-mail não encontrado (o preenchimento do campo não grava linha de sucesso) |
+
+**Observação (HDI Fit e Básico):** com a HDI Seguros pedida, o robô desmarca Fit (10051) e Básico (10052) na Página 2
+(confirmado no "Estado final"), mas na segunda passagem (Calcular, Página 5) as duas voltam **marcadas**: o portal as
+remarca junto com a HDI e o robô não clica em seguradora invisível. Na prática a HDI é calculada com as 3 variantes, como já
+aceito em setembro. O aviso "NÃO pedida … segue MARCADA — pode ser calculada" é esperado nesse caso (ajuste proposto no
+robô: rebaixar para info quando a HDI Seguros é pedida).
+
+**Rollback:** app pela tag anterior (`IMAGE_TAG=<sha anterior> ./deploy.sh`); robô com `git checkout <commit anterior>` e o mesmo
+`docker compose … up -d --build api`. O robô novo é retrocompatível com o app antigo, exceto a Efetivação sem o `email`.
+
 ## 7. Rollback
 
 **App:**
