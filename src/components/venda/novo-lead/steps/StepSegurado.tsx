@@ -227,6 +227,16 @@ export function StepSegurado({
             </span>
           )}
         </div>
+        <div className="field-group full">
+          <label>Endereço</label>
+          <input
+            className="input"
+            value={f.logradouro}
+            readOnly
+            style={{ background: "var(--offwhite)" }}
+            placeholder="Preenche via CEP"
+          />
+        </div>
         <div className="field-group">
           <label>Cidade / UF</label>
           <input
