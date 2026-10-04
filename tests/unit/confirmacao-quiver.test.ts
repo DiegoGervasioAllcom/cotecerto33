@@ -18,6 +18,7 @@ const DADOS: DadosComplementaresTransmissao = {
   orgaoEmissorRg: "SSP",
   cepResidencial: "01001-000",
   numeroEndereco: "1",
+  email: "a@b.com",
   mesmoEnderecoCorrespondencia: true,
   enderecoCorrespondencia: { cep: "", logradouro: "", numero: "", bairro: "", cidade: "", uf: "" },
   renavam: "12345678901",

@@ -10,7 +10,6 @@ export const CAMPOS_OBRIGATORIOS_CALCULO: { campo: keyof Form; label: string }[]
   { campo: "sexo", label: "Sexo" },
   { campo: "estadoCivil", label: "Estado civil" },
   { campo: "placa", label: "Placa" },
-  { campo: "email", label: "E-mail" },
   { campo: "cep", label: "CEP" },
   { campo: "celular", label: "Telefone celular" },
   { campo: "cepPernoite", label: "CEP de pernoite" },

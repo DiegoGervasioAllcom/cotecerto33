@@ -23,6 +23,9 @@ const DATA = "Data de saída da concessionária";
 const ODO = "Odômetro (km)";
 
 describe("gate do Calcular com Zero km", () => {
+  it("sem e-mail (opcional) o Calcular é liberado", () => {
+    expect(camposFaltantesCalculo({ ...base, email: "" })).toEqual([]);
+  });
   it("zeroKm sem data e sem odômetro: faltam os dois", () => {
     expect(camposFaltantesCalculo({ ...base, zeroKm: true })).toEqual([DATA, ODO]);
   });

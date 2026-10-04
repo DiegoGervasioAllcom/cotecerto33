@@ -14,6 +14,7 @@ import {
   acharAjusteCanonico,
   nomeCanonicoSeguradora,
 } from "@/lib/seguradora-canonica";
+import { resolverContatoTransmissao } from "@/lib/transmissao-contato";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
 import {
   calcularPremioTransmissao,
@@ -651,6 +652,7 @@ type Segurado = {
   celular?: string | null;
   cep?: string | null;
   numero?: string | null;
+  email?: string | null;
 };
 
 type VeiculoTransmissao = {
@@ -695,6 +697,7 @@ type TransmitirPropostaPayload = {
     orgaoEmissorRg: string;
     cepResidencial: string;
     numeroEndereco: string;
+    email: string;
     mesmoEnderecoCorrespondencia: boolean;
     // Só preenchido de verdade quando `mesmoEnderecoCorrespondencia` é false
     // (schema em TransmissaoDadosComplementares.schema.ts). O mapeamento
@@ -767,7 +770,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       .from("cotacoes")
       .select(
         "id,quiver_resultado_raw," +
-          "segurado:cotacao_segurado(cpf_cnpj,nome,celular,cep,numero)," +
+          "segurado:cotacao_segurado(cpf_cnpj,nome,celular,cep,numero,email)," +
           "veiculo:cotacao_veiculo(renavam,cor,chassi_remarcado)",
       )
       .eq("id", data.cotacaoId)
@@ -798,6 +801,19 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       );
     }
 
+    // Regra de bloqueio (servidor): e-mail e número são opcionais no cadastro,
+    // mas obrigatórios para transmitir. Vale o digitado no passo 7; senão o
+    // cadastro. Erro claro se faltar/inválido.
+    const contatoRes = resolverContatoTransmissao(
+      {
+        email: data.dadosComplementares?.email,
+        numero: data.dadosComplementares?.numeroEndereco,
+      },
+      { email: segurado?.email, numero: segurado?.numero },
+    );
+    if (!contatoRes.ok) throw new Error(contatoRes.erro);
+    const contato = contatoRes.contato;
+
     const soDigitos = (v?: string | null) => (v ?? "").replace(/\D/g, "");
     const celular = soDigitos(segurado?.celular);
 
@@ -824,7 +840,8 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
             ? "Sim"
             : "Não",
       cepResidencial: data.dadosComplementares?.cepResidencial || segurado?.cep || undefined,
-      numeroEndereco: data.dadosComplementares?.numeroEndereco || segurado?.numero || undefined,
+      numeroEndereco: contato.numero,
+      email: contato.email,
       dddCelular: celular.length >= 2 ? celular.slice(0, 2) : undefined,
       diaVencimentoDemaisParcelas: data.dadosComplementares?.diaVencimentoDemaisParcelas,
       desejaReceberPropostaPorEmail: data.dadosComplementares?.desejaReceberPropostaPorEmail,
@@ -870,6 +887,27 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     });
     if (!premioCalculado.ok) {
       throw new Error(premioCalculado.erro);
+    }
+
+    // Grava de volta no cadastro do segurado o e-mail/número validados (só se
+    // diferentes do atual), ANTES de chamar o robô. Best-effort deliberado:
+    // a transmissão usa o valor digitado (já no payload), então falha aqui só
+    // gera log e segue — não derruba nem duplica o envio (nada foi enviado
+    // ainda e não há retry desta etapa).
+    if (contato.gravarEmail || contato.gravarNumero) {
+      const patch: { email?: string; numero?: string } = {};
+      if (contato.gravarEmail) patch.email = contato.email;
+      if (contato.gravarNumero) patch.numero = contato.numero;
+      const { error: gravErr } = await admin
+        .from("cotacao_segurado")
+        .update(patch)
+        .eq("cotacao_id", data.cotacaoId);
+      if (gravErr) {
+        console.error(
+          "[transmitirPropostaQuiver] gravação de volta e-mail/número falhou:",
+          gravErr.message,
+        );
+      }
     }
 
     // T.9: registra a tentativa ANTES de chamar o robô — é essa linha que o
