@@ -18,7 +18,14 @@ export const dadosComplementaresTransmissaoSchema = z
     dataEmissaoRg: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Use o formato dd/mm/aaaa."),
     orgaoEmissorRg: z.string().trim().min(1, "Informe o órgão emissor.").max(20),
     cepResidencial: z.string().regex(/^\d{5}-?\d{3}$/, "Informe um CEP válido."),
-    numeroEndereco: z.string().trim().min(1, "Informe o número."),
+    numeroEndereco: z.string().trim().min(1, "Informe o número.").max(20, "Número muito longo."),
+    // Obrigatório só aqui (opcional no passo 1). Bloqueio real é no servidor.
+    email: z
+      .string()
+      .trim()
+      .min(1, "Informe o e-mail.")
+      .max(254, "E-mail muito longo.")
+      .email("E-mail inválido."),
     mesmoEnderecoCorrespondencia: z.boolean(),
     enderecoCorrespondencia: enderecoCorrespondenciaSchema,
     renavam: z.string().regex(/^\d{9,11}$/, "Informe um Renavam com 9 a 11 dígitos."),

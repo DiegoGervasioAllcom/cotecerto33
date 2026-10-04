@@ -260,6 +260,8 @@ Achados novos no robô (entram antes dos itens acima):
 
 ---
 
+**V12.x E-mail e Número opcionais; obrigatórios só na transmissão (04/10/2026).** E-mail e Número (do endereço) do passo 1 deixam de bloquear o avanço e o Calcular (celular segue obrigatório; formato/tamanho só quando preenchidos); viram obrigatórios na Etapa 7. Decisões do usuário: (a) o robô passa a receber e enviar o e-mail na transmissão (`email?: string` no payload de `/transmissao`; robô alterado em paralelo na branch `feat/email-opcional` do repo playwright); (b) o e-mail/número digitados no passo 7 são gravados de volta em `cotacao_segurado`, só se válidos e diferentes do atual (podem sobrescrever valor antigo); (c) o bloqueio é sempre no servidor — `transmitirPropostaQuiver` resolve digitado||cadastro (`src/lib/transmissao-contato.ts`) e recusa com erro claro; a gravação de volta é best-effort (falha só gera log, a transmissão usa o valor digitado). Sem migration (colunas anuláveis). Validado ao vivo em 04/10/2026: o portal aceita a Página 1 sem e-mail (cotação 158655) e a Efetivação traz o e-mail não obrigatório/preenchido pelo cadastro quando o CPF é conhecido. **Não confirmado:** CPF novo sem e-mail no cadastro do portal. **Ordem de deploy: robô ANTES do app.**
+
 ## Decisões pendentes que bloqueiam o início
 
 1. ~~Regra real do gate da Etapa 7~~ — **resolvido** (05/09/2026): sem gate, é para todo vendedor. Ver `docs/v12` memória do usuário / seção 1.2 acima.

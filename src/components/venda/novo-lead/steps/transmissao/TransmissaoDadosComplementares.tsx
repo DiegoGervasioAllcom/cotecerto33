@@ -41,6 +41,7 @@ export function TransmissaoDadosComplementares({
     orgaoEmissorRg: "",
     cepResidencial: f.cep,
     numeroEndereco: f.numero,
+    email: f.email,
     mesmoEnderecoCorrespondencia: true,
     enderecoCorrespondencia: {
       cep: "",
@@ -222,10 +223,7 @@ export function TransmissaoDadosComplementares({
         {field("rg", "RG", "00.000.000-0")}
         {field("dataEmissaoRg", "Data de emissão", "dd/mm/aaaa", "numeric")}
         {field("orgaoEmissorRg", "Órgão emissor", "SSP")}
-        <div className="field-group">
-          <label>E-mail</label>
-          <input className="input" value={f.email} disabled />
-        </div>
+        {field("email", "E-mail", "cliente@email.com")}
       </div>
 
       <div className="clt-note" style={{ marginBottom: 14 }}>
@@ -233,8 +231,9 @@ export function TransmissaoDadosComplementares({
           <use href="#i-info" />
         </svg>
         <div>
-          Telefone residencial, telefone comercial e e-mail do segurado vêm do cadastro do próprio
-          Quiver — o robô não os preenche.
+          O e-mail e o número do endereço são obrigatórios para transmitir; o e-mail é enviado ao
+          Quiver na efetivação e os dois ficam salvos no cadastro do segurado. Telefone residencial
+          e comercial vêm do cadastro do próprio Quiver — o robô não os preenche.
         </div>
       </div>
 

@@ -7,6 +7,7 @@ const dadosValidos = {
   orgaoEmissorRg: "SSP/SP",
   cepResidencial: "04567-090",
   numeroEndereco: "123",
+  email: "cliente@email.com",
   mesmoEnderecoCorrespondencia: true,
   // Não exigido quando mesmoEnderecoCorrespondencia é true, mas o shape
   // sempre existe (o form já inicializa assim, ver
@@ -45,6 +46,8 @@ describe("dados complementares para transmissão Quiver", () => {
     ["orgaoEmissorRg", ""],
     ["cepResidencial", "1234"],
     ["numeroEndereco", ""],
+    ["email", ""],
+    ["email", "sem-arroba"],
     ["renavam", "12345678"],
     ["corVeiculo", ""],
     ["diaVencimentoDemaisParcelas", "31"],

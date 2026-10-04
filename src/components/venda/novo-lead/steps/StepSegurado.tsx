@@ -170,7 +170,7 @@ export function StepSegurado({
         </div>
         <div className="field-group full">
           <label>
-            E-mail<span className="req">*</span>
+            E-mail <span className="hint">(opcional)</span>
           </label>
           <input
             className="input"
@@ -212,7 +212,7 @@ export function StepSegurado({
         </div>
         <div className="field-group">
           <label>
-            Número<span className="req">*</span>
+            Número <span className="hint">(opcional)</span>
           </label>
           <input
             className="input"

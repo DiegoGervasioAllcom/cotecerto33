@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 import { seguradoSchema } from "@/lib/schemas/cotacaoSegurado.schema";
 import { seguroSchema } from "@/lib/schemas/cotacaoSeguro.schema";
 
-// `email`, `numero` e `celular` são exceções à regra "todo campo é opcional"
-// desta etapa (ver comentário no schema) — por isso todo caso abaixo que testa
-// OUTRO campo precisa incluir valores válidos para esses três, senão falha por
+// `celular` é exceção à regra "todo campo é opcional" desta etapa (email e
+// número são opcionais; ver schema) — todo caso abaixo que testa
+// OUTRO campo precisa incluir valor válido para ele, senão falha por
 // um motivo que não é o que o teste quer verificar. `nomeSocial` é opcional
 // (só é validado quando preenchido). `nome` e `estadoCivil` não bloqueiam o
 // avanço de etapa (só o Calcular, via useSimulacaoCalculo.ts).
@@ -17,8 +17,31 @@ const CAMPOS_OBRIGATORIOS_VALIDOS = {
 };
 
 describe("seguradoSchema", () => {
-  it("rejeita objeto vazio (email, número e celular são obrigatórios)", () => {
+  it("rejeita objeto vazio (celular é obrigatório)", () => {
     expect(seguradoSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("aceita e-mail e número vazios (opcionais; obrigatórios só na transmissão)", () => {
+    expect(
+      seguradoSchema.safeParse({ celular: "(11) 98765-4321", email: "", numero: "" }).success,
+    ).toBe(true);
+    expect(seguradoSchema.safeParse({ celular: "(11) 98765-4321" }).success).toBe(true);
+  });
+
+  it("e-mail preenchido com formato inválido continua falhando", () => {
+    expect(
+      seguradoSchema.safeParse({ celular: "(11) 98765-4321", email: "sem-arroba" }).success,
+    ).toBe(false);
+  });
+
+  it("número preenchido acima de 20 caracteres continua falhando", () => {
+    expect(
+      seguradoSchema.safeParse({ celular: "(11) 98765-4321", numero: "1".repeat(21) }).success,
+    ).toBe(false);
+  });
+
+  it("celular vazio continua falhando", () => {
+    expect(seguradoSchema.safeParse({ email: "a@b.com", numero: "1" }).success).toBe(false);
   });
 
   it("aceita nomeSocial ausente (campo opcional)", () => {
@@ -85,15 +108,15 @@ describe("seguradoSchema", () => {
     ).toBe(true);
   });
 
-  it("rejeita quando email está vazio", () => {
+  it("aceita quando email está vazio (opcional)", () => {
     expect(seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, email: "" }).success).toBe(
-      false,
+      true,
     );
   });
 
-  it("rejeita quando número está vazio", () => {
+  it("aceita quando número está vazio (opcional)", () => {
     expect(seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, numero: "" }).success).toBe(
-      false,
+      true,
     );
   });
 

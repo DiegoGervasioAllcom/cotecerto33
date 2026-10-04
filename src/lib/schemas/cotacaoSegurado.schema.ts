@@ -3,8 +3,9 @@
 // o usuário ANTES de avançar, sem serem mais restritivos: todo campo é
 // opcional (mesma lógica dos checks `col is null or col = '' or ...`) e só
 // valida formato/tamanho se o campo estiver preenchido — exceto `celular`,
-// `email` e `numero`, obrigatórios via superRefine abaixo (decisão
-// de negócio, não vem do protótipo). `nome`, `estadoCivil` e `sexo` não
+// obrigatório via superRefine abaixo (decisão de negócio, não vem do
+// protótipo). `email` e `numero` são OPCIONAIS aqui: só viram obrigatórios
+// na transmissão (passo 7), validados no servidor. `nome`, `estadoCivil` e `sexo` não
 // bloqueiam o avanço de etapa — são exigidos só para liberar o Calcular
 // (useSimulacaoCalculo.ts), não aqui.
 
@@ -78,20 +79,6 @@ export const seguradoSchema = z
         code: z.ZodIssueCode.custom,
         path: ["celular"],
         message: "Celular é obrigatório.",
-      });
-    }
-    if (!(v.email ?? "").trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["email"],
-        message: "E-mail é obrigatório.",
-      });
-    }
-    if (!(v.numero ?? "").trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["numero"],
-        message: "Número é obrigatório.",
       });
     }
     const nomeSocial = (v.nomeSocial ?? "").trim();
