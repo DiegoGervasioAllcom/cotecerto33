@@ -290,3 +290,11 @@ A Frente 2 (as outras 7 personas) ainda não tem estimativa — é levantamento,
 ## V12.x Calcular não envia se a gravação do rascunho falhar
 
 `persistir` (useCotacaoRascunho) engolia o erro do RPC `salvar_cotacao_rascunho` (só `console.error` + `saveState=error`) e o Calcular seguia para `enviarCotacaoQuiver`, que no servidor lê o banco: dados antigos iam ao robô sem aviso. Evidência: a cotação 158617 foi ao robô com as 5 seguradoras padrão mesmo com "Marcar todas" marcado; causa exata desse caso ainda NÃO confirmada no banco (consulta por nome do cliente pendente). Correção: `persistir` devolve `Promise<boolean>`; `enviarECalcular` aborta com mensagem clara se não gravou (retorno `false` ou exceção). Helper puro `calculoGravacao.ts` + `tests/unit/calculo-gravacao.test.ts`.
+
+---
+
+## V12.x Endereço (rua) no passo 1
+
+No passo 1 (Segurado) só "Cidade / UF" aparecia após o CEP. Adicionado o campo "Endereço" (somente leitura — `readOnly`, igual a "Cidade / UF" —, placeholder "Preenche via CEP") com `f.logradouro`, já preenchido pelo ViaCEP (`useCepLookup`) e persistido em `cotacao_segurado.logradouro`; o passo 7 segue lendo o mesmo valor. Não obrigatório, fora de validação; CEP genérico (sem logradouro) deixa o campo vazio. Bairro não exibido (fora do pedido). Sem migration.
+
+O protótipo V12 pode não ter o campo "Endereço" no passo 1: adição pedida pelo usuário (04/10/2026), divergência intencional aceita; protótipo a atualizar. CEP genérico de cidade (sem logradouro) deixa o campo vazio sem erro; o endereço pode ser digitado no passo 7.
