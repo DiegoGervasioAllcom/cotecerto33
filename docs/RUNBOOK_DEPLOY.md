@@ -748,6 +748,30 @@ robô: rebaixar para info quando a HDI Seguros é pedida).
 **Rollback:** app pela tag anterior (`IMAGE_TAG=<sha anterior> ./deploy.sh`); robô com `git checkout <commit anterior>` e o mesmo
 `docker compose … up -d --build api`. O robô novo é retrocompatível com o app antigo, exceto a Efetivação sem o `email`.
 
+### 6.11 Carga das lojas Movida por vendedor (05/10/2026)
+
+**05/10/2026 — migration `20261005044324_carga_lojas_movida_por_vendedor` (PR #274):**
+só dados, sem mudança de schema; **sem rebuild nem redeploy do app**. O servidor é
+um container direto do git (sem `git pull`), então o SQL foi colado no `psql` do
+container do banco (`supabase-db`) por heredoc, numa transação com o `insert` em
+`schema_migrations`, ensaiado antes com `rollback` e aplicado trocando por
+`commit`. Cria/reaproveita 47 lojas Movida + Loja Web na Matriz e liga cada loja
+ao vendedor da carteira (Everton 12, Wesley 12, Katia 8), achado por nome entre os
+vendedores aprovados da Matriz. Idempotente.
+
+- Ana Beatriz (SP3) e André (SP4) não eram vendedores em produção ("Beatriz" é
+  Supervisor de Vendas): o ensaio e a aplicação deram o aviso "0 correspondência(s)"
+  e as lojas deles (16) e a Loja Web ficaram sem vendedor. Lead de loja inativa ou
+  sem vendedor elegível não é distribuído e cai na fila global da Matriz.
+  **Pendência:** cadastrar os dois como vendedores aprovados da Matriz (nome
+  começando por "Ana Beatriz" / "André") e rodar a migration de novo.
+- A carga só adiciona ao pool, nunca remove: havia vínculos antigos (Everton em
+  Americana, Penha, Praia Grande e Santos; Wesley em Mogi das Cruzes e Suzano;
+  Mirelle Lima Dias, que saiu da empresa, em São Miguel Paulista e Radial Leste).
+  Desativados à mão (`update movida_loja_vendedores set ativo = false`, `UPDATE 8`),
+  sem apagar. Conferido: vínculos ativos Everton 12, Wesley 12, Katia 8.
+- A Mirelle continua como vendedora aprovada; desligá-la na tela de acessos.
+
 ## 7. Rollback
 
 **App:**
