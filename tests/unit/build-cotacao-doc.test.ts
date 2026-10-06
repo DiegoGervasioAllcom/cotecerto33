@@ -227,4 +227,22 @@ describe("buildCotacaoDoc", () => {
       expect(sem).toContain("Comissão da corretora");
     });
   });
+
+  test("mostra o nº do orçamento na cia por faixa só quando alguma seguradora informa", () => {
+    const semNumero = buildCotacaoDoc(DADOS, config());
+    expect(semNumero).not.toContain("Nº do orçamento na cia");
+
+    const comNumero: DocDados = {
+      ...DADOS,
+      seguradoras: DADOS.seguradoras.map((s) =>
+        s.id === "card-porto"
+          ? { ...s, opcoes: s.opcoes.map((o) => ({ ...o, numeroOrcamentoCia: "1234567890" })) }
+          : s,
+      ),
+    };
+    const html = buildCotacaoDoc(comNumero, config());
+    expect(html).toContain("Nº do orçamento na cia");
+    expect(html).toContain("<td>1234567890</td>");
+    expect(html).toContain("<td>—</td>");
+  });
 });

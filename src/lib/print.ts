@@ -105,6 +105,8 @@ export type DocOpcaoOferta = {
   avista?: string | null;
   /** Textos como "6x sem juros de R$ 1.896,08" — uma por parcela oferecida. */
   parcelasOpcoes?: string[] | null;
+  /** Nº do orçamento na seguradora (só dígitos), quando ela informa. */
+  numeroOrcamentoCia?: string | null;
 };
 
 /** Uma seguradora selecionável no documento. */
@@ -422,6 +424,14 @@ export function buildCotacaoDoc(
     return `<tr><td class="doc-k">${i + 1}ª opção de franquia</td>${cols}</tr>`;
   }).join("");
 
+  const temNumeroCia = selecionadas.some((s) => s.opcoes.some((o) => o.numeroOrcamentoCia));
+  const numeroCiaRows = temNumeroCia
+    ? Array.from({ length: maxOpcoes }, (_, i) => {
+        const cols = col((s) => escapeHtml(s.opcoes[i]?.numeroOrcamentoCia || "—"));
+        return `<tr><td class="doc-k">Nº do orçamento na cia${sufixoOpcao(i)}</td>${cols}</tr>`;
+      }).join("")
+    : "";
+
   const parcelaRows = Array.from({ length: maxOpcoes }, (_, i) =>
     config.parcelas
       .map((n) => {
@@ -450,7 +460,7 @@ export function buildCotacaoDoc(
   const tabela = temTabela
     ? `<table class="doc-table"><tbody>${headCoberturas}${coberturaRows}${
         maxOpcoes
-          ? `${titulo("Franquias do veículo")}${franquiaRows}${titulo(
+          ? `${titulo("Franquias do veículo")}${franquiaRows}${numeroCiaRows}${titulo(
               "Parcelas (* sem juros)",
             )}${parcelaRows}`
           : ""

@@ -56,6 +56,14 @@ export const opcaoPremioSchema = z.object({
   // playwright) — sem esse campo, o card só conseguia mostrar 1 opção de
   // parcela por faixa mesmo quando a seguradora oferecia várias.
   parcelasOpcoes: z.array(z.string()).optional(),
+  // Número do orçamento na seguradora (só dígitos), quando ela informa. Valor
+  // inválido é ignorado sem derrubar a faixa.
+  numeroOrcamentoCia: z
+    .string()
+    .trim()
+    .regex(/^\d{1,20}$/)
+    .optional()
+    .catch(undefined),
 });
 
 const formasPagamentoSchema = z.object({

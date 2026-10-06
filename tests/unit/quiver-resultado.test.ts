@@ -735,4 +735,24 @@ describe("agruparParcelamento", () => {
     expect(blocos[0].linhas[0].opcoes[1]).toBeUndefined();
     expect(blocos[1].linhas[0].opcoes[1]).toBeUndefined();
   });
+
+  it("lê o número do orçamento na cia por faixa e ignora valor inválido", () => {
+    const [card] = parseQuiverResultado({
+      cards: [
+        {
+          seguradora: "Porto",
+          opcoes: [
+            { franquia: "normal 100%", numeroOrcamentoCia: " 12345678 " },
+            { franquia: "reduzida 50%", numeroOrcamentoCia: "abc" },
+            { franquia: "sem número" },
+          ],
+        },
+      ],
+    });
+    expect(card.opcoes.map((o) => o.numeroOrcamentoCia)).toEqual([
+      "12345678",
+      undefined,
+      undefined,
+    ]);
+  });
 });

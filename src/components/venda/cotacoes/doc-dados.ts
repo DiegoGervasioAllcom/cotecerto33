@@ -21,6 +21,7 @@ export function ofertaDoResultado(r: ResultadoCalculo): DocSeguradoraOferta {
       franquia: o.franquia,
       avista: o.avista,
       parcelasOpcoes: o.parcelasOpcoes,
+      numeroOrcamentoCia: o.numeroOrcamentoCia,
     })),
   };
 }
