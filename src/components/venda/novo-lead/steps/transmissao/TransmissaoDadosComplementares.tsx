@@ -41,12 +41,14 @@ export function TransmissaoDadosComplementares({
     orgaoEmissorRg: "",
     cepResidencial: f.cep,
     numeroEndereco: f.numero,
+    complementoEndereco: f.complemento,
     email: f.email,
     mesmoEnderecoCorrespondencia: true,
     enderecoCorrespondencia: {
       cep: "",
       logradouro: "",
       numero: "",
+      complemento: "",
       bairro: "",
       cidade: "",
       uf: "",
@@ -117,13 +119,15 @@ export function TransmissaoDadosComplementares({
     label: string,
     placeholder = "",
     inputMode?: "numeric",
+    maxLength?: number,
   ) => (
     <div className="field-group">
       <label htmlFor={`transmissao-${key}`}>{label}</label>
       <input
         id={`transmissao-${key}`}
         className="input"
-        value={String(dados[key])}
+        value={String(dados[key] ?? "")}
+        maxLength={maxLength}
         placeholder={placeholder}
         inputMode={inputMode}
         aria-invalid={Boolean(erros[key])}
@@ -142,13 +146,15 @@ export function TransmissaoDadosComplementares({
     label: string,
     placeholder = "",
     style?: CSSProperties,
+    maxLength?: number,
   ) => (
     <div className="field-group" style={style}>
       <label htmlFor={`transmissao-corresp-${key}`}>{label}</label>
       <input
         id={`transmissao-corresp-${key}`}
         className="input"
-        value={dados.enderecoCorrespondencia[key]}
+        value={dados.enderecoCorrespondencia[key] ?? ""}
+        maxLength={maxLength}
         placeholder={placeholder}
         aria-invalid={Boolean(erros.enderecoCorrespondencia?.[key])}
         onChange={(e) => upCorresp(key, e.target.value)}
@@ -244,7 +250,8 @@ export function TransmissaoDadosComplementares({
           <label>Endereço</label>
           <input className="input" value={endereco} disabled />
         </div>
-        {field("numeroEndereco", "Número")}
+        {field("numeroEndereco", "Número", "", undefined, 10)}
+        {field("complementoEndereco", "Complemento (opcional)", "Apto, bloco…", undefined, 30)}
       </div>
       <div className="acc-pills" style={{ margin: "10px 0 20px" }}>
         <button
@@ -286,7 +293,8 @@ export function TransmissaoDadosComplementares({
           <div className="wizard-grid cols-3">
             {fieldCorresp("cep", "CEP", "00000-000")}
             {fieldCorresp("logradouro", "Endereço", "Rua, avenida…", { gridColumn: "span 2" })}
-            {fieldCorresp("numero", "Número")}
+            {fieldCorresp("numero", "Número", "", undefined, 10)}
+            {fieldCorresp("complemento", "Complemento (opcional)", "Apto, bloco…", undefined, 30)}
             {fieldCorresp("bairro", "Bairro")}
             {fieldCorresp("cidade", "Cidade")}
             {fieldCorresp("uf", "Estado", "UF")}

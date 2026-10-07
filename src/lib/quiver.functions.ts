@@ -15,7 +15,11 @@ import {
   comissaoEditavel,
   nomeCanonicoSeguradora,
 } from "@/lib/seguradora-canonica";
-import { resolverContatoTransmissao } from "@/lib/transmissao-contato";
+import {
+  montarComplementosPayload,
+  resolverComplementoTransmissao,
+  resolverContatoTransmissao,
+} from "@/lib/transmissao-contato";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
 import { COMISSAO_MAX, COMISSAO_MIN } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
@@ -664,6 +668,7 @@ type Segurado = {
   celular?: string | null;
   cep?: string | null;
   numero?: string | null;
+  complemento?: string | null;
   email?: string | null;
 };
 
@@ -709,6 +714,7 @@ type TransmitirPropostaPayload = {
     orgaoEmissorRg: string;
     cepResidencial: string;
     numeroEndereco: string;
+    complementoEndereco?: string;
     email: string;
     mesmoEnderecoCorrespondencia: boolean;
     // Só preenchido de verdade quando `mesmoEnderecoCorrespondencia` é false
@@ -719,6 +725,7 @@ type TransmitirPropostaPayload = {
       cep: string;
       logradouro: string;
       numero: string;
+      complemento?: string;
       bairro: string;
       cidade: string;
       uf: string;
@@ -782,7 +789,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       .from("cotacoes")
       .select(
         "id,quiver_resultado_raw," +
-          "segurado:cotacao_segurado(cpf_cnpj,nome,celular,cep,numero,email)," +
+          "segurado:cotacao_segurado(cpf_cnpj,nome,celular,cep,numero,complemento,email)," +
           "veiculo:cotacao_veiculo(renavam,cor,chassi_remarcado)",
       )
       .eq("id", data.cotacaoId)
@@ -825,6 +832,16 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     );
     if (!contatoRes.ok) throw new Error(contatoRes.erro);
     const contato = contatoRes.contato;
+    const complRes = resolverComplementoTransmissao(
+      data.dadosComplementares?.complementoEndereco,
+      segurado?.complemento,
+    );
+    if (!complRes.ok) throw new Error(complRes.erro);
+    const complementos = montarComplementosPayload(
+      complRes.complemento,
+      data.dadosComplementares?.mesmoEnderecoCorrespondencia,
+      data.dadosComplementares?.enderecoCorrespondencia,
+    );
 
     const soDigitos = (v?: string | null) => (v ?? "").replace(/\D/g, "");
     const celular = soDigitos(segurado?.celular);
@@ -853,6 +870,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
             : "Não",
       cepResidencial: data.dadosComplementares?.cepResidencial || segurado?.cep || undefined,
       numeroEndereco: contato.numero,
+      ...complementos,
       email: contato.email,
       dddCelular: celular.length >= 2 ? celular.slice(0, 2) : undefined,
       diaVencimentoDemaisParcelas: data.dadosComplementares?.diaVencimentoDemaisParcelas,
@@ -906,10 +924,11 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     // a transmissão usa o valor digitado (já no payload), então falha aqui só
     // gera log e segue — não derruba nem duplica o envio (nada foi enviado
     // ainda e não há retry desta etapa).
-    if (contato.gravarEmail || contato.gravarNumero) {
-      const patch: { email?: string; numero?: string } = {};
+    if (contato.gravarEmail || contato.gravarNumero || complRes.gravar) {
+      const patch: { email?: string; numero?: string; complemento?: string } = {};
       if (contato.gravarEmail) patch.email = contato.email;
       if (contato.gravarNumero) patch.numero = contato.numero;
+      if (complRes.gravar && complRes.complemento) patch.complemento = complRes.complemento;
       const { error: gravErr } = await admin
         .from("cotacao_segurado")
         .update(patch)

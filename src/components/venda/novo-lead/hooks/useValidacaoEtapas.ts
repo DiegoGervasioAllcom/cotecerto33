@@ -31,6 +31,7 @@ export function useValidacaoEtapas(
         email: f.email,
         cep: f.cep,
         numero: f.numero,
+        complemento: f.complemento,
         logradouro: f.logradouro,
         bairro: f.bairro,
         cidade: f.cidade,

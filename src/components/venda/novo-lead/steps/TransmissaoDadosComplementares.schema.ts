@@ -6,7 +6,8 @@ import { z } from "zod";
 const enderecoCorrespondenciaSchema = z.object({
   cep: z.string(),
   logradouro: z.string(),
-  numero: z.string(),
+  numero: z.string().max(10, "Número muito longo (máx. 10)."),
+  complemento: z.string().trim().max(30, "Complemento muito longo (máx. 30).").optional(),
   bairro: z.string(),
   cidade: z.string(),
   uf: z.string(),
@@ -18,7 +19,12 @@ export const dadosComplementaresTransmissaoSchema = z
     dataEmissaoRg: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Use o formato dd/mm/aaaa."),
     orgaoEmissorRg: z.string().trim().min(1, "Informe o órgão emissor.").max(20),
     cepResidencial: z.string().regex(/^\d{5}-?\d{3}$/, "Informe um CEP válido."),
-    numeroEndereco: z.string().trim().min(1, "Informe o número.").max(20, "Número muito longo."),
+    numeroEndereco: z
+      .string()
+      .trim()
+      .min(1, "Informe o número.")
+      .max(10, "Número muito longo (máx. 10)."),
+    complementoEndereco: z.string().trim().max(30, "Complemento muito longo (máx. 30).").optional(),
     // Obrigatório só aqui (opcional no passo 1). Bloqueio real é no servidor.
     email: z
       .string()

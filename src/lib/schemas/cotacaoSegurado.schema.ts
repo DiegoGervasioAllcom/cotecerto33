@@ -52,7 +52,8 @@ export const seguradoSchema = z
       })
       .refine((v) => !v || v.length <= 254, { message: "E-mail muito longo." }),
     cep: optionalDigitsExact([8], "CEP inválido."),
-    numero: optionalMax(20, "Número muito longo."),
+    complemento: optionalMax(30, "Complemento muito longo (máx. 30)."),
+    numero: optionalMax(10, "Número muito longo (máx. 10)."),
     logradouro: optionalMax(2000, "Logradouro muito longo."),
     bairro: optionalMax(2000, "Bairro muito longo."),
     cidade: optionalMax(150, "Cidade muito longa."),

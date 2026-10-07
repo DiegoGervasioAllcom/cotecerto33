@@ -13,6 +13,7 @@ export type Form = {
   email: string;
   cep: string;
   numero: string;
+  complemento: string;
   logradouro: string;
   bairro: string;
   cidade: string;

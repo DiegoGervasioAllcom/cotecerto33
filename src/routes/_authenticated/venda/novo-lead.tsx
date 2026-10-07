@@ -133,6 +133,7 @@ function Page() {
     email: "",
     cep: "",
     numero: "",
+    complemento: "",
     logradouro: "",
     bairro: "",
     cidade: "",
