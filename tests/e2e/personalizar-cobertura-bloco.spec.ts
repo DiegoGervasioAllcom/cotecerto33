@@ -33,19 +33,19 @@ test.describe("Personalizar por seguradora — passo Coberturas (V12.3.7)", () =
     await expect(page.getByText("Personalizar por seguradora")).toBeVisible({ timeout: 15_000 });
   }
 
-  test("uma linha por seguradora, abas em breve, grava só o que difere e recarrega", async ({
+  test("uma linha por seguradora, abas Assistências/Descontos em breve, grava só o que difere e recarrega", async ({
     page,
   }) => {
     await abrir(page);
     await expect(page.locator(".seg-perso .seg-row")).toHaveCount(2);
     await expect(page.getByTestId("seg-row-Mapfre")).toBeVisible();
     await expect(page.getByTestId("seg-row-Porto")).toBeVisible();
-    for (const nome of [
-      /Assistências \(em breve\)/,
-      /Descontos \(em breve\)/,
-      /Comissões \(em breve\)/,
-    ])
+    for (const nome of [/Assistências \(em breve\)/, /Descontos \(em breve\)/])
       await expect(page.locator(".seg-perso").getByRole("button", { name: nome })).toBeDisabled();
+    // "+ Comissões" é funcional (20 a 25%); só Mapfre tem campo editável no portal.
+    await expect(
+      page.locator(".seg-perso").getByRole("button", { name: /Comissões$/ }),
+    ).toBeEnabled();
     await expect(page.locator(".seg-marcas, .seg-minis")).toHaveCount(0);
     await expect(page.getByText(/O ajuste vale só ao recalcular uma seguradora/)).toBeVisible();
 

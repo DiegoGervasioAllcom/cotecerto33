@@ -126,14 +126,15 @@ test.describe("Personalizar coberturas por seguradora (V12.3.7)", () => {
     await page.getByText("Personalizar coberturas").click();
 
     await expect(page.getByRole("heading", { name: "Personalizar Porto" })).toBeVisible();
-    // Só "Coberturas" funcional; as outras três "(em breve)".
-    for (const nome of [
-      /Assistências \(em breve\)/,
-      /Descontos \(em breve\)/,
-      /Comissões \(em breve\)/,
-    ])
+    // "Coberturas" e "+ Comissões" funcionais; Assistências e Descontos "(em breve)".
+    for (const nome of [/Assistências \(em breve\)/, /Descontos \(em breve\)/])
       await expect(page.getByRole("button", { name: nome })).toBeDisabled();
     await expect(page.getByRole("button", { name: /Coberturas$/ })).toBeEnabled();
+    await expect(page.getByRole("button", { name: /Comissões$/ })).toBeEnabled();
+    // Porto: o portal não deixa editar a comissão — a aba avisa e não oferece o campo.
+    await page.getByRole("button", { name: /Comissões$/ }).click();
+    await expect(page.getByText(/Definida pela seguradora/)).toBeVisible();
+    await page.getByRole("button", { name: /Coberturas$/ }).click();
     await expect(page.getByText(/vale só para Porto/)).toBeVisible();
 
     await page.getByLabel("1ª opção de franquia").selectOption("Reduzida 25%");
