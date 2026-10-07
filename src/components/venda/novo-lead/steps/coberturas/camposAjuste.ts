@@ -16,7 +16,8 @@ export type CoberturaGlobal = {
   carroReserva: string;
 };
 
-export type Campo = keyof AjusteSeguradoraEntrada;
+/** Campos de select (coberturas); a comissão é um texto à parte. */
+export type Campo = Exclude<keyof AjusteSeguradoraEntrada, "comissao">;
 
 export const CAMPOS_AJUSTE: { k: Campo; label: string; opcoes: readonly string[] }[] = [
   { k: "franquia1", label: "1ª opção de franquia", opcoes: FRANQUIA_OPCOES },
@@ -38,6 +39,11 @@ export function valoresIniciais(
   ) as Record<Campo, string>;
 }
 
+/** Texto inicial do input de comissão (vírgula decimal), vazio = padrão do portal. */
+export function comissaoInicial(guardado?: AjusteGuardado): string {
+  return guardado?.comissao == null ? "" : String(guardado.comissao).replace(".", ",");
+}
+
 /**
  * Só vira ajuste o que difere do Passo 5 (ou já estava ajustado): o resto
  * segue valendo o global e não sobrescreve nada no envio.
@@ -46,12 +52,14 @@ export function entradaDoAjuste(
   valores: Record<Campo, string>,
   global: CoberturaGlobal,
   guardado?: AjusteGuardado,
+  comissao = "",
 ): AjusteSeguradoraEntrada {
-  return Object.fromEntries(
+  const selects = Object.fromEntries(
     CAMPOS_AJUSTE.map((c) => {
       const v = valores[c.k];
       const igualGlobal = v === global[c.k] && !guardado?.[c.k];
       return [c.k, v === "" || igualGlobal ? null : v];
     }),
-  ) as AjusteSeguradoraEntrada;
+  ) as Omit<AjusteSeguradoraEntrada, "comissao">;
+  return { ...selects, comissao: comissao.trim() === "" ? null : comissao };
 }

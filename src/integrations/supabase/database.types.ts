@@ -1242,6 +1242,7 @@ export type Database = {
         Row: {
           aplicado_em: string | null;
           carro_reserva: string | null;
+          comissao_pct: number | null;
           cotacao_id: string;
           empresa_id: string;
           franquia_primeira_opcao: string | null;
@@ -1255,6 +1256,7 @@ export type Database = {
         Insert: {
           aplicado_em?: string | null;
           carro_reserva?: string | null;
+          comissao_pct?: number | null;
           cotacao_id: string;
           empresa_id: string;
           franquia_primeira_opcao?: string | null;
@@ -1268,6 +1270,7 @@ export type Database = {
         Update: {
           aplicado_em?: string | null;
           carro_reserva?: string | null;
+          comissao_pct?: number | null;
           cotacao_id?: string;
           empresa_id?: string;
           franquia_primeira_opcao?: string | null;
@@ -5718,6 +5721,7 @@ export type Database = {
       salvar_ajuste_seguradora: {
         Args: {
           p_carro_reserva: string;
+          p_comissao_pct?: number;
           p_cotacao_id: string;
           p_franquia_1: string;
           p_franquia_2: string;

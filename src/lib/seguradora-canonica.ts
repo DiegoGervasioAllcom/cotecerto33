@@ -25,6 +25,26 @@ export const SEGURADORA_QUIVER: Record<string, string> = {
   yelum: "yelum",
 };
 
+/**
+ * Seguradoras em que o portal Quiver deixa editar a comissão (aba "+ Comissões",
+ * mapeado ao vivo em 07/10/2026). Porto, Itaú, MSIG e Azul têm o campo oculto
+ * (a comissão vem da seguradora) e o robô ignora o valor — por isso o app não o oferece.
+ */
+const COMISSAO_EDITAVEL = new Set([
+  "aliro",
+  "allianz",
+  "bradesco",
+  "hdi seguros",
+  "mapfre",
+  "suhai",
+  "tokio",
+  "yelum",
+]);
+
+export function comissaoEditavel(nome: string): boolean {
+  return COMISSAO_EDITAVEL.has(nomeCanonicoSeguradora(nome));
+}
+
 /** Nome canônico do robô para um nome de exibição; sem mapa, devolve o nome aparado em minúsculas. */
 export function nomeCanonicoSeguradora(nome: string): string {
   const k = nome.trim().toLowerCase();

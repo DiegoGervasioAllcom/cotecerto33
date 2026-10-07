@@ -20,6 +20,7 @@ describe("entradaDoAjuste", () => {
       franquia2: null,
       vidros: null,
       carroReserva: null,
+      comissao: null,
     });
   });
 
@@ -38,6 +39,7 @@ describe("entradaDoAjuste", () => {
       franquia2: null,
       vidros: null,
       carroReserva: null,
+      comissao: null,
       aplicadoEm: null,
     };
     const v = valoresIniciais(global, guardado);

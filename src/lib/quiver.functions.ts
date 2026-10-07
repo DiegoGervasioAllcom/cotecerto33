@@ -12,10 +12,12 @@ import { normalizePlaca } from "@/lib/masks";
 import {
   SEGURADORA_QUIVER,
   acharAjusteCanonico,
+  comissaoEditavel,
   nomeCanonicoSeguradora,
 } from "@/lib/seguradora-canonica";
 import { resolverContatoTransmissao } from "@/lib/transmissao-contato";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
+import { COMISSAO_MAX, COMISSAO_MIN } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
   calcularPremioTransmissao,
   type OpcaoIdentificador,
@@ -158,6 +160,8 @@ export type AjusteCoberturaQuiver = {
   franquia_segunda_opcao?: string | null;
   vidros?: string | null;
   carro_reserva?: string | null;
+  /** Comissão % (20 a 25) — o robô lê `cobertura.comissaoPercentual`. */
+  comissao_pct?: number | string | null;
 };
 
 const nivelAjusteValido = (v: unknown): v is string =>
@@ -173,6 +177,10 @@ function sobreporAjuste<T extends object>(
   if (ajuste.franquia_segunda_opcao) out.franquiaSegundaOpcao = ajuste.franquia_segunda_opcao;
   if (nivelAjusteValido(ajuste.vidros)) out.vidrosFarosRetrovisores = ajuste.vidros;
   if (nivelAjusteValido(ajuste.carro_reserva)) out.carroReserva = ajuste.carro_reserva;
+  if (ajuste.comissao_pct != null && ajuste.comissao_pct !== "") {
+    const c = Number(ajuste.comissao_pct);
+    if (Number.isFinite(c) && c >= COMISSAO_MIN && c <= COMISSAO_MAX) out.comissaoPercentual = c;
+  }
   return out as T;
 }
 
@@ -574,13 +582,17 @@ export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
     if (data.seguradoraAjuste) {
       const { data: linhas, error: ajErr } = await admin
         .from("cotacao_seguradora_ajustes")
-        .select("seguradora,franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva")
+        .select(
+          "seguradora,franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva,comissao_pct",
+        )
         .eq("cotacao_id", data.cotacaoId);
       if (ajErr) throw new Error(ajErr.message);
       const achada = acharAjusteCanonico(linhas ?? [], data.seguradoraAjuste);
       if (achada) {
         seguradoraLinha = achada.seguradora;
-        ajuste = achada;
+        // O portal não deixa editar a comissão de algumas seguradoras: nunca envia o valor
+        // (linha antiga ou gravada direto pela RPC) para elas.
+        ajuste = comissaoEditavel(achada.seguradora) ? achada : { ...achada, comissao_pct: null };
       }
     }
     const payload = montarPayloadQuiver(cot as unknown as CotacaoRow, ajuste);
