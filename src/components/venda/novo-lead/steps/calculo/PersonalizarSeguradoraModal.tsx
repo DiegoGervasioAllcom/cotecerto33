@@ -5,9 +5,12 @@
 // aparecem desabilitadas "(em breve)".
 import { useState } from "react";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
-import { AbasPersonalizacao } from "../coberturas/AbasPersonalizacao";
+import { AbasPersonalizacao, type AbaPersonalizacao } from "../coberturas/AbasPersonalizacao";
+import { CampoComissao } from "../coberturas/CampoComissao";
+import { comissaoEditavel } from "@/lib/seguradora-canonica";
 import {
   CAMPOS_AJUSTE as CAMPOS,
+  comissaoInicial,
   entradaDoAjuste,
   valoresIniciais,
   type Campo,
@@ -48,12 +51,19 @@ export function PersonalizarSeguradoraModal({
   const [valores, setValores] = useState<Record<Campo, string>>(() =>
     valoresIniciais(global, guardado),
   );
+  const [aba, setAba] = useState<AbaPersonalizacao>("cob");
+  const [comissao, setComissao] = useState(() => comissaoInicial(guardado));
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
   async function aplicar() {
     setErro(null);
-    const entrada = entradaDoAjuste(valores, global, guardado);
+    const entrada = entradaDoAjuste(
+      valores,
+      global,
+      guardado,
+      comissaoEditavel(seguradora) ? comissao : "",
+    );
     const r = ajusteSeguradoraSchema.safeParse(entrada);
     if (!r.success) {
       setErro(r.error.issues[0]?.message ?? "Ajuste inválido.");
@@ -91,8 +101,16 @@ export function PersonalizarSeguradoraModal({
               </div>
             </div>
           </div>
-          <AbasPersonalizacao className="u-mb-14" />
-          <div className="wizard-grid cols-2">
+          <AbasPersonalizacao className="u-mb-14" ativa={aba} onChange={setAba} />
+          {aba === "com" && (
+            <CampoComissao
+              id="perso-comissao"
+              editavel={comissaoEditavel(seguradora)}
+              value={comissao}
+              onChange={setComissao}
+            />
+          )}
+          <div className="wizard-grid cols-2" hidden={aba !== "cob"}>
             {CAMPOS.map((c) => (
               <div className="field-group" key={c.k}>
                 <label htmlFor={`perso-${c.k}`}>{c.label}</label>

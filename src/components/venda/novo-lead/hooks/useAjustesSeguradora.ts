@@ -9,6 +9,7 @@ export type AjusteGuardado = {
   franquia2: string | null;
   vidros: string | null;
   carroReserva: string | null;
+  comissao: number | null;
   /** Preenchido só depois que o envio ao robô deu certo. */
   aplicadoEm: string | null;
 };
@@ -24,7 +25,7 @@ export function useAjustesSeguradora(cotacaoId: string | null) {
       const { data, error } = await supabase
         .from("cotacao_seguradora_ajustes")
         .select(
-          "seguradora,franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva,aplicado_em",
+          "seguradora,franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva,comissao_pct,aplicado_em",
         )
         .eq("cotacao_id", cotacaoId ?? "");
       if (error) throw new Error(error.message);
@@ -36,6 +37,7 @@ export function useAjustesSeguradora(cotacaoId: string | null) {
             franquia2: r.franquia_segunda_opcao,
             vidros: r.vidros,
             carroReserva: r.carro_reserva,
+            comissao: r.comissao_pct == null ? null : Number(r.comissao_pct),
             aplicadoEm: r.aplicado_em,
           }),
         ),
@@ -69,6 +71,7 @@ export function useSalvarAjusteSeguradora(cotacaoId: string | null) {
       p_franquia_2: a.franquia2 as string,
       p_vidros: a.vidros as string,
       p_carro_reserva: a.carroReserva as string,
+      p_comissao_pct: a.comissao as number,
     });
     await qc.invalidateQueries({ queryKey: ajustesKey(cotacaoId) });
     if (error)

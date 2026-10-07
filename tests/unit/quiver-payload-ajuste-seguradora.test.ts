@@ -88,6 +88,7 @@ describe("ajusteSeguradoraSchema", () => {
       franquia2: null,
       vidros: "Superior",
       carroReserva: null,
+      comissao: null,
     });
   });
 

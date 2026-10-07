@@ -71,6 +71,26 @@ describe("cotacao_seguradora_ajustes", () => {
       expect(l?.vidros).toBe("Superior");
       expect(l?.aplicado_em).toBeNull();
     });
+    it("comissão: grava dentro de 20 a 25 e rejeita fora da faixa (check do banco)", async () => {
+      const cotCom = await novaCot(donoId);
+      const ok = await salvar(dono, cotCom, "Porto", {
+        p_franquia_1: null,
+        p_comissao_pct: 22.5,
+      });
+      expect(ok.error).toBeNull();
+      expect(Number((await linha(cotCom))?.comissao_pct)).toBe(22.5);
+      for (const fora of [19.99, 25.01, 0, 100]) {
+        const r = await salvar(dono, cotCom, "Azul", { p_franquia_1: null, p_comissao_pct: fora });
+        expect(r.error?.code).toBe("23514");
+      }
+    });
+    it("comissão sozinha conta como ajuste; sem nenhum campo continua inválido", async () => {
+      const cotCom = await novaCot(donoId);
+      const so = await salvar(dono, cotCom, "HDI", { p_franquia_1: null, p_comissao_pct: 25 });
+      expect(so.error).toBeNull();
+      const nada = await salvar(dono, cotCom, "Mapfre", { p_franquia_1: null });
+      expect(nada.error?.code).toBe("23514");
+    });
     it("NEGATIVO: outro usuário, cotação inexistente e resp NULL -> 42501", async () => {
       expect((await salvar(outra, cot)).error?.code).toBe("42501");
       expect((await salvar(dono, "00000000-0000-0000-0000-000000000000")).error?.code).toBe(
