@@ -772,6 +772,38 @@ vendedores aprovados da Matriz. Idempotente.
   sem apagar. Conferido: vínculos ativos Everton 12, Wesley 12, Katia 8.
 - A Mirelle continua como vendedora aprovada; desligá-la na tela de acessos.
 
+### 6.12 Comissão por seguradora — aba "+ Comissões" (07/10/2026)
+
+**07/10/2026 — PRs #277 (app) e playwright#54 (robô):** o vendedor ajusta a
+comissão (20 a 25%) de uma seguradora na personalização, e o ajuste vale só no
+"Recalcular só esta seguradora" (mesmo caminho de franquia/vidros/carro reserva).
+Ordem aplicada: **robô primeiro** (o app passa a enviar `cobertura.comissaoPercentual`
+e um robô antigo recusa o campo com 400), depois **banco**, depois **app**.
+
+- **Migration `20261007032438_ajuste_seguradora_comissao`:** coluna
+  `cotacao_seguradora_ajustes.comissao_pct` (`numeric(5,2)`, check 20 a 25), check
+  `cot_seg_ajustes_algum` recriado e RPC `salvar_ajuste_seguradora` com 7º parâmetro
+  opcional (a assinatura de 6 argumentos foi removida). Colada no `psql` do container
+  (`supabase-db`) por heredoc, numa transação com o `insert` em `schema_migrations`,
+  ensaiada com `rollback` e aplicada com `commit`. `supabase-rest` reiniciado.
+- **Robô:** mapeado ao vivo (cotação 158916) que o botão é `#BtAbrirComissao` e o campo
+  é `#Comis<id> input`, com o mesmo `<id>` dos logos (`modalCobsLogo_<id>`). Editável
+  só em Aliro (10180), Allianz (15), Bradesco (10030), HDI (10050), Mapfre (10013),
+  Suhai (10290), Tokio (10016) e Yelum (10080); Porto, Itaú, MSIG e Azul têm o campo
+  oculto e a Azul Assinatura vem travada em 20. O robô só age com exatamente 1
+  seguradora no pedido, e a aba é aberta por último (as seções do portal se fecham
+  entre si). O app oferece o campo só para as 8 editáveis e o servidor também descarta
+  o valor nas demais.
+- **Teste no portal, sem transmitir** (payload `V-todas-seguradoras`, placa FTP4J82,
+  Mapfre sozinha): comissão padrão (25%) deu à vista R$ 5.481,91 / 12x R$ 456,83 na
+  faixa de franquia R$ 6.659,00; com `comissaoPercentual: 20` deu R$ 4.739,27 /
+  12x R$ 394,94 (queda de cerca de 13,5%). Log: `Comissão de mapfre preenchida: 20,00`.
+  Com o payload de `data/cotacao.json` (placa SUZ8A67) o portal não devolveu preço
+  para Mapfre nem para HDI sozinhos, então esse payload não serve para esse teste.
+- **Pendência de produto:** hoje o vendedor escolhe qualquer valor de 20 a 25 sem
+  passar pela alçada de desconto; como 5 pontos de comissão mexem mais de 13% no
+  prêmio, falta decidir se isso deve seguir a alçada (G3) ou ter faixa configurável.
+
 ## 7. Rollback
 
 **App:**
