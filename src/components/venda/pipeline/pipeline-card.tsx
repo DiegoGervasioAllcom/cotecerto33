@@ -43,6 +43,7 @@ export function PipelineCard({
   const acao = proximaAcao(lead);
   const veiculo = veiculoResumo(lead);
   const ramo = lead.ramo;
+  const isMovida = lead.origem === "captacao_movida";
   const dias = ageDays(lead.criado_em);
   const { texto: diasTexto, titulo: diasTitulo } = diasLabel(dias);
 
@@ -156,6 +157,17 @@ export function PipelineCard({
           </span>
         )}
       </div>
+      {isMovida && (
+        <div className="kcard-sub">
+          <span
+            className="chip chip-yellow"
+            style={{ fontSize: 9.5, padding: "2px 8px", width: "100%" }}
+            title="Lead recebido automaticamente da Movida"
+          >
+            Movida{lead.loja ? ` · ${lead.loja}` : ""}
+          </span>
+        </div>
+      )}
       {veiculo && (
         <div className="car">
           <svg width={12} height={12}>
