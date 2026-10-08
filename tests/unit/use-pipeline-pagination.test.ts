@@ -38,6 +38,7 @@ function criarLead(
     em_avaliacao_matriz: null,
     empresa_id: null,
     etapa: "novo",
+    loja: null,
     marca_nome: null,
     modelo_nome: null,
     motivo_perda: null,

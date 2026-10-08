@@ -4725,6 +4725,7 @@ export type Database = {
           empresa_id: string | null;
           etapa: string | null;
           lead_id: string | null;
+          loja: string | null;
           marca_nome: string | null;
           modelo_nome: string | null;
           motivo_perda: string | null;
