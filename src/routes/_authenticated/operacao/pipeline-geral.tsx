@@ -309,6 +309,7 @@ function Page() {
                 const fr = e?.nome || "—";
                 const car = veiculoLabel(l.dados);
                 const segs: string[] = (l.dados?.seguradoras_sel as string[] | undefined) ?? [];
+                const lojaMovida = typeof l.dados?.loja === "string" ? l.dados.loja.trim() : "";
                 return (
                   <div
                     key={l.id}
@@ -331,6 +332,17 @@ function Page() {
                     <div className="top">
                       <span className="name">{l.nome || "Sem nome"}</span>
                     </div>
+                    {l.origem === "captacao_movida" && (
+                      <div className="kcard-sub">
+                        <span
+                          className="chip chip-yellow"
+                          style={{ fontSize: 9.5, padding: "2px 8px", width: "100%" }}
+                          title="Lead recebido automaticamente da Movida"
+                        >
+                          Movida{lojaMovida ? ` · ${lojaMovida}` : ""}
+                        </span>
+                      </div>
+                    )}
                     {car !== "—" && <div className="car">{car}</div>}
                     {segs.length > 0 && (
                       <div className="kcard-sub" style={{ marginTop: 6 }}>
