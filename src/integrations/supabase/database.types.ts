@@ -1166,6 +1166,7 @@ export type Database = {
           celular: string | null;
           cep: string | null;
           cidade: string | null;
+          complemento: string | null;
           cotacao_id: string;
           cpf_cnpj: string | null;
           email: string | null;
@@ -1186,6 +1187,7 @@ export type Database = {
           celular?: string | null;
           cep?: string | null;
           cidade?: string | null;
+          complemento?: string | null;
           cotacao_id: string;
           cpf_cnpj?: string | null;
           email?: string | null;
@@ -1206,6 +1208,7 @@ export type Database = {
           celular?: string | null;
           cep?: string | null;
           cidade?: string | null;
+          complemento?: string | null;
           cotacao_id?: string;
           cpf_cnpj?: string | null;
           email?: string | null;

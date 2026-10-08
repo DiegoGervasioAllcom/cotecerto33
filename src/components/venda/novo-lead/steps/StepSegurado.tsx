@@ -217,13 +217,30 @@ export function StepSegurado({
           <input
             className="input"
             value={f.numero}
-            maxLength={20}
+            maxLength={10}
             onChange={(e) => up("numero", e.target.value)}
             placeholder="Nº"
           />
           {erros.numero && (
             <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
               {erros.numero}
+            </span>
+          )}
+        </div>
+        <div className="field-group">
+          <label>
+            Complemento <span className="hint">(opcional)</span>
+          </label>
+          <input
+            className="input"
+            value={f.complemento}
+            maxLength={30}
+            onChange={(e) => up("complemento", e.target.value)}
+            placeholder="Apto, bloco…"
+          />
+          {erros.complemento && (
+            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+              {erros.complemento}
             </span>
           )}
         </div>

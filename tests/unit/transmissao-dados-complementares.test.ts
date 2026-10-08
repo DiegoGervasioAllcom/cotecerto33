@@ -146,4 +146,38 @@ describe("dados complementares para transmissão Quiver", () => {
       expect(resultado.success).toBe(true);
     });
   });
+
+  describe("complemento", () => {
+    const parse = (extra: object) =>
+      dadosComplementaresTransmissaoSchema.safeParse({ ...dadosValidos, ...extra });
+    it("recusa número com 11 caracteres", () => {
+      expect(parse({ numeroEndereco: "12345678901" }).success).toBe(false);
+    });
+    it("recusa complemento com 31 e aceita vazio/30", () => {
+      expect(parse({ complementoEndereco: "x".repeat(31) }).success).toBe(false);
+      expect(parse({ complementoEndereco: "" }).success).toBe(true);
+      expect(parse({ complementoEndereco: "x".repeat(30) }).success).toBe(true);
+    });
+    it("correspondência com e sem complemento", () => {
+      const base = { mesmoEnderecoCorrespondencia: false };
+      expect(
+        parse({
+          ...base,
+          enderecoCorrespondencia: { ...enderecoCorrespondenciaValido, complemento: "AP 2" },
+        }).success,
+      ).toBe(true);
+      expect(
+        parse({ ...base, enderecoCorrespondencia: enderecoCorrespondenciaValido }).success,
+      ).toBe(true);
+      expect(
+        parse({
+          ...base,
+          enderecoCorrespondencia: {
+            ...enderecoCorrespondenciaValido,
+            complemento: "x".repeat(31),
+          },
+        }).success,
+      ).toBe(false);
+    });
+  });
 });
