@@ -103,9 +103,9 @@ function ModalInformativo({ produto, onClose }: { produto: Produto; onClose: () 
       <div className="clt-note">
         <Icon id="info" size={15} />
         <div>
-          Hoje só a jornada de <strong>Auto</strong> está pronta. As perguntas de{" "}
-          <strong>{produto.nome}</strong> (item, perfil e coberturas próprias) entram nas próximas
-          entregas — a cotação atual segue como Auto.
+          Hoje só as jornadas de <strong>Auto</strong> e <strong>Moto</strong> estão prontas. As
+          perguntas de <strong>{produto.nome}</strong> (item, perfil e coberturas próprias) entram
+          nas próximas entregas — a cotação atual segue como está.
         </div>
       </div>
     </ModalShell>

@@ -26,6 +26,24 @@ export const SEGURADORA_QUIVER: Record<string, string> = {
 };
 
 /**
+ * Seguradoras que existem no portal para o item Moto (Mult Moto), mapeado ao vivo em
+ * 08/10/2026. As demais não aparecem no formulário de moto do Quiver.
+ */
+export const SEGURADORAS_MOTO = new Set([
+  "allianz",
+  "mapfre",
+  "tokio",
+  "hdi seguros",
+  "porto",
+  "suhai",
+]);
+
+/** true quando a seguradora (qualquer grafia conhecida) existe para moto no portal. */
+export function seguradoraAceitaMoto(nome: string): boolean {
+  return SEGURADORAS_MOTO.has(SEGURADORA_QUIVER[nome.trim().toLowerCase()] ?? "");
+}
+
+/**
  * Seguradoras em que o portal Quiver deixa editar a comissão (aba "+ Comissões",
  * mapeado ao vivo em 07/10/2026). Porto, Itaú, MSIG e Azul têm o campo oculto
  * (a comissão vem da seguradora) e o robô ignora o valor — por isso o app não o oferece.

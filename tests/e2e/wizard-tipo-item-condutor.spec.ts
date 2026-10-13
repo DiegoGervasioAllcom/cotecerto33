@@ -96,15 +96,15 @@ test.describe("wizard — tipo de item por ícone + principal condutor (V12.3.8)
       const picker = page.locator(".tipo-item");
       await expect(picker.locator(".ti-btn.on")).toHaveAttribute("title", "Auto");
 
-      // Moto é um dos "em breve" — clicar abre o modal informativo, não troca o item.
-      await picker.getByTitle("Moto · em breve").click();
+      // Vida é um dos "em breve" (Auto e Moto já têm jornada) — clicar abre o modal informativo, não troca o item.
+      await picker.getByTitle("Vida · em breve").click();
       await expect(
-        page.getByRole("heading", { name: "Jornada de Moto em construção" }),
+        page.getByRole("heading", { name: "Jornada de Vida em construção" }),
       ).toBeVisible();
-      await expect(page.getByText(/a cotação atual segue como Auto/i)).toBeVisible();
+      await expect(page.getByText(/a cotação atual segue como está/i)).toBeVisible();
       await page.getByRole("button", { name: "Entendi" }).click();
       await expect(
-        page.getByRole("heading", { name: "Jornada de Moto em construção" }),
+        page.getByRole("heading", { name: "Jornada de Vida em construção" }),
       ).toBeHidden();
 
       // Automóvel continua marcado depois de fechar o modal.

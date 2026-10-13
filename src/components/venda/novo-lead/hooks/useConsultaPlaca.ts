@@ -9,6 +9,7 @@ import {
   type PrecificadorFipe,
 } from "@/lib/placa-decodificador";
 import type { Form } from "../types";
+import { fipeBase } from "./useFipe";
 
 export type StatusPlaca = { tipo: "ok" | "erro" | "aviso"; texto: string };
 
@@ -30,6 +31,8 @@ type Params = {
    * rode na primeira vez que o campo perder o foco.
    */
   veiculoJaResolvido: boolean;
+  /** Item segurado: Moto usa a tabela FIPE de motos (marcas e modelos); o resto, carros. */
+  ramo?: string;
 };
 
 /** Comparação tolerante de nomes FIPE: sem acento, sem pontuação, sem caixa. */
@@ -60,6 +63,7 @@ export function useConsultaPlaca({
   placaAtual,
   carregandoRascunho,
   veiculoJaResolvido,
+  ramo,
 }: Params) {
   const [consultando, setConsultando] = useState(false);
   const [status, setStatus] = useState<StatusPlaca | null>(null);
@@ -100,9 +104,7 @@ export function useConsultaPlaca({
 
       let lista: { codigo: number; nome: string }[] = [];
       try {
-        const r = await fetch(
-          `https://parallelum.com.br/fipe/api/v1/carros/marcas/${marcaMatch.codigo}/modelos`,
-        );
+        const r = await fetch(`${fipeBase(ramo)}/marcas/${marcaMatch.codigo}/modelos`);
         const j = await r.json();
         lista = j.modelos || [];
       } catch {
@@ -111,7 +113,7 @@ export function useConsultaPlaca({
       if (lista.length) setModelos(lista);
       return { marcaMatch, lista };
     },
-    [marcas, setModelos],
+    [marcas, setModelos, ramo],
   );
 
   const aplicarVersao = useCallback(
