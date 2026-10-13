@@ -272,6 +272,7 @@ function Page() {
     f.modelo,
     f.anoModelo,
     f.combustivel,
+    f.ramo,
   );
   const { erros, validarEtapa } = useValidacaoEtapas(f, marcas, modelos, fipeValor);
 
@@ -321,6 +322,7 @@ function Page() {
     // lead assumido via assumir_lead, que grava a placa sem consultar), a
     // primeira saída do campo precisa disparar a consulta de verdade.
     veiculoJaResolvido: !!f.marca,
+    ramo: f.ramo,
   });
   const {
     consultando: cpfConsultando,

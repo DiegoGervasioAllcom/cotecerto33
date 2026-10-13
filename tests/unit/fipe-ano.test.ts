@@ -47,3 +47,12 @@ describe("escolherAnoFipe", () => {
     expect(escolherAnoFipe(comZeroKm, "3200", "Flex")).toBeNull();
   });
 });
+
+describe("fipeBase", () => {
+  it("usa a tabela de motos só para o item Moto", async () => {
+    const { fipeBase } = await import("../../src/components/venda/novo-lead/hooks/useFipe");
+    expect(fipeBase("Moto")).toMatch(/\/motos$/);
+    expect(fipeBase("Automóvel")).toMatch(/\/carros$/);
+    expect(fipeBase(undefined)).toMatch(/\/carros$/);
+  });
+});
