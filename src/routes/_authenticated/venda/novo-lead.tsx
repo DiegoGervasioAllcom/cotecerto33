@@ -244,6 +244,7 @@ function Page() {
     tipoAtividadeEmpresa: "Comércio",
     ramoAtividade: "",
     profissaoPrincipalCondutor: "",
+    profissaoAviso: "",
     seguroCorretorProximo: "nao",
     jovens1825: "nao",
     jovens18a25Detalhes: [],

@@ -137,6 +137,8 @@ export type Form = {
   tipoAtividadeEmpresa: string;
   ramoAtividade: string;
   profissaoPrincipalCondutor: string;
+  /** Aviso de rascunho antigo cuja profissão não existe mais na lista. */
+  profissaoAviso: string;
   seguroCorretorProximo: "sim" | "nao";
   jovens1825: "sim" | "nao";
   // Detalhe por jovem condutor (17-25 anos) — espelha complementares.jovensCondutores

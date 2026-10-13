@@ -4,6 +4,22 @@ import { maskCpfCnpj, normalizePlaca } from "@/lib/masks";
 import { maskCel, maskCep } from "../masks";
 import { ANOS_POR_TIPO_CALCULO, vigenciaAPartirDeHoje } from "../steps/StepSeguro";
 import type { Form } from "../types";
+import { PROFISSOES_CONDUTOR } from "../enumsProfissao";
+import { acharOpcao } from "@/lib/normalizaTexto";
+
+/** Rascunho antigo tinha texto livre: casa com a lista ou limpa e avisa. */
+export function resolveProfissao(
+  salvo: string | null | undefined,
+): Pick<Form, "profissaoPrincipalCondutor" | "profissaoAviso"> {
+  const txt = (salvo ?? "").trim();
+  if (!txt) return { profissaoPrincipalCondutor: "", profissaoAviso: "" };
+  const achada = acharOpcao(txt, PROFISSOES_CONDUTOR);
+  if (achada) return { profissaoPrincipalCondutor: achada, profissaoAviso: "" };
+  return {
+    profissaoPrincipalCondutor: "",
+    profissaoAviso: `A profissão anterior '${txt}' não existe no portal; selecione novamente.`,
+  };
+}
 
 type MarcaOpt = { codigo: string; nome: string };
 type ModeloOpt = { codigo: number; nome: string };
@@ -412,7 +428,7 @@ export function useCotacaoRascunho(params: {
         tipoResidencia: p.tipo_residencia ?? prev.tipoResidencia,
         tipoAtividadeEmpresa: p.tipo_atividade_empresa ?? prev.tipoAtividadeEmpresa,
         ramoAtividade: p.ramo_atividade ?? "",
-        profissaoPrincipalCondutor: p.profissao_principal_condutor ?? "",
+        ...resolveProfissao(p.profissao_principal_condutor),
         seguroCorretorProximo: p.seguro_corretor_proximo ? "sim" : "nao",
         jovens1825: p.jovens_18_25 ? "sim" : "nao",
         jovens18a25Detalhes: (p.jovens_18_25_detalhes as Form["jovens18a25Detalhes"]) ?? [],
