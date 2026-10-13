@@ -17,6 +17,8 @@ import {
   CONDUTORES_QUE_UTILIZAM,
   TIPOS_USO_COM_CONDUTORES,
 } from "@/components/venda/novo-lead/enumsQuiver";
+import { ComboboxBusca } from "@/components/venda/novo-lead/ComboboxBusca";
+import { PROFISSOES_CONDUTOR } from "@/components/venda/novo-lead/enumsProfissao";
 import type { Form } from "@/components/venda/novo-lead/types";
 
 type Props = {
@@ -425,16 +427,35 @@ export function StepPerfil({ f, up, erros }: Props) {
               </select>
             </div>
             <div className="field-group">
-              <label>
+              <label htmlFor="profissaoPrincipalCondutor">
                 Profissão do principal condutor<span className="req">*</span>
               </label>
-              <input
-                className="input"
+              <ComboboxBusca
+                id="profissaoPrincipalCondutor"
+                ariaLabel="Profissão do principal condutor"
+                invalido={!!erros.profissaoPrincipalCondutor}
+                descritoPor={erros.profissaoPrincipalCondutor ? "profissao-erro" : undefined}
                 value={f.profissaoPrincipalCondutor}
-                maxLength={150}
-                onChange={(e) => up("profissaoPrincipalCondutor", e.target.value)}
-                placeholder="Ex.: Motorista de aplicativo"
+                options={PROFISSOES_CONDUTOR}
+                onChange={(v) => {
+                  up("profissaoPrincipalCondutor", v);
+                  up("profissaoAviso", "");
+                }}
               />
+              {f.profissaoAviso && (
+                <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+                  {f.profissaoAviso}
+                </span>
+              )}
+              {erros.profissaoPrincipalCondutor && (
+                <span
+                  id="profissao-erro"
+                  className="hint"
+                  style={{ color: "var(--alert)", display: "block" }}
+                >
+                  {erros.profissaoPrincipalCondutor}
+                </span>
+              )}
             </div>
             {precisaCondutores && (
               <div className="field-group full">

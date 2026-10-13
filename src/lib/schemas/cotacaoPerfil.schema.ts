@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import { onlyDigits } from "@/lib/masks";
+import { PROFISSOES_CONDUTOR } from "@/components/venda/novo-lead/enumsProfissao";
 
 function optionalDigitsExact(lengths: number[], message: string) {
   return z
@@ -37,7 +38,12 @@ export const perfilSchema = z.object({
   tipoResidencia: optionalMax(30, "Campo muito longo."),
   tipoAtividadeEmpresa: optionalMax(30, "Campo muito longo."),
   ramoAtividade: optionalMax(150, "Campo muito longo."),
-  profissaoPrincipalCondutor: optionalMax(150, "Profissão muito longa."),
+  profissaoPrincipalCondutor: z
+    .string()
+    .optional()
+    .refine((v) => !v || (PROFISSOES_CONDUTOR as readonly string[]).includes(v), {
+      message: "Selecione uma profissão da lista.",
+    }),
 });
 
 export type PerfilFormValues = z.infer<typeof perfilSchema>;
