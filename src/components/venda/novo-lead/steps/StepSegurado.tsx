@@ -105,9 +105,7 @@ export function StepSegurado({
           )}
         </div>
         <div className="field-group">
-          <label>
-            Data de nascimento<span className="req">*</span>
-          </label>
+          <label>Data de nascimento</label>
           <input
             className="input"
             type="date"
