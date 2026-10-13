@@ -21,9 +21,9 @@ export const PRODUTOS: Produto[] = [
   { id: "celular", ramo: "Celular", nome: "Celular", icone: "mobile" },
 ];
 
-/** Só Auto tem jornada pronta por ora (produtoTemJornada do protótipo). */
+/** Auto e Moto têm jornada pronta (Moto reaproveita as telas de Auto; o robô usa Mult Moto). */
 export function produtoTemJornada(id: ProdutoId): boolean {
-  return id === "auto";
+  return id === "auto" || id === "moto";
 }
 
 export function produtoPorRamo(ramo: string): Produto | undefined {

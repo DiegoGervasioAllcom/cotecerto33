@@ -235,7 +235,7 @@ export const salesTutorialChapters = [
         target: ".tipo-item",
         pos: "bottom",
         title: "Etapa 2 — que item vai ser segurado",
-        body: "<p>O lead já chega marcado como Auto, Moto ou Vida, porque a campanha que o trouxe dizia isso. Mas campanha erra, e cliente muda de ideia no meio da conversa.</p><p>Se ele ligou pelo carro e no fim quer segurar a moto, é <strong>aqui</strong> que você troca — sem recomeçar o cadastro. Hoje só o <strong>Automóvel</strong> tem jornada completa; os outros aparecem marcados e entram em breve.</p>",
+        body: "<p>O lead já chega marcado como Auto, Moto ou Vida, porque a campanha que o trouxe dizia isso. Mas campanha erra, e cliente muda de ideia no meio da conversa.</p><p>Se ele ligou pelo carro e no fim quer segurar a moto, é <strong>aqui</strong> que você troca — sem recomeçar o cadastro. Hoje <strong>Automóvel</strong> e <strong>Moto</strong> têm jornada pronta (na Moto só 6 seguradoras estão disponíveis); os outros aparecem marcados e entram em breve.</p>",
         prepare: "lead-step-1",
       },
       {

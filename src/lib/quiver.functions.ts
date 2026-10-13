@@ -11,6 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import { normalizePlaca } from "@/lib/masks";
 import {
   SEGURADORA_QUIVER,
+  SEGURADORAS_MOTO,
   acharAjusteCanonico,
   comissaoEditavel,
   nomeCanonicoSeguradora,
@@ -197,7 +198,11 @@ export function montarPayloadQuiver(cot: CotacaoRow, ajuste?: AjusteCoberturaQui
 
   const condutorMesmo = (p.condutor_mesmo as boolean | null) ?? true;
   const alienado = (v.alienado as boolean | null) ?? false;
-  const seguradorasQuiver = mapSeguradoras(sg.seguradoras_sel as string[]);
+  const ehMoto = sg.ramo === "Moto";
+  // Moto: só 6 seguradoras existem no portal; filtra no servidor também (rascunho antigo).
+  const seguradorasQuiver = mapSeguradoras(sg.seguradoras_sel as string[]).filter(
+    (s) => !ehMoto || SEGURADORAS_MOTO.has(s),
+  );
 
   return {
     id: cot.id,
@@ -240,6 +245,8 @@ export function montarPayloadQuiver(cot: CotacaoRow, ajuste?: AjusteCoberturaQui
     },
     veiculo: {
       placa: normalizePlaca(v.placa as string | null | undefined),
+      // Mult Moto no robô (veiculo.tipoProduto, PR playwright#59); sem o campo = carro.
+      ...(ehMoto ? { tipoProduto: "moto" } : {}),
       // zeroKm mapeado no robô em 17/08/2026 (#Padrao2000_Zerokm) — nem
       // sempre aparece no portal (depende do veículo resolvido pela placa),
       // mas quando aparece exige resposta; enviamos sempre, igual

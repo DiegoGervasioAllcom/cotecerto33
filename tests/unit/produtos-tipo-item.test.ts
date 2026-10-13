@@ -17,9 +17,9 @@ describe("catálogo de produtos (tipo de item segurado — V12.3.8)", () => {
     ]);
   });
 
-  it("só Auto tem jornada pronta", () => {
+  it("só Auto e Moto têm jornada pronta", () => {
     expect(produtoTemJornada("auto")).toBe(true);
-    expect(produtoTemJornada("moto")).toBe(false);
+    expect(produtoTemJornada("moto")).toBe(true);
     expect(produtoTemJornada("vida")).toBe(false);
     expect(produtoTemJornada("resid")).toBe(false);
     expect(produtoTemJornada("celular")).toBe(false);

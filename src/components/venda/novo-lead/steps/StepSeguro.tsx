@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import type { Form, BonusFieldKey } from "@/components/venda/novo-lead/types";
 import { SeguradoraTile } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { TipoItemPicker } from "@/components/venda/novo-lead/TipoItemPicker";
+import { seguradoraAceitaMoto } from "@/lib/seguradora-canonica";
 
 export const ANOS_POR_TIPO_CALCULO: Record<string, number> = {
   Anual: 1,
@@ -26,8 +28,18 @@ type Props = {
 };
 
 export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
-  const SEG_HABILITADAS = seguradorasDb;
+  const ehMoto = f.ramo === "Moto";
+  // Moto: o portal só oferece 6 seguradoras (allianz, mapfre, tokio, hdi, porto, suhai).
+  const SEG_HABILITADAS = ehMoto ? seguradorasDb.filter(seguradoraAceitaMoto) : seguradorasDb;
   const INSURERS = seguradorasDb;
+
+  // Lead que já nasce como Moto (LeadManualGate) traz a seleção padrão de Auto: poda o que
+  // não existe para moto, senão o contador e o payload divergem do que a tela mostra.
+  const selecaoForaDeMoto = ehMoto && f.seguradorasSel.some((x) => !seguradoraAceitaMoto(x));
+  useEffect(() => {
+    if (!selecaoForaDeMoto) return;
+    setF((s) => ({ ...s, seguradorasSel: s.seguradorasSel.filter(seguradoraAceitaMoto) }));
+  }, [selecaoForaDeMoto, setF]);
   const bonusClasses = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
   const isRenov = (f.tipoSeguro || "").includes("Renovação");
   return (
@@ -41,7 +53,15 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
         </div>
         <TipoItemPicker
           ramo={f.ramo}
-          onChange={(ramo) => up("ramo", ramo)}
+          onChange={(ramo) => {
+            setF((s) => ({
+              ...s,
+              ramo,
+              // Ao virar Moto, tira da seleção as seguradoras que não existem para moto.
+              seguradorasSel:
+                ramo === "Moto" ? s.seguradorasSel.filter(seguradoraAceitaMoto) : s.seguradorasSel,
+            }));
+          }}
           dataTour="seguro-tipo-item"
         />
       </div>
