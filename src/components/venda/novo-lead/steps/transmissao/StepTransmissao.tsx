@@ -7,8 +7,8 @@ import {
 } from "./TransmissaoDadosComplementares";
 import { TransmissaoConfirmacao } from "./TransmissaoConfirmacao";
 import { TransmissaoPagamento } from "./TransmissaoPagamento";
-import { TransmissaoPagamentoDebito } from "./TransmissaoPagamentoDebito";
-import { ehDebitoEmContaPorto, type PagamentoTransmissao } from "@/lib/transmissao-debito";
+import { ehDebitoEmContaPorto } from "@/lib/transmissao-debito";
+import { type PagamentoTransmissao } from "@/lib/transmissao-pagamento";
 import { TransmissaoResultado, type ResultadoTransmissaoEstado } from "./TransmissaoResultado";
 
 // "Cartão de crédito" é o único valor de forma de pagamento que exige o
@@ -153,24 +153,17 @@ export function StepTransmissao({
         onConfirmarTransmitir={() => dadosComplementares && onTransmitir(dadosComplementares)}
       />
     );
-  } else if (faseAtual === "pagamento" && ehDebitoPorto) {
-    body = (
-      <TransmissaoPagamentoDebito
-        enviando={enviando}
-        erroEnvio={erroEnvio}
-        onVoltar={() => setFase("confirmacao")}
-        onEfetivar={(contaDebito) =>
-          dadosComplementares && onTransmitir(dadosComplementares, { contaDebito })
-        }
-      />
-    );
   } else if (faseAtual === "pagamento") {
     body = (
       <TransmissaoPagamento
+        seguradora={oferta.resultado.seguradora}
+        formaPagamento={oferta.formaPagamento}
         enviando={enviando}
         erroEnvio={erroEnvio}
         onVoltar={() => setFase("confirmacao")}
-        onEfetivar={() => dadosComplementares && onTransmitir(dadosComplementares)}
+        onEfetivar={(pagamento) =>
+          dadosComplementares && onTransmitir(dadosComplementares, pagamento)
+        }
       />
     );
   } else {

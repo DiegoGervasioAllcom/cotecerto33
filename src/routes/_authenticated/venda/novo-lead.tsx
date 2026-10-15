@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
-import type { PagamentoTransmissao } from "@/lib/transmissao-debito";
+import type { PagamentoTransmissao } from "@/lib/transmissao-pagamento";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { useClassificarPerda } from "@/components/venda/novo-lead/hooks/useClassificarPerda";
 import { useCepLookup } from "@/components/venda/novo-lead/hooks/useCepLookup";
@@ -516,8 +516,9 @@ function Page() {
           opcao,
           premio,
           dadosComplementares,
-          // Dado financeiro sensível (débito em conta): só no body desta chamada.
-          contaDebito: pagamento?.contaDebito,
+          // Dados sensíveis (débito em conta / cartão / pagador): só no body
+          // desta chamada — nunca em estado global, storage, cache ou log.
+          pagamento,
         },
       });
       // O 201 significa só que o robô aceitou a solicitação: o resultado real

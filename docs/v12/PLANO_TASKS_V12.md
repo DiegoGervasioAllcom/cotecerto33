@@ -268,6 +268,7 @@ Achados novos no robô (entram antes dos itens acima):
 2. **Escopo de Cliente VIP**: não há nenhuma referência a isso em nenhum documento V10/V11 existente — é uma feature nova que precisa de uma sessão de escopo dedicada antes de virar task.
 3. **Campos do sub-passo "Dados complementares"**: confirmar com a seguradora/Quiver quais desses ~30 campos ela realmente aceita hoje via API, para não desenhar UI para campos que o robô não consome.
 4. **Dados de cartão de crédito**: confirmar o gateway/fluxo PCI antes de desenhar V12.1.12 — não pode ser implementado "como no protótipo" (campos mascarados fixos) em produção.
+   - **Nota (15/10/2026):** o dono do produto decidiu implementar a coleta **pelo CoteCerto, só para a seguradora Porto** (cartão de crédito e Cartão Porto Bank; também débito em conta e, no "Terceiros", os dados do pagador), **sem persistir, sem logar e sem CVV** — os dados vão direto no body da server function ao robô de transmissão, que os digita no portal (PRs da Fase 3 do front). Isso **contradiz** a "Decisão de segurança obrigatória" da V12.1.12 (dados de cartão nunca trafegarem pelo CoteCerto) e amplia o escopo de PCI-DSS do CoteCerto (front, server function e robô). **A aprovação de compliance/PCI continua pendente de registro** — confirmar também que proxy/WAF/logs de request da infra não gravam o body. Cartão de outras seguradoras segue ilustrativo.
 
 ---
 
