@@ -22,6 +22,7 @@ import {
   resolverContatoTransmissao,
 } from "@/lib/transmissao-contato";
 import { camposPortoPayload, erroDeclaracoesPorto } from "@/lib/transmissao-porto";
+import { campoSimulacao, roboSuportaSimulacao } from "@/lib/transmissao-simulacao";
 import {
   camposPagamentoPayload,
   erroPagamentoPorto,
@@ -895,6 +896,9 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       // cliente. Ver `camposPortoPayload`.
       ...camposPortoPayload(data.seguradora, data.opcao, data.dadosComplementares),
       ...camposPagamentoPayload(data.seguradora, data.formaPagamento, data.pagamento),
+      // Modo simulação (só se SELF_QUIVER_TRANSMISSAO_SIMULACAO=1): o robô preenche
+      // tudo e para antes do Efetivar; nada é transmitido.
+      ...campoSimulacao(process.env.SELF_QUIVER_TRANSMISSAO_SIMULACAO),
       // Campos do formulário de efetivação — priorizamos os dados confirmados
       // pelo vendedor e usamos o cadastro da cotação como fallback.
       rg: data.dadosComplementares?.rg,
@@ -937,6 +941,28 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
         ? undefined
         : data.dadosComplementares?.enderecoCorrespondencia?.uf,
     };
+
+    // Modo simulação ligado: confirma ANTES de qualquer gravação que o robô em
+    // produção suporta o recurso — um robô antigo ignora `simulacao: true` e
+    // efetivaria a venda de verdade. Sem confirmação (ou sem resposta), recusa
+    // e nada é enviado.
+    if (payload.simulacao === true) {
+      console.warn(
+        "[transmitirPropostaQuiver] MODO SIMULAÇÃO ativo (SELF_QUIVER_TRANSMISSAO_SIMULACAO=1).",
+      );
+      let suporta = false;
+      try {
+        const h = await fetch(`${apiUrl}/health`, { signal: AbortSignal.timeout(8000) });
+        suporta = h.ok && roboSuportaSimulacao(await h.json());
+      } catch {
+        suporta = false;
+      }
+      if (!suporta) {
+        throw new Error(
+          "Modo simulação ligado, mas o robô não confirmou que suporta a simulação (atualize o robô antes). Nada foi enviado.",
+        );
+      }
+    }
 
     // Regra 2 do AGENTS.md (dinheiro roda no servidor): o `premio` do front é
     // só conferência — o valor que vale é recalculado aqui, a partir do

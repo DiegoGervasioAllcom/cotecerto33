@@ -189,6 +189,7 @@ SELF_APP_URL=https://cote-certo.sandboxallcom.com
 SELF_QUIVER_API_URL=https://quiver-bot.sandboxallcom.com
 SELF_QUIVER_WEBHOOK_CLIENT_KEY=<segredo compartilhado com a Quiver>
 SELF_QUIVER_WEBHOOK_CLIENT_SECRET=<segredo compartilhado com a Quiver>
+# (opcional, só para TESTAR) SELF_QUIVER_TRANSMISSAO_SIMULACAO=1 — o robô preenche o formulário e para antes do Efetivar; nada é transmitido. Faça o deploy do robô com o modo simulação ANTES de ligar (o app recusa se o /health do robô não anunciar o recurso). Remova/zere ao terminar o teste e recrie o container.
 SELF_PLACA_API_URL=https://ws.sisconsulta.com/ApiSisconsulta/Integracao/DecodificadorAR
 SELF_PLACA_API_CLIENTE=<cliente da conta sisconsulta>
 SELF_PLACA_API_CHAVE=<chave da conta sisconsulta>

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
+import { MOTIVO_SIMULACAO } from "@/lib/transmissao-simulacao";
 import { TransmissaoTransmitidaCard } from "./TransmissaoTransmitidaCard";
 
 export type ResultadoTransmissaoEstado = {
@@ -63,13 +64,21 @@ export function TransmissaoResultado({ seguradora, resultado, tentarNovamente, f
 
       {resultado?.status === "falha" && (
         <>
+          {/* Simulação (ambiente de teste): o robô preencheu o formulário e parou
+              antes do Efetivar. Não é erro nem venda — destaque neutro. */}
+          {resultado.motivo === MOTIVO_SIMULACAO && (
+            <div style={{ marginTop: 8, fontWeight: 600 }}>
+              Simulação concluída — nada foi transmitido
+            </div>
+          )}
           <div
             style={{
               marginTop: 8,
               padding: "10px 14px",
               borderRadius: 8,
-              background: "var(--alert-soft)",
-              color: "var(--alert)",
+              background:
+                resultado.motivo === MOTIVO_SIMULACAO ? "var(--soft-bg)" : "var(--alert-soft)",
+              color: resultado.motivo === MOTIVO_SIMULACAO ? "inherit" : "var(--alert)",
               fontSize: 13,
               textAlign: "left",
             }}
