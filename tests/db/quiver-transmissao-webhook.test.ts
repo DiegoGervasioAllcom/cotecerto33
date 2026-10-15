@@ -199,6 +199,67 @@ describe("webhook de transmissão Quiver — Onda 2 (endpoint HTTP)", () => {
     expect(prop?.transmissao_mensagem).toBe("Portal recusou a cotação");
   });
 
+  it("simulação: grava como 'falha' com motivo SIMULACAO e o relatório na mensagem; nada vira venda", async () => {
+    const empresa = await criarEmpresa({ nome: uniq("Empresa Webhook Simulacao") });
+    const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: empresa.id });
+    const cotacaoId = await criarCotacao(empresa.id, vendedor.userId);
+    const tentativaId = await criarTentativa(cotacaoId);
+
+    const res = await handleQuiverTransmissaoWebhook(
+      req({
+        cotacaoId,
+        transmitido: false,
+        simulado: true,
+        motivo: "SIMULACAO",
+        mensagem: "Simulação: o formulário foi preenchido e nada foi enviado.",
+        relatorio: {
+          seguradora: "porto",
+          formaPagamento: "Débito em Conta",
+          camposInformados: ["rg", "email"],
+          comContaDebito: true,
+        },
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const { data: tent } = await admin
+      .from("cotacao_transmissoes")
+      .select("status, motivo, mensagem, proposta_id")
+      .eq("id", tentativaId)
+      .single();
+    expect(tent?.status).toBe("falha");
+    expect(tent?.motivo).toBe("SIMULACAO");
+    expect(tent?.mensagem).toContain("Forma de pagamento: Débito em Conta");
+    expect(tent?.mensagem).toContain("Campos preenchidos: rg, email");
+
+    const { data: prop } = await admin
+      .from("propostas")
+      .select("status, transmissao_status")
+      .eq("id", tent!.proposta_id!)
+      .single();
+    expect(prop?.status).toBe("gerada");
+    expect(prop?.transmissao_status).toBe("falha");
+  });
+
+  it("simulação marcada como transmitido por engano NUNCA vira venda (rede de segurança)", async () => {
+    const empresa = await criarEmpresa({ nome: uniq("Empresa Webhook Simulacao Erro") });
+    const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: empresa.id });
+    const cotacaoId = await criarCotacao(empresa.id, vendedor.userId);
+    const tentativaId = await criarTentativa(cotacaoId);
+
+    const res = await handleQuiverTransmissaoWebhook(
+      req({ cotacaoId, transmitido: true, simulado: true, motivo: "SIMULACAO" }),
+    );
+    expect(res.status).toBe(200);
+
+    const { data: tent } = await admin
+      .from("cotacao_transmissoes")
+      .select("status")
+      .eq("id", tentativaId)
+      .single();
+    expect(tent?.status).toBe("falha");
+  });
+
   it("usa a tentativa mais recente quando há mais de uma 'enviada' para o mesmo cotacaoId", async () => {
     const empresa = await criarEmpresa({ nome: uniq("Empresa Webhook Multiplas Tentativas") });
     const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: empresa.id });

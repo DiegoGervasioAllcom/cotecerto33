@@ -12,6 +12,7 @@
 // CLIENT_KEY/SECRET, usadas pelo CoteCerto para chamar o robô) e do webhook
 // de cotação (SELF_QUIVER_WEBHOOK_CLIENT_KEY/SECRET) — nunca reaproveitar.
 import { createClient } from "@supabase/supabase-js";
+import { MOTIVO_SIMULACAO, montarMensagemSimulacao } from "@/lib/transmissao-simulacao";
 
 export const QUIVER_TRANSMISSAO_WEBHOOK_PATH = "/api/webhooks/quiver-transmissao";
 
@@ -90,7 +91,11 @@ export async function handleQuiverTransmissaoWebhook(request: Request): Promise<
   }
 
   const motivo = typeof payload.motivo === "string" ? payload.motivo : null;
-  const mensagem = typeof payload.mensagem === "string" ? payload.mensagem : null;
+  // Simulação (robô parou antes do Efetivar): a mensagem leva o relatório do
+  // que foi pedido; `transmitido` é sempre false, então nada vira venda.
+  const mensagem =
+    montarMensagemSimulacao(payload) ??
+    (typeof payload.mensagem === "string" ? payload.mensagem : null);
   const numeroCotacao = typeof payload.numeroCotacao === "string" ? payload.numeroCotacao : null;
   const capturadoEm = typeof payload.capturadoEm === "string" ? payload.capturadoEm : undefined;
 
@@ -99,7 +104,9 @@ export async function handleQuiverTransmissaoWebhook(request: Request): Promise<
 
   const rpcArgs: Record<string, unknown> = {
     p_tentativa_id: tentativa.id,
-    p_transmitido: transmitido,
+    // Rede de segurança: resultado marcado como simulação NUNCA vira venda,
+    // mesmo que o robô mande `transmitido: true` por engano.
+    p_transmitido: transmitido && payload.simulado !== true && payload.motivo !== MOTIVO_SIMULACAO,
     p_motivo: motivo,
     p_mensagem: mensagem,
     p_numero_cotacao: numeroCotacao,
