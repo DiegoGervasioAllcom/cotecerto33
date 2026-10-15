@@ -1,4 +1,9 @@
 import { useEffect, useState } from "react";
+import {
+  aplicarRascunho,
+  baseDoForm,
+  type RascunhoDadosTransmissao,
+} from "@/lib/transmissao-rascunho";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { OfertaTransmissao } from "@/components/venda/novo-lead/steps/StepCalculo";
 import {
@@ -7,8 +12,8 @@ import {
 } from "./TransmissaoDadosComplementares";
 import { TransmissaoConfirmacao } from "./TransmissaoConfirmacao";
 import { TransmissaoPagamento } from "./TransmissaoPagamento";
-import { TransmissaoPagamentoDebito } from "./TransmissaoPagamentoDebito";
-import { ehDebitoEmContaPorto, type PagamentoTransmissao } from "@/lib/transmissao-debito";
+import { ehDebitoEmContaPorto } from "@/lib/transmissao-debito";
+import { type PagamentoTransmissao } from "@/lib/transmissao-pagamento";
 import { TransmissaoResultado, type ResultadoTransmissaoEstado } from "./TransmissaoResultado";
 
 // "Cartão de crédito" é o único valor de forma de pagamento que exige o
@@ -42,6 +47,10 @@ type Props = {
   // resultado já existe (falha/transmitida) — nesses casos o wizard-card
   // ainda mostraria "Dados complementares" por 1 frame até o vendedor mexer.
   faseInicial?: Fase;
+  // Dados complementares já digitados nesta cotação, guardados só em memória
+  // pelo pai: trocar a forma de pagamento volta ao Cálculo e remonta este passo.
+  dadosSalvos?: RascunhoDadosTransmissao | null;
+  onDadosSalvos?: (rascunho: RascunhoDadosTransmissao) => void;
 };
 
 export function StepTransmissao({
@@ -57,10 +66,14 @@ export function StepTransmissao({
   onTentarNovamente,
   onFaseChange,
   faseInicial = "dados",
+  dadosSalvos = null,
+  onDadosSalvos,
 }: Props) {
   const [fase, setFase] = useState<Fase>(faseInicial);
   const [dadosComplementares, setDadosComplementares] =
-    useState<DadosComplementaresTransmissao | null>(null);
+    useState<DadosComplementaresTransmissao | null>(() =>
+      dadosSalvos ? aplicarRascunho(dadosSalvos, baseDoForm(f)) : null,
+    );
 
   useEffect(() => {
     if (fase === "resultado") return;
@@ -153,24 +166,17 @@ export function StepTransmissao({
         onConfirmarTransmitir={() => dadosComplementares && onTransmitir(dadosComplementares)}
       />
     );
-  } else if (faseAtual === "pagamento" && ehDebitoPorto) {
-    body = (
-      <TransmissaoPagamentoDebito
-        enviando={enviando}
-        erroEnvio={erroEnvio}
-        onVoltar={() => setFase("confirmacao")}
-        onEfetivar={(contaDebito) =>
-          dadosComplementares && onTransmitir(dadosComplementares, { contaDebito })
-        }
-      />
-    );
   } else if (faseAtual === "pagamento") {
     body = (
       <TransmissaoPagamento
+        seguradora={oferta.resultado.seguradora}
+        formaPagamento={oferta.formaPagamento}
         enviando={enviando}
         erroEnvio={erroEnvio}
         onVoltar={() => setFase("confirmacao")}
-        onEfetivar={() => dadosComplementares && onTransmitir(dadosComplementares)}
+        onEfetivar={(pagamento) =>
+          dadosComplementares && onTransmitir(dadosComplementares, pagamento)
+        }
       />
     );
   } else {
@@ -181,9 +187,13 @@ export function StepTransmissao({
         resultado={oferta.resultado}
         formaPagamento={oferta.formaPagamento}
         parcelas={oferta.parcelas}
-        onVoltar={onVoltarCalculo}
+        onVoltar={(dados) => {
+          onDadosSalvos?.({ dados, base: baseDoForm(f) });
+          onVoltarCalculo();
+        }}
         onConfirmar={(dados) => {
           setDadosComplementares(dados);
+          onDadosSalvos?.({ dados, base: baseDoForm(f) });
           setFase("confirmacao");
         }}
       />

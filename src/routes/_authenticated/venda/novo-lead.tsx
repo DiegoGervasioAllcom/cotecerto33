@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
-import type { PagamentoTransmissao } from "@/lib/transmissao-debito";
+import type { PagamentoTransmissao } from "@/lib/transmissao-pagamento";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { useClassificarPerda } from "@/components/venda/novo-lead/hooks/useClassificarPerda";
 import { useCepLookup } from "@/components/venda/novo-lead/hooks/useCepLookup";
@@ -34,6 +34,7 @@ import {
   StepCalculo,
   type OfertaTransmissao,
 } from "@/components/venda/novo-lead/steps/StepCalculo";
+import type { RascunhoDadosTransmissao } from "@/lib/transmissao-rascunho";
 import { StepTransmissao } from "@/components/venda/novo-lead/steps/transmissao/StepTransmissao";
 import type { DadosComplementaresTransmissao } from "@/components/venda/novo-lead/steps/transmissao/TransmissaoDadosComplementares";
 import type { ResultadoTransmissaoEstado } from "@/components/venda/novo-lead/steps/transmissao/TransmissaoResultado";
@@ -383,6 +384,13 @@ function Page() {
   const [faseInicialTransmissao, setFaseInicialTransmissao] = useState<
     "dados" | "confirmacao" | "pagamento" | "resultado"
   >("dados");
+  // Dados complementares digitados na Etapa 7 (só memória, nunca persistidos):
+  // sobrevivem à troca de oferta/forma de pagamento na mesma cotação.
+  const [dadosTransmissaoSalvos, setDadosTransmissaoSalvos] =
+    useState<RascunhoDadosTransmissao | null>(null);
+  useEffect(() => {
+    setDadosTransmissaoSalvos(null);
+  }, [cotacaoId]);
   const [enviandoProposta, setEnviandoProposta] = useState(false);
   const [erroProposta, setErroProposta] = useState<string | null>(null);
   // Onda 3 (T.10): enquanto uma transmissão está em andamento, a Etapa 7
@@ -516,8 +524,9 @@ function Page() {
           opcao,
           premio,
           dadosComplementares,
-          // Dado financeiro sensível (débito em conta): só no body desta chamada.
-          contaDebito: pagamento?.contaDebito,
+          // Dados sensíveis (débito em conta / cartão / pagador): só no body
+          // desta chamada — nunca em estado global, storage, cache ou log.
+          pagamento,
         },
       });
       // O 201 significa só que o robô aceitou a solicitação: o resultado real
@@ -679,6 +688,8 @@ function Page() {
               onTentarNovamente={tentarNovamenteTransmissao}
               onFaseChange={onFaseTransmissaoChange}
               faseInicial={faseInicialTransmissao}
+              dadosSalvos={dadosTransmissaoSalvos}
+              onDadosSalvos={setDadosTransmissaoSalvos}
             />
           )}
 

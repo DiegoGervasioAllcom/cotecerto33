@@ -17,14 +17,6 @@ export type ContaDebito = {
   conta: string;
 };
 
-/**
- * Dados de pagamento sensíveis que seguem junto da transmissão, sem passar por
- * banco/log/cache. Hoje só a conta de débito.
- */
-export type PagamentoTransmissao = {
-  contaDebito?: ContaDebito;
-};
-
 const REGEX_AGENCIA = /^\d{1,6}$/;
 const REGEX_CONTA = /^[\dxX-]{1,11}$/;
 

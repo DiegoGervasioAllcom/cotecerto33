@@ -3,6 +3,8 @@ import type { Form } from "@/components/venda/novo-lead/types";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
+import { mascararData } from "@/lib/transmissao-pagador";
+import { baseDoForm } from "@/lib/transmissao-rascunho";
 import {
   dadosComplementaresTransmissaoPortoSchema,
   dadosComplementaresTransmissaoSchema,
@@ -23,7 +25,8 @@ type Props = {
    * memória — nada disso é persistido.
    */
   inicial?: DadosComplementaresTransmissao | null;
-  onVoltar: () => void;
+  /** Recebe o que já foi digitado, para o pai guardar em memória (ex.: ao trocar de forma de pagamento). */
+  onVoltar: (dados: DadosComplementaresTransmissao) => void;
   onConfirmar: (dados: DadosComplementaresTransmissao) => void;
 };
 
@@ -53,10 +56,7 @@ export function TransmissaoDadosComplementares({
         rg: "",
         dataEmissaoRg: "",
         orgaoEmissorRg: "",
-        cepResidencial: f.cep,
-        numeroEndereco: f.numero,
-        complementoEndereco: f.complemento,
-        email: f.email,
+        ...baseDoForm(f),
         mesmoEnderecoCorrespondencia: true,
         enderecoCorrespondencia: {
           cep: "",
@@ -67,8 +67,6 @@ export function TransmissaoDadosComplementares({
           cidade: "",
           uf: "",
         },
-        renavam: f.renavam.replace(/\D/g, ""),
-        corVeiculo: f.cor,
         diaVencimentoDemaisParcelas: "",
         desejaReceberPropostaPorEmail: "Não",
       },
@@ -143,6 +141,7 @@ export function TransmissaoDadosComplementares({
     placeholder = "",
     inputMode?: "numeric",
     maxLength?: number,
+    mascara?: (valor: string) => string,
   ) => (
     <div className="field-group">
       <label htmlFor={`transmissao-${key}`}>{label}</label>
@@ -154,7 +153,7 @@ export function TransmissaoDadosComplementares({
         placeholder={placeholder}
         inputMode={inputMode}
         aria-invalid={Boolean(erros[key])}
-        onChange={(e) => up(key, e.target.value as never)}
+        onChange={(e) => up(key, (mascara ? mascara(e.target.value) : e.target.value) as never)}
       />
       {erros[key] && (
         <span className="small" style={{ color: "var(--alert)" }}>
@@ -250,7 +249,7 @@ export function TransmissaoDadosComplementares({
           <input className="input" value={f.nome} disabled />
         </div>
         {field("rg", "RG", "00.000.000-0")}
-        {field("dataEmissaoRg", "Data de emissão", "dd/mm/aaaa", "numeric")}
+        {field("dataEmissaoRg", "Data de emissão", "dd/mm/aaaa", "numeric", 10, mascararData)}
         {field("orgaoEmissorRg", "Órgão emissor", "SSP")}
         {field("email", "E-mail", "cliente@email.com")}
       </div>
@@ -367,9 +366,11 @@ export function TransmissaoDadosComplementares({
           )}
         </div>
         <div className="field-group">
-          <label htmlFor="transmissao-email">Receber proposta/boleto por e-mail?</label>
+          <label htmlFor="transmissao-receberPropostaPorEmail">
+            Receber proposta/boleto por e-mail?
+          </label>
           <select
-            id="transmissao-email"
+            id="transmissao-receberPropostaPorEmail"
             className="input"
             value={dados.desejaReceberPropostaPorEmail}
             onChange={(e) => up("desejaReceberPropostaPorEmail", e.target.value as "Sim" | "Não")}
@@ -381,7 +382,7 @@ export function TransmissaoDadosComplementares({
       </div>
 
       <div className="wizard-foot">
-        <button className="btn btn-ghost" type="button" onClick={onVoltar}>
+        <button className="btn btn-ghost" type="button" onClick={() => onVoltar(dados)}>
           <svg width="14" height="14">
             <use href="#i-chevron-left" />
           </svg>{" "}

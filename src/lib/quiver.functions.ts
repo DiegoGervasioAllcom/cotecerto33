@@ -22,7 +22,12 @@ import {
   resolverContatoTransmissao,
 } from "@/lib/transmissao-contato";
 import { camposPortoPayload, erroDeclaracoesPorto } from "@/lib/transmissao-porto";
-import { camposDebitoPayload, erroContaDebito, type ContaDebito } from "@/lib/transmissao-debito";
+import {
+  camposPagamentoPayload,
+  erroPagamentoPorto,
+  ocultarNumerosLongos,
+  type PagamentoTransmissao,
+} from "@/lib/transmissao-pagamento";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
 import { COMISSAO_MAX, COMISSAO_MIN } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
@@ -750,10 +755,11 @@ type TransmitirPropostaPayload = {
     pessoaPoliticamenteExposta?: string;
   };
   /**
-   * Débito em conta (Porto). DADO FINANCEIRO SENSÍVEL: nunca persistir, nunca
-   * logar — segue só no body do fetch ao robô (ver `transmissao-debito.ts`).
+   * Pagamento da Porto (débito em conta / cartão / pagador). DADOS SENSÍVEIS:
+   * nunca persistir, nunca logar — seguem só no body do fetch ao robô (ver
+   * `transmissao-pagamento.ts`).
    */
-  contaDebito?: ContaDebito;
+  pagamento?: PagamentoTransmissao;
 };
 
 /**
@@ -862,10 +868,10 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     const erroPorto = erroDeclaracoesPorto(data.seguradora, data.dadosComplementares);
     if (erroPorto) throw new Error(erroPorto);
 
-    // Débito em conta (Porto): conta obrigatória e válida. A mensagem nunca
-    // repete o valor recebido (dado financeiro).
-    const erroDebito = erroContaDebito(data.seguradora, data.formaPagamento, data.contaDebito);
-    if (erroDebito) throw new Error(erroDebito);
+    // Pagamento da Porto (débito/cartão/pagador): dados obrigatórios e válidos.
+    // A mensagem nunca repete o valor recebido (dado financeiro/pessoal).
+    const erroPagamento = erroPagamentoPorto(data.seguradora, data.formaPagamento, data.pagamento);
+    if (erroPagamento) throw new Error(erroPagamento);
 
     const complementos = montarComplementosPayload(
       complRes.complemento,
@@ -888,7 +894,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       // `franquia` (da opção escolhida) e, só na Porto, as declarações do
       // cliente. Ver `camposPortoPayload`.
       ...camposPortoPayload(data.seguradora, data.opcao, data.dadosComplementares),
-      ...camposDebitoPayload(data.seguradora, data.formaPagamento, data.contaDebito),
+      ...camposPagamentoPayload(data.seguradora, data.formaPagamento, data.pagamento),
       // Campos do formulário de efetivação — priorizamos os dados confirmados
       // pelo vendedor e usamos o cadastro da cotação como fallback.
       rg: data.dadosComplementares?.rg,
@@ -1032,9 +1038,12 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       } catch {
         /* resposta sem JSON — segue sem detalhes */
       }
+      // Com dados de pagamento no payload, esconde qualquer sequência longa de
+      // dígitos da mensagem (o robô não repete valores, mas não dependemos disso).
+      const mensagem = details.join("; ");
       throw new Error(
         details.length
-          ? `Transmissão rejeitada: ${details.join("; ")}`
+          ? `Transmissão rejeitada: ${data.pagamento ? ocultarNumerosLongos(mensagem) : mensagem}`
           : `Falha ao transmitir (HTTP ${res.status}).`,
       );
     }
