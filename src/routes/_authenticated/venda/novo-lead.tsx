@@ -34,6 +34,7 @@ import {
   StepCalculo,
   type OfertaTransmissao,
 } from "@/components/venda/novo-lead/steps/StepCalculo";
+import type { RascunhoDadosTransmissao } from "@/lib/transmissao-rascunho";
 import { StepTransmissao } from "@/components/venda/novo-lead/steps/transmissao/StepTransmissao";
 import type { DadosComplementaresTransmissao } from "@/components/venda/novo-lead/steps/transmissao/TransmissaoDadosComplementares";
 import type { ResultadoTransmissaoEstado } from "@/components/venda/novo-lead/steps/transmissao/TransmissaoResultado";
@@ -386,7 +387,7 @@ function Page() {
   // Dados complementares digitados na Etapa 7 (só memória, nunca persistidos):
   // sobrevivem à troca de oferta/forma de pagamento na mesma cotação.
   const [dadosTransmissaoSalvos, setDadosTransmissaoSalvos] =
-    useState<DadosComplementaresTransmissao | null>(null);
+    useState<RascunhoDadosTransmissao | null>(null);
   useEffect(() => {
     setDadosTransmissaoSalvos(null);
   }, [cotacaoId]);

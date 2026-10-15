@@ -4,6 +4,7 @@ import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSim
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { mascararData } from "@/lib/transmissao-pagador";
+import { baseDoForm } from "@/lib/transmissao-rascunho";
 import {
   dadosComplementaresTransmissaoPortoSchema,
   dadosComplementaresTransmissaoSchema,
@@ -55,10 +56,7 @@ export function TransmissaoDadosComplementares({
         rg: "",
         dataEmissaoRg: "",
         orgaoEmissorRg: "",
-        cepResidencial: f.cep,
-        numeroEndereco: f.numero,
-        complementoEndereco: f.complemento,
-        email: f.email,
+        ...baseDoForm(f),
         mesmoEnderecoCorrespondencia: true,
         enderecoCorrespondencia: {
           cep: "",
@@ -69,8 +67,6 @@ export function TransmissaoDadosComplementares({
           cidade: "",
           uf: "",
         },
-        renavam: f.renavam.replace(/\D/g, ""),
-        corVeiculo: f.cor,
         diaVencimentoDemaisParcelas: "",
         desejaReceberPropostaPorEmail: "Não",
       },

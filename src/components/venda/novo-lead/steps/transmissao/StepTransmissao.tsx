@@ -1,4 +1,9 @@
 import { useEffect, useState } from "react";
+import {
+  aplicarRascunho,
+  baseDoForm,
+  type RascunhoDadosTransmissao,
+} from "@/lib/transmissao-rascunho";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { OfertaTransmissao } from "@/components/venda/novo-lead/steps/StepCalculo";
 import {
@@ -44,8 +49,8 @@ type Props = {
   faseInicial?: Fase;
   // Dados complementares já digitados nesta cotação, guardados só em memória
   // pelo pai: trocar a forma de pagamento volta ao Cálculo e remonta este passo.
-  dadosSalvos?: DadosComplementaresTransmissao | null;
-  onDadosSalvos?: (dados: DadosComplementaresTransmissao) => void;
+  dadosSalvos?: RascunhoDadosTransmissao | null;
+  onDadosSalvos?: (rascunho: RascunhoDadosTransmissao) => void;
 };
 
 export function StepTransmissao({
@@ -66,7 +71,9 @@ export function StepTransmissao({
 }: Props) {
   const [fase, setFase] = useState<Fase>(faseInicial);
   const [dadosComplementares, setDadosComplementares] =
-    useState<DadosComplementaresTransmissao | null>(dadosSalvos);
+    useState<DadosComplementaresTransmissao | null>(() =>
+      dadosSalvos ? aplicarRascunho(dadosSalvos, baseDoForm(f)) : null,
+    );
 
   useEffect(() => {
     if (fase === "resultado") return;
@@ -181,12 +188,12 @@ export function StepTransmissao({
         formaPagamento={oferta.formaPagamento}
         parcelas={oferta.parcelas}
         onVoltar={(dados) => {
-          onDadosSalvos?.(dados);
+          onDadosSalvos?.({ dados, base: baseDoForm(f) });
           onVoltarCalculo();
         }}
         onConfirmar={(dados) => {
           setDadosComplementares(dados);
-          onDadosSalvos?.(dados);
+          onDadosSalvos?.({ dados, base: baseDoForm(f) });
           setFase("confirmacao");
         }}
       />
