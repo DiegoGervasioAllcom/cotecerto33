@@ -2,10 +2,13 @@ import { useMemo, useState, type CSSProperties } from "react";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
+import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import {
+  dadosComplementaresTransmissaoPortoSchema,
   dadosComplementaresTransmissaoSchema,
   type DadosComplementaresTransmissao,
 } from "../TransmissaoDadosComplementares.schema";
+import { TransmissaoDadosPorto, type CamposPorto } from "./TransmissaoDadosPorto";
 
 export type { DadosComplementaresTransmissao } from "../TransmissaoDadosComplementares.schema";
 
@@ -14,6 +17,12 @@ type Props = {
   resultado: ResultadoCalculo;
   formaPagamento: string;
   parcelas: string;
+  /**
+   * Valores já digitados neste passo (voltar do passo seguinte ou "tentar
+   * novamente" após uma falha): o vendedor não precisa redigitar. Só em
+   * memória — nada disso é persistido.
+   */
+  inicial?: DadosComplementaresTransmissao | null;
   onVoltar: () => void;
   onConfirmar: (dados: DadosComplementaresTransmissao) => void;
 };
@@ -32,32 +41,38 @@ export function TransmissaoDadosComplementares({
   resultado,
   formaPagamento,
   parcelas,
+  inicial,
   onVoltar,
   onConfirmar,
 }: Props) {
-  const [dados, setDados] = useState<DadosComplementaresTransmissao>({
-    rg: "",
-    dataEmissaoRg: "",
-    orgaoEmissorRg: "",
-    cepResidencial: f.cep,
-    numeroEndereco: f.numero,
-    complementoEndereco: f.complemento,
-    email: f.email,
-    mesmoEnderecoCorrespondencia: true,
-    enderecoCorrespondencia: {
-      cep: "",
-      logradouro: "",
-      numero: "",
-      complemento: "",
-      bairro: "",
-      cidade: "",
-      uf: "",
-    },
-    renavam: f.renavam.replace(/\D/g, ""),
-    corVeiculo: f.cor,
-    diaVencimentoDemaisParcelas: "",
-    desejaReceberPropostaPorEmail: "Não",
-  });
+  // Porto: renda, ramo de atividade e PEP são exigidos pela Efetivação.
+  const ehPorto = nomeCanonicoSeguradora(resultado.seguradora) === "porto";
+  const [dados, setDados] = useState<DadosComplementaresTransmissao>(
+    () =>
+      inicial ?? {
+        rg: "",
+        dataEmissaoRg: "",
+        orgaoEmissorRg: "",
+        cepResidencial: f.cep,
+        numeroEndereco: f.numero,
+        complementoEndereco: f.complemento,
+        email: f.email,
+        mesmoEnderecoCorrespondencia: true,
+        enderecoCorrespondencia: {
+          cep: "",
+          logradouro: "",
+          numero: "",
+          complemento: "",
+          bairro: "",
+          cidade: "",
+          uf: "",
+        },
+        renavam: f.renavam.replace(/\D/g, ""),
+        corVeiculo: f.cor,
+        diaVencimentoDemaisParcelas: "",
+        desejaReceberPropostaPorEmail: "Não",
+      },
+  );
   const [erros, setErros] = useState<Erros>({});
   const endereco = useMemo(
     () =>
@@ -71,6 +86,11 @@ export function TransmissaoDadosComplementares({
     key: K,
     value: DadosComplementaresTransmissao[K],
   ) {
+    setDados((atual) => ({ ...atual, [key]: value }));
+    setErros((atual) => ({ ...atual, [key]: undefined }));
+  }
+
+  function upPorto<K extends keyof CamposPorto>(key: K, value: CamposPorto[K]) {
     setDados((atual) => ({ ...atual, [key]: value }));
     setErros((atual) => ({ ...atual, [key]: undefined }));
   }
@@ -90,7 +110,10 @@ export function TransmissaoDadosComplementares({
   }
 
   function confirmar() {
-    const validacao = dadosComplementaresTransmissaoSchema.safeParse(dados);
+    const schema = ehPorto
+      ? dadosComplementaresTransmissaoPortoSchema
+      : dadosComplementaresTransmissaoSchema;
+    const validacao = schema.safeParse(dados);
     if (!validacao.success) {
       const proximos: Erros = {};
       for (const issue of validacao.error.issues) {
@@ -319,6 +342,8 @@ export function TransmissaoDadosComplementares({
         {field("renavam", "Renavam", "11 dígitos", "numeric")}
         {field("corVeiculo", "Cor", "Ex.: Branco")}
       </div>
+
+      {ehPorto && <TransmissaoDadosPorto dados={dados} erros={erros} onChange={upPorto} />}
 
       <div className="acc-sec-t">Transmissão e envio</div>
       <div className="wizard-grid cols-3">

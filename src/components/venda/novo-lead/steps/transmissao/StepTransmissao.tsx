@@ -159,6 +159,7 @@ export function StepTransmissao({
   } else {
     body = (
       <TransmissaoDadosComplementares
+        inicial={dadosComplementares}
         f={f}
         resultado={oferta.resultado}
         formaPagamento={oferta.formaPagamento}
