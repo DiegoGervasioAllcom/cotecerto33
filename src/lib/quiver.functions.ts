@@ -21,6 +21,7 @@ import {
   resolverComplementoTransmissao,
   resolverContatoTransmissao,
 } from "@/lib/transmissao-contato";
+import { camposPortoPayload, erroDeclaracoesPorto } from "@/lib/transmissao-porto";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
 import { COMISSAO_MAX, COMISSAO_MIN } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
@@ -741,6 +742,11 @@ type TransmitirPropostaPayload = {
     corVeiculo: string;
     diaVencimentoDemaisParcelas: string;
     desejaReceberPropostaPorEmail: "Sim" | "Não";
+    // Só na Porto: declarações do cliente (nunca assumidas pelo robô). Não
+    // são persistidas — seguem direto no payload para o robô.
+    rendaMensal?: string;
+    ramoAtividade?: string;
+    pessoaPoliticamenteExposta?: string;
   };
 };
 
@@ -844,6 +850,12 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       segurado?.complemento,
     );
     if (!complRes.ok) throw new Error(complRes.erro);
+    // Regra de bloqueio (servidor): na Porto, renda/ramo/PEP são exigidos e
+    // precisam ser opções reais do portal — o front valida, mas quem decide é
+    // aqui (nunca confiar só no cliente).
+    const erroPorto = erroDeclaracoesPorto(data.seguradora, data.dadosComplementares);
+    if (erroPorto) throw new Error(erroPorto);
+
     const complementos = montarComplementosPayload(
       complRes.complemento,
       data.dadosComplementares?.mesmoEnderecoCorrespondencia,
@@ -862,6 +874,9 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       produto: data.produto,
       formaPagamento: data.formaPagamento,
       parcelas: data.parcelas,
+      // `franquia` (da opção escolhida) e, só na Porto, as declarações do
+      // cliente. Ver `camposPortoPayload`.
+      ...camposPortoPayload(data.seguradora, data.opcao, data.dadosComplementares),
       // Campos do formulário de efetivação — priorizamos os dados confirmados
       // pelo vendedor e usamos o cadastro da cotação como fallback.
       rg: data.dadosComplementares?.rg,

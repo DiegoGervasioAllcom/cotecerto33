@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { PEP_PORTO, RENDAS_MENSAIS_PORTO } from "@/components/venda/novo-lead/enumsPorto";
+import { RAMOS_ATIVIDADE_PORTO } from "@/components/venda/novo-lead/enumsRamoAtividade";
 
 // Espelha as colunas endereco_corresp_* de `proposta_dados_complementares`
 // (migration 20260908152312) — só são exigidas quando o segurado usa um
@@ -13,35 +15,76 @@ const enderecoCorrespondenciaSchema = z.object({
   uf: z.string(),
 });
 
-export const dadosComplementaresTransmissaoSchema = z
-  .object({
-    rg: z.string().trim().min(1, "Informe o RG.").max(20, "RG muito longo."),
-    dataEmissaoRg: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Use o formato dd/mm/aaaa."),
-    orgaoEmissorRg: z.string().trim().min(1, "Informe o órgão emissor.").max(20),
-    cepResidencial: z.string().regex(/^\d{5}-?\d{3}$/, "Informe um CEP válido."),
-    numeroEndereco: z
-      .string()
-      .trim()
-      .min(1, "Informe o número.")
-      .max(10, "Número muito longo (máx. 10)."),
-    complementoEndereco: z.string().trim().max(30, "Complemento muito longo (máx. 30).").optional(),
-    // Obrigatório só aqui (opcional no passo 1). Bloqueio real é no servidor.
-    email: z
-      .string()
-      .trim()
-      .min(1, "Informe o e-mail.")
-      .max(254, "E-mail muito longo.")
-      .email("E-mail inválido."),
-    mesmoEnderecoCorrespondencia: z.boolean(),
-    enderecoCorrespondencia: enderecoCorrespondenciaSchema,
-    renavam: z.string().regex(/^\d{9,11}$/, "Informe um Renavam com 9 a 11 dígitos."),
-    corVeiculo: z.string().trim().min(1, "Informe a cor."),
-    diaVencimentoDemaisParcelas: z.string().regex(/^(?:[1-9]|[12]\d|30)$/, "Escolha um dia."),
-    desejaReceberPropostaPorEmail: z.enum(["Sim", "Não"], {
-      invalid_type_error: "Escolha Sim ou Não.",
-    }),
-  })
-  .superRefine((val, ctx) => {
+const camposBase = z.object({
+  rg: z.string().trim().min(1, "Informe o RG.").max(20, "RG muito longo."),
+  dataEmissaoRg: z.string().regex(/^\d{2}\/\d{2}\/\d{4}$/, "Use o formato dd/mm/aaaa."),
+  orgaoEmissorRg: z.string().trim().min(1, "Informe o órgão emissor.").max(20),
+  cepResidencial: z.string().regex(/^\d{5}-?\d{3}$/, "Informe um CEP válido."),
+  numeroEndereco: z
+    .string()
+    .trim()
+    .min(1, "Informe o número.")
+    .max(10, "Número muito longo (máx. 10)."),
+  complementoEndereco: z.string().trim().max(30, "Complemento muito longo (máx. 30).").optional(),
+  // Obrigatório só aqui (opcional no passo 1). Bloqueio real é no servidor.
+  email: z
+    .string()
+    .trim()
+    .min(1, "Informe o e-mail.")
+    .max(254, "E-mail muito longo.")
+    .email("E-mail inválido."),
+  mesmoEnderecoCorrespondencia: z.boolean(),
+  enderecoCorrespondencia: enderecoCorrespondenciaSchema,
+  renavam: z.string().regex(/^\d{9,11}$/, "Informe um Renavam com 9 a 11 dígitos."),
+  corVeiculo: z.string().trim().min(1, "Informe a cor."),
+  diaVencimentoDemaisParcelas: z.string().regex(/^(?:[1-9]|[12]\d|30)$/, "Escolha um dia."),
+  desejaReceberPropostaPorEmail: z.enum(["Sim", "Não"], {
+    invalid_type_error: "Escolha Sim ou Não.",
+  }),
+  // Declarações do cliente exigidas só na Efetivação da Porto (ver
+  // `exigePorto` abaixo). NUNCA têm valor padrão: o robô não assume essas
+  // respostas pelo cliente. Não são persistidas (ver useRetomarTransmissao:
+  // "nenhuma fonte com dado pessoal") — vivem só no estado do passo.
+  rendaMensal: z.enum(RENDAS_MENSAIS_PORTO).optional(),
+  // Sem `.max`: o limite é a própria lista fechada (alguns ramos do portal
+  // passam de 100 caracteres — o maior tem 137). Ver `RAMOS_ATIVIDADE_PORTO`.
+  ramoAtividade: z.string().trim().optional(),
+  pessoaPoliticamenteExposta: z.enum(PEP_PORTO).optional(),
+});
+
+type OpcoesSchema = {
+  /** true quando a seguradora do card é a Porto: renda, ramo e PEP viram obrigatórios. */
+  exigePorto: boolean;
+};
+
+export function criarSchemaDadosComplementares({ exigePorto }: OpcoesSchema) {
+  return camposBase.superRefine((val, ctx) => {
+    if (exigePorto) {
+      if (!val.rendaMensal) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["rendaMensal"],
+          message: "Informe a renda mensal.",
+        });
+      }
+      if (!val.pessoaPoliticamenteExposta) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["pessoaPoliticamenteExposta"],
+          message: "Informe se é pessoa politicamente exposta.",
+        });
+      }
+      // O robô só aceita o texto exato do portal: o ramo precisa ser um item
+      // da lista fechada (não texto livre).
+      if (!val.ramoAtividade || !RAMOS_ATIVIDADE_PORTO.includes(val.ramoAtividade)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["ramoAtividade"],
+          message: "Escolha o ramo de atividade na lista.",
+        });
+      }
+    }
+
     // Endereço residencial já é validado acima (cepResidencial/numeroEndereco)
     // — aqui só valida o de correspondência, e só quando ele é usado de fato.
     if (val.mesmoEnderecoCorrespondencia) return;
@@ -60,5 +103,16 @@ export const dadosComplementaresTransmissaoSchema = z
     if (!e.cidade.trim()) campo("cidade", "Informe a cidade.");
     if (e.uf.trim().length !== 2) campo("uf", "Use a sigla do estado (2 letras).");
   });
+}
+
+/** Seguradoras em geral (renda/ramo/PEP opcionais e ignorados). */
+export const dadosComplementaresTransmissaoSchema = criarSchemaDadosComplementares({
+  exigePorto: false,
+});
+
+/** Porto: renda, ramo de atividade e PEP obrigatórios. */
+export const dadosComplementaresTransmissaoPortoSchema = criarSchemaDadosComplementares({
+  exigePorto: true,
+});
 
 export type DadosComplementaresTransmissao = z.infer<typeof dadosComplementaresTransmissaoSchema>;
