@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
+import type { PagamentoTransmissao } from "@/lib/transmissao-debito";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { useClassificarPerda } from "@/components/venda/novo-lead/hooks/useClassificarPerda";
 import { useCepLookup } from "@/components/venda/novo-lead/hooks/useCepLookup";
@@ -492,7 +493,10 @@ function Page() {
     sincronizarStepNaUrl,
   });
 
-  async function onTransmitir(dadosComplementares: DadosComplementaresTransmissao) {
+  async function onTransmitir(
+    dadosComplementares: DadosComplementaresTransmissao,
+    pagamento?: PagamentoTransmissao,
+  ) {
     if (!cotacaoId || !oferta) return;
     const { resultado: r, formaPagamento, parcelas, premio, opcao } = oferta;
     setResultadoTransmissao(null);
@@ -512,6 +516,8 @@ function Page() {
           opcao,
           premio,
           dadosComplementares,
+          // Dado financeiro sensível (débito em conta): só no body desta chamada.
+          contaDebito: pagamento?.contaDebito,
         },
       });
       // O 201 significa só que o robô aceitou a solicitação: o resultado real
@@ -662,7 +668,7 @@ function Page() {
               erroEnvio={erroProposta}
               transmissaoEmAndamento={transmissaoEmAndamento !== null}
               resultadoTransmissao={resultadoTransmissao}
-              onTransmitir={(dados) => void onTransmitir(dados)}
+              onTransmitir={(dados, pagamento) => void onTransmitir(dados, pagamento)}
               onVoltarCalculo={() => {
                 setOferta(null);
                 setErroProposta(null);

@@ -22,6 +22,7 @@ import {
   resolverContatoTransmissao,
 } from "@/lib/transmissao-contato";
 import { camposPortoPayload, erroDeclaracoesPorto } from "@/lib/transmissao-porto";
+import { camposDebitoPayload, erroContaDebito, type ContaDebito } from "@/lib/transmissao-debito";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
 import { COMISSAO_MAX, COMISSAO_MIN } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
@@ -748,6 +749,11 @@ type TransmitirPropostaPayload = {
     ramoAtividade?: string;
     pessoaPoliticamenteExposta?: string;
   };
+  /**
+   * Débito em conta (Porto). DADO FINANCEIRO SENSÍVEL: nunca persistir, nunca
+   * logar — segue só no body do fetch ao robô (ver `transmissao-debito.ts`).
+   */
+  contaDebito?: ContaDebito;
 };
 
 /**
@@ -856,6 +862,11 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     const erroPorto = erroDeclaracoesPorto(data.seguradora, data.dadosComplementares);
     if (erroPorto) throw new Error(erroPorto);
 
+    // Débito em conta (Porto): conta obrigatória e válida. A mensagem nunca
+    // repete o valor recebido (dado financeiro).
+    const erroDebito = erroContaDebito(data.seguradora, data.formaPagamento, data.contaDebito);
+    if (erroDebito) throw new Error(erroDebito);
+
     const complementos = montarComplementosPayload(
       complRes.complemento,
       data.dadosComplementares?.mesmoEnderecoCorrespondencia,
@@ -877,6 +888,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       // `franquia` (da opção escolhida) e, só na Porto, as declarações do
       // cliente. Ver `camposPortoPayload`.
       ...camposPortoPayload(data.seguradora, data.opcao, data.dadosComplementares),
+      ...camposDebitoPayload(data.seguradora, data.formaPagamento, data.contaDebito),
       // Campos do formulário de efetivação — priorizamos os dados confirmados
       // pelo vendedor e usamos o cadastro da cotação como fallback.
       rg: data.dadosComplementares?.rg,

@@ -7,6 +7,8 @@ import {
 } from "./TransmissaoDadosComplementares";
 import { TransmissaoConfirmacao } from "./TransmissaoConfirmacao";
 import { TransmissaoPagamento } from "./TransmissaoPagamento";
+import { TransmissaoPagamentoDebito } from "./TransmissaoPagamentoDebito";
+import { ehDebitoEmContaPorto, type PagamentoTransmissao } from "@/lib/transmissao-debito";
 import { TransmissaoResultado, type ResultadoTransmissaoEstado } from "./TransmissaoResultado";
 
 // "Cartão de crédito" é o único valor de forma de pagamento que exige o
@@ -28,7 +30,7 @@ type Props = {
   erroEnvio: string | null;
   transmissaoEmAndamento: boolean;
   resultadoTransmissao: ResultadoTransmissaoEstado | null;
-  onTransmitir: (dados: DadosComplementaresTransmissao) => void;
+  onTransmitir: (dados: DadosComplementaresTransmissao, pagamento?: PagamentoTransmissao) => void;
   onVoltarCalculo: () => void;
   onTentarNovamente: () => void;
   // Best-effort: só pra granularidade do Pipeline (`cotacoes.transmissao_fase`).
@@ -67,7 +69,11 @@ export function StepTransmissao({
   }, [fase]);
 
   const ehCartao = ehCartaoCredito(oferta.formaPagamento);
-  const subs: { fase: Fase; l: string }[] = ehCartao
+  // Débito em conta da Porto: a Efetivação exige banco/agência/conta — passo
+  // "Pagamento" próprio (dado sensível, só em memória).
+  const ehDebitoPorto = ehDebitoEmContaPorto(oferta.resultado.seguradora, oferta.formaPagamento);
+  const temPassoPagamento = ehCartao || ehDebitoPorto;
+  const subs: { fase: Fase; l: string }[] = temPassoPagamento
     ? [
         { fase: "dados", l: "Dados complementares" },
         { fase: "confirmacao", l: "Confirmação" },
@@ -139,12 +145,23 @@ export function StepTransmissao({
         formaPagamento={oferta.formaPagamento}
         parcelas={oferta.parcelas}
         premio={oferta.premio}
-        ehCartao={ehCartao}
+        temPassoPagamento={temPassoPagamento}
         enviando={enviando}
         erroEnvio={erroEnvio}
         onVoltar={() => setFase("dados")}
         onAvancarPagamento={() => setFase("pagamento")}
         onConfirmarTransmitir={() => dadosComplementares && onTransmitir(dadosComplementares)}
+      />
+    );
+  } else if (faseAtual === "pagamento" && ehDebitoPorto) {
+    body = (
+      <TransmissaoPagamentoDebito
+        enviando={enviando}
+        erroEnvio={erroEnvio}
+        onVoltar={() => setFase("confirmacao")}
+        onEfetivar={(contaDebito) =>
+          dadosComplementares && onTransmitir(dadosComplementares, { contaDebito })
+        }
       />
     );
   } else if (faseAtual === "pagamento") {

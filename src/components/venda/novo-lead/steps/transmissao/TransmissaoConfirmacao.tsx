@@ -13,7 +13,8 @@ type Props = {
   formaPagamento: string;
   parcelas: string;
   premio: number | undefined;
-  ehCartao: boolean;
+  /** Há um sub-passo "Pagamento" depois da confirmação (cartão ou débito em conta da Porto). */
+  temPassoPagamento: boolean;
   enviando: boolean;
   erroEnvio: string | null;
   onVoltar: () => void;
@@ -44,7 +45,7 @@ export function TransmissaoConfirmacao({
   formaPagamento,
   parcelas,
   premio,
-  ehCartao,
+  temPassoPagamento,
   enviando,
   erroEnvio,
   onVoltar,
@@ -167,7 +168,7 @@ export function TransmissaoConfirmacao({
           Voltar
         </button>
         <span className="spacer" />
-        {ehCartao ? (
+        {temPassoPagamento ? (
           <button
             className="btn btn-yellow"
             type="button"
