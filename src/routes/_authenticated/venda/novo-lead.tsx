@@ -383,6 +383,13 @@ function Page() {
   const [faseInicialTransmissao, setFaseInicialTransmissao] = useState<
     "dados" | "confirmacao" | "pagamento" | "resultado"
   >("dados");
+  // Dados complementares digitados na Etapa 7 (só memória, nunca persistidos):
+  // sobrevivem à troca de oferta/forma de pagamento na mesma cotação.
+  const [dadosTransmissaoSalvos, setDadosTransmissaoSalvos] =
+    useState<DadosComplementaresTransmissao | null>(null);
+  useEffect(() => {
+    setDadosTransmissaoSalvos(null);
+  }, [cotacaoId]);
   const [enviandoProposta, setEnviandoProposta] = useState(false);
   const [erroProposta, setErroProposta] = useState<string | null>(null);
   // Onda 3 (T.10): enquanto uma transmissão está em andamento, a Etapa 7
@@ -680,6 +687,8 @@ function Page() {
               onTentarNovamente={tentarNovamenteTransmissao}
               onFaseChange={onFaseTransmissaoChange}
               faseInicial={faseInicialTransmissao}
+              dadosSalvos={dadosTransmissaoSalvos}
+              onDadosSalvos={setDadosTransmissaoSalvos}
             />
           )}
 

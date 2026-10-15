@@ -42,6 +42,10 @@ type Props = {
   // resultado já existe (falha/transmitida) — nesses casos o wizard-card
   // ainda mostraria "Dados complementares" por 1 frame até o vendedor mexer.
   faseInicial?: Fase;
+  // Dados complementares já digitados nesta cotação, guardados só em memória
+  // pelo pai: trocar a forma de pagamento volta ao Cálculo e remonta este passo.
+  dadosSalvos?: DadosComplementaresTransmissao | null;
+  onDadosSalvos?: (dados: DadosComplementaresTransmissao) => void;
 };
 
 export function StepTransmissao({
@@ -57,10 +61,12 @@ export function StepTransmissao({
   onTentarNovamente,
   onFaseChange,
   faseInicial = "dados",
+  dadosSalvos = null,
+  onDadosSalvos,
 }: Props) {
   const [fase, setFase] = useState<Fase>(faseInicial);
   const [dadosComplementares, setDadosComplementares] =
-    useState<DadosComplementaresTransmissao | null>(null);
+    useState<DadosComplementaresTransmissao | null>(dadosSalvos);
 
   useEffect(() => {
     if (fase === "resultado") return;
@@ -174,9 +180,13 @@ export function StepTransmissao({
         resultado={oferta.resultado}
         formaPagamento={oferta.formaPagamento}
         parcelas={oferta.parcelas}
-        onVoltar={onVoltarCalculo}
+        onVoltar={(dados) => {
+          onDadosSalvos?.(dados);
+          onVoltarCalculo();
+        }}
         onConfirmar={(dados) => {
           setDadosComplementares(dados);
+          onDadosSalvos?.(dados);
           setFase("confirmacao");
         }}
       />
