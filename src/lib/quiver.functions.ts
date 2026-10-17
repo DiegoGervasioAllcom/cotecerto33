@@ -754,6 +754,12 @@ type TransmitirPropostaPayload = {
     rendaMensal?: string;
     ramoAtividade?: string;
     pessoaPoliticamenteExposta?: string;
+    // Só na Porto: telefones FIXOS opcionais (a Porto recusa o celular que o portal copia
+    // para os campos fixos). Vazio = o robô limpa o celular copiado.
+    dddTelefoneResidencial?: string;
+    telefoneResidencial?: string;
+    dddTelefoneComercial?: string;
+    telefoneComercial?: string;
   };
   /**
    * Pagamento da Porto (débito em conta / cartão / pagador). DADOS SENSÍVEIS:

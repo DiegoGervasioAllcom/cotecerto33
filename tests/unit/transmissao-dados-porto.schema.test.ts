@@ -107,3 +107,44 @@ describe("dados complementares — Porto", () => {
     expect(recusados).toEqual([]);
   });
 });
+
+describe("dados complementares — Porto: telefones fixos", () => {
+  it("telefones em branco são válidos", () => {
+    expect(dadosComplementaresTransmissaoPortoSchema.safeParse({ ...base, ...porto }).success).toBe(
+      true,
+    );
+  });
+
+  it("fixo válido passa; celular no fixo é recusado no campo certo", () => {
+    expect(
+      dadosComplementaresTransmissaoPortoSchema.safeParse({
+        ...base,
+        ...porto,
+        dddTelefoneResidencial: "11",
+        telefoneResidencial: "3333-4444",
+      }).success,
+    ).toBe(true);
+
+    const r = dadosComplementaresTransmissaoPortoSchema.safeParse({
+      ...base,
+      ...porto,
+      dddTelefoneComercial: "11",
+      telefoneComercial: "967922075",
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      const issue = r.error.issues.find((i) => i.path[0] === "telefoneComercial");
+      expect(issue?.message).toMatch(/celular não é aceito/);
+    }
+  });
+
+  it("outras seguradoras não validam os telefones (campos ignorados)", () => {
+    expect(
+      dadosComplementaresTransmissaoSchema.safeParse({
+        ...base,
+        dddTelefoneResidencial: "1",
+        telefoneResidencial: "967922075",
+      }).success,
+    ).toBe(true);
+  });
+});

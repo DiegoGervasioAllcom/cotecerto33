@@ -88,3 +88,55 @@ describe("transmissão Porto — campos extras do payload", () => {
     });
   });
 });
+
+describe("transmissão Porto — telefones fixos", () => {
+  it("passa sem telefones (opcionais) e com telefones fixos válidos", () => {
+    expect(erroDeclaracoesPorto("Porto", declaracoesOk)).toBeNull();
+    expect(
+      erroDeclaracoesPorto("Porto", {
+        ...declaracoesOk,
+        dddTelefoneResidencial: "11",
+        telefoneResidencial: "33334444",
+        dddTelefoneComercial: "11",
+        telefoneComercial: "22223333",
+      }),
+    ).toBeNull();
+  });
+
+  it("bloqueia no servidor um celular no telefone fixo (a Porto recusaria a venda)", () => {
+    const erro = erroDeclaracoesPorto("Porto", {
+      ...declaracoesOk,
+      dddTelefoneResidencial: "11",
+      telefoneResidencial: "967922075",
+    });
+    expect(erro).toMatch(/residencial/);
+    expect(erro).not.toContain("967922075");
+    expect(
+      erroDeclaracoesPorto("Porto", {
+        ...declaracoesOk,
+        dddTelefoneComercial: "11",
+        telefoneComercial: "967922075",
+      }),
+    ).toMatch(/comercial/);
+  });
+
+  it("os telefones só saem no payload para a Porto, sem máscara", () => {
+    const d = {
+      ...declaracoesOk,
+      dddTelefoneResidencial: "11",
+      telefoneResidencial: "3333-4444",
+      dddTelefoneComercial: "21",
+      telefoneComercial: "2222-3333",
+    };
+    const porto = camposPortoPayload("Porto", undefined, d);
+    expect(porto.telefoneResidencial).toEqual({ ddd: "11", numero: "33334444" });
+    expect(porto.telefoneComercial).toEqual({ ddd: "21", numero: "22223333" });
+    expect(camposPortoPayload("Suhai", undefined, d)).toEqual({});
+  });
+
+  it("sem telefone preenchido, o payload não leva a chave (o robô limpa o celular copiado)", () => {
+    const campos = camposPortoPayload("Porto", undefined, declaracoesOk);
+    expect(campos).not.toHaveProperty("telefoneResidencial");
+    expect(campos).not.toHaveProperty("telefoneComercial");
+  });
+});
