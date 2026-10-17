@@ -299,3 +299,27 @@ A Frente 2 (as outras 7 personas) ainda não tem estimativa — é levantamento,
 No passo 1 (Segurado) só "Cidade / UF" aparecia após o CEP. Adicionado o campo "Endereço" (somente leitura — `readOnly`, igual a "Cidade / UF" —, placeholder "Preenche via CEP") com `f.logradouro`, já preenchido pelo ViaCEP (`useCepLookup`) e persistido em `cotacao_segurado.logradouro`; o passo 7 segue lendo o mesmo valor. Não obrigatório, fora de validação; CEP genérico (sem logradouro) deixa o campo vazio. Bairro não exibido (fora do pedido). Sem migration.
 
 O protótipo V12 pode não ter o campo "Endereço" no passo 1: adição pedida pelo usuário (04/10/2026), divergência intencional aceita; protótipo a atualizar. CEP genérico de cidade (sem logradouro) deixa o campo vazio sem erro; o endereço pode ser digitado no passo 7.
+
+## V12.x Modo simulação da transmissão e teste em produção da Porto (16/10/2026)
+
+**O que é.** Com `SELF_QUIVER_TRANSMISSAO_SIMULACAO=1` no `.env` do app, `transmitirPropostaQuiver` envia `simulacao: true` ao robô (playwright#72): ele faz login, busca a cotação, escolhe produto, franquia e forma de pagamento, preenche o formulário da Efetivação e **para antes do "Efetivar"** — nada é efetivado nem transmitido (o formulário é preenchido no portal, mas não enviado). O resultado volta como `motivo = SIMULACAO` com um relatório do que foi pedido (só nomes de campos e booleanos, nunca valores) e aparece na tela como "Simulação concluída — nada foi transmitido". Sem migration: a tentativa é gravada como `falha` com esse motivo; `negociacao_status` não muda e o resultado nunca vira venda, mesmo que o robô mande `transmitido: true` por engano.
+
+**Proteções.** Só o valor exato `1` liga. Antes de enviar, o app consulta o `/health` do robô e exige o recurso `transmissao-simulacao` — um robô antigo ignoraria o campo e transmitiria de verdade; sem a confirmação o app recusa e nada é gravado nem enviado (front #290; robô #72 e #73 — o #73 corrigiu um YAML do `openapi.yaml` que derrubou o robô no primeiro deploy, por isso o robô agora precisa subir saudável antes de ligar a variável). Ordem de uso: deploy do robô antes de ligar a variável; zerar a variável ao terminar, porque ligada nenhuma venda real é efetivada.
+
+**Teste ao vivo em produção (16/10/2026).** Lead de teste novo (placa FTP4J82, Chevrolet Cobalt LTZ 1.8 2015), cálculo só com a Porto (4 cards), card "Itaú Auto Compacto" (`10226_1`). As quatro formas terminaram em "Simulação concluída", sem erro na tela e com o log do robô só com os avisos esperados abaixo:
+
+| Forma de pagamento                   | À vista                      | Dados sensíveis enviados ao formulário |
+| ------------------------------------ | ---------------------------- | -------------------------------------- |
+| Boleto Bancário                      | R$ 7.054,44                  | nenhum                                 |
+| Cartão de Crédito (Demais Bandeiras) | R$ 6.701,68 (5% de desconto) | cartão                                 |
+| Cartão Porto Bank (Terceiros)        | R$ 6.701,68 (5% de desconto) | cartão, pagador                        |
+| Débito em Conta                      | R$ 6.701,68 (5% de desconto) | conta de débito                        |
+
+Avisos esperados nos logs do worker: modal "Notícias da Quiver" escondido (Bug #38) e os campos "DDD Celular" e "Número do renavam" que a tela da Porto não tem (em Terceiros, também "Chassi remarcado"). Confirmado em produção: busca de placa ao sair do campo (Tab), máscara da data de emissão do RG, id único do e-mail, validações do cartão (Luhn e validade) e os dados complementares mantidos ao trocar a forma de pagamento.
+
+**Limites e pendências.**
+
+- A simulação para **antes** do "Efetivar", que é onde o portal valida as pendências ("Preencha o campo..."): isso só se confirma numa venda real. O "campo preenchido" do relatório é o que foi enviado ao robô, não uma leitura do portal.
+- **Nível 2 (pendente):** o robô avançaria até a tela de Confirmação (validando as pendências do portal) e pararia antes do "Confirmar". Só é seguro depois de confirmado, com certeza, que o "Efetivar" não cria nada na seguradora (a tela de Confirmação já mostra o protocolo).
+- **Primeira venda real da Porto** ainda não aconteceu (sem cotação real). Depois dela, procurar a sequência de 16 dígitos do cartão usado nos logs do nginx e do container (ver a nota de verificação de logs na pendência 4 acima).
+- O lead de teste (identificado como "TESTE SIMULAÇÃO") ficou no pipeline e as tentativas ficaram registradas como `SIMULACAO`; limpar manualmente.
