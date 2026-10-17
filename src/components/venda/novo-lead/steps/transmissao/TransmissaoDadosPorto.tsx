@@ -1,11 +1,18 @@
 import { ComboboxBusca } from "@/components/venda/novo-lead/ComboboxBusca";
 import { PEP_PORTO, RENDAS_MENSAIS_PORTO } from "@/components/venda/novo-lead/enumsPorto";
 import { RAMOS_ATIVIDADE_PORTO } from "@/components/venda/novo-lead/enumsRamoAtividade";
+import { mascararDdd, mascararTelefoneFixo } from "@/lib/telefone-fixo";
 import type { DadosComplementaresTransmissao } from "../TransmissaoDadosComplementares.schema";
 
 export type CamposPorto = Pick<
   DadosComplementaresTransmissao,
-  "rendaMensal" | "ramoAtividade" | "pessoaPoliticamenteExposta"
+  | "rendaMensal"
+  | "ramoAtividade"
+  | "pessoaPoliticamenteExposta"
+  | "dddTelefoneResidencial"
+  | "telefoneResidencial"
+  | "dddTelefoneComercial"
+  | "telefoneComercial"
 >;
 type ErrosPorto = Partial<Record<keyof CamposPorto, string>>;
 
@@ -100,6 +107,64 @@ export function TransmissaoDadosPorto({ dados, erros, onChange }: Props) {
           />
           {erro("ramoAtividade")}
         </div>
+      </div>
+
+      <div className="acc-sec-t">Telefones fixos (opcional)</div>
+      <div className="clt-note" style={{ marginBottom: 14 }}>
+        <svg width="15" height="15">
+          <use href="#i-info" />
+        </svg>
+        <div>
+          A Porto não aceita celular nos telefones residencial e comercial. Se o segurado tem um
+          telefone fixo, informe aqui; se não tem, deixe em branco que o sistema limpa esses campos
+          no portal. O celular do segurado não muda.
+        </div>
+      </div>
+      <div className="wizard-grid" data-testid="transmissao-porto-telefones-fixos">
+        {(
+          [
+            ["Residencial", "dddTelefoneResidencial", "telefoneResidencial"],
+            ["Comercial", "dddTelefoneComercial", "telefoneComercial"],
+          ] as const
+        ).map(([rotulo, chaveDdd, chaveNumero]) => (
+          <div className="field-group" key={chaveNumero}>
+            <label htmlFor={`transmissao-${chaveNumero}`}>
+              Telefone fixo {rotulo.toLowerCase()}
+            </label>
+            <div className="row" style={{ gap: 8 }}>
+              <input
+                id={`transmissao-${chaveDdd}`}
+                className="input"
+                style={{ maxWidth: 64 }}
+                inputMode="numeric"
+                placeholder="DDD"
+                aria-label={`DDD do telefone fixo ${rotulo.toLowerCase()}`}
+                value={dados[chaveDdd] ?? ""}
+                aria-invalid={Boolean(erros[chaveNumero])}
+                aria-describedby={
+                  erros[chaveNumero] ? `transmissao-${chaveNumero}-erro` : undefined
+                }
+                onChange={(e) => onChange(chaveDdd, mascararDdd(e.target.value) || undefined)}
+              />
+              <input
+                id={`transmissao-${chaveNumero}`}
+                className="input"
+                style={{ flex: 1, minWidth: 0 }}
+                inputMode="numeric"
+                placeholder="0000-0000"
+                value={dados[chaveNumero] ?? ""}
+                aria-invalid={Boolean(erros[chaveNumero])}
+                aria-describedby={
+                  erros[chaveNumero] ? `transmissao-${chaveNumero}-erro` : undefined
+                }
+                onChange={(e) =>
+                  onChange(chaveNumero, mascararTelefoneFixo(e.target.value) || undefined)
+                }
+              />
+            </div>
+            {erro(chaveNumero)}
+          </div>
+        ))}
       </div>
     </>
   );

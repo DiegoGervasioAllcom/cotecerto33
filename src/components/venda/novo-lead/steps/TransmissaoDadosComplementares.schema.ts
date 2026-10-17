@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { erroTelefoneFixo } from "@/lib/telefone-fixo";
 import { PEP_PORTO, RENDAS_MENSAIS_PORTO } from "@/components/venda/novo-lead/enumsPorto";
 import { RAMOS_ATIVIDADE_PORTO } from "@/components/venda/novo-lead/enumsRamoAtividade";
 
@@ -50,6 +51,11 @@ const camposBase = z.object({
   // passam de 100 caracteres — o maior tem 137). Ver `RAMOS_ATIVIDADE_PORTO`.
   ramoAtividade: z.string().trim().optional(),
   pessoaPoliticamenteExposta: z.enum(PEP_PORTO).optional(),
+  // Telefones FIXOS opcionais (só Porto; ver `@/lib/telefone-fixo`). Vazio é válido.
+  dddTelefoneResidencial: z.string().optional(),
+  telefoneResidencial: z.string().optional(),
+  dddTelefoneComercial: z.string().optional(),
+  telefoneComercial: z.string().optional(),
 });
 
 type OpcoesSchema = {
@@ -82,6 +88,14 @@ export function criarSchemaDadosComplementares({ exigePorto }: OpcoesSchema) {
           path: ["ramoAtividade"],
           message: "Escolha o ramo de atividade na lista.",
         });
+      }
+      const telefones = [
+        ["telefoneResidencial", val.dddTelefoneResidencial, val.telefoneResidencial, "residencial"],
+        ["telefoneComercial", val.dddTelefoneComercial, val.telefoneComercial, "comercial"],
+      ] as const;
+      for (const [campo, ddd, numero, rotulo] of telefones) {
+        const erro = erroTelefoneFixo(ddd, numero, rotulo);
+        if (erro) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message: erro });
       }
     }
 

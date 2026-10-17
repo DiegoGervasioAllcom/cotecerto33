@@ -6,14 +6,27 @@
 import { PEP_PORTO, RENDAS_MENSAIS_PORTO } from "@/components/venda/novo-lead/enumsPorto";
 import { RAMOS_ATIVIDADE_PORTO } from "@/components/venda/novo-lead/enumsRamoAtividade";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
+import { erroTelefoneFixo, telefoneFixoPayload, type TelefoneFixo } from "@/lib/telefone-fixo";
 
 export type DeclaracoesPorto = {
   rendaMensal?: string;
   ramoAtividade?: string;
   pessoaPoliticamenteExposta?: string;
+  // Telefones FIXOS (opcionais): a Porto recusa o celular que o portal copia para estes campos.
+  dddTelefoneResidencial?: string;
+  telefoneResidencial?: string;
+  dddTelefoneComercial?: string;
+  telefoneComercial?: string;
 };
 
-export type CamposPortoPayload = DeclaracoesPorto & { franquia?: string };
+export type CamposPortoPayload = Pick<
+  DeclaracoesPorto,
+  "rendaMensal" | "ramoAtividade" | "pessoaPoliticamenteExposta"
+> & {
+  franquia?: string;
+  telefoneResidencial?: TelefoneFixo;
+  telefoneComercial?: TelefoneFixo;
+};
 
 export function ehSeguradoraPorto(seguradora: string): boolean {
   return nomeCanonicoSeguradora(seguradora) === "porto";
@@ -43,7 +56,10 @@ export function erroDeclaracoesPorto(
   if (!d.ramoAtividade || !RAMOS_ATIVIDADE_PORTO.includes(d.ramoAtividade)) {
     return "Escolha o ramo de atividade na lista (exigido pela Porto).";
   }
-  return null;
+  return (
+    erroTelefoneFixo(d.dddTelefoneResidencial, d.telefoneResidencial, "residencial") ??
+    erroTelefoneFixo(d.dddTelefoneComercial, d.telefoneComercial, "comercial")
+  );
 }
 
 /**
@@ -70,6 +86,16 @@ export function camposPortoPayload(
     if (declaracoes.pessoaPoliticamenteExposta) {
       campos.pessoaPoliticamenteExposta = declaracoes.pessoaPoliticamenteExposta;
     }
+    const residencial = telefoneFixoPayload(
+      declaracoes.dddTelefoneResidencial,
+      declaracoes.telefoneResidencial,
+    );
+    if (residencial) campos.telefoneResidencial = residencial;
+    const comercial = telefoneFixoPayload(
+      declaracoes.dddTelefoneComercial,
+      declaracoes.telefoneComercial,
+    );
+    if (comercial) campos.telefoneComercial = comercial;
   }
   return campos;
 }
