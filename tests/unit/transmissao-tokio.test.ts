@@ -5,6 +5,7 @@ import {
   ehSeguradoraTokio,
   erroDadosTokio,
   erroVencimentoTokio,
+  tipoLogradouroDoEndereco,
   vencimentoPadraoTokio,
 } from "@/lib/transmissao-tokio";
 import {
@@ -244,5 +245,19 @@ describe("schema dos dados complementares — Tokio", () => {
       expect(campos).toContain("rg");
       expect(campos).toContain("renavam");
     }
+  });
+});
+
+describe("tipoLogradouroDoEndereco", () => {
+  it("deduz o tipo pela primeira palavra do endereço", () => {
+    expect(tipoLogradouroDoEndereco("Rua das Flores")).toBe("Rua");
+    expect(tipoLogradouroDoEndereco("Av. Paulista")).toBe("Avenida");
+    expect(tipoLogradouroDoEndereco("praça da Sé")).toBe("Praça");
+    expect(tipoLogradouroDoEndereco("Estr. do Campo")).toBe("Estrada");
+  });
+  it("devolve undefined sem tipo reconhecível", () => {
+    expect(tipoLogradouroDoEndereco("Paulista")).toBeUndefined();
+    expect(tipoLogradouroDoEndereco("")).toBeUndefined();
+    expect(tipoLogradouroDoEndereco(undefined)).toBeUndefined();
   });
 });
