@@ -23,6 +23,7 @@ import {
 } from "@/lib/transmissao-contato";
 import { camposPortoPayload, erroDeclaracoesPorto } from "@/lib/transmissao-porto";
 import { campoSimulacao, roboSuportaSimulacao } from "@/lib/transmissao-simulacao";
+import { camposTokioPayload, erroDadosTokio } from "@/lib/transmissao-tokio";
 import {
   camposPagamentoPayload,
   erroPagamentoPorto,
@@ -760,6 +761,8 @@ type TransmitirPropostaPayload = {
     telefoneResidencial?: string;
     dddTelefoneComercial?: string;
     telefoneComercial?: string;
+    // Só na Tokio: vencimento da 1ª parcela / do boleto (dd/mm/aaaa).
+    vencimentoPrimeiraParcela?: string;
   };
   /**
    * Pagamento da Porto (débito em conta / cartão / pagador). DADOS SENSÍVEIS:
@@ -874,6 +877,9 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     // aqui (nunca confiar só no cliente).
     const erroPorto = erroDeclaracoesPorto(data.seguradora, data.dadosComplementares);
     if (erroPorto) throw new Error(erroPorto);
+    // Tokio: renda, PEP, vencimento, telefone fixo (opcional) e o `produto` (conferido na Confirmação por igualdade).
+    const erroTokio = erroDadosTokio(data.seguradora, data.produto, data.dadosComplementares);
+    if (erroTokio) throw new Error(erroTokio);
 
     // Pagamento da Porto (débito/cartão/pagador): dados obrigatórios e válidos.
     // A mensagem nunca repete o valor recebido (dado financeiro/pessoal).
@@ -901,6 +907,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       // `franquia` (da opção escolhida) e, só na Porto, as declarações do
       // cliente. Ver `camposPortoPayload`.
       ...camposPortoPayload(data.seguradora, data.opcao, data.dadosComplementares),
+      ...camposTokioPayload(data.seguradora, data.dadosComplementares),
       ...camposPagamentoPayload(data.seguradora, data.formaPagamento, data.pagamento),
       // Modo simulação (só se SELF_QUIVER_TRANSMISSAO_SIMULACAO=1): o robô preenche
       // tudo e para antes do Efetivar; nada é transmitido.
