@@ -11,7 +11,17 @@ import {
   type PagadorTransmissao,
 } from "@/lib/transmissao-pagador";
 import { tipoPagamentoPorto, type PagamentoTransmissao } from "@/lib/transmissao-pagamento";
+import {
+  tipoPagamentoTokio,
+  validarCartaoTokio,
+  validarDebitoTokio,
+  type CartaoTokio,
+  type DebitoTokio,
+  type ErrosCartaoTokio,
+  type ErrosDebitoTokio,
+} from "@/lib/transmissao-tokio-pagamento";
 import { PagamentoCartaoCampos } from "./PagamentoCartaoCampos";
+import { PagamentoTokioCartaoCampos, PagamentoTokioDebitoCampos } from "./PagamentoTokioCampos";
 import { PagamentoDebitoCampos } from "./PagamentoDebitoCampos";
 import { PagamentoPagadorCampos } from "./PagamentoPagadorCampos";
 
@@ -25,6 +35,24 @@ type Props = {
 };
 
 const CONTA_VAZIA: ContaDebito = { banco: "", agencia: "", conta: "" };
+const DEBITO_TOKIO_VAZIO: DebitoTokio = {
+  banco: "",
+  agencia: "",
+  agenciaDv: "",
+  conta: "",
+  titularNome: "",
+  titularDocumento: "",
+  parentesco: "",
+  diaVencimento: "",
+  primeiraParcelaDebito: "",
+  ciente: false,
+};
+const CARTAO_TOKIO_VAZIO: CartaoTokio = {
+  envio: "tela",
+  relacaoProprietario: "",
+  cpfResponsavelLink: "",
+  diaFatura: "",
+};
 const CARTAO_VAZIO: CartaoTransmissao = { nomeTitular: "", bandeira: "", numero: "", validade: "" };
 const PAGADOR_VAZIO: PagadorTransmissao = {
   tipoPessoa: "",
@@ -53,6 +81,11 @@ export function TransmissaoPagamento({
   onEfetivar,
 }: Props) {
   const tipo = tipoPagamentoPorto(seguradora, formaPagamento);
+  const tipoTokio = tipoPagamentoTokio(seguradora, formaPagamento);
+  const [debitoTokio, setDebitoTokio] = useState<DebitoTokio>(DEBITO_TOKIO_VAZIO);
+  const [cartaoTokio, setCartaoTokio] = useState<CartaoTokio>(CARTAO_TOKIO_VAZIO);
+  const [errosDebitoTokio, setErrosDebitoTokio] = useState<ErrosDebitoTokio>({});
+  const [errosCartaoTokio, setErrosCartaoTokio] = useState<ErrosCartaoTokio>({});
   const [conta, setConta] = useState<ContaDebito>(CONTA_VAZIA);
   const [cartao, setCartao] = useState<CartaoTransmissao>(CARTAO_VAZIO);
   const [pagador, setPagador] = useState<PagadorTransmissao>(PAGADOR_VAZIO);
@@ -73,6 +106,15 @@ export function TransmissaoPagamento({
     setErrosPagador((a) => ({ ...a, [chave]: undefined }));
   }
 
+  function upDebitoTokio<K extends keyof DebitoTokio>(chave: K, valor: DebitoTokio[K]) {
+    setDebitoTokio((a) => ({ ...a, [chave]: valor }));
+    setErrosDebitoTokio((a) => ({ ...a, [chave]: undefined }));
+  }
+  function upCartaoTokio<K extends keyof CartaoTokio>(chave: K, valor: CartaoTokio[K]) {
+    setCartaoTokio((a) => ({ ...a, [chave]: valor }));
+    setErrosCartaoTokio((a) => ({ ...a, [chave]: undefined }));
+  }
+
   // Leva o foco ao primeiro campo com erro (acessibilidade).
   function focar(ids: string[]) {
     const primeiro = ids.find((id) => document.getElementById(id));
@@ -80,6 +122,40 @@ export function TransmissaoPagamento({
   }
 
   function efetivar() {
+    if (tipoTokio === "debito") {
+      const erros = validarDebitoTokio(debitoTokio);
+      if (Object.keys(erros).length > 0) {
+        setErrosDebitoTokio(erros);
+        const ids: Record<keyof DebitoTokio, string> = {
+          banco: "tokio-debito-banco",
+          agencia: "tokio-debito-agencia",
+          agenciaDv: "tokio-debito-agencia-dv",
+          conta: "tokio-debito-conta",
+          titularNome: "tokio-debito-titular",
+          titularDocumento: "tokio-debito-titular-doc",
+          parentesco: "tokio-debito-parentesco",
+          diaVencimento: "tokio-debito-dia",
+          primeiraParcelaDebito: "tokio-debito-primeira",
+          ciente: "tokio-debito-ciente",
+        };
+        return focar((Object.keys(erros) as (keyof DebitoTokio)[]).map((k) => ids[k]));
+      }
+      return onEfetivar({ tokio: { debito: debitoTokio } });
+    }
+    if (tipoTokio === "cartao") {
+      const erros = validarCartaoTokio(cartaoTokio);
+      if (Object.keys(erros).length > 0) {
+        setErrosCartaoTokio(erros);
+        const ids: Record<keyof CartaoTokio, string> = {
+          envio: "tokio-cartao-envio",
+          relacaoProprietario: "tokio-cartao-relacao",
+          cpfResponsavelLink: "tokio-cartao-cpf-link",
+          diaFatura: "tokio-cartao-dia",
+        };
+        return focar((Object.keys(erros) as (keyof CartaoTokio)[]).map((k) => ids[k]));
+      }
+      return onEfetivar({ tokio: { cartao: cartaoTokio } });
+    }
     if (tipo === "debito") {
       const erros = validarContaDebito(conta);
       if (Object.keys(erros).length > 0) {
@@ -129,13 +205,17 @@ export function TransmissaoPagamento({
   }
 
   const subtitulo =
-    tipo === "debito"
-      ? "Débito em conta · informe a conta que será debitada."
-      : tipo === "cartao_terceiros"
-        ? "Cartão Porto Bank (Terceiros) · dados do cartão e do pagador."
-        : tipo === "cartao"
-          ? "Cartão de crédito · informe os dados do cartão."
-          : "Cartão de crédito · dados coletados diretamente pela seguradora.";
+    tipoTokio === "debito"
+      ? "Débito em conta · informe o titular e a conta que será debitada."
+      : tipoTokio === "cartao"
+        ? "Cartão de crédito · a Tokio não pede os dados do cartão aqui; escolha como será informado."
+        : tipo === "debito"
+          ? "Débito em conta · informe a conta que será debitada."
+          : tipo === "cartao_terceiros"
+            ? "Cartão Porto Bank (Terceiros) · dados do cartão e do pagador."
+            : tipo === "cartao"
+              ? "Cartão de crédito · informe os dados do cartão."
+              : "Cartão de crédito · dados coletados diretamente pela seguradora.";
 
   return (
     <>
@@ -146,6 +226,20 @@ export function TransmissaoPagamento({
         </div>
       </div>
 
+      {tipoTokio === "debito" && (
+        <PagamentoTokioDebitoCampos
+          valor={debitoTokio}
+          erros={errosDebitoTokio}
+          onChange={upDebitoTokio}
+        />
+      )}
+      {tipoTokio === "cartao" && (
+        <PagamentoTokioCartaoCampos
+          valor={cartaoTokio}
+          erros={errosCartaoTokio}
+          onChange={upCartaoTokio}
+        />
+      )}
       {tipo === "debito" && (
         <PagamentoDebitoCampos valor={conta} erros={errosConta} onChange={upConta} />
       )}
@@ -155,9 +249,9 @@ export function TransmissaoPagamento({
       {tipo === "cartao_terceiros" && (
         <PagamentoPagadorCampos valor={pagador} erros={errosPagador} onChange={upPagador} />
       )}
-      {tipo === null && <PagamentoIlustrativo />}
+      {tipo === null && tipoTokio === null && <PagamentoIlustrativo />}
 
-      {tipo !== null && (
+      {(tipo !== null || tipoTokio === "debito") && (
         <div className="clt-note" style={{ marginTop: 12 }}>
           <svg width="15" height="15">
             <use href="#i-lock" />
@@ -165,7 +259,7 @@ export function TransmissaoPagamento({
           <div>
             Estes dados <strong>não são gravados</strong> pelo CoteCerto: seguem direto ao robô de
             transmissão.
-            {tipo !== "debito" && " Não pedimos o código de segurança (CVV)."}
+            {tipo !== null && tipo !== "debito" && " Não pedimos o código de segurança (CVV)."}
           </div>
         </div>
       )}
