@@ -482,6 +482,174 @@ export type Database = {
         };
         Relationships: [];
       };
+      comissao_solicitacoes: {
+        Row: {
+          comissao_pct: number;
+          cotacao_id: string;
+          criado_em: string;
+          empresa_id: string;
+          id: string;
+          motivo_recusa: string | null;
+          nivel_atual: string | null;
+          resolvido_em: string | null;
+          resolvido_por: string | null;
+          seguradora: string;
+          solicitante_id: string;
+          status: string;
+        };
+        Insert: {
+          comissao_pct: number;
+          cotacao_id: string;
+          criado_em?: string;
+          empresa_id: string;
+          id?: string;
+          motivo_recusa?: string | null;
+          nivel_atual?: string | null;
+          resolvido_em?: string | null;
+          resolvido_por?: string | null;
+          seguradora: string;
+          solicitante_id: string;
+          status?: string;
+        };
+        Update: {
+          comissao_pct?: number;
+          cotacao_id?: string;
+          criado_em?: string;
+          empresa_id?: string;
+          id?: string;
+          motivo_recusa?: string | null;
+          nivel_atual?: string | null;
+          resolvido_em?: string | null;
+          resolvido_por?: string | null;
+          seguradora?: string;
+          solicitante_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comissao_solicitacoes_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "cotacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comissao_solicitacoes_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
+          {
+            foreignKeyName: "comissao_solicitacoes_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comissao_solicitacoes_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "v_franquia_kpis";
+            referencedColumns: ["empresa_id"];
+          },
+          {
+            foreignKeyName: "comissao_solicitacoes_nivel_atual_fkey";
+            columns: ["nivel_atual"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comissao_solicitacoes_nivel_atual_fkey";
+            columns: ["nivel_atual"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "comissao_solicitacoes_resolvido_por_fkey";
+            columns: ["resolvido_por"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comissao_solicitacoes_resolvido_por_fkey";
+            columns: ["resolvido_por"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "comissao_solicitacoes_solicitante_id_fkey";
+            columns: ["solicitante_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comissao_solicitacoes_solicitante_id_fkey";
+            columns: ["solicitante_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      comissao_trilha: {
+        Row: {
+          acao: string;
+          autor_id: string | null;
+          comissao_pct: number | null;
+          criado_em: string;
+          id: string;
+          observacao: string | null;
+          solicitacao_id: string;
+        };
+        Insert: {
+          acao: string;
+          autor_id?: string | null;
+          comissao_pct?: number | null;
+          criado_em?: string;
+          id?: string;
+          observacao?: string | null;
+          solicitacao_id: string;
+        };
+        Update: {
+          acao?: string;
+          autor_id?: string | null;
+          comissao_pct?: number | null;
+          criado_em?: string;
+          id?: string;
+          observacao?: string | null;
+          solicitacao_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comissao_trilha_autor_id_fkey";
+            columns: ["autor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comissao_trilha_autor_id_fkey";
+            columns: ["autor_id"];
+            isOneToOne: false;
+            referencedRelation: "v_vendedor_kpis";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "comissao_trilha_solicitacao_id_fkey";
+            columns: ["solicitacao_id"];
+            isOneToOne: false;
+            referencedRelation: "comissao_solicitacoes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       configuracoes_gerais: {
         Row: {
           aprovacao_dupla_comissao: boolean;
@@ -4952,6 +5120,15 @@ export type Database = {
         };
         Returns: string;
       };
+      aprovar_comissao_baixa: {
+        Args: { p_id: string };
+        Returns: {
+          comissao_pct: number;
+          cotacao_id: string;
+          seguradora: string;
+          solicitante_id: string;
+        }[];
+      };
       aprovar_desconto: {
         Args: { p_id: string; p_pct_concedido: number };
         Returns: undefined;
@@ -4980,6 +5157,7 @@ export type Database = {
         Args: { p_motivo?: string; p_proposta_id: string };
         Returns: undefined;
       };
+      cancelar_comissao_baixa: { Args: { p_id: string }; Returns: undefined };
       cancelar_desconto: { Args: { p_id: string }; Returns: undefined };
       classificar_perda_cotacao: {
         Args: {
@@ -5623,6 +5801,10 @@ export type Database = {
       quiver_limpar_bruto_lote: { Args: { p_limite?: number }; Returns: number };
       quiver_sem_bruto: { Args: { p: Json }; Returns: Json };
       recalcular_regua_performance: { Args: never; Returns: Json };
+      recusar_comissao_baixa: {
+        Args: { p_id: string; p_motivo: string };
+        Returns: undefined;
+      };
       recusar_empresa: {
         Args: { motivo?: string; p_empresa_id: string };
         Returns: string;
@@ -5736,6 +5918,14 @@ export type Database = {
       };
       salvar_cotacao_rascunho: {
         Args: { p_cotacao_id: string; p_origem?: string; p_payload: Json };
+        Returns: string;
+      };
+      solicitar_comissao_baixa: {
+        Args: {
+          p_comissao_pct: number;
+          p_cotacao_id: string;
+          p_seguradora: string;
+        };
         Returns: string;
       };
       solicitar_desconto: {

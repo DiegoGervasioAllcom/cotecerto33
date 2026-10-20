@@ -92,8 +92,13 @@ async function countAprovacoesPendentes(role: Perfil | null): Promise<number> {
   } else {
     return 0;
   }
-  const { count } = await query;
-  return count ?? 0;
+  let comissoes = supabase
+    .from("comissao_solicitacoes")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pendente");
+  if (role !== "matriz") comissoes = comissoes.eq("nivel_atual", uid as string);
+  const [desc, com] = await Promise.all([query, comissoes]);
+  return (desc.count ?? 0) + (com.count ?? 0);
 }
 
 /**

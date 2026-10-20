@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ajustesKey } from "./useAjustesSeguradora";
+import { ajustesKey, useAjustesSeguradora } from "./useAjustesSeguradora";
+import { useComissaoSolicitacoes, useRetomarAoCalcularAprovada } from "./useComissaoSolicitacoes";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarCotacaoQuiver } from "@/lib/quiver.functions";
 import type { Form } from "../types";
@@ -166,6 +167,18 @@ export function useSimulacaoCalculo(
   async function recalcularSeguradora(seguradora: string) {
     await enviarECalcular({ seguradorasSel: [seguradora], seguradoraAjuste: seguradora });
   }
+
+  // Comissão <20% aprovada: o aprovador dispara o cálculo no servidor; aqui só
+  // retomamos o acompanhamento quando o ajuste vira "aplicado".
+  const ajustesGuardados = useAjustesSeguradora(cotacaoId);
+  const solicitacoesComissao = useComissaoSolicitacoes(cotacaoId, ajustesGuardados);
+  useRetomarAoCalcularAprovada(cotacaoId, ajustesGuardados, solicitacoesComissao, () => {
+    if (!cotacaoId) return;
+    setErro(null);
+    setResultados([]);
+    setCalculando(true);
+    iniciarPolling(cotacaoId);
+  });
 
   const camposFaltantes = camposFaltantesCalculo(f);
 

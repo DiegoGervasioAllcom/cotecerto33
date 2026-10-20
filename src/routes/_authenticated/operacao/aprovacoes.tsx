@@ -9,6 +9,10 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { formatarNumeroCotacao } from "@/lib/cotacao-numero";
+import {
+  ComissoesPendentes,
+  useComissoesPendentes,
+} from "@/components/aprovacoes/ComissoesPendentes";
 import { useGroupScope } from "@/lib/group-scope";
 
 export const Route = createFileRoute("/_authenticated/operacao/aprovacoes")({
@@ -275,6 +279,8 @@ function Trilha({ solicitacaoId }: { solicitacaoId: string }) {
 
 function Page() {
   const { role } = useAuth();
+  const { data: comissoesPend = [] } = useComissoesPendentes();
+  const temComissoes = comissoesPend.length > 0;
   const { loading: scopeLoading, isFranqIndividual } = useGroupScope();
   const [rows, setRows] = useState<Solicitacao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -458,7 +464,7 @@ function Page() {
 
       {(loading || scopeLoading) && <div className="muted">Carregando…</div>}
 
-      {!loading && !scopeLoading && rows.length === 0 && !err && (
+      {!loading && !scopeLoading && rows.length === 0 && !err && !temComissoes && (
         <div className="card">
           <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
             Nenhum pedido pendente pra você.
@@ -586,6 +592,7 @@ function Page() {
           onConfirm={(_pct, obs) => confirmarNegar(acao.sol, obs)}
         />
       )}
+      <ComissoesPendentes onFeedback={setFeedback} />
     </AppShell>
   );
 }

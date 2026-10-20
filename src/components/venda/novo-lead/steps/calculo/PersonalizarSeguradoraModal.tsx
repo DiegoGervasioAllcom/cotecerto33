@@ -18,8 +18,10 @@ import {
 } from "../coberturas/camposAjuste";
 import {
   ajusteSeguradoraSchema,
+  comissaoExigeAprovacao,
   type AjusteSeguradora,
 } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
+import { useSolicitarComissaoBaixa } from "@/components/venda/novo-lead/hooks/useComissaoSolicitacoes";
 import {
   useSalvarAjusteSeguradora,
   type AjusteGuardado,
@@ -48,6 +50,7 @@ export function PersonalizarSeguradoraModal({
   onSalvo,
 }: Props) {
   const salvar = useSalvarAjusteSeguradora(cotacaoId);
+  const solicitarBaixa = useSolicitarComissaoBaixa(cotacaoId);
   const [valores, setValores] = useState<Record<Campo, string>>(() =>
     valoresIniciais(global, guardado),
   );
@@ -70,6 +73,18 @@ export function PersonalizarSeguradoraModal({
       return;
     }
     setSalvando(true);
+    if (r.data.comissao != null && comissaoExigeAprovacao(r.data.comissao)) {
+      // <20%: não calcula agora — pede aprovação; o cálculo roda sozinho ao aprovar.
+      const { comissao, ...resto } = r.data;
+      const outros = Object.values(resto).some((v) => v !== null);
+      const resOutros = outros ? await salvar(seguradora, { ...resto, comissao: null }) : null;
+      const resSol =
+        resOutros && !resOutros.ok ? resOutros : await solicitarBaixa(seguradora, comissao);
+      setSalvando(false);
+      if (!resSol.ok) setErro(resSol.erro);
+      else onClose();
+      return;
+    }
     const res = await salvar(seguradora, r.data);
     setSalvando(false);
     if (!res.ok) {
@@ -159,6 +174,7 @@ export function PersonalizarSeguradoraModal({
               <use href="#i-refresh" />
             </svg>{" "}
             Aplicar e recalcular {seguradora}
+            {/* comissão <20%: vira solicitação de aprovação */}
           </button>
         </div>
       </div>

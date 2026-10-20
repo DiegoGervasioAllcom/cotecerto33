@@ -11,11 +11,18 @@ import {
 const opcional = <T extends readonly [string, ...string[]]>(valores: T) =>
   z.union([z.literal("").transform(() => null), z.enum(valores)]).nullable();
 
-export const COMISSAO_MIN = 20;
-export const COMISSAO_MAX = 25;
-const MSG_COMISSAO = "Comissão entre 20% e 25%.";
+export const COMISSAO_MIN = 10;
+export const COMISSAO_MAX = 30;
+/** Abaixo disto a comissão exige aprovação do superior imediato ou da Matriz. */
+export const COMISSAO_SEM_APROVACAO_MIN = 20;
+/** Acima disto (até o MAX) a comissão é rotulada "Agravo" — só rótulo. */
+export const COMISSAO_AGRAVO_MIN = 25;
+const MSG_COMISSAO = "Comissão entre 10% e 30%.";
 
-/** Aceita "" (→ null), número ou string com vírgula/ponto; 20 a 25, até 2 casas. */
+export const comissaoExigeAprovacao = (n: number) => n < COMISSAO_SEM_APROVACAO_MIN;
+export const comissaoEhAgravo = (n: number) => n > COMISSAO_AGRAVO_MIN && n <= COMISSAO_MAX;
+
+/** Aceita "" (→ null), número ou string com vírgula/ponto; 10 a 30, até 2 casas. */
 const comissaoOpcional = z
   .union([z.literal("").transform(() => null), z.string(), z.number()])
   .nullable()
