@@ -6,7 +6,10 @@ import { comissaoEditavel, nomeCanonicoSeguradora } from "@/lib/seguradora-canon
 import { useEffect, useRef, useState } from "react";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
-import { ajusteSeguradoraSchema } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
+import {
+  ajusteSeguradoraSchema,
+  COMISSAO_SEM_APROVACAO_MIN,
+} from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
   useAjustesSeguradora,
   useSalvarAjusteSeguradora,
@@ -91,6 +94,13 @@ function Linha({
     if (!r.success) {
       const msgComissao = r.error.issues.find((i) => i.path[0] === "comissao")?.message;
       setStatus(msgComissao ? { tipo: "erro", msg: msgComissao } : null);
+      return;
+    }
+    if (r.data.comissao != null && r.data.comissao < COMISSAO_SEM_APROVACAO_MIN) {
+      setStatus({
+        tipo: "erro",
+        msg: "Abaixo de 20% exige aprovação: solicite pela engrenagem da seguradora depois de calcular.",
+      });
       return;
     }
     setStatus({ tipo: "salvando" });

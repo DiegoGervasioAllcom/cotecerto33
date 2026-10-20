@@ -18,6 +18,8 @@ import { PersonalizarSeguradoraModal, type CoberturaGlobal } from "./Personaliza
 import { resumoAjuste } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import { useAjustesSeguradora } from "@/components/venda/novo-lead/hooks/useAjustesSeguradora";
 import { tituloResultado } from "@/components/venda/cotacoes/quiver-resultado";
+import { useComissaoSolicitacoes } from "@/components/venda/novo-lead/hooks/useComissaoSolicitacoes";
+import { StatusComissaoBaixa } from "./StatusComissaoBaixa";
 import { MensagensRetornoModal } from "./MensagensRetornoModal";
 
 type Props = {
@@ -52,7 +54,10 @@ export function SegAcoes({
   const [personalizarAberto, setPersonalizarAberto] = useState(false);
   // Resumo do ajuste recém-salvo: a confirmação do recálculo passa a citá-lo.
   const [resumoConfirmacao, setResumoConfirmacao] = useState<string | null>(null);
-  const guardado = useAjustesSeguradora(cotacaoId)[nomeCanonicoSeguradora(resultado.seguradora)];
+  const ajustes = useAjustesSeguradora(cotacaoId);
+  const chave = nomeCanonicoSeguradora(resultado.seguradora);
+  const guardado = ajustes[chave];
+  const solicitacaoComissao = useComissaoSolicitacoes(cotacaoId, ajustes)[chave];
 
   const descontoDisabledTitle = !info.disponivel
     ? (info.indisponivelMotivo ?? "Indisponível")
@@ -147,6 +152,14 @@ export function SegAcoes({
           <use href="#i-refresh" />
         </svg>
       </button>
+
+      <StatusComissaoBaixa
+        cotacaoId={cotacaoId}
+        solicitacao={solicitacaoComissao}
+        ajuste={guardado}
+        onRefazer={() => setPersonalizarAberto(true)}
+        onRecalcular={() => setConfirmarRecalculo(true)}
+      />
 
       {/* Os modais vão para o <body>: dentro da célula da lista comparativa eles
           herdavam o texto centralizado e sem quebra de linha da tabela. */}

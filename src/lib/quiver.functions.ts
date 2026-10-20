@@ -32,7 +32,11 @@ import {
 } from "@/lib/transmissao-pagamento";
 import { camposPagamentoTokioPayload, erroPagamentoTokio } from "@/lib/transmissao-tokio-pagamento";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
-import { COMISSAO_MAX, COMISSAO_MIN } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
+import {
+  COMISSAO_MAX,
+  COMISSAO_MIN,
+  COMISSAO_SEM_APROVACAO_MIN,
+} from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
   calcularPremioTransmissao,
   type OpcaoIdentificador,
@@ -175,7 +179,7 @@ export type AjusteCoberturaQuiver = {
   franquia_segunda_opcao?: string | null;
   vidros?: string | null;
   carro_reserva?: string | null;
-  /** Comissão % (20 a 25) — o robô lê `cobertura.comissaoPercentual`. */
+  /** Comissão % (10 a 30; abaixo de 20 só com aprovação) — o robô lê `cobertura.comissaoPercentual`. */
   comissao_pct?: number | string | null;
 };
 
@@ -197,6 +201,21 @@ function sobreporAjuste<T extends object>(
     if (Number.isFinite(c) && c >= COMISSAO_MIN && c <= COMISSAO_MAX) out.comissaoPercentual = c;
   }
   return out as T;
+}
+
+/**
+ * Comissão abaixo de 20% só segue ao robô se existir solicitação APROVADA
+ * para aquela cotação+seguradora com exatamente esse valor. Sem isso o valor
+ * é descartado (o portal usa o padrão dele). `aprovadas` = valores aprovados.
+ */
+export function ajusteSemComissaoNaoAprovada<T extends AjusteCoberturaQuiver>(
+  ajuste: T,
+  aprovadas: number[],
+): T {
+  if (ajuste.comissao_pct == null || ajuste.comissao_pct === "") return ajuste;
+  const c = Number(ajuste.comissao_pct);
+  if (!Number.isFinite(c) || c >= COMISSAO_SEM_APROVACAO_MIN) return ajuste;
+  return aprovadas.some((a) => Number(a) === c) ? ajuste : { ...ajuste, comissao_pct: null };
 }
 
 export function montarPayloadQuiver(cot: CotacaoRow, ajuste?: AjusteCoberturaQuiver | null) {
@@ -561,6 +580,206 @@ export async function marcarAjustesAposEnvio(
   }
 }
 
+/** Envia a cotação ao robô Quiver (service role). Quem chama já autorizou o acesso. */
+async function enviarParaQuiver(
+  admin: ReturnType<typeof getAdmin>,
+  cotacaoId: string,
+  seguradoraAjuste: string | undefined,
+  opcoes?: { isolarSeguradora?: boolean },
+): Promise<{ ajuste: AjusteCoberturaQuiver | null; seguradoraLinha: string | undefined }> {
+  const apiUrl = process.env.SELF_QUIVER_API_URL;
+  if (!apiUrl) throw new Error("SELF_QUIVER_API_URL não configurada.");
+
+  const { data: cot, error: cotErr } = await admin
+    .from("cotacoes")
+    .select(
+      "id," +
+        "segurado:cotacao_segurado(*)," +
+        "seguro:cotacao_seguro(*)," +
+        "veiculo:cotacao_veiculo(*)," +
+        "perfil:cotacao_perfil(*)," +
+        "coberturas:cotacao_coberturas(*)",
+    )
+    .eq("id", cotacaoId)
+    .maybeSingle();
+  if (cotErr) throw new Error(cotErr.message);
+  if (!cot) throw new Error("Cotação não encontrada.");
+
+  // Busca tolerante: compara o canônico de cada linha da cotação com o do
+  // pedido (aceita linhas antigas gravadas com nome de exibição, ex. "Porto").
+  let ajuste: AjusteCoberturaQuiver | null = null;
+  let seguradoraLinha: string | undefined;
+  if (seguradoraAjuste) {
+    const { data: linhas, error: ajErr } = await admin
+      .from("cotacao_seguradora_ajustes")
+      .select(
+        "seguradora,franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva,comissao_pct",
+      )
+      .eq("cotacao_id", cotacaoId);
+    if (ajErr) throw new Error(ajErr.message);
+    const achada = acharAjusteCanonico(linhas ?? [], seguradoraAjuste);
+    if (achada) {
+      seguradoraLinha = achada.seguradora;
+      const { data: aprov, error: aprErr } = await admin
+        .from("comissao_solicitacoes")
+        .select("seguradora,comissao_pct")
+        .eq("cotacao_id", cotacaoId)
+        .eq("status", "aprovada");
+      if (aprErr) throw new Error(aprErr.message);
+      const alvo = nomeCanonicoSeguradora(achada.seguradora);
+      const aprovadas = (aprov ?? [])
+        .filter((r) => nomeCanonicoSeguradora(r.seguradora) === alvo)
+        .map((r) => Number(r.comissao_pct));
+      // O portal não deixa editar a comissão de algumas seguradoras: nunca envia o valor
+      // (linha antiga ou gravada direto pela RPC) para elas.
+      ajuste = comissaoEditavel(achada.seguradora)
+        ? ajusteSemComissaoNaoAprovada(achada, aprovadas)
+        : { ...achada, comissao_pct: null };
+    }
+  }
+  let cotEnvio = cot as unknown as CotacaoRow;
+  if (opcoes?.isolarSeguradora && seguradoraAjuste) {
+    // recálculo automático pós-aprovação: só esta seguradora (como "recalcular só esta")
+    cotEnvio = {
+      ...cotEnvio,
+      seguro: { ...(cotEnvio.seguro ?? {}), seguradoras_sel: [seguradoraAjuste] },
+    };
+  }
+  const payload = montarPayloadQuiver(cotEnvio, ajuste);
+
+  let res: Response;
+  try {
+    res = await fetch(`${apiUrl}/cotacao`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error("Não foi possível conectar à API de cotação (Quiver).");
+  }
+
+  if (res.status !== 201) {
+    let details: string[] = [];
+    try {
+      // Formato real da API (validateCotacao.ts): { error: { code, message, details: string[] } }.
+      // Não é { details, error: string } — ler assim fazia `[body.error]` virar um array com o
+      // OBJETO de erro inteiro, e o .join(...) mais abaixo coagia isso pra "[object Object]"
+      // em vez da mensagem de validação real (ex.: "Campo veiculo.kmMes é obrigatório").
+      const body = (await res.json()) as {
+        error?: { code?: string; message?: string; details?: string[] };
+      };
+      details = body.error?.details?.length
+        ? body.error.details
+        : body.error?.message
+          ? [body.error.message]
+          : [];
+    } catch {
+      /* resposta sem JSON — segue sem detalhes */
+    }
+    throw new Error(
+      details.length
+        ? `Cotação rejeitada pela Quiver: ${details.join("; ")}`
+        : `Falha ao enviar cotação (HTTP ${res.status}).`,
+    );
+  }
+
+  const { error: updErr } = await admin
+    .from("cotacoes")
+    .update({ status: "enviada_quiver", quiver_enviado_em: new Date().toISOString() })
+    .eq("id", cotacaoId);
+  if (updErr) throw new Error(updErr.message);
+  return { ajuste, seguradoraLinha };
+}
+
+/** Limpa a falha registrada do cálculo automático (novo sucesso/recálculo manual). */
+async function limparCalculoErroComissao(
+  admin: ReturnType<typeof getAdmin>,
+  cotacaoId: string,
+  seguradora: string,
+) {
+  const { error } = await admin
+    .from("comissao_solicitacoes")
+    .update({ calculo_erro: null, calculo_erro_em: null })
+    .eq("cotacao_id", cotacaoId)
+    .eq("seguradora", seguradora)
+    .not("calculo_erro", "is", null);
+  if (error) console.error("[quiver] falha ao limpar calculo_erro:", error.message);
+}
+
+type CalcularAposAprovacaoPayload = { solicitacaoId: string; caller_token: string };
+
+/**
+ * Disparado pelo front do APROVADOR logo após `aprovar_comissao_baixa`: o
+ * servidor não confia no front — relê a solicitação, confere que está
+ * aprovada e foi resolvida por quem chama, e só então recalcula (service role)
+ * aquela cotação+seguradora para o solicitante. O ajuste (comissão aprovada)
+ * é lido do banco. Marca o ajuste como aplicado ao fim (o vendedor usa isso
+ * como sinal de "cálculo disparado"). Idempotente: ajuste já aplicado = no-op.
+ */
+export const calcularAposAprovacaoComissao = createServerFn({ method: "POST" })
+  .inputValidator((data: CalcularAposAprovacaoPayload) => {
+    if (!data?.solicitacaoId || !/^[0-9a-f-]{36}$/i.test(data.solicitacaoId))
+      throw new Error("solicitacaoId inválido.");
+    if (!data?.caller_token) throw new Error("Sem token.");
+    return data;
+  })
+  .handler(async ({ data }) => {
+    const admin = getAdmin();
+    const { data: u, error: uErr } = await admin.auth.getUser(data.caller_token);
+    if (uErr || !u.user) throw new Error("Não autenticado.");
+    const { data: sol, error: sErr } = await admin
+      .from("comissao_solicitacoes")
+      .select("id,cotacao_id,seguradora,comissao_pct,status,resolvido_por")
+      .eq("id", data.solicitacaoId)
+      .maybeSingle();
+    if (sErr) throw new Error(sErr.message);
+    if (!sol) throw new Error("Solicitação não encontrada.");
+    if (sol.status !== "aprovada") throw new Error("Solicitação não está aprovada.");
+    if (sol.resolvido_por !== u.user.id) throw new Error("Permissão negada.");
+
+    const { data: cot, error: cErr } = await admin
+      .from("cotacoes")
+      .select("status")
+      .eq("id", sol.cotacao_id)
+      .maybeSingle();
+    if (cErr) throw new Error(cErr.message);
+    if (!cot || cot.status === "proposta" || cot.status === "aceita")
+      throw new Error("Cotação não aceita mais recálculo.");
+
+    const { data: aj, error: ajErr } = await admin
+      .from("cotacao_seguradora_ajustes")
+      .select("comissao_pct,aplicado_em")
+      .eq("cotacao_id", sol.cotacao_id)
+      .eq("seguradora", sol.seguradora)
+      .maybeSingle();
+    if (ajErr) throw new Error(ajErr.message);
+    if (!aj || Number(aj.comissao_pct) !== Number(sol.comissao_pct))
+      throw new Error("Ajuste da comissão aprovada não encontrado.");
+    if (aj.aplicado_em) return { ok: true as const, jaAplicado: true as const };
+
+    try {
+      await enviarParaQuiver(admin, sol.cotacao_id, sol.seguradora, { isolarSeguradora: true });
+    } catch (e) {
+      // Persiste a falha: o vendedor vê "Recalcular" em vez de ficar esperando.
+      const msg = (e instanceof Error ? e.message : "erro desconhecido").slice(0, 500);
+      const { error: gErr } = await admin
+        .from("comissao_solicitacoes")
+        .update({ calculo_erro: msg, calculo_erro_em: new Date().toISOString() })
+        .eq("id", sol.id);
+      if (gErr) console.error("[quiver] falha ao gravar calculo_erro:", gErr.message);
+      throw e;
+    }
+    await limparCalculoErroComissao(admin, sol.cotacao_id, sol.seguradora);
+    const { error: mErr } = await admin
+      .from("cotacao_seguradora_ajustes")
+      .update({ aplicado_em: new Date().toISOString() })
+      .eq("cotacao_id", sol.cotacao_id)
+      .eq("seguradora", sol.seguradora);
+    if (mErr)
+      console.error("[quiver] cálculo disparado, mas falhou marcar aplicado:", mErr.message);
+    return { ok: true as const, jaAplicado: false as const };
+  });
+
 export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
   .inputValidator((data: EnviarCotacaoPayload) => {
     if (!data?.cotacaoId) throw new Error("cotacaoId obrigatório.");
@@ -578,87 +797,18 @@ export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
     const admin = getAdmin();
     await assertDonoCotacao(admin, data.caller_token, data.cotacaoId);
 
-    const apiUrl = process.env.SELF_QUIVER_API_URL;
-    if (!apiUrl) throw new Error("SELF_QUIVER_API_URL não configurada.");
+    const { ajuste, seguradoraLinha } = await enviarParaQuiver(
+      admin,
+      data.cotacaoId,
+      data.seguradoraAjuste,
+    );
 
-    const { data: cot, error: cotErr } = await admin
-      .from("cotacoes")
-      .select(
-        "id," +
-          "segurado:cotacao_segurado(*)," +
-          "seguro:cotacao_seguro(*)," +
-          "veiculo:cotacao_veiculo(*)," +
-          "perfil:cotacao_perfil(*)," +
-          "coberturas:cotacao_coberturas(*)",
-      )
-      .eq("id", data.cotacaoId)
-      .maybeSingle();
-    if (cotErr) throw new Error(cotErr.message);
-    if (!cot) throw new Error("Cotação não encontrada.");
-
-    // Busca tolerante: compara o canônico de cada linha da cotação com o do
-    // pedido (aceita linhas antigas gravadas com nome de exibição, ex. "Porto").
-    let ajuste: AjusteCoberturaQuiver | null = null;
-    let seguradoraLinha: string | undefined;
-    if (data.seguradoraAjuste) {
-      const { data: linhas, error: ajErr } = await admin
-        .from("cotacao_seguradora_ajustes")
-        .select(
-          "seguradora,franquia_primeira_opcao,franquia_segunda_opcao,vidros,carro_reserva,comissao_pct",
-        )
-        .eq("cotacao_id", data.cotacaoId);
-      if (ajErr) throw new Error(ajErr.message);
-      const achada = acharAjusteCanonico(linhas ?? [], data.seguradoraAjuste);
-      if (achada) {
-        seguradoraLinha = achada.seguradora;
-        // O portal não deixa editar a comissão de algumas seguradoras: nunca envia o valor
-        // (linha antiga ou gravada direto pela RPC) para elas.
-        ajuste = comissaoEditavel(achada.seguradora) ? achada : { ...achada, comissao_pct: null };
-      }
-    }
-    const payload = montarPayloadQuiver(cot as unknown as CotacaoRow, ajuste);
-
-    let res: Response;
-    try {
-      res = await fetch(`${apiUrl}/cotacao`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      throw new Error("Não foi possível conectar à API de cotação (Quiver).");
-    }
-
-    if (res.status !== 201) {
-      let details: string[] = [];
-      try {
-        // Formato real da API (validateCotacao.ts): { error: { code, message, details: string[] } }.
-        // Não é { details, error: string } — ler assim fazia `[body.error]` virar um array com o
-        // OBJETO de erro inteiro, e o .join(...) mais abaixo coagia isso pra "[object Object]"
-        // em vez da mensagem de validação real (ex.: "Campo veiculo.kmMes é obrigatório").
-        const body = (await res.json()) as {
-          error?: { code?: string; message?: string; details?: string[] };
-        };
-        details = body.error?.details?.length
-          ? body.error.details
-          : body.error?.message
-            ? [body.error.message]
-            : [];
-      } catch {
-        /* resposta sem JSON — segue sem detalhes */
-      }
-      throw new Error(
-        details.length
-          ? `Cotação rejeitada pela Quiver: ${details.join("; ")}`
-          : `Falha ao enviar cotação (HTTP ${res.status}).`,
+    if (data.seguradoraAjuste)
+      await limparCalculoErroComissao(
+        admin,
+        data.cotacaoId,
+        nomeCanonicoSeguradora(data.seguradoraAjuste),
       );
-    }
-
-    const { error: updErr } = await admin
-      .from("cotacoes")
-      .update({ status: "enviada_quiver", quiver_enviado_em: new Date().toISOString() })
-      .eq("id", data.cotacaoId);
-    if (updErr) throw new Error(updErr.message);
 
     // V12.3.7: só depois do envio dar certo. Recálculo de uma seguradora marca
     // o ajuste dela como aplicado; recálculo geral marca todos como não aplicados.
