@@ -11,7 +11,7 @@ import {
   dadosComplementaresTransmissaoSchema,
   type DadosComplementaresTransmissao,
 } from "../TransmissaoDadosComplementares.schema";
-import { vencimentoPadraoTokio } from "@/lib/transmissao-tokio";
+import { tipoLogradouroDoEndereco, vencimentoPadraoTokio } from "@/lib/transmissao-tokio";
 import { TransmissaoDadosPorto, type CamposPorto } from "./TransmissaoDadosPorto";
 import { TransmissaoDadosTokio, type CamposTokio } from "./TransmissaoDadosTokio";
 
@@ -144,7 +144,11 @@ export function TransmissaoDadosComplementares({
       setErros(proximos);
       return;
     }
-    onConfirmar(validacao.data);
+    onConfirmar(
+      ehTokio
+        ? { ...validacao.data, tipoLogradouro: tipoLogradouroDoEndereco(f.logradouro) }
+        : validacao.data,
+    );
   }
 
   const field = (

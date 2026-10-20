@@ -764,6 +764,7 @@ type TransmitirPropostaPayload = {
     telefoneComercial?: string;
     // Só na Tokio: vencimento da 1ª parcela / do boleto (dd/mm/aaaa).
     vencimentoPrimeiraParcela?: string;
+    tipoLogradouro?: string;
   };
   /**
    * Pagamento da Porto (débito em conta / cartão / pagador). DADOS SENSÍVEIS:
