@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { erroTelefoneFixo } from "@/lib/telefone-fixo";
-import { PEP_PORTO, RENDAS_MENSAIS_PORTO } from "@/components/venda/novo-lead/enumsPorto";
+import { erroVencimentoTokio } from "@/lib/transmissao-tokio";
+import {
+  PEP_PORTO,
+  RENDAS_MENSAIS_PORTO,
+  RENDAS_MENSAIS_TOKIO,
+} from "@/components/venda/novo-lead/enumsPorto";
 import { RAMOS_ATIVIDADE_PORTO } from "@/components/venda/novo-lead/enumsRamoAtividade";
 
 // Espelha as colunas endereco_corresp_* de `proposta_dados_complementares`
@@ -46,7 +51,8 @@ const camposBase = z.object({
   // `exigePorto` abaixo). NUNCA têm valor padrão: o robô não assume essas
   // respostas pelo cliente. Não são persistidas (ver useRetomarTransmissao:
   // "nenhuma fonte com dado pessoal") — vivem só no estado do passo.
-  rendaMensal: z.enum(RENDAS_MENSAIS_PORTO).optional(),
+  // União das opções (Porto + Tokio): cada seguradora restringe no refinamento abaixo.
+  rendaMensal: z.enum(RENDAS_MENSAIS_TOKIO).optional(),
   // Sem `.max`: o limite é a própria lista fechada (alguns ramos do portal
   // passam de 100 caracteres — o maior tem 137). Ver `RAMOS_ATIVIDADE_PORTO`.
   ramoAtividade: z.string().trim().optional(),
@@ -56,17 +62,59 @@ const camposBase = z.object({
   telefoneResidencial: z.string().optional(),
   dddTelefoneComercial: z.string().optional(),
   telefoneComercial: z.string().optional(),
+  // Tokio: vencimento da 1ª parcela / do boleto (dd/mm/aaaa). Ignorado nas outras seguradoras.
+  vencimentoPrimeiraParcela: z.string().optional(),
+});
+
+// A Efetivação da Tokio NÃO tem estes campos (sem RG, renavam, cor, chassi nem ramo): deixam de ser obrigatórios.
+const camposBaseTokio = camposBase.partial({
+  rg: true,
+  dataEmissaoRg: true,
+  orgaoEmissorRg: true,
+  renavam: true,
+  corVeiculo: true,
+  diaVencimentoDemaisParcelas: true,
+  desejaReceberPropostaPorEmail: true,
 });
 
 type OpcoesSchema = {
   /** true quando a seguradora do card é a Porto: renda, ramo e PEP viram obrigatórios. */
   exigePorto: boolean;
+  /** Tokio: renda, PEP, vencimento e telefone fixo; sem RG/renavam/cor. */
+  exigeTokio?: boolean;
 };
 
-export function criarSchemaDadosComplementares({ exigePorto }: OpcoesSchema) {
-  return camposBase.superRefine((val, ctx) => {
+export function criarSchemaDadosComplementares({ exigePorto, exigeTokio = false }: OpcoesSchema) {
+  // O cast mantém o tipo de saída (strict) do schema geral: na Tokio o estado do formulário sempre traz esses
+  // campos (strings vazias), só a obrigatoriedade deixa de valer em tempo de execução.
+  const base = (exigeTokio ? camposBaseTokio : camposBase) as unknown as typeof camposBase;
+  return base.superRefine((val, ctx) => {
+    if (exigeTokio) {
+      const add = (campo: string, message: string) =>
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
+      if (
+        !val.rendaMensal ||
+        !(RENDAS_MENSAIS_TOKIO as readonly string[]).includes(val.rendaMensal)
+      ) {
+        add("rendaMensal", "Informe a renda mensal.");
+      }
+      if (!val.pessoaPoliticamenteExposta) {
+        add("pessoaPoliticamenteExposta", "Informe se é pessoa politicamente exposta.");
+      }
+      const erroVenc = erroVencimentoTokio(val.vencimentoPrimeiraParcela);
+      if (erroVenc) add("vencimentoPrimeiraParcela", erroVenc);
+      const erroTel = erroTelefoneFixo(
+        val.dddTelefoneResidencial,
+        val.telefoneResidencial,
+        "residencial",
+      );
+      if (erroTel) add("telefoneResidencial", erroTel);
+    }
     if (exigePorto) {
-      if (!val.rendaMensal) {
+      if (
+        !val.rendaMensal ||
+        !(RENDAS_MENSAIS_PORTO as readonly string[]).includes(val.rendaMensal)
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["rendaMensal"],
@@ -122,6 +170,52 @@ export function criarSchemaDadosComplementares({ exigePorto }: OpcoesSchema) {
 /** Seguradoras em geral (renda/ramo/PEP opcionais e ignorados). */
 export const dadosComplementaresTransmissaoSchema = criarSchemaDadosComplementares({
   exigePorto: false,
+});
+
+/** Campos do formulário geral que a Efetivação da Tokio NÃO tem (o estado do form os guarda como ""). */
+const CAMPOS_AUSENTES_NA_TOKIO = [
+  "rg",
+  "dataEmissaoRg",
+  "orgaoEmissorRg",
+  "renavam",
+  "corVeiculo",
+  "diaVencimentoDemaisParcelas",
+  "desejaReceberPropostaPorEmail",
+] as const;
+
+/**
+ * Valida os dados da Tokio. Os campos que ela não tem saem ANTES: com "" (o valor do estado do form) as regras
+ * deles (regex, min 1) rodariam mesmo sendo opcionais e recusariam um campo que nem aparece na tela. O que
+ * volta traz esses campos como "" para manter o formato que o resto do app espera.
+ */
+export function validarDadosComplementaresTokio(dados: DadosComplementaresTransmissao) {
+  const copia: Record<string, unknown> = { ...dados };
+  for (const campo of CAMPOS_AUSENTES_NA_TOKIO) delete copia[campo];
+  const r = dadosComplementaresTransmissaoTokioSchema.safeParse(copia);
+  if (!r.success) return r;
+  return {
+    success: true as const,
+    data: {
+      ...r.data,
+      rg: "",
+      dataEmissaoRg: "",
+      orgaoEmissorRg: "",
+      renavam: "",
+      corVeiculo: "",
+      diaVencimentoDemaisParcelas: "",
+      desejaReceberPropostaPorEmail: dados.desejaReceberPropostaPorEmail,
+    } as DadosComplementaresTransmissao,
+  };
+}
+
+/**
+ * Tokio: renda, PEP e vencimento obrigatórios; RG, renavam e cor não existem na Efetivação dela. NÃO exportado de
+ * propósito: o tipo é o do schema geral (cast), então só `validarDadosComplementaresTokio` pode chamá-lo — ele tira os
+ * campos ausentes antes de validar.
+ */
+const dadosComplementaresTransmissaoTokioSchema = criarSchemaDadosComplementares({
+  exigePorto: false,
+  exigeTokio: true,
 });
 
 /** Porto: renda, ramo de atividade e PEP obrigatórios. */

@@ -10,5 +10,13 @@ export const RENDAS_MENSAIS_PORTO = [
 
 export const PEP_PORTO = ["Sim", "Não", "Relacionamento Próximo"] as const;
 
+// Tokio: mesmos ids (#Padrao2000_Cobertura7164 / #7202), lidos ao vivo em 19/10/2026 — a renda traz
+// duas opções a mais que a da Porto; a PEP é igual.
+export const RENDAS_MENSAIS_TOKIO = [
+  "Não desejo informar",
+  "Sem Renda",
+  ...RENDAS_MENSAIS_PORTO,
+] as const;
+
 export type RendaMensalPorto = (typeof RENDAS_MENSAIS_PORTO)[number];
 export type PepPorto = (typeof PEP_PORTO)[number];

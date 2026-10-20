@@ -7,10 +7,13 @@ import { mascararData } from "@/lib/transmissao-pagador";
 import { baseDoForm } from "@/lib/transmissao-rascunho";
 import {
   dadosComplementaresTransmissaoPortoSchema,
+  validarDadosComplementaresTokio,
   dadosComplementaresTransmissaoSchema,
   type DadosComplementaresTransmissao,
 } from "../TransmissaoDadosComplementares.schema";
+import { vencimentoPadraoTokio } from "@/lib/transmissao-tokio";
 import { TransmissaoDadosPorto, type CamposPorto } from "./TransmissaoDadosPorto";
+import { TransmissaoDadosTokio, type CamposTokio } from "./TransmissaoDadosTokio";
 
 export type { DadosComplementaresTransmissao } from "../TransmissaoDadosComplementares.schema";
 
@@ -50,6 +53,8 @@ export function TransmissaoDadosComplementares({
 }: Props) {
   // Porto: renda, ramo de atividade e PEP são exigidos pela Efetivação.
   const ehPorto = nomeCanonicoSeguradora(resultado.seguradora) === "porto";
+  // Tokio: Efetivação própria — sem RG, renavam, cor nem "dia de vencimento das demais parcelas".
+  const ehTokio = nomeCanonicoSeguradora(resultado.seguradora) === "tokio";
   const [dados, setDados] = useState<DadosComplementaresTransmissao>(
     () =>
       inicial ?? {
@@ -69,6 +74,7 @@ export function TransmissaoDadosComplementares({
         },
         diaVencimentoDemaisParcelas: "",
         desejaReceberPropostaPorEmail: "Não",
+        ...(ehTokio ? { vencimentoPrimeiraParcela: vencimentoPadraoTokio() } : {}),
       },
   );
   const [erros, setErros] = useState<Erros>({});
@@ -93,6 +99,11 @@ export function TransmissaoDadosComplementares({
     setErros((atual) => ({ ...atual, [key]: undefined }));
   }
 
+  function upTokio<K extends keyof CamposTokio>(key: K, value: CamposTokio[K]) {
+    setDados((atual) => ({ ...atual, [key]: value }));
+    setErros((atual) => ({ ...atual, [key]: undefined }));
+  }
+
   function upCorresp<K extends keyof DadosComplementaresTransmissao["enderecoCorrespondencia"]>(
     key: K,
     value: DadosComplementaresTransmissao["enderecoCorrespondencia"][K],
@@ -108,10 +119,12 @@ export function TransmissaoDadosComplementares({
   }
 
   function confirmar() {
-    const schema = ehPorto
-      ? dadosComplementaresTransmissaoPortoSchema
-      : dadosComplementaresTransmissaoSchema;
-    const validacao = schema.safeParse(dados);
+    const validacao = ehTokio
+      ? validarDadosComplementaresTokio(dados)
+      : (ehPorto
+          ? dadosComplementaresTransmissaoPortoSchema
+          : dadosComplementaresTransmissaoSchema
+        ).safeParse(dados);
     if (!validacao.success) {
       const proximos: Erros = {};
       for (const issue of validacao.error.issues) {
@@ -248,9 +261,10 @@ export function TransmissaoDadosComplementares({
           <label>Nome do segurado</label>
           <input className="input" value={f.nome} disabled />
         </div>
-        {field("rg", "RG", "00.000.000-0")}
-        {field("dataEmissaoRg", "Data de emissão", "dd/mm/aaaa", "numeric", 10, mascararData)}
-        {field("orgaoEmissorRg", "Órgão emissor", "SSP")}
+        {!ehTokio && field("rg", "RG", "00.000.000-0")}
+        {!ehTokio &&
+          field("dataEmissaoRg", "Data de emissão", "dd/mm/aaaa", "numeric", 10, mascararData)}
+        {!ehTokio && field("orgaoEmissorRg", "Órgão emissor", "SSP")}
         {field("email", "E-mail", "cliente@email.com")}
       </div>
 
@@ -338,48 +352,57 @@ export function TransmissaoDadosComplementares({
           <label>Placa</label>
           <input className="input" value={f.placa} disabled />
         </div>
-        {field("renavam", "Renavam", "11 dígitos", "numeric")}
-        {field("corVeiculo", "Cor", "Ex.: Branco")}
+        {!ehTokio && field("renavam", "Renavam", "11 dígitos", "numeric")}
+        {!ehTokio && field("corVeiculo", "Cor", "Ex.: Branco")}
       </div>
 
       {ehPorto && <TransmissaoDadosPorto dados={dados} erros={erros} onChange={upPorto} />}
+      {ehTokio && <TransmissaoDadosTokio dados={dados} erros={erros} onChange={upTokio} />}
 
-      <div className="acc-sec-t">Transmissão e envio</div>
-      <div className="wizard-grid cols-3">
-        <div className="field-group">
-          <label htmlFor="transmissao-dia-vencimento">Dia de vencimento das demais parcelas</label>
-          <select
-            id="transmissao-dia-vencimento"
-            className="input"
-            value={dados.diaVencimentoDemaisParcelas}
-            onChange={(e) => up("diaVencimentoDemaisParcelas", e.target.value)}
-          >
-            <option value="">Selecione</option>
-            {Array.from({ length: 30 }, (_, i) => String(i + 1)).map((dia) => (
-              <option key={dia}>{dia}</option>
-            ))}
-          </select>
-          {erros.diaVencimentoDemaisParcelas && (
-            <span className="small" style={{ color: "var(--alert)" }}>
-              {erros.diaVencimentoDemaisParcelas}
-            </span>
-          )}
-        </div>
-        <div className="field-group">
-          <label htmlFor="transmissao-receberPropostaPorEmail">
-            Receber proposta/boleto por e-mail?
-          </label>
-          <select
-            id="transmissao-receberPropostaPorEmail"
-            className="input"
-            value={dados.desejaReceberPropostaPorEmail}
-            onChange={(e) => up("desejaReceberPropostaPorEmail", e.target.value as "Sim" | "Não")}
-          >
-            <option>Não</option>
-            <option>Sim</option>
-          </select>
-        </div>
-      </div>
+      {!ehTokio && (
+        <>
+          <div className="acc-sec-t">Transmissão e envio</div>
+          <div className="wizard-grid cols-3">
+            <div className="field-group">
+              <label htmlFor="transmissao-dia-vencimento">
+                Dia de vencimento das demais parcelas
+              </label>
+              <select
+                id="transmissao-dia-vencimento"
+                className="input"
+                value={dados.diaVencimentoDemaisParcelas}
+                onChange={(e) => up("diaVencimentoDemaisParcelas", e.target.value)}
+              >
+                <option value="">Selecione</option>
+                {Array.from({ length: 30 }, (_, i) => String(i + 1)).map((dia) => (
+                  <option key={dia}>{dia}</option>
+                ))}
+              </select>
+              {erros.diaVencimentoDemaisParcelas && (
+                <span className="small" style={{ color: "var(--alert)" }}>
+                  {erros.diaVencimentoDemaisParcelas}
+                </span>
+              )}
+            </div>
+            <div className="field-group">
+              <label htmlFor="transmissao-receberPropostaPorEmail">
+                Receber proposta/boleto por e-mail?
+              </label>
+              <select
+                id="transmissao-receberPropostaPorEmail"
+                className="input"
+                value={dados.desejaReceberPropostaPorEmail}
+                onChange={(e) =>
+                  up("desejaReceberPropostaPorEmail", e.target.value as "Sim" | "Não")
+                }
+              >
+                <option>Não</option>
+                <option>Sim</option>
+              </select>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="wizard-foot">
         <button className="btn btn-ghost" type="button" onClick={() => onVoltar(dados)}>
