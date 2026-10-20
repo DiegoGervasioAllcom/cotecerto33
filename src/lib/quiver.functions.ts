@@ -30,6 +30,7 @@ import {
   ocultarNumerosLongos,
   type PagamentoTransmissao,
 } from "@/lib/transmissao-pagamento";
+import { camposPagamentoTokioPayload, erroPagamentoTokio } from "@/lib/transmissao-tokio-pagamento";
 import { NIVEL_COBERTURA_OPCOES } from "@/components/venda/novo-lead/enumsCoberturas";
 import { COMISSAO_MAX, COMISSAO_MIN } from "@/components/venda/novo-lead/ajusteSeguradora.schema";
 import {
@@ -885,6 +886,12 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     // A mensagem nunca repete o valor recebido (dado financeiro/pessoal).
     const erroPagamento = erroPagamentoPorto(data.seguradora, data.formaPagamento, data.pagamento);
     if (erroPagamento) throw new Error(erroPagamento);
+    const erroPagamentoDaTokio = erroPagamentoTokio(
+      data.seguradora,
+      data.formaPagamento,
+      data.pagamento?.tokio,
+    );
+    if (erroPagamentoDaTokio) throw new Error(erroPagamentoDaTokio);
 
     const complementos = montarComplementosPayload(
       complRes.complemento,
@@ -932,6 +939,9 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       dddCelular: celular.length >= 2 ? celular.slice(0, 2) : undefined,
       diaVencimentoDemaisParcelas: data.dadosComplementares?.diaVencimentoDemaisParcelas,
       desejaReceberPropostaPorEmail: data.dadosComplementares?.desejaReceberPropostaPorEmail,
+      // Tokio (débito/cartão): titular, conta e dia de vencimento vêm do passo "Pagamento" (dado sensível,
+      // não persistido). Vem DEPOIS do dia das dadosComplementares: na Tokio aquele campo não existe.
+      ...camposPagamentoTokioPayload(data.seguradora, data.formaPagamento, data.pagamento?.tokio),
       // Endereço de correspondência — só preenchido quando o vendedor
       // desmarca "é o mesmo"; mapeamento no portal da seguradora pendente.
       mesmoEnderecoCorrespondencia: data.dadosComplementares?.mesmoEnderecoCorrespondencia,

@@ -20,6 +20,7 @@ import {
   type ContaDebito,
 } from "@/lib/transmissao-debito";
 import { validarPagador, type PagadorTransmissao } from "@/lib/transmissao-pagador";
+import type { PagamentoTokio } from "@/lib/transmissao-tokio-pagamento";
 
 /** Dados de pagamento que seguem junto da transmissão (só na Porto). */
 export type PagamentoTransmissao = {
@@ -27,6 +28,8 @@ export type PagamentoTransmissao = {
   cartao?: CartaoTransmissao;
   /** Só no "Cartão Porto Bank (Terceiros)". */
   pagador?: PagadorTransmissao;
+  /** Só na Tokio: débito (titular/conta) ou cartão (como pagar). Ver `transmissao-tokio-pagamento.ts`. */
+  tokio?: PagamentoTokio;
 };
 
 export type TipoPagamentoPorto = "debito" | "cartao" | "cartao_terceiros";

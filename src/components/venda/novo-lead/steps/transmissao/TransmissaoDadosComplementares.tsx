@@ -74,7 +74,9 @@ export function TransmissaoDadosComplementares({
         },
         diaVencimentoDemaisParcelas: "",
         desejaReceberPropostaPorEmail: "Não",
-        ...(ehTokio ? { vencimentoPrimeiraParcela: vencimentoPadraoTokio() } : {}),
+        ...(ehTokio
+          ? { vencimentoPrimeiraParcela: vencimentoPadraoTokio(new Date(), formaPagamento) }
+          : {}),
       },
   );
   const [erros, setErros] = useState<Erros>({});

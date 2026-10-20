@@ -13,6 +13,7 @@ import {
 import { TransmissaoConfirmacao } from "./TransmissaoConfirmacao";
 import { TransmissaoPagamento } from "./TransmissaoPagamento";
 import { ehDebitoEmContaPorto } from "@/lib/transmissao-debito";
+import { tipoPagamentoTokio } from "@/lib/transmissao-tokio-pagamento";
 import { type PagamentoTransmissao } from "@/lib/transmissao-pagamento";
 import { TransmissaoResultado, type ResultadoTransmissaoEstado } from "./TransmissaoResultado";
 
@@ -85,7 +86,11 @@ export function StepTransmissao({
   // Débito em conta da Porto: a Efetivação exige banco/agência/conta — passo
   // "Pagamento" próprio (dado sensível, só em memória).
   const ehDebitoPorto = ehDebitoEmContaPorto(oferta.resultado.seguradora, oferta.formaPagamento);
-  const temPassoPagamento = ehCartao || ehDebitoPorto;
+  // Tokio: débito (titular/conta) e cartão (como pagar) também têm passo próprio.
+  const temPassoPagamento =
+    ehCartao ||
+    ehDebitoPorto ||
+    tipoPagamentoTokio(oferta.resultado.seguradora, oferta.formaPagamento) !== null;
   const subs: { fase: Fase; l: string }[] = temPassoPagamento
     ? [
         { fase: "dados", l: "Dados complementares" },
