@@ -117,8 +117,8 @@ export function TransmissaoDadosTokio({ dados, erros, onChange }: Props) {
           <use href="#i-info" />
         </svg>
         <div>
-          O vencimento já vem com a data que o portal da Tokio aceita (hoje + 7 dias). Só mude se o
-          portal indicar outra data.
+          O vencimento já vem com a data que o portal da Tokio aceita (Boleto: hoje + 7 dias;
+          Débito: hoje + 8). Só mude se o portal indicar outra data.
         </div>
       </div>
 

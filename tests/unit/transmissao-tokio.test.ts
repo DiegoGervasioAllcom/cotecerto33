@@ -26,6 +26,8 @@ describe("Tokio — detecção e datas (fuso de São Paulo)", () => {
 
   it("o vencimento padrão é hoje + 7 dias", () => {
     expect(vencimentoPadraoTokio(AGORA)).toBe("26/10/2026");
+    expect(vencimentoPadraoTokio(AGORA, "Débito/PIX Aut")).toBe("27/10/2026");
+    expect(vencimentoPadraoTokio(AGORA, "Cartão de Crédito")).toBe("26/10/2026");
     expect(dataEmDiasSp(0, AGORA)).toBe("19/10/2026");
   });
 

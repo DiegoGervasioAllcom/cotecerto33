@@ -24,6 +24,8 @@ export type CamposTokioPayload = {
 
 /** O portal aceita só a data da regra dele ("deve estar entre X e Y"); observado: hoje + 7 dias. */
 export const DIAS_VENCIMENTO_TOKIO = 7;
+/** Débito: observado ao vivo (20/10/2026) hoje + 8 — o Boleto é hoje + 7. */
+export const DIAS_VENCIMENTO_TOKIO_DEBITO = 8;
 
 export function ehSeguradoraTokio(seguradora: string): boolean {
   return nomeCanonicoSeguradora(seguradora) === "tokio";
@@ -53,8 +55,9 @@ export function dataEmDiasSp(dias: number, agora: Date = new Date()): string {
   return `${g("day")}/${g("month")}/${g("year")}`;
 }
 
-export function vencimentoPadraoTokio(agora: Date = new Date()): string {
-  return dataEmDiasSp(DIAS_VENCIMENTO_TOKIO, agora);
+export function vencimentoPadraoTokio(agora: Date = new Date(), formaPagamento = ""): string {
+  const debito = /\bdeb/.test(formaPagamento.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase());
+  return dataEmDiasSp(debito ? DIAS_VENCIMENTO_TOKIO_DEBITO : DIAS_VENCIMENTO_TOKIO, agora);
 }
 
 /** Obrigatório; `DD/MM/AAAA` real e não passado (hoje em São Paulo). A mensagem nunca repete o valor. */
