@@ -169,4 +169,42 @@ describe("comissão abaixo de 20% — aprovação", () => {
     });
     expect(ins.error).not.toBeNull();
   });
+
+  it("calculo_erro: service role grava/limpa; vendedor lê mas não escreve; limite 500", async () => {
+    const c = await novaCot();
+    const id = (await solicitar(c, "HDI", 12)).data as string;
+    const w = await admin
+      .from("comissao_solicitacoes")
+      .update({ calculo_erro: "falhou", calculo_erro_em: new Date().toISOString() })
+      .eq("id", id);
+    expect(w.error).toBeNull();
+    const r = await vend.client
+      .from("comissao_solicitacoes")
+      .select("calculo_erro")
+      .eq("id", id)
+      .single();
+    expect(r.data?.calculo_erro).toBe("falhou");
+    const v = await vend.client
+      .from("comissao_solicitacoes")
+      .update({ calculo_erro: null })
+      .eq("id", id)
+      .select();
+    expect(v.error !== null || (v.data ?? []).length === 0).toBe(true);
+    expect(
+      (
+        await admin
+          .from("comissao_solicitacoes")
+          .update({ calculo_erro: "x".repeat(501) })
+          .eq("id", id)
+      ).error,
+    ).not.toBeNull();
+    expect(
+      (
+        await admin
+          .from("comissao_solicitacoes")
+          .update({ calculo_erro: null, calculo_erro_em: null })
+          .eq("id", id)
+      ).error,
+    ).toBeNull();
+  });
 });

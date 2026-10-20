@@ -14,9 +14,17 @@ type Props = {
   ajuste?: AjusteGuardado;
   /** Reabre o "Personalizar" para refazer com outro valor. */
   onRefazer: () => void;
+  /** Abre o recálculo manual desta seguradora. */
+  onRecalcular: () => void;
 };
 
-export function StatusComissaoBaixa({ cotacaoId, solicitacao, ajuste, onRefazer }: Props) {
+export function StatusComissaoBaixa({
+  cotacaoId,
+  solicitacao,
+  ajuste,
+  onRefazer,
+  onRecalcular,
+}: Props) {
   const cancelar = useCancelarComissaoBaixa(cotacaoId);
   if (!solicitacao) return null;
   const pct = fmtPct(solicitacao.comissaoPct);
@@ -37,6 +45,17 @@ export function StatusComissaoBaixa({ cotacaoId, solicitacao, ajuste, onRefazer 
   }
   if (solicitacao.status === "aprovada") {
     const calculado = ajuste?.aplicadoEm != null;
+    if (!calculado && solicitacao.calculoErro) {
+      return (
+        <div className="banner alert" role="alert" data-testid="comissao-baixa-calculo-falhou">
+          <span className="chip chip-ok">Comissão {pct}% aprovada</span> Falha ao calcular
+          automaticamente{" "}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onRecalcular}>
+            Recalcular
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="muted small" role="status" data-testid="comissao-baixa-aprovada">
         <span className="chip chip-ok">Comissão {pct}% aprovada</span>{" "}

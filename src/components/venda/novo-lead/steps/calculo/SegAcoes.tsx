@@ -158,6 +158,7 @@ export function SegAcoes({
         solicitacao={solicitacaoComissao}
         ajuste={guardado}
         onRefazer={() => setPersonalizarAberto(true)}
+        onRecalcular={() => setConfirmarRecalculo(true)}
       />
 
       {/* Os modais vão para o <body>: dentro da célula da lista comparativa eles

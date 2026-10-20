@@ -691,6 +691,21 @@ async function enviarParaQuiver(
   return { ajuste, seguradoraLinha };
 }
 
+/** Limpa a falha registrada do cálculo automático (novo sucesso/recálculo manual). */
+async function limparCalculoErroComissao(
+  admin: ReturnType<typeof getAdmin>,
+  cotacaoId: string,
+  seguradora: string,
+) {
+  const { error } = await admin
+    .from("comissao_solicitacoes")
+    .update({ calculo_erro: null, calculo_erro_em: null })
+    .eq("cotacao_id", cotacaoId)
+    .eq("seguradora", seguradora)
+    .not("calculo_erro", "is", null);
+  if (error) console.error("[quiver] falha ao limpar calculo_erro:", error.message);
+}
+
 type CalcularAposAprovacaoPayload = { solicitacaoId: string; caller_token: string };
 
 /**
@@ -742,7 +757,19 @@ export const calcularAposAprovacaoComissao = createServerFn({ method: "POST" })
       throw new Error("Ajuste da comissão aprovada não encontrado.");
     if (aj.aplicado_em) return { ok: true as const, jaAplicado: true as const };
 
-    await enviarParaQuiver(admin, sol.cotacao_id, sol.seguradora, { isolarSeguradora: true });
+    try {
+      await enviarParaQuiver(admin, sol.cotacao_id, sol.seguradora, { isolarSeguradora: true });
+    } catch (e) {
+      // Persiste a falha: o vendedor vê "Recalcular" em vez de ficar esperando.
+      const msg = (e instanceof Error ? e.message : "erro desconhecido").slice(0, 500);
+      const { error: gErr } = await admin
+        .from("comissao_solicitacoes")
+        .update({ calculo_erro: msg, calculo_erro_em: new Date().toISOString() })
+        .eq("id", sol.id);
+      if (gErr) console.error("[quiver] falha ao gravar calculo_erro:", gErr.message);
+      throw e;
+    }
+    await limparCalculoErroComissao(admin, sol.cotacao_id, sol.seguradora);
     const { error: mErr } = await admin
       .from("cotacao_seguradora_ajustes")
       .update({ aplicado_em: new Date().toISOString() })
@@ -775,6 +802,13 @@ export const enviarCotacaoQuiver = createServerFn({ method: "POST" })
       data.cotacaoId,
       data.seguradoraAjuste,
     );
+
+    if (data.seguradoraAjuste)
+      await limparCalculoErroComissao(
+        admin,
+        data.cotacaoId,
+        nomeCanonicoSeguradora(data.seguradoraAjuste),
+      );
 
     // V12.3.7: só depois do envio dar certo. Recálculo de uma seguradora marca
     // o ajuste dela como aplicado; recálculo geral marca todos como não aplicados.

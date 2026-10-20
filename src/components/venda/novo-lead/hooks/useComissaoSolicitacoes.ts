@@ -11,6 +11,7 @@ export type ComissaoSolicitacao = {
   status: "pendente" | "aprovada" | "recusada" | "cancelada";
   motivoRecusa: string | null;
   criadoEm: string;
+  calculoErro: string | null;
 };
 
 export const comissaoSolKey = (cotacaoId: string | null) =>
@@ -35,14 +36,15 @@ export function useComissaoSolicitacoes(
       const lista = query.state.data ?? {};
       const ativo = Object.entries(lista).some(
         ([k, s]) =>
-          s.status === "pendente" || (s.status === "aprovada" && ajustes[k]?.aplicadoEm == null),
+          s.status === "pendente" ||
+          (s.status === "aprovada" && ajustes[k]?.aplicadoEm == null && !s.calculoErro),
       );
       return ativo ? POLL_MS : false;
     },
     queryFn: async (): Promise<Record<string, ComissaoSolicitacao>> => {
       const { data, error } = await supabase
         .from("comissao_solicitacoes")
-        .select("id,seguradora,comissao_pct,status,motivo_recusa,criado_em")
+        .select("id,seguradora,comissao_pct,status,motivo_recusa,criado_em,calculo_erro")
         .eq("cotacao_id", cotacaoId ?? "")
         .order("criado_em", { ascending: true });
       if (error) throw new Error(error.message);
@@ -57,6 +59,7 @@ export function useComissaoSolicitacoes(
           status: r.status as ComissaoSolicitacao["status"],
           motivoRecusa: r.motivo_recusa,
           criadoEm: r.criado_em,
+          calculoErro: r.calculo_erro,
         };
       }
       return out;

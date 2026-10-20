@@ -484,6 +484,8 @@ export type Database = {
       };
       comissao_solicitacoes: {
         Row: {
+          calculo_erro: string | null;
+          calculo_erro_em: string | null;
           comissao_pct: number;
           cotacao_id: string;
           criado_em: string;
@@ -498,6 +500,8 @@ export type Database = {
           status: string;
         };
         Insert: {
+          calculo_erro?: string | null;
+          calculo_erro_em?: string | null;
           comissao_pct: number;
           cotacao_id: string;
           criado_em?: string;
@@ -512,6 +516,8 @@ export type Database = {
           status?: string;
         };
         Update: {
+          calculo_erro?: string | null;
+          calculo_erro_em?: string | null;
           comissao_pct?: number;
           cotacao_id?: string;
           criado_em?: string;
