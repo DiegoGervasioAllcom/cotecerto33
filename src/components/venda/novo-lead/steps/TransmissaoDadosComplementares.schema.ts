@@ -57,6 +57,8 @@ const camposBase = z.object({
   // passam de 100 caracteres — o maior tem 137). Ver `RAMOS_ATIVIDADE_PORTO`.
   ramoAtividade: z.string().trim().optional(),
   pessoaPoliticamenteExposta: z.enum(PEP_PORTO).optional(),
+  // Só Tokio: tipo do logradouro deduzido do endereço do CEP (Rua, Avenida…); o portal nem sempre o preenche sozinho.
+  tipoLogradouro: z.string().trim().max(40).optional(),
   // Telefones FIXOS opcionais (só Porto; ver `@/lib/telefone-fixo`). Vazio é válido.
   dddTelefoneResidencial: z.string().optional(),
   telefoneResidencial: z.string().optional(),

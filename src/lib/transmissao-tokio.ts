@@ -13,6 +13,8 @@ export type DadosTokio = {
   // Telefone residencial FIXO (opcional): vazio = o robô repete o celular do segurado (o portal exige o campo).
   dddTelefoneResidencial?: string;
   telefoneResidencial?: string;
+  /** Tipo do logradouro deduzido do endereço do CEP (ver `tipoLogradouroDoEndereco`). */
+  tipoLogradouro?: string;
 };
 
 export type CamposTokioPayload = {
@@ -20,6 +22,7 @@ export type CamposTokioPayload = {
   pessoaPoliticamenteExposta?: string;
   vencimentoPrimeiraParcela?: string;
   telefoneResidencial?: TelefoneFixo;
+  tipoLogradouro?: string;
 };
 
 /** O portal aceita só a data da regra dele ("deve estar entre X e Y"); observado: hoje + 7 dias. */
@@ -106,6 +109,43 @@ export function erroDadosTokio(
   );
 }
 
+const TIPOS_LOGRADOURO: Record<string, string> = {
+  rua: "Rua",
+  r: "Rua",
+  avenida: "Avenida",
+  av: "Avenida",
+  travessa: "Travessa",
+  tv: "Travessa",
+  trav: "Travessa",
+  alameda: "Alameda",
+  al: "Alameda",
+  estrada: "Estrada",
+  estr: "Estrada",
+  rodovia: "Rodovia",
+  rod: "Rodovia",
+  praca: "Praça",
+  pc: "Praça",
+  pca: "Praça",
+  largo: "Largo",
+  viela: "Viela",
+  beco: "Beco",
+};
+
+/**
+ * Tipo do logradouro a partir do endereço do CEP ("Rua das Flores" → "Rua"). `undefined` quando a primeira palavra
+ * não é um tipo conhecido — o robô então tenta deduzir pelo portal e, se não der, o portal cobra o campo.
+ */
+export function tipoLogradouroDoEndereco(logradouro: string | undefined): string | undefined {
+  const primeira = (logradouro ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)[0]
+    ?.replace(/\.$/, "");
+  return primeira ? TIPOS_LOGRADOURO[primeira] : undefined;
+}
+
 /** Campos extras do payload — só para a Tokio. Vazio/inválido não vai (o robô aplica seus padrões). */
 export function camposTokioPayload(
   seguradora: string,
@@ -121,5 +161,6 @@ export function camposTokioPayload(
   }
   const residencial = telefoneFixoPayload(dados.dddTelefoneResidencial, dados.telefoneResidencial);
   if (residencial) campos.telefoneResidencial = residencial;
+  if (dados.tipoLogradouro?.trim()) campos.tipoLogradouro = dados.tipoLogradouro.trim();
   return campos;
 }
