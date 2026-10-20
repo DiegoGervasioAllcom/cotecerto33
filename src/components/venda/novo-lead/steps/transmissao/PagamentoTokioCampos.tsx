@@ -154,12 +154,17 @@ export function PagamentoTokioDebitoCampos({ valor, erros, onChange }: PropsDebi
           ))}
         </select>
       </CampoPagamento>
-      <div className="field-group">
-        <label htmlFor="tokio-debito-primeira">Primeira parcela no débito?</label>
+      <CampoPagamento
+        id="tokio-debito-primeira"
+        label="Pagamento da 1ª parcela no débito?"
+        erro={erros.primeiraParcelaDebito}
+      >
         <select
           id="tokio-debito-primeira"
           className="input"
           value={valor.primeiraParcelaDebito}
+          aria-invalid={Boolean(erros.primeiraParcelaDebito)}
+          aria-describedby={erros.primeiraParcelaDebito ? "tokio-debito-primeira-erro" : undefined}
           onChange={(e) =>
             onChange(
               "primeiraParcelaDebito",
@@ -167,11 +172,11 @@ export function PagamentoTokioDebitoCampos({ valor, erros, onChange }: PropsDebi
             )
           }
         >
-          <option value="">Padrão do portal</option>
+          <option value="">Selecione</option>
           <option>Sim</option>
           <option>Não</option>
         </select>
-      </div>
+      </CampoPagamento>
       <div className="field-group" style={{ gridColumn: "span 3" }}>
         <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
           <input

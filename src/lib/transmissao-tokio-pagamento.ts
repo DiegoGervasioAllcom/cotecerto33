@@ -152,12 +152,8 @@ export function validarDebitoTokio(debito: Partial<DebitoTokio> | undefined): Er
     e.parentesco = "Informe o parentesco do titular com o segurado.";
   }
   if (!diaValido(d.diaVencimento)) e.diaVencimento = "Escolha o dia de vencimento.";
-  if (
-    d.primeiraParcelaDebito &&
-    d.primeiraParcelaDebito !== "Sim" &&
-    d.primeiraParcelaDebito !== "Não"
-  ) {
-    e.primeiraParcelaDebito = "Escolha Sim ou Não.";
+  if (d.primeiraParcelaDebito !== "Sim" && d.primeiraParcelaDebito !== "Não") {
+    e.primeiraParcelaDebito = "Informe se a 1ª parcela será paga no débito.";
   }
   if (d.ciente !== true)
     e.ciente = "Confirme a ciência: o CPF/CNPJ deve pertencer ao titular da conta.";
@@ -237,7 +233,7 @@ export function camposPagamentoTokioPayload(
         parentesco: d.parentesco,
       },
       cienteTitularConta: d.ciente === true,
-      ...(d.primeiraParcelaDebito ? { debitoPrimeiraParcela: d.primeiraParcelaDebito } : {}),
+      debitoPrimeiraParcela: d.primeiraParcelaDebito as "Sim" | "Não",
       diaVencimentoDemaisParcelas: d.diaVencimento.trim(),
     };
   }

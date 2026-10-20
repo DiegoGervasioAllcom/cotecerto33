@@ -19,7 +19,7 @@ const debito: DebitoTokio = {
   titularDocumento: "52998224725",
   parentesco: "O Próprio Segurado",
   diaVencimento: "10",
-  primeiraParcelaDebito: "",
+  primeiraParcelaDebito: "Não",
   ciente: true,
 };
 const cartao: CartaoTokio = {
@@ -73,6 +73,11 @@ describe("validarDebitoTokio", () => {
       parentesco: "Tio",
     });
     expect(Object.keys(e).sort()).toEqual(["agencia", "diaVencimento", "parentesco"]);
+  });
+  it("exige a resposta da 1ª parcela no débito (o portal cobra)", () => {
+    expect(
+      validarDebitoTokio({ ...debito, primeiraParcelaDebito: "" }).primeiraParcelaDebito,
+    ).toBeTruthy();
   });
   it("não repete o valor recebido nas mensagens", () => {
     const e = validarDebitoTokio({ ...debito, conta: "ABC", titularDocumento: "123" });
