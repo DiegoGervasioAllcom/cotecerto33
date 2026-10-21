@@ -10,6 +10,7 @@
 // lados) É a única camada de segurança deste endpoint — nunca remover essa
 // checagem.
 import { createClient } from "@supabase/supabase-js";
+import { CALCULO_SEQ_FINAL } from "@/lib/calculo-etapas";
 
 export const QUIVER_WEBHOOK_PATH = "/api/webhooks/quiver";
 
@@ -60,6 +61,21 @@ export async function handleQuiverWebhook(request: Request): Promise<Response> {
     console.error("[quiver-webhook] Falha ao registrar prêmios:", error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
+
+  // Fecha o ciclo de progresso (best-effort): o desfecho real vive em cotacoes.status.
+  const { data: cot } = await admin
+    .from("cotacoes")
+    .select("status,quiver_mensagem")
+    .eq("id", cotacaoId)
+    .maybeSingle();
+  const falhou = cot?.status === "erro_quiver";
+  const { error: etapaError } = await admin.rpc("registrar_calculo_etapa", {
+    p_cotacao_id: cotacaoId,
+    p_etapa: falhou ? "erro" : "concluido",
+    p_seq: CALCULO_SEQ_FINAL,
+    ...(falhou ? { p_erro: (cot?.quiver_mensagem ?? "").slice(0, 500) || undefined } : {}),
+  });
+  if (etapaError) console.error("[quiver-webhook] Falha ao fechar etapa:", etapaError.message);
 
   return Response.json({ ok: true });
 }

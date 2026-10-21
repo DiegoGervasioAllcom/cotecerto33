@@ -21,6 +21,9 @@ import {
   type OrdemCalculo,
   type SemRetornoItem,
 } from "@/components/venda/cotacoes/quiver-resultado";
+import { CalculoEspera } from "@/components/calculo/CalculoCard";
+import { useCalculoProgresso } from "@/hooks/useCalculoProgresso";
+import { useSeguradorasDoCalculo } from "@/hooks/useSeguradorasDoCalculo";
 import { CalculoContexto } from "./calculo/CalculoContexto";
 import { CalculoFiltroSecao } from "./calculo/CalculoFiltroSecao";
 import { RecalculoGeralAvisoModal } from "./calculo/RecalculoGeralAvisoModal";
@@ -87,7 +90,11 @@ export function StepCalculo({
     avisoRecalculoGeral,
     restaurarSelecao,
   } = descontoAcoes;
+  const progressoMap = useCalculoProgresso(calculando && cotacaoId ? [cotacaoId] : []);
+  const progresso = cotacaoId ? progressoMap.get(cotacaoId) : undefined;
+  const nSeguradorasCalculo = useSeguradorasDoCalculo(cotacaoId, calculando, progresso?.etapa);
   const [avisoAberto, setAvisoAberto] = useState(false);
+
   // "Recalcular" da barra: se o último recálculo foi de uma cia só, pergunta antes.
   function onRecalcularBarra() {
     if (avisoRecalculoGeral) setAvisoAberto(true);
@@ -275,14 +282,7 @@ export function StepCalculo({
         />
       )}
 
-      {calculando && (
-        <div style={{ padding: "12px 0", marginBottom: 8 }}>
-          <span className="muted small">
-            Enviamos a cotação para as seguradoras — o resultado chega em alguns minutos, sem
-            precisar ficar nesta tela.
-          </span>
-        </div>
-      )}
+      {calculando && <CalculoEspera v={progresso} nSeguradoras={nSeguradorasCalculo} />}
 
       {resultados.length === 0 && !calculando && (
         <div style={{ padding: "12px 0", marginBottom: 8 }}>

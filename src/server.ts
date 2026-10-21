@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { QUIVER_WEBHOOK_PATH, handleQuiverWebhook } from "./lib/quiver-webhook";
+import { QUIVER_ETAPA_WEBHOOK_PATH, handleQuiverEtapaWebhook } from "./lib/quiver-etapa-webhook";
 import {
   QUIVER_TRANSMISSAO_WEBHOOK_PATH,
   handleQuiverTransmissaoWebhook,
@@ -52,6 +53,9 @@ export default {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === QUIVER_WEBHOOK_PATH) {
       return handleQuiverWebhook(request);
+    }
+    if (request.method === "POST" && url.pathname === QUIVER_ETAPA_WEBHOOK_PATH) {
+      return handleQuiverEtapaWebhook(request);
     }
     if (request.method === "POST" && url.pathname === QUIVER_TRANSMISSAO_WEBHOOK_PATH) {
       return handleQuiverTransmissaoWebhook(request);

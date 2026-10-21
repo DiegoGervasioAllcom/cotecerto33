@@ -26,6 +26,21 @@ export const SEGURADORA_QUIVER: Record<string, string> = {
 };
 
 /**
+ * Quantas seguradoras o robô de fato consulta para a seleção salva — mesmo mapeamento
+ * e filtro de moto do envio ao Quiver (`quiver.functions.ts`). 0 = sem seleção válida
+ * (o robô consulta todas por padrão).
+ */
+export function contarSeguradorasConsultadas(
+  sel: string[] | null | undefined,
+  ramo: string | null | undefined,
+): number {
+  const ehMoto = ramo === "Moto";
+  return (sel ?? [])
+    .map((s) => SEGURADORA_QUIVER[s.trim().toLowerCase()])
+    .filter((s): s is string => !!s && (!ehMoto || SEGURADORAS_MOTO.has(s))).length;
+}
+
+/**
  * Seguradoras que existem no portal para o item Moto (Mult Moto), mapeado ao vivo em
  * 08/10/2026. As demais não aparecem no formulário de moto do Quiver.
  */
