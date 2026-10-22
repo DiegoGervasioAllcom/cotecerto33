@@ -6,6 +6,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { CALCULO_ETAPAS, CALCULO_ETAPA_SEQ } from "@/lib/calculo-etapas";
+import { requestAutenticado } from "@/lib/webhook-auth";
 
 export const QUIVER_ETAPA_WEBHOOK_PATH = "/api/webhooks/quiver-etapa";
 
@@ -37,10 +38,7 @@ export async function handleQuiverEtapaWebhook(request: Request): Promise<Respon
     return Response.json({ error: "Webhook não configurado." }, { status: 500 });
   }
 
-  if (
-    request.headers.get("x-client-key") !== expectedKey ||
-    request.headers.get("x-client-secret") !== expectedSecret
-  ) {
+  if (!requestAutenticado(request, { key: expectedKey, secret: expectedSecret })) {
     return Response.json({ error: "Credenciais inválidas." }, { status: 401 });
   }
 
