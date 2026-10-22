@@ -688,10 +688,37 @@ desligado recebe "Acesso desativado" e pendente recebe vazio. Quando houver um
 supervisor com equipe, fazer um smoke test pelo navegador (logar como ele e abrir
 uma cotação de um vendedor dele).
 
-Pendente, fora desta mudança: pela definição, as policies `_rw` das tabelas filhas
-de cotação são `FOR ALL` com `USING` que libera a mesma empresa (o `WITH CHECK` exige
-ser o responsável, mas o `DELETE` só avalia o `USING`), então um colega da mesma
-empresa consegue apagar linhas delas (risco anterior a esta migration).
+Pendência registrada nessa data (resolvida na entrada seguinte): pela definição,
+as policies `_rw` das tabelas filhas de cotação eram `FOR ALL` com `USING` que
+liberava a mesma empresa (o `WITH CHECK` exige ser o responsável, mas o `DELETE`
+só avalia o `USING`), então um colega da mesma empresa conseguia apagar linhas
+delas (risco anterior a esta migration).
+
+**22/10/2026 — `DELETE` negado por client nas tabelas filhas de cotação (PR #306):**
+migration `20261022190139_cotacao_filhas_delete_somente_definer` aplicada pelo
+usuário em produção, num script único em transação (`psql -v ON_ERROR_STOP=1
+--single-transaction`, com `lock_timeout` de 5 s, o arquivo + o `insert` em
+`supabase_migrations.schema_migrations`). Antes de aplicar, conferido que cada uma
+das 6 tabelas (`cotacao_coberturas`, `cotacao_perfil`, `cotacao_premios`,
+`cotacao_segurado`, `cotacao_seguro`, `cotacao_veiculo`) tinha exatamente
+`<tabela>_rw` (`ALL`), `<tabela>_select_interno_matriz` e
+`<tabela>_select_supervisor_rede`, sem policy criada à mão. A migration remove a
+`_rw` e a recria como `<tabela>_select`, `<tabela>_insert` e `<tabela>_update` com as
+mesmas expressões de antes (leitura, insert e update inalterados), **sem policy de
+`DELETE`**: nenhum perfil apaga por client (dono, colega, matriz, master, supervisor e
+coordenador). Continuam apagando as funções `SECURITY DEFINER` (`salvar_cotacao_rascunho`,
+`registrar_premios_quiver`) e o `ON DELETE CASCADE` de `cotacoes`; o app não faz
+`.delete()` nessas tabelas. Resultado: cada tabela com `_insert`, `_select`,
+`_select_interno_matriz`, `_select_supervisor_rede` e `_update`; histórico `1`, `0`
+policies `ALL` ou `DELETE` e a RLS ligada nas 6 (`1|0|6`). Teste de comportamento
+com `rollback` (como o responsável de uma cotação existente): `dono_le` igual ao total
+de linhas do segurado e `dono_apagou = 0`. `supabase-rest` reiniciado. Smoke test
+pelo navegador logo depois, com uma cotação real (salvar o rascunho, calcular e avançar
+uma etapa), sem erro: `salvar_cotacao_rascunho` e `registrar_premios_quiver` seguem
+apagando e regravando por dentro. A migration não exige deploy de app nem mudança no
+robô. A negação vem da RLS (sem policy de `DELETE`), independente dos privilégios de
+tabela: no banco local o `authenticated` mantém o privilégio `DELETE` nessas tabelas e
+a migration não o altera; revogá-lo seria defesa em profundidade, ainda não feita.
 
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
