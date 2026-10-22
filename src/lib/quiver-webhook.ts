@@ -58,7 +58,7 @@ export async function handleQuiverWebhook(request: Request): Promise<Response> {
   });
   if (error) {
     console.error("[quiver-webhook] Falha ao registrar prêmios:", error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: "Falha ao registrar prêmios." }, { status: 500 });
   }
 
   // Fecha o ciclo de progresso (best-effort): o desfecho real vive em cotacoes.status.

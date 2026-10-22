@@ -148,9 +148,13 @@ describe("webhook de cotação: fechamento da etapa", () => {
   });
 
   test("falha em registrar prêmios responde 500 e NÃO fecha a etapa", async () => {
-    rpc.mockResolvedValueOnce({ data: null, error: { message: "falhou" } });
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "relation secreta violou fk_x" } });
     const res = await handleQuiverWebhook(req({ cotacaoId: ID }));
     expect(res.status).toBe(500);
+    // a mensagem do banco fica só no log do servidor; o robô recebe um texto genérico
+    const txt = await res.text();
+    expect(txt).not.toContain("secreta");
+    expect(JSON.parse(txt)).toEqual({ error: "Falha ao registrar prêmios." });
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 });
