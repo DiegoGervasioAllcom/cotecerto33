@@ -102,7 +102,20 @@ jobs:
 
       - name: Start Supabase (subconjunto de serviços)
         run: |
-          supabase start --exclude edge-runtime,imgproxy,realtime,studio,vector
+          # Retry: o pull anônimo de imagens pode falhar com "Rate exceeded".
+          for attempt in 1 2 3; do
+            if supabase start --exclude edge-runtime,imgproxy,realtime,studio,vector; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              wait=$((attempt * 20))
+              echo "supabase start falhou (tentativa $attempt/3); nova tentativa em ${wait}s"
+              supabase stop --no-backup || true
+              sleep "$wait"
+            fi
+          done
+          echo "supabase start falhou após 3 tentativas"
+          exit 1
 
       - name: Exportar env do Supabase local
         run: |
@@ -170,7 +183,20 @@ jobs:
 
       - name: Start Supabase (subconjunto de serviços)
         run: |
-          supabase start --exclude edge-runtime,imgproxy,realtime,studio,vector
+          # Retry: o pull anônimo de imagens pode falhar com "Rate exceeded".
+          for attempt in 1 2 3; do
+            if supabase start --exclude edge-runtime,imgproxy,realtime,studio,vector; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              wait=$((attempt * 20))
+              echo "supabase start falhou (tentativa $attempt/3); nova tentativa em ${wait}s"
+              supabase stop --no-backup || true
+              sleep "$wait"
+            fi
+          done
+          echo "supabase start falhou após 3 tentativas"
+          exit 1
 
       - name: Aplicar migrations + seed
         run: supabase db reset
@@ -204,8 +230,20 @@ jobs:
           echo "SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_KEY=ci-teste-key" >> "$GITHUB_ENV"
           echo "SELF_QUIVER_TRANSMISSAO_WEBHOOK_CLIENT_SECRET=ci-teste-secret" >> "$GITHUB_ENV"
 
+      - name: Cache do Chromium do Playwright
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
       - name: Install Playwright browsers (chromium)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: bunx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
 
       - name: E2E tests
         run: bun run test:e2e
