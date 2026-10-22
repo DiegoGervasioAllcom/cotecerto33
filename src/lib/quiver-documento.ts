@@ -1,7 +1,8 @@
 // Lógica pura do documento (PDF) da proposta capturado do portal Quiver
 // (V12.4.7 fatia 2). Sem I/O: validação do payload do webhook, conferência
 // do PDF, autenticação em tempo constante e mapeamento de erros para o front.
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash } from "node:crypto";
+import { safeEqual } from "@/lib/webhook-auth";
 import { z } from "zod";
 
 export const QUIVER_DOCUMENTO_WEBHOOK_PATH = "/api/webhooks/quiver-documento";
@@ -93,22 +94,8 @@ export function validarPdf(
   return { ok: true, bytes };
 }
 
-/** Comparação em tempo constante (hash dos dois lados normaliza o tamanho). */
-export function safeEqual(a: string, b: string): boolean {
-  const ha = createHash("sha256").update(a).digest();
-  const hb = createHash("sha256").update(b).digest();
-  return timingSafeEqual(ha, hb);
-}
-
-export function credenciaisConferem(
-  got: { key: string | null; secret: string | null },
-  expected: { key: string; secret: string },
-): boolean {
-  // Sem curto-circuito: sempre compara os dois.
-  const k = safeEqual(got.key ?? "", expected.key);
-  const s = safeEqual(got.secret ?? "", expected.secret);
-  return k && s && got.key !== null && got.secret !== null;
-}
+// Autenticação em tempo constante vive em webhook-auth.ts (compartilhada pelos webhooks).
+export { safeEqual, credenciaisConferem } from "@/lib/webhook-auth";
 
 export function storagePathProposta(empresaId: string, propostaId: string): string {
   return `${empresaId}/${propostaId}/proposta.pdf`;

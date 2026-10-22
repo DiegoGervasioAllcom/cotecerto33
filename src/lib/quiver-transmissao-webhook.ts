@@ -13,6 +13,7 @@
 // de cotação (SELF_QUIVER_WEBHOOK_CLIENT_KEY/SECRET) — nunca reaproveitar.
 import { createClient } from "@supabase/supabase-js";
 import { MOTIVO_SIMULACAO, montarMensagemSimulacao } from "@/lib/transmissao-simulacao";
+import { requestAutenticado } from "@/lib/webhook-auth";
 
 export const QUIVER_TRANSMISSAO_WEBHOOK_PATH = "/api/webhooks/quiver-transmissao";
 
@@ -38,9 +39,7 @@ export async function handleQuiverTransmissaoWebhook(request: Request): Promise<
     return Response.json({ error: "Webhook não configurado." }, { status: 500 });
   }
 
-  const gotKey = request.headers.get("x-client-key");
-  const gotSecret = request.headers.get("x-client-secret");
-  if (gotKey !== expectedKey || gotSecret !== expectedSecret) {
+  if (!requestAutenticado(request, { key: expectedKey, secret: expectedSecret })) {
     return Response.json({ error: "Credenciais inválidas." }, { status: 401 });
   }
 

@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { admin, criarPersonaComEmpresa, type Db } from "../helpers/supabase";
+import {
+  admin,
+  anonClient,
+  criarPersonaComEmpresa,
+  loginMatriz,
+  type Db,
+} from "../helpers/supabase";
 
 describe("cotacao_calculo_progresso — RPC + RLS", () => {
   let vendA: Db;
@@ -85,5 +91,50 @@ describe("cotacao_calculo_progresso — RPC + RLS", () => {
       .eq("cotacao_id", cotA)
       .select();
     expect(ins.data ?? []).toHaveLength(0);
+  });
+
+  it("NEGATIVO: anon não lê, não escreve e não executa a RPC", async () => {
+    await reg(cotA, "login", 1);
+    const anon = anonClient();
+    const sel = await anon.from("cotacao_calculo_progresso").select("cotacao_id");
+    // grant select é só de authenticated: anon recebe erro de permissão (42501)
+    expect(sel.data ?? []).toHaveLength(0);
+    expect(sel.error?.code).toBe("42501");
+    const ins = await anon
+      .from("cotacao_calculo_progresso")
+      .insert({ cotacao_id: cotB, etapa: "login", seq: 1 });
+    expect(ins.error).not.toBeNull();
+    const upd = await anon
+      .from("cotacao_calculo_progresso")
+      .update({ etapa: "erro" })
+      .eq("cotacao_id", cotA)
+      .select();
+    expect(upd.data ?? []).toHaveLength(0);
+    const del = await anon
+      .from("cotacao_calculo_progresso")
+      .delete()
+      .eq("cotacao_id", cotA)
+      .select();
+    expect(del.data ?? []).toHaveLength(0);
+    // a linha segue intacta depois do update/delete anônimos
+    expect((await ler(cotA))?.etapa).toBe("login");
+    const rpc = await anon.rpc("registrar_calculo_etapa", {
+      p_cotacao_id: cotA,
+      p_etapa: "veiculo",
+      p_seq: 99,
+    });
+    expect(rpc.error).not.toBeNull();
+    expect((await ler(cotA))?.seq).not.toBe(99);
+  });
+
+  it("perfil sem visibilidade da cotação não vê o progresso; dono e matriz veem", async () => {
+    await reg(cotA, "login", 1);
+    const consulta = (c: Db) =>
+      c.from("cotacao_calculo_progresso").select("cotacao_id").eq("cotacao_id", cotA);
+    // vendB é de outra empresa/rede, sem relação com o dono de cotA
+    expect((await consulta(vendB)).data ?? []).toHaveLength(0);
+    expect((await consulta(vendA)).data).toEqual([{ cotacao_id: cotA }]);
+    const matriz = await loginMatriz();
+    expect((await consulta(matriz)).data).toEqual([{ cotacao_id: cotA }]);
   });
 });
