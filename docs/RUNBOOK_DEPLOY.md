@@ -664,6 +664,35 @@ do CI levou 13 min 14 s num PR bom e estourou os 15 min no #299 por lentidão do
 runner (Chromium levou ~7 min e o pull de imagens do Supabase teve `Rate
 exceeded`), sem teste falhando; por isso o limite subiu para 25 min no #300.
 
+**22/10/2026 — supervisor e coordenador leem as cotações da rede (PR #303):**
+migration `20261022162940_cot_select_supervisor_coordenador_rede` aplicada pelo
+usuário em produção, seguindo o roteiro desta seção (arquivo + `insert` em
+`supabase_migrations.schema_migrations`). A migration recria a `cot_select` (os
+5 ramos anteriores idênticos, mais `supervisor` e `coordenador` com `empresa_id
+in empresas_visiveis(auth.uid())`) e cria 7 policies `FOR SELECT`
+`<tabela>_select_supervisor_rede` em `cotacao_coberturas`, `cotacao_perfil`,
+`cotacao_premios`, `cotacao_segurado`, `cotacao_seguro`, `cotacao_veiculo` e
+`cotacao_transmissoes`. Só leitura: as policies `_rw` e as RPCs de escrita não
+mudam; o supervisor e o coordenador passam a ler também os dados do segurado
+(CPF, telefone, endereço) da subárvore. Validação em produção: histórico `1`,
+`7` policies novas, `0` que não sejam `SELECT` e a `cot_select` com os dois
+ramos novos (`1|7|0|t`). `supabase-rest` reiniciado. A migration não exige
+deploy de app nem mudança no robô.
+
+Teste de comportamento em produção: não aplicável em 22/10/2026. Os dois
+supervisores ativos não tinham subordinado direto ativo (nem cotações de subordinados) e não havia
+coordenador ativo, então a regra nova não muda o que alguém enxerga hoje. A prova
+da regra são os 9 testes de RLS do CI (`tests/db/rls-cotacoes-supervisor-rede.test.ts`):
+supervisor da cadeia lê, o de outra cadeia não, ninguém ganha escrita, supervisor
+desligado recebe "Acesso desativado" e pendente recebe vazio. Quando houver um
+supervisor com equipe, fazer um smoke test pelo navegador (logar como ele e abrir
+uma cotação de um vendedor dele).
+
+Pendente, fora desta mudança: pela definição, as policies `_rw` das tabelas filhas
+de cotação são `FOR ALL` com `USING` que libera a mesma empresa (o `WITH CHECK` exige
+ser o responsável, mas o `DELETE` só avalia o `USING`), então um colega da mesma
+empresa consegue apagar linhas delas (risco anterior a esta migration).
+
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
