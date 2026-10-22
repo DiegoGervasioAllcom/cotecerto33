@@ -73,7 +73,7 @@ export async function handleQuiverTransmissaoWebhook(request: Request): Promise<
 
   if (buscaError) {
     console.error("[quiver-transmissao-webhook] Falha ao buscar tentativa:", buscaError.message);
-    return Response.json({ error: buscaError.message }, { status: 500 });
+    return Response.json({ error: "Falha ao buscar a tentativa." }, { status: 500 });
   }
 
   if (!tentativa) {
@@ -119,7 +119,7 @@ export async function handleQuiverTransmissaoWebhook(request: Request): Promise<
       "[quiver-transmissao-webhook] Falha ao registrar resultado da transmissão:",
       error.message,
     );
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: "Falha ao registrar o resultado." }, { status: 500 });
   }
 
   return Response.json({ ok: true });
