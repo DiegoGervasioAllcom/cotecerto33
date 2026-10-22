@@ -66,7 +66,6 @@ jobs:
     timeout-minutes: 25
     permissions:
       contents: read
-      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,25 +100,9 @@ jobs:
             exit 1
           fi
 
-      # O pull anônimo da public.ecr.aws (e do ghcr.io) estoura a cota nos runners
-      # ("toomanyrequests: Data limit exceeded"). Autenticado no ghcr.io com o
-      # GITHUB_TOKEN o limite é bem maior, e as imagens do Supabase são públicas lá.
-      - name: Login no GHCR (pull autenticado das imagens do Supabase)
-        # Em PR de fork/Dependabot o token é reduzido: sem login o pull cai no limite
-        # anônimo (o problema de antes), mas o job ainda tem chance de passar.
-        continue-on-error: true
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Start Supabase (subconjunto de serviços)
-        env:
-          # Pula a ECR (cota esgotada) e puxa direto do ghcr.io/supabase.
-          SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
         run: |
-          # Retry: o pull de imagens ainda pode falhar de forma transitória.
+          # Retry: o pull anônimo de imagens pode falhar com "Rate exceeded".
           for attempt in 1 2 3; do
             if supabase start --exclude edge-runtime,imgproxy,realtime,studio,vector; then
               exit 0
@@ -164,7 +147,6 @@ jobs:
     timeout-minutes: 25
     permissions:
       contents: read
-      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -199,25 +181,9 @@ jobs:
             exit 1
           fi
 
-      # O pull anônimo da public.ecr.aws (e do ghcr.io) estoura a cota nos runners
-      # ("toomanyrequests: Data limit exceeded"). Autenticado no ghcr.io com o
-      # GITHUB_TOKEN o limite é bem maior, e as imagens do Supabase são públicas lá.
-      - name: Login no GHCR (pull autenticado das imagens do Supabase)
-        # Em PR de fork/Dependabot o token é reduzido: sem login o pull cai no limite
-        # anônimo (o problema de antes), mas o job ainda tem chance de passar.
-        continue-on-error: true
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Start Supabase (subconjunto de serviços)
-        env:
-          # Pula a ECR (cota esgotada) e puxa direto do ghcr.io/supabase.
-          SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
         run: |
-          # Retry: o pull de imagens ainda pode falhar de forma transitória.
+          # Retry: o pull anônimo de imagens pode falhar com "Rate exceeded".
           for attempt in 1 2 3; do
             if supabase start --exclude edge-runtime,imgproxy,realtime,studio,vector; then
               exit 0
