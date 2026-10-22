@@ -34,6 +34,8 @@
   /* Frente 3 V12 (7a · Impressão de cotação) — trazidas byte a byte do bloco
      `:root` do protótipo V12 (linhas ~27-39), só as que faltavam. */
   --fs-md: 13px;
+  /* V12 — título da tela de espera (`.cc-load-t`), faltava aqui. */
+  --fs-3xl: 22px;
   --cool-50: #f4f6f8;
   --cream-border: #f0e6c2;
   --gold-ink: #8a6d1a;
@@ -6148,3 +6150,34 @@ tr.foco-pisca > td{animation:focoPisca 2.2s ease-out}
 .seg-row-fields .field-group label{font-size:var(--fs-xs);color:var(--muted);font-weight:600}
 .seg-row-fields .input{height:36px;font-size:var(--fs-sm)}
 @media (max-width:1100px){.seg-row-fields{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== TELA DE ESPERA — símbolo com a onda amarela varrendo ===== */
+.cc-load{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;background:rgba(247,248,249,.94);backdrop-filter:blur(4px);animation:fadein .18s}
+.cc-sym{position:relative;aspect-ratio:150/140;margin-bottom:18px}
+.cc-sym img{position:absolute;inset:0;width:100%;height:auto}
+.cc-sym .sym-c{animation:ccPulso 2.2s ease-in-out infinite}
+.cc-sym .sym-a{
+  -webkit-mask-image:linear-gradient(105deg,transparent 18%,#000 40%,#000 55%,transparent 78%);
+          mask-image:linear-gradient(105deg,transparent 18%,#000 40%,#000 55%,transparent 78%);
+  -webkit-mask-size:280% 100%;mask-size:280% 100%;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  animation:ccOnda 2.6s linear infinite}
+@keyframes ccOnda{from{-webkit-mask-position:190% 0;mask-position:190% 0}
+                  to{-webkit-mask-position:-90% 0;mask-position:-90% 0}}
+@keyframes ccPulso{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:1;transform:scale(1.035)}}
+.cc-load-t{font-size:var(--fs-3xl);font-weight:800;color:var(--slate);letter-spacing:-.01em}
+.cc-load-s{font-size:var(--fs-md);color:var(--muted);max-width:340px;text-align:center;line-height:1.5;margin-bottom:20px}
+.cc-passos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;min-width:270px}
+.cc-passos li{display:flex;align-items:center;gap:10px;font-size:var(--fs-sm);color:var(--muted);opacity:.45;transition:all .3s}
+.cc-passos li .cp-ic{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);flex:none;transition:all .3s}
+.cc-passos li.agora{opacity:1;color:var(--slate);font-weight:600}
+.cc-passos li.agora .cp-ic{border-color:var(--yellow);border-top-color:transparent;animation:ccGira .9s linear infinite}
+.cc-passos li.ok{opacity:1;color:var(--slate)}
+.cc-passos li.ok .cp-ic{background:var(--yellow);border-color:var(--yellow);animation:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232F3D48' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'><path d='m5 13 4 4L19 7'/></svg>");
+  background-size:11px;background-repeat:no-repeat;background-position:center}
+@keyframes ccGira{to{transform:rotate(360deg)}}
+.cc-cancel{margin-top:24px;background:none;border:0;color:var(--muted);font-size:var(--fs-sm);font-weight:600;
+  cursor:pointer;text-decoration:underline;padding:6px 12px}
+.cc-cancel:hover{color:var(--slate)}

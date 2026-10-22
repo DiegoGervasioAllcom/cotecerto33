@@ -1040,6 +1040,48 @@ export type Database = {
           },
         ];
       };
+      cotacao_calculo_progresso: {
+        Row: {
+          atualizado_em: string;
+          cotacao_id: string;
+          erro: string | null;
+          etapa: string;
+          iniciado_em: string;
+          seq: number;
+        };
+        Insert: {
+          atualizado_em?: string;
+          cotacao_id: string;
+          erro?: string | null;
+          etapa: string;
+          iniciado_em?: string;
+          seq: number;
+        };
+        Update: {
+          atualizado_em?: string;
+          cotacao_id?: string;
+          erro?: string | null;
+          etapa?: string;
+          iniciado_em?: string;
+          seq?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cotacao_calculo_progresso_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: true;
+            referencedRelation: "cotacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cotacao_calculo_progresso_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: true;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
+        ];
+      };
       cotacao_coberturas: {
         Row: {
           app_invalidez: string | null;
@@ -5820,6 +5862,15 @@ export type Database = {
         Returns: undefined;
       };
       reenviar_link_acesso: { Args: { p_empresa_id: string }; Returns: string };
+      registrar_calculo_etapa: {
+        Args: {
+          p_cotacao_id: string;
+          p_erro?: string;
+          p_etapa: string;
+          p_seq: number;
+        };
+        Returns: boolean;
+      };
       registrar_documento_proposta: {
         Args: {
           p_cotacao_id: string;
