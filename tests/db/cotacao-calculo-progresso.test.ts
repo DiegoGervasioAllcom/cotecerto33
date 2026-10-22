@@ -137,4 +137,92 @@ describe("cotacao_calculo_progresso — RPC + RLS", () => {
     const matriz = await loginMatriz();
     expect((await consulta(matriz)).data).toEqual([{ cotacao_id: cotA }]);
   });
+  describe("herança de visibilidade de cot_select", () => {
+    const consulta = (c: Db, id: string) =>
+      c.from("cotacao_calculo_progresso").select("cotacao_id").eq("cotacao_id", id);
+
+    // Rede: master M (empresa própria) › vendedor D (outra empresa, superior_id = M) dono da cotação.
+    let master: Db;
+    let masterOutraRede: Db;
+    let supervisor: Db;
+    let colega: Db;
+    let cotRede: string;
+    let cotSup: string;
+
+    beforeAll(async () => {
+      const m = await criarPersonaComEmpresa("master", { emailPrefix: "master-prog" });
+      const sup = await criarPersonaComEmpresa("supervisor", { emailPrefix: "sup-prog" });
+      const dono = await criarPersonaComEmpresa("vendedor", {
+        emailPrefix: "dono-prog",
+        superiorId: m.userId,
+      });
+      const donoSup = await criarPersonaComEmpresa("vendedor", {
+        emailPrefix: "dono-sup-prog",
+        superiorId: sup.userId,
+      });
+      const cs = await admin
+        .from("cotacoes")
+        .insert({ empresa_id: donoSup.empresaId, responsavel_id: donoSup.userId })
+        .select("id")
+        .single();
+      if (cs.error) throw cs.error;
+      cotSup = cs.data.id;
+      expect((await reg(cotSup, "login", 1)).data).toBe(true);
+      const outro = await criarPersonaComEmpresa("master", { emailPrefix: "master-prog-out" });
+      const col = await criarPersonaComEmpresa("vendedor", {
+        emailPrefix: "colega-prog",
+        empresaId: dono.empresaId,
+      });
+      master = m.client;
+      masterOutraRede = outro.client;
+      supervisor = sup.client;
+      colega = col.client;
+      const c = await admin
+        .from("cotacoes")
+        .insert({ empresa_id: dono.empresaId, responsavel_id: dono.userId })
+        .select("id")
+        .single();
+      if (c.error) throw c.error;
+      cotRede = c.data.id;
+      expect((await reg(cotRede, "login", 1)).data).toBe(true);
+    });
+
+    it("master com visibilidade da empresa da cotação enxerga o progresso", async () => {
+      expect((await consulta(master, cotRede)).data).toEqual([{ cotacao_id: cotRede }]);
+    });
+
+    it("NEGATIVO: master de outra rede não enxerga o progresso", async () => {
+      const r = await consulta(masterOutraRede, cotRede);
+      expect(r.error).toBeNull();
+      expect(r.data).toEqual([]);
+    });
+
+    // Espelha a cot_select vigente (V11 i): ela não tem ramo de supervisor. Documenta o
+    // comportamento ATUAL, não uma regra de negócio decidida — se supervisor passar a
+    // enxergar a rede, mude a policy e este teste junto.
+    it("supervisor superior do dono (outra empresa) não vê a linha, como na cot_select vigente", async () => {
+      const r = await consulta(supervisor, cotSup);
+      expect(r.error).toBeNull();
+      expect(r.data).toEqual([]);
+    });
+
+    it("colega da mesma empresa do dono enxerga o progresso (leitura de equipe)", async () => {
+      expect((await consulta(colega, cotRede)).data).toEqual([{ cotacao_id: cotRede }]);
+    });
+
+    it("NEGATIVO: colega da mesma empresa não escreve no progresso", async () => {
+      const upd = await colega
+        .from("cotacao_calculo_progresso")
+        .update({ etapa: "erro" })
+        .eq("cotacao_id", cotRede)
+        .select();
+      expect(upd.data ?? []).toHaveLength(0);
+      const { data } = await admin
+        .from("cotacao_calculo_progresso")
+        .select("etapa")
+        .eq("cotacao_id", cotRede)
+        .single();
+      expect(data?.etapa).toBe("login");
+    });
+  });
 });
