@@ -648,11 +648,12 @@ Robô: PR #80 mesclado (`48825ef`); entra no `.env` da máquina do robô a vari�
 (a credencial é a do webhook de cotação, `WEBHOOK_CLIENT_KEY/SECRET`; em branco
 desliga os avisos). O progresso aparece na tela de cálculo, etapa por etapa.
 
-Pendente: o #300 (mensagem genérica nos 500 dos webhooks de cotação e de
-transmissão; timeout do e2e de 15 para 25 min) ainda não foi publicado
-(`sha-0447e4a`). Em observação, sem implementar: a rede de segurança para
-cotação presa em `enviada_quiver` (robô morto), que só será retomada se
-aparecerem cotações travadas.
+Depois, o usuário publicou também `sha-0447e4a` (merge do #300: os webhooks de
+cotação e de transmissão passam a devolver texto genérico nos 500, sem a mensagem
+do Postgres, e o job `e2e` do CI sobe de 15 para 25 min), sem migration nova.
+Em observação, sem implementar: a rede de segurança para cotação presa em
+`enviada_quiver` (robô morto), que só será retomada se aparecerem cotações
+travadas.
 
 Achados: (a) o worker do robô (`tests/cotacao.spec.ts`) roda na imagem de
 runtime, que só tem `dist/`, `pages/`, `utils/` e `tests/`: um import de
@@ -661,7 +662,7 @@ runtime, que só tem `dist/`, `pages/`, `utils/` e `tests/`: um import de
 descoberto rodando a imagem reconstruída com uma cotação real. (b) O job `e2e`
 do CI levou 13 min 14 s num PR bom e estourou os 15 min no #299 por lentidão do
 runner (Chromium levou ~7 min e o pull de imagens do Supabase teve `Rate
-exceeded`), sem teste falhando; por isso o limite sobe para 25 min no #300.
+exceeded`), sem teste falhando; por isso o limite subiu para 25 min no #300.
 
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
