@@ -6,6 +6,16 @@
 > as mesmas 152 versões. Isto documenta o schema versionado, não comprova
 > aplicação nem configuração em produção.
 
+> **Defasado em relação às migrations mais recentes.** O snapshot acima é de
+> 14/08/2026 (152 migrations). Não refletem aqui, entre outras: a tabela
+> `cotacao_calculo_progresso` e a RPC `registrar_calculo_etapa`; as tabelas
+> `cotacao_seguradora_ajustes` e `cotacao_impressoes`; a `cot_select` com os ramos
+> `supervisor` e `coordenador`; as policies `<tabela>_select_supervisor_rede`; e a troca
+> das `<tabela>_rw` (`ALL`) das 6 filhas de cotação por `_select`/`_insert`/`_update`
+> sem `DELETE`. Para o schema atual, a fonte é `supabase/migrations/` e
+> `src/integrations/supabase/database.types.ts`; o resumo dessas mudanças está em
+> `docs/DOC_TECNICA_V11.md` §5.14. Regenerar este documento é uma tarefa à parte.
+
 **Resumo:** 66 tabelas · 5 views · 121 policies RLS · 157 funções (RPCs e funções internas) · 8 enums · 3 jobs `pg_cron`.
 
 ## Sumário

@@ -444,6 +444,64 @@ estourado, vendas não pagas, estornos, renovações).
 
 Referência: `docs/PLANO_VISAO_GERAL_V11.md`.
 
+### 5.14 Cálculo da cotação — progresso real e quem lê/apaga
+
+**Progresso do cálculo (out/2026).** O robô avisa cada etapa do cálculo e a tela
+de cálculo mostra a etapa real, em vez de um indicador genérico:
+
+```
+robô (utils/etapa.ts, WEBHOOK_ETAPA_URL)
+  → POST /api/webhooks/quiver-etapa        src/lib/quiver-etapa-webhook.ts
+  → RPC registrar_calculo_etapa            security definer, só service_role
+  → tabela cotacao_calculo_progresso       1 linha por cotação (só a última etapa)
+  → Realtime → useCalculoProgresso → loader da tela de cálculo
+```
+
+- **Etapas** (`src/lib/calculo-etapas.ts`, as mesmas do robô): `na_fila` (0), `login`
+  (1), `segurado` (2), `veiculo` (3), `seguradoras` (4), `calculando` (5),
+  `lendo_resultados` (6); o servidor fecha o ciclo em `concluido` ou `erro` (9).
+- **A RPC é idempotente:** ignora `seq` menor que o atual, não sobrescreve
+  `concluido`/`erro`, e `na_fila` com `seq 0` reinicia o ciclo (recálculo). A leitura
+  da tabela herda a visibilidade da cotação (`exists` em `cotacoes`); ninguém escreve
+  por client.
+- **Fechamento:** o webhook de prêmios (`src/lib/quiver-webhook.ts`) registra
+  `concluido`, ou `erro` quando `cotacoes.status` fica `erro_quiver`.
+- **Autenticação:** o webhook de etapa usa o mesmo par `SELF_QUIVER_WEBHOOK_CLIENT_KEY/SECRET`
+  do webhook de cotação, por decisão do produto; a comparação das credenciais dos
+  webhooks é em tempo constante (`src/lib/webhook-auth.ts`) e as respostas de erro são
+  genéricas (a mensagem do banco fica só no log).
+- **Front:** `useCalculoProgresso` (Realtime, com polling de 4 s como fallback só com a
+  aba visível), `CalculoEspera` (o loader `.cc-load` do protótipo V12, inline na tela de
+  cálculo, sem modal) e `useSeguradorasDoCalculo` (nº de seguradoras que o robô de fato
+  consulta, de `cotacao_seguro.seguradoras_sel`, com o mesmo filtro do envio). Etapa
+  parada há mais de 45 s mostra "sem atualização do robô".
+- **Não existe** marcação automática de erro quando o robô morre no meio: a cotação
+  fica em `enviada_quiver`. O plano da "rede de segurança" existe, mas só será
+  implementado se aparecerem cotações travadas.
+
+**Quem lê e quem apaga as cotações.**
+
+- `cot_select` libera: dono, mesma empresa, matriz, master via `empresas_visiveis`,
+  interno na empresa da matriz e, desde out/2026, **supervisor e coordenador** (empresa da
+  cotação em `empresas_visiveis`: subárvore inteira; o coordenador, como recebe todas as
+  empresas, lê todas). Isso inclui os dados do segurado (`cotacao_segurado`: CPF,
+  telefone, endereço) e `cotacao_transmissoes`. Só leitura; supervisor desligado ou
+  pendente não lê nada. Para o supervisor não ver a cotação sem ver as filhas, as 7
+  tabelas têm uma policy `<tabela>_select_supervisor_rede` (e a leitura do interno na
+  matriz, que na `cot_select` é um ramo, nas filhas vem de `<tabela>_select_interno_matriz`).
+- As 6 tabelas filhas (`cotacao_coberturas`, `_perfil`, `_premios`, `_segurado`,
+  `_seguro`, `_veiculo`) têm `<tabela>_select`, `_insert` e `_update` e **nenhuma policy
+  de `DELETE`**: ninguém apaga por client. Só apagam as funções `SECURITY DEFINER`
+  (`salvar_cotacao_rascunho`, `registrar_premios_quiver`) e o `ON DELETE CASCADE` de
+  `cotacoes`. A `cotacoes.cot_iud` só deixa o responsável alterar a própria cotação.
+
+Referências: `docs/RUNBOOK_DEPLOY.md` §6.6 (aplicação em produção), as migrations
+`20261021214719_cotacao_calculo_progresso`, `20261022162940_cot_select_supervisor_coordenador_rede`
+e `20261022190139_cotacao_filhas_delete_somente_definer`, e os testes
+`tests/db/cotacao-calculo-progresso.test.ts`, `rls-cotacoes-supervisor-rede.test.ts` e
+`rls-cotacao-filhas-delete.test.ts`. O contrato do aviso do lado do robô está no
+`README.md` e no Swagger do repositório `playwright`.
+
 ---
 
 ## 6. Testes
