@@ -627,6 +627,43 @@ vendedor marcar as outras de novo (comportamento da V12.3.6, ainda não tratado)
 coluna, e não de cada coluna, e pode mostrar "Sem Franquia" para colunas que estão
 em "reduzida 75%" (ainda não tratado).
 
+**22/10/2026 — progresso real do cálculo (PRs #298 e #299 no app; #80 no robô):**
+migration `20261021214719_cotacao_calculo_progresso` aplicada pelo usuário num
+script único em transação (`psql -v ON_ERROR_STOP=1 --single-transaction`: o
+arquivo + o `insert` em `supabase_migrations.schema_migrations`), sem `ERROR` e
+com o histórico em dia. Cria a tabela `cotacao_calculo_progresso` (RLS herdada
+de `cotacoes`), a RPC `registrar_calculo_etapa` (só `service_role`) e inclui a
+tabela na publicação `supabase_realtime`; `supabase-rest` e o serviço de
+Realtime foram reiniciados. Sem `pg_dump`: só cria objetos novos. Imagens do
+app publicadas pelo usuário via `deploy.sh`: `sha-53d8a21` (merge do #298: o
+loader do V12 inline na tela de cálculo, o webhook `/api/webhooks/quiver-etapa`
+e o fechamento do ciclo no webhook de prêmios) e depois `sha-214c5c0` (merge do
+#299: a credencial dos webhooks de cotação, transmissão e etapa passa a ser
+comparada em tempo constante), sem migration nova. Health do app OK e
+`POST /api/webhooks/quiver-etapa` sem credencial devolveu `401`; o usuário
+confirmou o resultado esperado depois do deploy.
+
+Robô: PR #80 mesclado (`48825ef`); entra no `.env` da máquina do robô a variável
+`WEBHOOK_ETAPA_URL=https://cote-certo.sandboxallcom.com/api/webhooks/quiver-etapa`
+(a credencial é a do webhook de cotação, `WEBHOOK_CLIENT_KEY/SECRET`; em branco
+desliga os avisos). O progresso aparece na tela de cálculo, etapa por etapa.
+
+Depois, o usuário publicou também `sha-0447e4a` (merge do #300: os webhooks de
+cotação e de transmissão passam a devolver texto genérico nos 500, sem a mensagem
+do Postgres, e o job `e2e` do CI sobe de 15 para 25 min), sem migration nova.
+Em observação, sem implementar: a rede de segurança para cotação presa em
+`enviada_quiver` (robô morto), que só será retomada se aparecerem cotações
+travadas.
+
+Achados: (a) o worker do robô (`tests/cotacao.spec.ts`) roda na imagem de
+runtime, que só tem `dist/`, `pages/`, `utils/` e `tests/`: um import de
+`../src/...` mata o worker inteiro (`Cannot find module`, exit 1) e o
+`tsc --noEmit` não pega; o aviso de etapa ficou em `utils/etapa.ts`. Só foi
+descoberto rodando a imagem reconstruída com uma cotação real. (b) O job `e2e`
+do CI levou 13 min 14 s num PR bom e estourou os 15 min no #299 por lentidão do
+runner (Chromium levou ~7 min e o pull de imagens do Supabase teve `Rate
+exceeded`), sem teste falhando; por isso o limite subiu para 25 min no #300.
+
 ### 6.7 Marcar os 2 diretores iniciais (regra 2 das Regras Decididas)
 
 `profiles.diretor` não tem seed automático em produção — só `supabase/seed.sql`
@@ -666,6 +703,12 @@ git pull && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -
 - Os campos novos do webhook do robô são opcionais: robô e app podem subir em
   qualquer ordem. Variáveis novas, quando houver, entram no `.env` dessa
   máquina (ver `.env.example` do robô).
+- Aviso de etapa do cálculo: `WEBHOOK_ETAPA_URL` no `.env` do robô aponta para
+  `/api/webhooks/quiver-etapa` do app (mesma credencial do webhook de cotação).
+  Suba o **app e a migration antes** do robô: robô novo contra app antigo só
+  recebe `404` nos avisos (ignorados, não derrubam a cotação), mas não há
+  progresso na tela. O código chamado pelo worker tem de ficar em `utils/`,
+  nunca importar de `src/` (a imagem não tem essa pasta).
 - A conta do portal é de produção: cada cotação é real. Nunca rodar
   `transmissao.spec.ts` nem `npm run test` para testar.
 
