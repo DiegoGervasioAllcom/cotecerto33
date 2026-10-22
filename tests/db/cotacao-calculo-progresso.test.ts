@@ -145,6 +145,7 @@ describe("cotacao_calculo_progresso — RPC + RLS", () => {
     let master: Db;
     let masterOutraRede: Db;
     let supervisor: Db;
+    let supervisorOutro: Db;
     let colega: Db;
     let cotRede: string;
     let cotSup: string;
@@ -176,6 +177,8 @@ describe("cotacao_calculo_progresso — RPC + RLS", () => {
       master = m.client;
       masterOutraRede = outro.client;
       supervisor = sup.client;
+      supervisorOutro = (await criarPersonaComEmpresa("supervisor", { emailPrefix: "sup-prog-o" }))
+        .client;
       colega = col.client;
       const c = await admin
         .from("cotacoes")
@@ -197,11 +200,15 @@ describe("cotacao_calculo_progresso — RPC + RLS", () => {
       expect(r.data).toEqual([]);
     });
 
-    // Espelha a cot_select vigente (V11 i): ela não tem ramo de supervisor. Documenta o
-    // comportamento ATUAL, não uma regra de negócio decidida — se supervisor passar a
-    // enxergar a rede, mude a policy e este teste junto.
-    it("supervisor superior do dono (outra empresa) não vê a linha, como na cot_select vigente", async () => {
+    // Regra decidida: supervisor lê as cotações da subárvore dele (cot_select, ramo supervisor).
+    it("supervisor superior do dono (outra empresa) VÊ a linha de progresso", async () => {
       const r = await consulta(supervisor, cotSup);
+      expect(r.error).toBeNull();
+      expect(r.data).toEqual([{ cotacao_id: cotSup }]);
+    });
+
+    it("NEGATIVO: supervisor sem relação com o dono não vê a linha de progresso", async () => {
+      const r = await consulta(supervisorOutro, cotSup);
       expect(r.error).toBeNull();
       expect(r.data).toEqual([]);
     });
