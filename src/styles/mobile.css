@@ -1,0 +1,37 @@
+/* Mini-app mobile (/m). Carregado só no layout /m. Usa tokens do proto.css. */
+.m-app { min-height: 100dvh; display: flex; flex-direction: column; background: var(--offwhite); color: var(--ink); max-width: 560px; margin: 0 auto; }
+.m-header { position: sticky; top: 0; z-index: 10; background: var(--slate); color: #fff; padding: calc(12px + env(safe-area-inset-top)) 16px 12px; font-size: 18px; font-weight: 700; }
+.m-main { flex: 1; padding: 14px 14px calc(76px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; }
+.m-tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; max-width: 560px; margin: 0 auto; background: var(--white); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
+.m-tab { flex: 1; min-height: 56px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 0; text-decoration: none; }
+.m-tab.on { color: var(--slate-dark); box-shadow: inset 0 3px 0 var(--yellow); }
+.m-input, .m-select { width: 100%; min-height: 48px; font-size: 16px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--white); color: var(--ink); }
+.m-filters { display: flex; gap: 8px; }
+.m-card { display: block; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); padding: 14px; min-height: 44px; color: inherit; text-decoration: none; }
+.m-card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.m-card-title { font-size: 17px; font-weight: 700; margin: 6px 0 2px; }
+.m-card-sub { font-size: 14px; color: var(--slate-soft); }
+.m-badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--cream); color: var(--gold-ink); }
+.m-state { text-align: center; color: var(--muted); padding: 32px 12px; font-size: 15px; }
+.m-state.err { color: var(--alert); }
+.m-btn { min-height: 48px; padding: 0 18px; font-size: 16px; font-weight: 700; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--white); color: var(--ink); display: flex; align-items: center; justify-content: center; text-decoration: none; width: 100%; }
+.m-btn.danger { color: var(--alert); }
+.m-progress { height: 8px; margin: 10px 0; border-radius: 999px; background: var(--cream); overflow: hidden; }
+.m-progress-bar { height: 100%; background: var(--yellow); transition: width .4s ease; }
+.m-field { display: flex; flex-direction: column; gap: 6px; }
+.m-label { font-size: 14px; font-weight: 700; color: var(--slate-dark); }
+.m-hint { font-size: 13px; color: var(--muted); }
+.m-err { font-size: 13px; color: var(--alert); }
+.m-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.m-chip { flex: 1; min-height: 48px; padding: 0 16px; font-size: 16px; font-weight: 600; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--white); color: var(--ink); }
+.m-chip.on { background: var(--yellow); border-color: var(--yellow); color: var(--slate-dark); }
+.m-check { display: flex; gap: 10px; align-items: center; min-height: 48px; font-size: 15px; }
+.m-check input { width: 22px; height: 22px; flex: none; }
+.m-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 15px; border-bottom: 1px solid var(--border); }
+.m-row:last-child { border-bottom: 0; }
+.m-row strong { text-align: right; word-break: break-word; }
+.m-steps { font-size: 14px; color: var(--muted); }
+.m-link { background: none; border: 0; padding: 8px 0; min-height: 44px; font-size: 14px; font-weight: 700; color: var(--slate-dark); text-decoration: underline; }
+.m-actions { display: flex; gap: 8px; margin-top: 4px; }
+.m-btn.primary { background: var(--yellow); border-color: var(--yellow); color: var(--slate-dark); }
+.m-btn:disabled { opacity: .5; }

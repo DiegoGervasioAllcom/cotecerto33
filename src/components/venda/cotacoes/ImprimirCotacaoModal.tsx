@@ -12,12 +12,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
-import {
-  buildCotacaoDoc,
-  printCotacaoDoc,
-  type DocDados,
-  type DocConfigImpressao,
-} from "@/lib/print";
+import { gerarPdfCotacao, montarDocHtml } from "@/lib/cotacao-envio";
+import type { DocDados } from "@/lib/print";
 import {
   IMPRIMIR_COTACAO_MAX_SEGURADORAS,
   IMPRIMIR_COTACAO_PARCELAS_PADRAO,
@@ -27,7 +23,6 @@ import {
 
 import { ComissaoImpressaoBloco } from "./ComissaoImpressaoBloco";
 import { ImprimirEnvioLateral } from "./ImprimirEnvioLateral";
-import { registrarImpressao } from "./comissao-impressao";
 import { useComissaoImpressao } from "./useComissaoImpressao";
 
 type Etapa = "porta" | "config" | "preview";
@@ -84,15 +79,7 @@ export function ImprimirCotacaoModal({
 
   const doc = useMemo(() => {
     if (!dadosRef || etapa !== "preview") return null;
-    const cfg: DocConfigImpressao = {
-      modelo: config.modelo,
-      tipo: config.tipo,
-      seguradorasSelecionadas: config.seguradorasSelecionadas,
-      parcelas: config.parcelas,
-      economia: config.economia,
-      colunado: config.colunado,
-    };
-    return buildCotacaoDoc(dadosRef, cfg, { interno: comComissao, pctComissao });
+    return montarDocHtml(dadosRef, config, { interno: comComissao, pctComissao });
   }, [dadosRef, etapa, config, comComissao, pctComissao]);
 
   if (!dadosRef) return null;
@@ -137,22 +124,7 @@ export function ImprimirCotacaoModal({
     setOcupado(true);
     setMensagem(null);
     try {
-      try {
-        await registrarImpressao(dadosAbertos, { ...config, comComissao }, "baixar");
-      } catch (e) {
-        if (comComissao) {
-          // Fail-closed: documento com comissão só sai com a trilha gravada.
-          setMensagem({
-            tipo: "erro",
-            texto: `Não foi possível registrar a impressão (${
-              e instanceof Error ? e.message : "erro"
-            }). O documento com comissão não foi gerado.`,
-          });
-          return;
-        }
-        setMensagem({ tipo: "aviso", texto: "Aviso: não foi possível registrar esta impressão." });
-      }
-      printCotacaoDoc(`Cotação · ${dadosAbertos.cotacaoNumero}`, doc);
+      setMensagem(await gerarPdfCotacao({ dados: dadosAbertos, config, doc, comComissao }));
     } finally {
       ocupadoRef.current = false;
       setOcupado(false);

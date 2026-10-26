@@ -1,0 +1,5 @@
+/* Banner de sugestão da versão mobile (telas desktop). Tokens do proto.css. */
+.m-banner { position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 60; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; background: var(--slate); color: #fff; border-radius: var(--radius); box-shadow: var(--shadow-sm); font-size: 14px; }
+.m-banner-txt { flex: 1 1 180px; font-weight: 600; }
+.m-banner-btn { min-height: 44px; padding: 0 14px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; text-decoration: none; cursor: pointer; }
+.m-banner-btn.pri { background: var(--yellow); color: var(--ink); border-color: var(--yellow); }

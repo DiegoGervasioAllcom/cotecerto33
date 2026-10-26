@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from "react";
+import { BannerMobile } from "@/components/mobile/BannerMobile";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home,
@@ -327,6 +328,7 @@ export function AppShell({
 
   return (
     <div className="app">
+      <BannerMobile />
       <aside className="sidebar" data-tour="shell-sidebar">
         <div className="brand">
           <img src={logoUrl} alt="CoteCerto" className="logo-img" />
