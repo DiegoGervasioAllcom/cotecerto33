@@ -2592,3 +2592,118 @@ export async function criarDocumentoPropostaOk(cotacaoId: string): Promise<strin
 export async function limparDocumentoPropostaOk(path: string): Promise<void> {
   await admin.storage.from("propostas-docs").remove([path]);
 }
+
+/** CPF válido fictício para o wizard mobile (cache semeado: nunca chama a API paga). */
+export const CPF_MOBILE_E2E = "52998224725";
+
+/** Semeia `consultas_cpf` (cache de 30 dias) para CPF_MOBILE_E2E; devolve o id para limpar. */
+export async function semearConsultaCpfE2E(userId: string, empresaId: string): Promise<string> {
+  const { data, error } = await admin
+    .from("consultas_cpf")
+    .insert({
+      cpf: CPF_MOBILE_E2E,
+      consultado_por: userId,
+      empresa_id: empresaId,
+      sucesso: true,
+      codigo_retorno: "0",
+      nome: "Maria Mobile E2E",
+      sexo: "Feminino",
+      payload: {
+        cpf: CPF_MOBILE_E2E,
+        nome: "Maria Mobile E2E",
+        sexo: "Feminino",
+        dataNascimento: "1990-05-10",
+        nomeMae: "",
+        estadoCivil: "",
+        celular: "",
+        email: "",
+        endereco: null,
+      },
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`semear consulta de CPF E2E: ${error?.message}`);
+  return data.id;
+}
+
+export async function limparConsultaCpfE2E(id: string): Promise<void> {
+  await admin.from("consultas_cpf").delete().eq("id", id);
+}
+
+/** Placa de moto fictícia com UMA versão FIPE (aplicada sozinha, sem pedir escolha). */
+export const PLACA_MOTO_E2E = "MOT1A23";
+
+export async function semearConsultaPlacaMotoE2E(
+  userId: string,
+  empresaId: string,
+): Promise<string> {
+  const { data, error } = await admin
+    .from("consultas_placa")
+    .insert({
+      placa: PLACA_MOTO_E2E,
+      consultado_por: userId,
+      empresa_id: empresaId,
+      sucesso: true,
+      codigo_retorno: "0",
+      mensagem_retorno: "Marca/Modelo/Ano Identificados",
+      marca: "HONDA",
+      modelo: "CG 160 FAN",
+      ano_modelo: "2022",
+      ano_fabricacao: "2022",
+      chassi: "9C2KC2200NR000001",
+      combustivel: "Flex",
+      categoria: "MOTOCICLETA",
+      fipe_codigo: "800001-0",
+      fipe_valor: 15000,
+      payload: {
+        placa: PLACA_MOTO_E2E,
+        chassi: "9C2KC2200NR000001",
+        categoria: "MOTOCICLETA",
+        marca: "HONDA",
+        modelo: "CG 160 FAN",
+        versao: "",
+        motor: "",
+        origem: "NACIONAL",
+        localFabricacao: "",
+        tipoCarroceria: "",
+        anoModelo: "2022",
+        anoFabricacao: "2022",
+        codigoRetorno: "0",
+        mensagemRetorno: "Marca/Modelo/Ano Identificados",
+        fipe: [
+          {
+            codigo: "800001-0",
+            combustivel: "Gasolina",
+            marca: "Honda",
+            modelo: "CG 160 FAN Flex",
+            valor: 15000,
+          },
+        ],
+      },
+    })
+    .select("id")
+    .single();
+  if (error || !data) throw new Error(`semear consulta de placa de moto E2E: ${error?.message}`);
+  return data.id;
+}
+
+/** Cotações do responsável (service role), com segurado/veículo, para asserts do wizard mobile. */
+export async function listarCotacoesDoVendedorE2E(userId: string) {
+  const { data, error } = await admin
+    .from("cotacoes")
+    .select(
+      "id,status,step_atual,lead_id,segurado:cotacao_segurado(nome,cpf_cnpj,celular,cep),veiculo:cotacao_veiculo(placa,marca_nome,modelo_nome)",
+    )
+    .eq("responsavel_id", userId);
+  if (error) throw new Error(`listar cotações E2E: ${error.message}`);
+  return data ?? [];
+}
+
+/** Remove cotações/leads do vendedor criados pelo wizard (best-effort; antes de `limparPersona`). */
+export async function limparCotacoesDoVendedorE2E(userId: string): Promise<void> {
+  const { data } = await admin.from("cotacoes").select("id,lead_id").eq("responsavel_id", userId);
+  for (const c of data ?? []) {
+    await admin.from("cotacoes").delete().eq("id", c.id);
+    if (c.lead_id) await admin.from("leads").delete().eq("id", c.lead_id);
+  }
+}

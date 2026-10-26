@@ -40,6 +40,8 @@ RUN bun install --frozen-lockfile
 # Código-fonte necessário ao build (ver .dockerignore para o que fica de fora).
 COPY tsconfig.json vite.config.ts components.json ./
 COPY src ./src
+# Estáticos servidos na raiz (manifest.webmanifest e ícones do PWA mobile).
+COPY public ./public
 
 RUN bun run build
 

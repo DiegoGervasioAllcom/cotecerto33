@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { criarPersistenciaSerial } from "@/lib/persistencia-serial";
 import { maskCpfCnpj, normalizePlaca } from "@/lib/masks";
 import { maskCel, maskCep } from "../masks";
 import { ANOS_POR_TIPO_CALCULO, vigenciaAPartirDeHoje } from "../steps/StepSeguro";
@@ -61,6 +62,9 @@ export function useCotacaoRascunho(params: {
   const [cotacaoId, setCotacaoId] = useState<string | null>(routeId ?? null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const idRef = useRef<string | null>(routeId ?? null);
+  idRef.current = cotacaoId ?? idRef.current;
+  const serial = useRef(criarPersistenciaSerial()).current;
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
   const loadingRef = useRef<boolean>(!!routeId);
@@ -227,7 +231,14 @@ export function useCotacaoRascunho(params: {
   // Devolve `true` quando gravou; `false` quando não gravou (sem dados mínimos
   // para criar a cotação, erro do RPC ou exceção). Quem depende do banco
   // (Calcular) deve checar; o autosave ignora o retorno.
-  async function persistir(overrides?: { seguradorasSel?: string[] }): Promise<boolean> {
+  function persistir(overrides?: { seguradorasSel?: string[] }): Promise<boolean> {
+    // Serializa: chamadas concorrentes (autosave + Avançar) reaproveitam a
+    // gravação em curso; com override espera e grava em seguida.
+    return serial(() => persistirAgora(overrides), !overrides);
+  }
+
+  async function persistirAgora(overrides?: { seguradorasSel?: string[] }): Promise<boolean> {
+    const cotacaoId = idRef.current;
     // só persiste se tiver algo identificador mínimo
     if (!f.cpf && !f.nome && !cotacaoId) return false;
     setSaveState("saving");
@@ -253,7 +264,10 @@ export function useCotacaoRascunho(params: {
         setSaveState("error");
         return false;
       }
-      if (data && !cotacaoId) setCotacaoId(data as string);
+      if (data && !cotacaoId) {
+        idRef.current = data as string;
+        setCotacaoId(data as string);
+      }
       setSaveState("saved");
       setLastSavedAt(new Date());
       return true;
