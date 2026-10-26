@@ -1,0 +1,178 @@
+// Padrões do wizard mobile de cotação (Auto e Moto). ÚNICO lugar que decide
+// os valores dos campos que o mobile não mostra. Espelha o estado inicial do
+// desktop (routes/_authenticated/venda/novo-lead.tsx) — mudou lá, mude aqui.
+//
+// Campos ocultos (decisão de produto, v1): ajuste por seguradora, desconto
+// adicional, comissão, coberturas customizadas, renovação, condutor diferente,
+// proprietário, jovens condutores, blindagem/kit gás/acessórios, zero km.
+import type { Form } from "@/components/venda/novo-lead/types";
+import { vigenciaAPartirDeHoje } from "@/components/venda/novo-lead/steps/StepSeguro";
+import { seguradoraAceitaMoto } from "@/lib/seguradora-canonica";
+
+export type RamoMobile = "Automóvel" | "Moto";
+
+/** Mesma seleção inicial do desktop (somente seguradoras que o robô suporta). */
+export const SEGURADORAS_PADRAO_AUTO = ["Mapfre", "Aliro", "Yelum", "HDI", "Suhai"];
+
+/** Origem do lead criado pelo mobile (vendedor digitando = lead manual, sem SLA). */
+export const CANAL_ORIGEM_MOBILE = "Manual";
+
+export function seguradorasPadrao(ramo: RamoMobile): string[] {
+  return ramo === "Moto"
+    ? SEGURADORAS_PADRAO_AUTO.filter(seguradoraAceitaMoto)
+    : [...SEGURADORAS_PADRAO_AUTO];
+}
+
+export function formPadraoMobile(ramo: RamoMobile = "Automóvel"): Form {
+  const vig = vigenciaAPartirDeHoje(1);
+  return {
+    canalOrigem: CANAL_ORIGEM_MOBILE,
+    cpf: "",
+    pessoa: "Física",
+    nome: "",
+    nomeSocial: "",
+    nasc: "",
+    sexo: "",
+    estadoCivil: "",
+    celular: "",
+    email: "",
+    cep: "",
+    numero: "",
+    complemento: "",
+    logradouro: "",
+    bairro: "",
+    cidade: "",
+    uf: "",
+    tipoSeguro: "Seguro novo",
+    ramo,
+    categoria: "Particular",
+    vigIni: vig.ini,
+    vigFim: vig.fim,
+    ciaAtual: "",
+    apoliceAtual: "",
+    ciAtual: "",
+    classeBonus: "0",
+    seguradorasSel: seguradorasPadrao(ramo),
+    tipoCalculo: "Anual",
+    observacoesCot: "",
+    seguradoraAnterior: "",
+    sucursalAnterior: "",
+    apoliceAnterior: "",
+    coberturaAnterior: "Compreensiva",
+    statusApoliceAnterior: "Em vigor",
+    itemApoliceAnterior: "",
+    inicioVigenciaAnterior: "",
+    fimVigenciaAnterior: "",
+    renovacaoMesmoVeiculo: "Sim",
+    renovacaoInclusaoCasco: "Não",
+    qtdSinistrosParcialAnterior: "",
+    ciApoliceAnterior: "",
+    classeBonusAnterior: "0",
+    comissaoApoliceAnterior: "",
+    bonusRenovacaoTodasSeguradoras: "0",
+    bonusAllianz: "0",
+    bonusSuhai: "0",
+    bonusPortoAzulItau: "0",
+    bonusMapfre: "0",
+    bonusTokio: "0",
+    bonusHdi: "0",
+    bonusBradesco: "0",
+    bonusYelumAliroIndiana: "0",
+    placa: "",
+    chassi: "",
+    renavam: "",
+    marca: "",
+    modelo: "",
+    anoModelo: "",
+    anoFab: "",
+    combustivel: "Flex",
+    cor: "",
+    tipoCambio: "",
+    zeroKm: false,
+    dataSaidaConcessionaria: "",
+    odometro: "",
+    alienado: false,
+    banco: "",
+    kmMensal: "",
+    tipoUso: "Particular",
+    usoTrabalho: "Não trabalha",
+    usoEstudo: "Não estuda",
+    usoComercialDoisDias: "nao",
+    categoriaTaxi: "",
+    utilizacaoLocadora: "",
+    condutoresQueUtilizam: "",
+    cepCirculacao: "",
+    chassiRemarcado: "nao",
+    leilao: "Não possui histórico de leilão",
+    isencaoImposto: "Sem isenção",
+    pcdCnhEspecial: "nao",
+    valorAdaptacaoPcd: "",
+    possuiAntifurtoPorto: "nao",
+    hdiSegurosBasico: "nao",
+    antifurto: "Não",
+    antifurtoDetalhes: {},
+    blindagemAtiva: "nao",
+    coberturaBlindagem: "",
+    valorBlindagem: "",
+    comFranquiaBlindagem: "nao",
+    kitGasAtivo: "nao",
+    coberturaKitGas: "nao",
+    valorKitGas: "",
+    comFranquiaKitGas: "nao",
+    acessoriosAtivo: "nao",
+    kitAcessoriosAtivo: "nao",
+    opcionaisAtivo: "nao",
+    equipamentosAtivo: "nao",
+    acessoriosDetalhes: {},
+    condutorMesmo: "sim",
+    condCpf: "",
+    condNome: "",
+    condNasc: "",
+    condSexo: "",
+    condEstadoCivil: "",
+    condRelacao: "",
+    condNomeSocial: "",
+    condTempoHabilitacao: "",
+    cepPernoite: "",
+    tipoGaragem: "Sim, com portão manual",
+    segProprietario: true,
+    relacaoComProprietario: "",
+    proprietarioTipoPessoa: "Física",
+    proprietarioCpf: "",
+    proprietarioCnpj: "",
+    proprietarioNome: "",
+    proprietarioNomeSocial: "",
+    proprietarioSexo: "",
+    proprietarioNascimento: "",
+    proprietarioEstadoCivil: "",
+    tipoResidencia: "Casa",
+    tipoAtividadeEmpresa: "Comércio",
+    ramoAtividade: "",
+    profissaoPrincipalCondutor: "",
+    profissaoAviso: "",
+    seguroCorretorProximo: "nao",
+    jovens1825: "nao",
+    jovens18a25Detalhes: [],
+    tipoCobertura: "Fácil",
+    appMorte: "",
+    appInval: "",
+    rcfDm: "",
+    rcfDc: "",
+    vidros: "Não contratada",
+    carroReserva: "Não contratada",
+    assist24: "Não contratada",
+    modalidade: "Valor de Mercado",
+    percentualAjuste: "100",
+    franquiaPrimeiraOpcao: "Normal 100%",
+    franquiaSegundaOpcao: "Reduzida 50%",
+    danosMorais: "",
+    despesasExtras: "Não contratada",
+    pequenosReparos: false,
+    valorDeterminado: "",
+  };
+}
+
+/** Troca Auto <-> Moto mantendo o resto; seguradoras seguem o padrão do ramo (não são editáveis no mobile). */
+export function aplicarRamo(f: Form, ramo: RamoMobile): Form {
+  return { ...f, ramo, seguradorasSel: seguradorasPadrao(ramo) };
+}

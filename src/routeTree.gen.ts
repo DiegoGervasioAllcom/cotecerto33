@@ -19,6 +19,8 @@ import { Route as AuthEsqueciSenhaRouteImport } from './routes/auth.esqueci-senh
 import { Route as AuthCriarSenhaRouteImport } from './routes/auth.criar-senha'
 import { Route as AuthContatoRouteImport } from './routes/auth.contato'
 import { Route as AuthenticatedInicioRouteImport } from './routes/_authenticated/inicio'
+import { Route as AuthenticatedMRouteRouteImport } from './routes/_authenticated/m/route'
+import { Route as AuthenticatedMIndexRouteImport } from './routes/_authenticated/m/index'
 import { Route as AuthenticatedVendaPipelineRouteImport } from './routes/_authenticated/venda/pipeline'
 import { Route as AuthenticatedVendaNovoLeadRouteImport } from './routes/_authenticated/venda/novo-lead'
 import { Route as AuthenticatedVendaMensagensProntasRouteImport } from './routes/_authenticated/venda/mensagens-prontas'
@@ -43,14 +45,18 @@ import { Route as AuthenticatedOperacaoConfiguracoesRouteImport } from './routes
 import { Route as AuthenticatedOperacaoComissoesRouteImport } from './routes/_authenticated/operacao/comissoes'
 import { Route as AuthenticatedOperacaoAprovacoesRouteImport } from './routes/_authenticated/operacao/aprovacoes'
 import { Route as AuthenticatedOperacaoAcessosRouteImport } from './routes/_authenticated/operacao/acessos'
+import { Route as AuthenticatedMMenuRouteImport } from './routes/_authenticated/m/menu'
+import { Route as AuthenticatedMCotarRouteImport } from './routes/_authenticated/m/cotar'
 import { Route as AuthenticatedComandoVisaoGeralRouteImport } from './routes/_authenticated/comando/visao-geral'
 import { Route as AuthenticatedComandoLeadsRouteImport } from './routes/_authenticated/comando/leads'
 import { Route as AuthenticatedComandoDistribuicaoRouteImport } from './routes/_authenticated/comando/distribuicao'
 import { Route as AuthenticatedOperacaoVendedoresIndexRouteImport } from './routes/_authenticated/operacao/vendedores.index'
 import { Route as AuthenticatedOperacaoFranquiasIndexRouteImport } from './routes/_authenticated/operacao/franquias.index'
+import { Route as AuthenticatedMCotacoesIndexRouteImport } from './routes/_authenticated/m/cotacoes.index'
 import { Route as AuthenticatedVendaCotacoesIdRouteImport } from './routes/_authenticated/venda/cotacoes.$id'
 import { Route as AuthenticatedOperacaoVendedoresIdRouteImport } from './routes/_authenticated/operacao/vendedores.$id'
 import { Route as AuthenticatedOperacaoFranquiasIdRouteImport } from './routes/_authenticated/operacao/franquias.$id'
+import { Route as AuthenticatedMCotacoesIdRouteImport } from './routes/_authenticated/m/cotacoes.$id'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -100,6 +106,16 @@ const AuthenticatedInicioRoute = AuthenticatedInicioRouteImport.update({
   id: '/inicio',
   path: '/inicio',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMRouteRoute = AuthenticatedMRouteRouteImport.update({
+  id: '/m',
+  path: '/m',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMIndexRoute = AuthenticatedMIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedMRouteRoute,
 } as any)
 const AuthenticatedVendaPipelineRoute =
   AuthenticatedVendaPipelineRouteImport.update({
@@ -245,6 +261,16 @@ const AuthenticatedOperacaoAcessosRoute =
     path: '/operacao/acessos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedMMenuRoute = AuthenticatedMMenuRouteImport.update({
+  id: '/menu',
+  path: '/menu',
+  getParentRoute: () => AuthenticatedMRouteRoute,
+} as any)
+const AuthenticatedMCotarRoute = AuthenticatedMCotarRouteImport.update({
+  id: '/cotar',
+  path: '/cotar',
+  getParentRoute: () => AuthenticatedMRouteRoute,
+} as any)
 const AuthenticatedComandoVisaoGeralRoute =
   AuthenticatedComandoVisaoGeralRouteImport.update({
     id: '/comando/visao-geral',
@@ -275,6 +301,12 @@ const AuthenticatedOperacaoFranquiasIndexRoute =
     path: '/operacao/franquias/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedMCotacoesIndexRoute =
+  AuthenticatedMCotacoesIndexRouteImport.update({
+    id: '/cotacoes/',
+    path: '/cotacoes/',
+    getParentRoute: () => AuthenticatedMRouteRoute,
+  } as any)
 const AuthenticatedVendaCotacoesIdRoute =
   AuthenticatedVendaCotacoesIdRouteImport.update({
     id: '/venda/cotacoes/$id',
@@ -293,9 +325,16 @@ const AuthenticatedOperacaoFranquiasIdRoute =
     path: '/operacao/franquias/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedMCotacoesIdRoute =
+  AuthenticatedMCotacoesIdRouteImport.update({
+    id: '/cotacoes/$id',
+    path: '/cotacoes/$id',
+    getParentRoute: () => AuthenticatedMRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/m': typeof AuthenticatedMRouteRouteWithChildren
   '/inicio': typeof AuthenticatedInicioRoute
   '/auth/contato': typeof AuthContatoRoute
   '/auth/criar-senha': typeof AuthCriarSenhaRoute
@@ -307,6 +346,8 @@ export interface FileRoutesByFullPath {
   '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
   '/comando/leads': typeof AuthenticatedComandoLeadsRoute
   '/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
+  '/m/cotar': typeof AuthenticatedMCotarRoute
+  '/m/menu': typeof AuthenticatedMMenuRoute
   '/operacao/acessos': typeof AuthenticatedOperacaoAcessosRoute
   '/operacao/aprovacoes': typeof AuthenticatedOperacaoAprovacoesRoute
   '/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
@@ -331,9 +372,12 @@ export interface FileRoutesByFullPath {
   '/venda/mensagens-prontas': typeof AuthenticatedVendaMensagensProntasRoute
   '/venda/novo-lead': typeof AuthenticatedVendaNovoLeadRoute
   '/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
+  '/m/': typeof AuthenticatedMIndexRoute
+  '/m/cotacoes/$id': typeof AuthenticatedMCotacoesIdRoute
   '/operacao/franquias/$id': typeof AuthenticatedOperacaoFranquiasIdRoute
   '/operacao/vendedores/$id': typeof AuthenticatedOperacaoVendedoresIdRoute
   '/venda/cotacoes/$id': typeof AuthenticatedVendaCotacoesIdRoute
+  '/m/cotacoes/': typeof AuthenticatedMCotacoesIndexRoute
   '/operacao/franquias/': typeof AuthenticatedOperacaoFranquiasIndexRoute
   '/operacao/vendedores/': typeof AuthenticatedOperacaoVendedoresIndexRoute
 }
@@ -350,6 +394,8 @@ export interface FileRoutesByTo {
   '/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
   '/comando/leads': typeof AuthenticatedComandoLeadsRoute
   '/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
+  '/m/cotar': typeof AuthenticatedMCotarRoute
+  '/m/menu': typeof AuthenticatedMMenuRoute
   '/operacao/acessos': typeof AuthenticatedOperacaoAcessosRoute
   '/operacao/aprovacoes': typeof AuthenticatedOperacaoAprovacoesRoute
   '/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
@@ -374,9 +420,12 @@ export interface FileRoutesByTo {
   '/venda/mensagens-prontas': typeof AuthenticatedVendaMensagensProntasRoute
   '/venda/novo-lead': typeof AuthenticatedVendaNovoLeadRoute
   '/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
+  '/m': typeof AuthenticatedMIndexRoute
+  '/m/cotacoes/$id': typeof AuthenticatedMCotacoesIdRoute
   '/operacao/franquias/$id': typeof AuthenticatedOperacaoFranquiasIdRoute
   '/operacao/vendedores/$id': typeof AuthenticatedOperacaoVendedoresIdRoute
   '/venda/cotacoes/$id': typeof AuthenticatedVendaCotacoesIdRoute
+  '/m/cotacoes': typeof AuthenticatedMCotacoesIndexRoute
   '/operacao/franquias': typeof AuthenticatedOperacaoFranquiasIndexRoute
   '/operacao/vendedores': typeof AuthenticatedOperacaoVendedoresIndexRoute
 }
@@ -384,6 +433,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/_authenticated/m': typeof AuthenticatedMRouteRouteWithChildren
   '/_authenticated/inicio': typeof AuthenticatedInicioRoute
   '/auth/contato': typeof AuthContatoRoute
   '/auth/criar-senha': typeof AuthCriarSenhaRoute
@@ -395,6 +445,8 @@ export interface FileRoutesById {
   '/_authenticated/comando/distribuicao': typeof AuthenticatedComandoDistribuicaoRoute
   '/_authenticated/comando/leads': typeof AuthenticatedComandoLeadsRoute
   '/_authenticated/comando/visao-geral': typeof AuthenticatedComandoVisaoGeralRoute
+  '/_authenticated/m/cotar': typeof AuthenticatedMCotarRoute
+  '/_authenticated/m/menu': typeof AuthenticatedMMenuRoute
   '/_authenticated/operacao/acessos': typeof AuthenticatedOperacaoAcessosRoute
   '/_authenticated/operacao/aprovacoes': typeof AuthenticatedOperacaoAprovacoesRoute
   '/_authenticated/operacao/comissoes': typeof AuthenticatedOperacaoComissoesRoute
@@ -419,9 +471,12 @@ export interface FileRoutesById {
   '/_authenticated/venda/mensagens-prontas': typeof AuthenticatedVendaMensagensProntasRoute
   '/_authenticated/venda/novo-lead': typeof AuthenticatedVendaNovoLeadRoute
   '/_authenticated/venda/pipeline': typeof AuthenticatedVendaPipelineRoute
+  '/_authenticated/m/': typeof AuthenticatedMIndexRoute
+  '/_authenticated/m/cotacoes/$id': typeof AuthenticatedMCotacoesIdRoute
   '/_authenticated/operacao/franquias/$id': typeof AuthenticatedOperacaoFranquiasIdRoute
   '/_authenticated/operacao/vendedores/$id': typeof AuthenticatedOperacaoVendedoresIdRoute
   '/_authenticated/venda/cotacoes/$id': typeof AuthenticatedVendaCotacoesIdRoute
+  '/_authenticated/m/cotacoes/': typeof AuthenticatedMCotacoesIndexRoute
   '/_authenticated/operacao/franquias/': typeof AuthenticatedOperacaoFranquiasIndexRoute
   '/_authenticated/operacao/vendedores/': typeof AuthenticatedOperacaoVendedoresIndexRoute
 }
@@ -429,6 +484,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/m'
     | '/inicio'
     | '/auth/contato'
     | '/auth/criar-senha'
@@ -440,6 +496,8 @@ export interface FileRouteTypes {
     | '/comando/distribuicao'
     | '/comando/leads'
     | '/comando/visao-geral'
+    | '/m/cotar'
+    | '/m/menu'
     | '/operacao/acessos'
     | '/operacao/aprovacoes'
     | '/operacao/comissoes'
@@ -464,9 +522,12 @@ export interface FileRouteTypes {
     | '/venda/mensagens-prontas'
     | '/venda/novo-lead'
     | '/venda/pipeline'
+    | '/m/'
+    | '/m/cotacoes/$id'
     | '/operacao/franquias/$id'
     | '/operacao/vendedores/$id'
     | '/venda/cotacoes/$id'
+    | '/m/cotacoes/'
     | '/operacao/franquias/'
     | '/operacao/vendedores/'
   fileRoutesByTo: FileRoutesByTo
@@ -483,6 +544,8 @@ export interface FileRouteTypes {
     | '/comando/distribuicao'
     | '/comando/leads'
     | '/comando/visao-geral'
+    | '/m/cotar'
+    | '/m/menu'
     | '/operacao/acessos'
     | '/operacao/aprovacoes'
     | '/operacao/comissoes'
@@ -507,15 +570,19 @@ export interface FileRouteTypes {
     | '/venda/mensagens-prontas'
     | '/venda/novo-lead'
     | '/venda/pipeline'
+    | '/m'
+    | '/m/cotacoes/$id'
     | '/operacao/franquias/$id'
     | '/operacao/vendedores/$id'
     | '/venda/cotacoes/$id'
+    | '/m/cotacoes'
     | '/operacao/franquias'
     | '/operacao/vendedores'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/_authenticated/m'
     | '/_authenticated/inicio'
     | '/auth/contato'
     | '/auth/criar-senha'
@@ -527,6 +594,8 @@ export interface FileRouteTypes {
     | '/_authenticated/comando/distribuicao'
     | '/_authenticated/comando/leads'
     | '/_authenticated/comando/visao-geral'
+    | '/_authenticated/m/cotar'
+    | '/_authenticated/m/menu'
     | '/_authenticated/operacao/acessos'
     | '/_authenticated/operacao/aprovacoes'
     | '/_authenticated/operacao/comissoes'
@@ -551,9 +620,12 @@ export interface FileRouteTypes {
     | '/_authenticated/venda/mensagens-prontas'
     | '/_authenticated/venda/novo-lead'
     | '/_authenticated/venda/pipeline'
+    | '/_authenticated/m/'
+    | '/_authenticated/m/cotacoes/$id'
     | '/_authenticated/operacao/franquias/$id'
     | '/_authenticated/operacao/vendedores/$id'
     | '/_authenticated/venda/cotacoes/$id'
+    | '/_authenticated/m/cotacoes/'
     | '/_authenticated/operacao/franquias/'
     | '/_authenticated/operacao/vendedores/'
   fileRoutesById: FileRoutesById
@@ -641,6 +713,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/inicio'
       preLoaderRoute: typeof AuthenticatedInicioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/m': {
+      id: '/_authenticated/m'
+      path: '/m'
+      fullPath: '/m'
+      preLoaderRoute: typeof AuthenticatedMRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/m/': {
+      id: '/_authenticated/m/'
+      path: '/'
+      fullPath: '/m/'
+      preLoaderRoute: typeof AuthenticatedMIndexRouteImport
+      parentRoute: typeof AuthenticatedMRouteRoute
     }
     '/_authenticated/venda/pipeline': {
       id: '/_authenticated/venda/pipeline'
@@ -810,6 +896,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperacaoAcessosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/m/menu': {
+      id: '/_authenticated/m/menu'
+      path: '/menu'
+      fullPath: '/m/menu'
+      preLoaderRoute: typeof AuthenticatedMMenuRouteImport
+      parentRoute: typeof AuthenticatedMRouteRoute
+    }
+    '/_authenticated/m/cotar': {
+      id: '/_authenticated/m/cotar'
+      path: '/cotar'
+      fullPath: '/m/cotar'
+      preLoaderRoute: typeof AuthenticatedMCotarRouteImport
+      parentRoute: typeof AuthenticatedMRouteRoute
+    }
     '/_authenticated/comando/visao-geral': {
       id: '/_authenticated/comando/visao-geral'
       path: '/comando/visao-geral'
@@ -845,6 +945,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperacaoFranquiasIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/m/cotacoes/': {
+      id: '/_authenticated/m/cotacoes/'
+      path: '/cotacoes'
+      fullPath: '/m/cotacoes/'
+      preLoaderRoute: typeof AuthenticatedMCotacoesIndexRouteImport
+      parentRoute: typeof AuthenticatedMRouteRoute
+    }
     '/_authenticated/venda/cotacoes/$id': {
       id: '/_authenticated/venda/cotacoes/$id'
       path: '/venda/cotacoes/$id'
@@ -866,10 +973,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperacaoFranquiasIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/m/cotacoes/$id': {
+      id: '/_authenticated/m/cotacoes/$id'
+      path: '/cotacoes/$id'
+      fullPath: '/m/cotacoes/$id'
+      preLoaderRoute: typeof AuthenticatedMCotacoesIdRouteImport
+      parentRoute: typeof AuthenticatedMRouteRoute
+    }
   }
 }
 
+interface AuthenticatedMRouteRouteChildren {
+  AuthenticatedMCotarRoute: typeof AuthenticatedMCotarRoute
+  AuthenticatedMMenuRoute: typeof AuthenticatedMMenuRoute
+  AuthenticatedMIndexRoute: typeof AuthenticatedMIndexRoute
+  AuthenticatedMCotacoesIdRoute: typeof AuthenticatedMCotacoesIdRoute
+  AuthenticatedMCotacoesIndexRoute: typeof AuthenticatedMCotacoesIndexRoute
+}
+
+const AuthenticatedMRouteRouteChildren: AuthenticatedMRouteRouteChildren = {
+  AuthenticatedMCotarRoute: AuthenticatedMCotarRoute,
+  AuthenticatedMMenuRoute: AuthenticatedMMenuRoute,
+  AuthenticatedMIndexRoute: AuthenticatedMIndexRoute,
+  AuthenticatedMCotacoesIdRoute: AuthenticatedMCotacoesIdRoute,
+  AuthenticatedMCotacoesIndexRoute: AuthenticatedMCotacoesIndexRoute,
+}
+
+const AuthenticatedMRouteRouteWithChildren =
+  AuthenticatedMRouteRoute._addFileChildren(AuthenticatedMRouteRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedMRouteRoute: typeof AuthenticatedMRouteRouteWithChildren
   AuthenticatedInicioRoute: typeof AuthenticatedInicioRoute
   AuthenticatedComandoDistribuicaoRoute: typeof AuthenticatedComandoDistribuicaoRoute
   AuthenticatedComandoLeadsRoute: typeof AuthenticatedComandoLeadsRoute
@@ -906,6 +1040,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedMRouteRoute: AuthenticatedMRouteRouteWithChildren,
   AuthenticatedInicioRoute: AuthenticatedInicioRoute,
   AuthenticatedComandoDistribuicaoRoute: AuthenticatedComandoDistribuicaoRoute,
   AuthenticatedComandoLeadsRoute: AuthenticatedComandoLeadsRoute,
