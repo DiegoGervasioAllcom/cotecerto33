@@ -29,6 +29,9 @@ describe("estadoCalculoMobile", () => {
     expect(estadoCalculoMobile(undefined, "rascunho", false)).toBe("aguardando");
     expect(estadoCalculoMobile(undefined, "calculada", true)).toBe("pronta");
     expect(estadoCalculoMobile(undefined, "erro_quiver", false)).toBe("erro");
+    // enviada ao robô, sem progresso nem prêmios ainda: aguardando (não "nenhum prêmio")
+    expect(estadoCalculoMobile(undefined, "enviada_quiver", false)).toBe("aguardando");
+    expect(estadoCalculoMobile(undefined, "enviada_quiver", true)).toBe("pronta");
   });
 });
 

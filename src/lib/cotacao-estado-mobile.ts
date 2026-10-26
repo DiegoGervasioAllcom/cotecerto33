@@ -14,6 +14,8 @@ export function estadoCalculoMobile(
   if (progresso?.final === "erro" || status === "erro_quiver") return "erro";
   if (progresso?.final === "concluido") return "pronta";
   if (progresso?.etapa) return "calculando";
+  // Enviada ao robô e ainda sem progresso nem prêmios: está aguardando, não "pronta sem prêmios".
+  if (status === "enviada_quiver" && !temResultados) return "aguardando";
   if (temResultados || status !== "rascunho") return "pronta";
   return "aguardando";
 }
