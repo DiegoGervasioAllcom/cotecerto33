@@ -47,11 +47,47 @@ test.describe.serial("mobile — cotações (/m)", () => {
     await expect(page.getByRole("button", { name: /continuar/i })).toBeVisible();
   });
 
-  test("banner sugere a versão mobile e pode ser dispensado", async ({ page }) => {
+  test("login no celular cai direto em /m/cotacoes", async ({ page }) => {
     await loginAs(page, vendedor.email, vendedor.senha);
-    const banner = page.getByRole("link", { name: /usar versão mobile/i });
+    await expect(page).toHaveURL(/\/m\/cotacoes/);
+  });
+
+  test("versão completa grava preferência; banner volta ao mobile e a remove", async ({ page }) => {
+    await loginAs(page, vendedor.email, vendedor.senha);
+    await page.goto("/m/menu");
+    await page.getByRole("link", { name: /versão completa/i }).click();
+    await expect(page).toHaveURL(/\/inicio/);
+    await page.reload();
+    await expect(page).toHaveURL(/\/inicio/);
+    const banner = page.getByRole("button", { name: /usar versão mobile/i });
+    await expect(banner).toBeVisible();
+    await banner.click();
+    await expect(page).toHaveURL(/\/m\/cotacoes/);
+    expect(await page.evaluate(() => localStorage.getItem("cc:versao-preferida"))).toBeNull();
+  });
+
+  test("banner pode ser dispensado (com preferência completa)", async ({ page }) => {
+    await loginAs(page, vendedor.email, vendedor.senha);
+    await page.evaluate(() => localStorage.setItem("cc:versao-preferida", "completa"));
+    await page.goto("/inicio");
+    const banner = page.getByRole("button", { name: /usar versão mobile/i });
     await expect(banner).toBeVisible();
     await page.getByRole("button", { name: /agora não/i }).click();
     await expect(banner).toBeHidden();
+  });
+});
+
+test.describe("desktop não é redirecionado", () => {
+  const { defaultBrowserType: _ignorado, ...desktop } = devices["Desktop Chrome"];
+  test.use(desktop);
+  test("fica na landing", async ({ page }) => {
+    const v = await criarVendedorComLeadEmCotacao();
+    try {
+      await loginAs(page, v.email, v.senha);
+      await page.waitForTimeout(1_000);
+      await expect(page).not.toHaveURL(/\/m\//);
+    } finally {
+      await limparVendedorComLeadEmCotacao(v);
+    }
   });
 });

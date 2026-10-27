@@ -1,3 +1,4 @@
+import { preferirVersaoCompleta } from "@/lib/banner-mobile";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -180,7 +181,12 @@ function DetalheMobile() {
           Enviar por WhatsApp
         </a>
       )}
-      <Link to="/venda/cotacoes/$id" params={{ id }} className="m-btn">
+      <Link
+        to="/venda/cotacoes/$id"
+        params={{ id }}
+        className="m-btn"
+        onClick={() => preferirVersaoCompleta()}
+      >
         Abrir na versão completa
       </Link>
     </Shell>
