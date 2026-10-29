@@ -34,8 +34,7 @@ export function explicarSemPremios(bruta: string | null | undefined): MensagemSe
 
   if (/^placa não encontrada/i.test(texto)) {
     return {
-      resumo:
-        "Não encontramos esta placa no portal. Confira a placa ou preencha o veículo manualmente.",
+      resumo: "Placa não encontrada no portal. Confira a placa ou preencha o veículo manualmente.",
     };
   }
 
