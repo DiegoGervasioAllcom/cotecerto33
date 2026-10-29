@@ -28,8 +28,15 @@ export type CamposPortoPayload = Pick<
   telefoneComercial?: TelefoneFixo;
 };
 
+/**
+ * Grupo Porto: a Azul Seguros usa a MESMA Efetivação da Porto no Quiver — mesmas formas de pagamento, mesmos campos e
+ * ids (renda, PEP, ramo, logradouro, débito, cartão, pagador), conferido ao vivo em 29/10/2026 na cotação 160556.
+ * Os produtos do Itaú já chegam como seguradora "Porto". Por isso estas regras valem para as duas.
+ */
+const GRUPO_PORTO = new Set(["porto", "azul"]);
+
 export function ehSeguradoraPorto(seguradora: string): boolean {
-  return nomeCanonicoSeguradora(seguradora) === "porto";
+  return GRUPO_PORTO.has(nomeCanonicoSeguradora(seguradora));
 }
 
 /**

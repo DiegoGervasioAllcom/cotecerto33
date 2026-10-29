@@ -3,6 +3,7 @@ import type { Form } from "@/components/venda/novo-lead/types";
 import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSimulacaoCalculo";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
+import { ehSeguradoraPorto } from "@/lib/transmissao-porto";
 import { mascararData } from "@/lib/transmissao-pagador";
 import { baseDoForm } from "@/lib/transmissao-rascunho";
 import {
@@ -51,8 +52,8 @@ export function TransmissaoDadosComplementares({
   onVoltar,
   onConfirmar,
 }: Props) {
-  // Porto: renda, ramo de atividade e PEP são exigidos pela Efetivação.
-  const ehPorto = nomeCanonicoSeguradora(resultado.seguradora) === "porto";
+  // Grupo Porto (Porto e Azul): renda, ramo de atividade e PEP são exigidos pela Efetivação.
+  const ehPorto = ehSeguradoraPorto(resultado.seguradora);
   // Tokio: Efetivação própria — sem RG, renavam, cor nem "dia de vencimento das demais parcelas".
   const ehTokio = nomeCanonicoSeguradora(resultado.seguradora) === "tokio";
   const [dados, setDados] = useState<DadosComplementaresTransmissao>(
