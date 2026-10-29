@@ -1,5 +1,6 @@
 import { cotNum } from "@/components/venda/cotacoes/lista-helpers";
 import { formatElapsed } from "@/lib/nav-badges";
+import { textoSemPremios } from "@/lib/mensagem-sem-premios";
 import type { AguardandoCotacaoRow } from "./queries";
 
 /**
@@ -63,7 +64,9 @@ export function AguardandoCotacaoLista({
                     <span className="chip chip-alert" style={{ marginRight: 6 }}>
                       Erro no cálculo
                     </span>
-                    {r.quiver_mensagem && <span className="small muted">{r.quiver_mensagem}</span>}
+                    {r.quiver_mensagem && (
+                      <span className="small muted">{textoSemPremios(r.quiver_mensagem)}</span>
+                    )}
                   </div>
                 )}
               </td>
