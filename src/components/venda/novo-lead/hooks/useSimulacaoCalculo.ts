@@ -4,6 +4,7 @@ import { ajustesKey, useAjustesSeguradora } from "./useAjustesSeguradora";
 import { useComissaoSolicitacoes, useRetomarAoCalcularAprovada } from "./useComissaoSolicitacoes";
 import { supabase } from "@/integrations/supabase/client";
 import { enviarCotacaoQuiver } from "@/lib/quiver.functions";
+import { textoSemPremios } from "@/lib/mensagem-sem-premios";
 import type { Form } from "../types";
 import { camposFaltantesCalculo } from "../calculoGate";
 import { gravouAntesDeCalcular, MSG_FALHA_GRAVAR } from "../calculoGravacao";
@@ -58,7 +59,7 @@ export function useSimulacaoCalculo(
       if (data.status === "calculada") {
         await carregarResultados(cotacaoId);
       } else if (data.status === "erro_quiver") {
-        setErro(data.quiver_mensagem || "A seguradora não retornou prêmios para esta cotação.");
+        setErro(textoSemPremios(data.quiver_mensagem));
       } else if (data.status === "enviada_quiver") {
         // reabriu a cotação enquanto o webhook da Quiver ainda não respondeu —
         // retoma o polling em vez de deixar a tela parada em "Calcular agora".
@@ -105,7 +106,7 @@ export function useSimulacaoCalculo(
           setCalculando(false);
         } else if (data.status === "erro_quiver") {
           pararPolling();
-          setErro(data.quiver_mensagem || "A seguradora não retornou prêmios para esta cotação.");
+          setErro(textoSemPremios(data.quiver_mensagem));
           setCalculando(false);
         }
       })();
