@@ -16,7 +16,10 @@ describe("transmissão Porto — detecção da seguradora", () => {
   it.each(["Porto", "porto", "Porto Seguro", " porto seguro "])("%s é a Porto", (nome) => {
     expect(ehSeguradoraPorto(nome)).toBe(true);
   });
-  it.each(["Suhai", "Azul", "Mapfre", ""])("%s não é a Porto", (nome) => {
+  it.each(["Azul", "azul", "Azul Seguros"])("%s é do grupo Porto (mesma Efetivação)", (nome) => {
+    expect(ehSeguradoraPorto(nome)).toBe(true);
+  });
+  it.each(["Suhai", "Mapfre", "Tokio", ""])("%s não é do grupo Porto", (nome) => {
     expect(ehSeguradoraPorto(nome)).toBe(false);
   });
 });
@@ -38,7 +41,7 @@ describe("transmissão Porto — validação no servidor (declarações)", () =>
 
   it("não exige nada de outras seguradoras", () => {
     expect(erroDeclaracoesPorto("Suhai", undefined)).toBeNull();
-    expect(erroDeclaracoesPorto("Azul", {})).toBeNull();
+    expect(erroDeclaracoesPorto("Tokio", {})).toBeNull();
   });
 
   it.each([
@@ -138,5 +141,12 @@ describe("transmissão Porto — telefones fixos", () => {
     const campos = camposPortoPayload("Porto", undefined, declaracoesOk);
     expect(campos).not.toHaveProperty("telefoneResidencial");
     expect(campos).not.toHaveProperty("telefoneComercial");
+  });
+});
+
+describe("transmissão Azul — mesma Efetivação da Porto", () => {
+  it("exige as declarações (renda, ramo, PEP) como na Porto", () => {
+    expect(erroDeclaracoesPorto("Azul", {})).not.toBeNull();
+    expect(erroDeclaracoesPorto("Azul", declaracoesOk)).toBeNull();
   });
 });
