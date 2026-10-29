@@ -5,17 +5,20 @@ import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { ehSeguradoraPorto } from "@/lib/transmissao-porto";
 import { ehParcelado, ehSeguradoraAllianz } from "@/lib/transmissao-allianz";
+import { ehSeguradoraMapfre } from "@/lib/transmissao-mapfre";
 import { mascararData } from "@/lib/transmissao-pagador";
 import { baseDoForm } from "@/lib/transmissao-rascunho";
 import {
   dadosComplementaresTransmissaoPortoSchema,
   validarDadosComplementaresAllianz,
+  validarDadosComplementaresMapfre,
   validarDadosComplementaresTokio,
   dadosComplementaresTransmissaoSchema,
   type DadosComplementaresTransmissao,
 } from "../TransmissaoDadosComplementares.schema";
 import { tipoLogradouroDoEndereco, vencimentoPadraoTokio } from "@/lib/transmissao-tokio";
 import { TransmissaoDadosAllianz, type CamposAllianz } from "./TransmissaoDadosAllianz";
+import { TransmissaoDadosMapfre, type CamposMapfre } from "./TransmissaoDadosMapfre";
 import { TransmissaoDadosPorto, type CamposPorto } from "./TransmissaoDadosPorto";
 import { TransmissaoDadosTokio, type CamposTokio } from "./TransmissaoDadosTokio";
 
@@ -61,6 +64,9 @@ export function TransmissaoDadosComplementares({
   const ehTokio = nomeCanonicoSeguradora(resultado.seguradora) === "tokio";
   // Allianz: Efetivação própria — sem RG, renavam, cor nem PEP; renda, ramo e "veículo alienado" próprios.
   const ehAllianz = ehSeguradoraAllianz(resultado.seguradora);
+  // Mapfre: Efetivação própria — documento/emissão/órgão/ramo/renda do vendedor; sem RG (número), renavam nem cor.
+  const ehMapfre = ehSeguradoraMapfre(resultado.seguradora);
+  const semDocumentoPadrao = ehTokio || ehAllianz || ehMapfre;
   const [dados, setDados] = useState<DadosComplementaresTransmissao>(
     () =>
       inicial ?? {
@@ -113,6 +119,11 @@ export function TransmissaoDadosComplementares({
     setErros((atual) => ({ ...atual, [key]: undefined }));
   }
 
+  function upMapfre<K extends keyof CamposMapfre>(key: K, value: CamposMapfre[K]) {
+    setDados((atual) => ({ ...atual, [key]: value }));
+    setErros((atual) => ({ ...atual, [key]: undefined }));
+  }
+
   function upTokio<K extends keyof CamposTokio>(key: K, value: CamposTokio[K]) {
     setDados((atual) => ({ ...atual, [key]: value }));
     setErros((atual) => ({ ...atual, [key]: undefined }));
@@ -133,14 +144,16 @@ export function TransmissaoDadosComplementares({
   }
 
   function confirmar() {
-    const validacao = ehAllianz
-      ? validarDadosComplementaresAllianz(dados)
-      : ehTokio
-        ? validarDadosComplementaresTokio(dados)
-        : (ehPorto
-            ? dadosComplementaresTransmissaoPortoSchema
-            : dadosComplementaresTransmissaoSchema
-          ).safeParse(dados);
+    const validacao = ehMapfre
+      ? validarDadosComplementaresMapfre(dados)
+      : ehAllianz
+        ? validarDadosComplementaresAllianz(dados)
+        : ehTokio
+          ? validarDadosComplementaresTokio(dados)
+          : (ehPorto
+              ? dadosComplementaresTransmissaoPortoSchema
+              : dadosComplementaresTransmissaoSchema
+            ).safeParse(dados);
     if (!validacao.success) {
       const proximos: Erros = {};
       for (const issue of validacao.error.issues) {
@@ -285,11 +298,10 @@ export function TransmissaoDadosComplementares({
           <label>Nome do segurado</label>
           <input className="input" value={f.nome} disabled />
         </div>
-        {!ehTokio && !ehAllianz && field("rg", "RG", "00.000.000-0")}
-        {!ehTokio &&
-          !ehAllianz &&
+        {!semDocumentoPadrao && field("rg", "RG", "00.000.000-0")}
+        {!semDocumentoPadrao &&
           field("dataEmissaoRg", "Data de emissão", "dd/mm/aaaa", "numeric", 10, mascararData)}
-        {!ehTokio && !ehAllianz && field("orgaoEmissorRg", "Órgão emissor", "SSP")}
+        {!semDocumentoPadrao && field("orgaoEmissorRg", "Órgão emissor", "SSP")}
         {field("email", "E-mail", "cliente@email.com")}
       </div>
 
@@ -377,8 +389,8 @@ export function TransmissaoDadosComplementares({
           <label>Placa</label>
           <input className="input" value={f.placa} disabled />
         </div>
-        {!ehTokio && !ehAllianz && field("renavam", "Renavam", "11 dígitos", "numeric")}
-        {!ehTokio && !ehAllianz && field("corVeiculo", "Cor", "Ex.: Branco")}
+        {!semDocumentoPadrao && field("renavam", "Renavam", "11 dígitos", "numeric")}
+        {!semDocumentoPadrao && field("corVeiculo", "Cor", "Ex.: Branco")}
       </div>
 
       {ehPorto && <TransmissaoDadosPorto dados={dados} erros={erros} onChange={upPorto} />}
@@ -393,7 +405,16 @@ export function TransmissaoDadosComplementares({
         />
       )}
 
-      {!ehTokio && (
+      {ehMapfre && (
+        <TransmissaoDadosMapfre
+          dados={dados}
+          erros={erros}
+          nomeSegurado={f.nome}
+          onChange={upMapfre}
+        />
+      )}
+
+      {!ehTokio && !ehMapfre && (
         <>
           <div className="acc-sec-t">Transmissão e envio</div>
           <div className="wizard-grid cols-3">

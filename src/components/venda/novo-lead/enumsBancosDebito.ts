@@ -41,3 +41,25 @@ export const BANCOS_DEBITO_ALLIANZ = [
   { codigo: "104", nome: "Caixa Econômica Federal" },
   { codigo: "47", nome: "BANESE" },
 ] as const;
+
+// Bancos do débito em conta da MAPFRE (formas "Débito em Conta" e "Débito c/ 1ª em Boleto"), conforme o mapa da
+// Efetivação. `codigo` = código do banco (o robô aceita código ou nome). Não editar à mão: regerar lendo o portal.
+export const BANCOS_DEBITO_MAPFRE = [
+  { codigo: "10", nome: "CREDICOAMO" },
+  { codigo: "133", nome: "CRESOL Confederação" },
+  { codigo: "341", nome: "Banco Itaú S.A" },
+  { codigo: "634", nome: "Banco Triângulo S.A" },
+  { codigo: "748", nome: "Banco Cooperativo Sicredi S.A" },
+  { codigo: "84", nome: "Uniprime Norte do Paraná" },
+  { codigo: "97", nome: "Credisis - Central de Coop de Crédito" },
+  { codigo: "85", nome: "Cooperativa Central Ailos" },
+  { codigo: "47", nome: "Banco do Estado de Sergipe S.A (Banese)" },
+  { codigo: "237", nome: "Banco Bradesco S.A." },
+  { codigo: "756", nome: "BANCO COOPERATIVO DO BRASIL S.A." },
+  { codigo: "1", nome: "Banco do Brasil S.A." },
+  { codigo: "4", nome: "BNB - BANCO DO NORDESTE DO BRASIL S/A" },
+  { codigo: "70", nome: "Banco de Brasília S.A." },
+  { codigo: "104", nome: "CAIXA ECONOMICA FEDERAL" },
+  { codigo: "33", nome: "Banco Santander Brasil S.A." },
+  { codigo: "3", nome: "Banco da Amazônia S.A." },
+] as const;

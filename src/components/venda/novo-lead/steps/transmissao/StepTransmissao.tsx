@@ -13,6 +13,7 @@ import {
 import { TransmissaoConfirmacao } from "./TransmissaoConfirmacao";
 import { TransmissaoPagamento } from "./TransmissaoPagamento";
 import { ehDebitoEmContaPorto } from "@/lib/transmissao-debito";
+import { ehCartaoMapfre, ehDebitoMapfre } from "@/lib/transmissao-mapfre";
 import { tipoPagamentoTokio } from "@/lib/transmissao-tokio-pagamento";
 import { type PagamentoTransmissao } from "@/lib/transmissao-pagamento";
 import { TransmissaoResultado, type ResultadoTransmissaoEstado } from "./TransmissaoResultado";
@@ -90,6 +91,8 @@ export function StepTransmissao({
   const temPassoPagamento =
     ehCartao ||
     ehDebitoPorto ||
+    ehDebitoMapfre(oferta.resultado.seguradora, oferta.formaPagamento) ||
+    ehCartaoMapfre(oferta.resultado.seguradora, oferta.formaPagamento) ||
     tipoPagamentoTokio(oferta.resultado.seguradora, oferta.formaPagamento) !== null;
   const subs: { fase: Fase; l: string }[] = temPassoPagamento
     ? [

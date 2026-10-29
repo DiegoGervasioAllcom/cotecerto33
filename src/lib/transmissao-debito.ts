@@ -7,6 +7,7 @@
 // no body do fetch ao robô.
 import {
   BANCOS_DEBITO_ALLIANZ,
+  BANCOS_DEBITO_MAPFRE,
   BANCOS_DEBITO_PORTO,
 } from "@/components/venda/novo-lead/enumsBancosDebito";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
@@ -16,9 +17,9 @@ type BancoDebito = { readonly codigo: string; readonly nome: string };
 
 /** Bancos do débito por seguradora (os selects do portal diferem entre a Porto e a Allianz). */
 export function bancosDaSeguradora(seguradora: string): readonly BancoDebito[] {
-  return nomeCanonicoSeguradora(seguradora) === "allianz"
-    ? BANCOS_DEBITO_ALLIANZ
-    : BANCOS_DEBITO_PORTO;
+  const s = nomeCanonicoSeguradora(seguradora);
+  if (s === "mapfre") return BANCOS_DEBITO_MAPFRE;
+  return s === "allianz" ? BANCOS_DEBITO_ALLIANZ : BANCOS_DEBITO_PORTO;
 }
 
 export type ContaDebito = {
