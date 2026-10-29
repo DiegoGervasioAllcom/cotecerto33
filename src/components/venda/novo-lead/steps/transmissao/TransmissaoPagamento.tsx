@@ -16,6 +16,7 @@ import {
   type ErrosPagador,
   type PagadorTransmissao,
 } from "@/lib/transmissao-pagador";
+import { ehCartaoMapfre, ehDebitoMapfre } from "@/lib/transmissao-mapfre";
 import { tipoPagamentoPorto, type PagamentoTransmissao } from "@/lib/transmissao-pagamento";
 import {
   tipoPagamentoTokio,
@@ -28,6 +29,7 @@ import {
 } from "@/lib/transmissao-tokio-pagamento";
 import { PagamentoCartaoCampos } from "./PagamentoCartaoCampos";
 import { PagamentoTokioCartaoCampos, PagamentoTokioDebitoCampos } from "./PagamentoTokioCampos";
+import { PagamentoMapfreCartaoAviso, PagamentoMapfreDebitoCampos } from "./PagamentoMapfreCampos";
 import { PagamentoDebitoCampos } from "./PagamentoDebitoCampos";
 import { PagamentoPagadorCampos } from "./PagamentoPagadorCampos";
 
@@ -91,6 +93,10 @@ export function TransmissaoPagamento({
   // Listas do portal por seguradora (a Allianz tem outros bancos e não tem Diners).
   const bancos = bancosDaSeguradora(seguradora);
   const bandeiras = bandeirasDaSeguradora(seguradora);
+  const debitoMapfre = ehDebitoMapfre(seguradora, formaPagamento);
+  const cartaoMapfre = ehCartaoMapfre(seguradora, formaPagamento);
+  const [cienteMapfre, setCienteMapfre] = useState(false);
+  const [erroCienteMapfre, setErroCienteMapfre] = useState<string | undefined>();
   const [debitoTokio, setDebitoTokio] = useState<DebitoTokio>(DEBITO_TOKIO_VAZIO);
   const [cartaoTokio, setCartaoTokio] = useState<CartaoTokio>(CARTAO_TOKIO_VAZIO);
   const [errosDebitoTokio, setErrosDebitoTokio] = useState<ErrosDebitoTokio>({});
@@ -165,6 +171,21 @@ export function TransmissaoPagamento({
       }
       return onEfetivar({ tokio: { cartao: cartaoTokio } });
     }
+    if (debitoMapfre) {
+      const erros = validarContaDebito(conta, bancos);
+      if (Object.keys(erros).length > 0 || !cienteMapfre) {
+        setErrosConta(erros);
+        setErroCienteMapfre(
+          cienteMapfre ? undefined : "Confirme que o CPF/CNPJ pertence ao titular da conta.",
+        );
+        return focar([
+          ...["banco", "agencia", "conta"].filter((k) => k in erros).map((k) => `debito-${k}`),
+          "mapfre-debito-ciente",
+        ]);
+      }
+      return onEfetivar({ mapfre: { contaDebito: conta, cienteTitularConta: true } });
+    }
+    if (cartaoMapfre) return onEfetivar(); // sem dados de cartão: o segurado recebe um link
     if (tipo === "debito") {
       const erros = validarContaDebito(conta, bancos);
       if (Object.keys(erros).length > 0) {
@@ -213,18 +234,21 @@ export function TransmissaoPagamento({
     onEfetivar(); // cartão de outra seguradora: nada a coletar aqui
   }
 
-  const subtitulo =
-    tipoTokio === "debito"
-      ? "Débito em conta · informe o titular e a conta que será debitada."
-      : tipoTokio === "cartao"
-        ? "Cartão de crédito · a Tokio não pede os dados do cartão aqui; escolha como será informado."
-        : tipo === "debito"
-          ? "Débito em conta · informe a conta que será debitada."
-          : tipo === "cartao_terceiros"
-            ? "Cartão Porto Bank (Terceiros) · dados do cartão e do pagador."
-            : tipo === "cartao"
-              ? "Cartão de crédito · informe os dados do cartão."
-              : "Cartão de crédito · dados coletados diretamente pela seguradora.";
+  const subtitulo = debitoMapfre
+    ? "Débito em conta · informe a conta que será debitada."
+    : cartaoMapfre
+      ? "Cartão de crédito · a Mapfre coleta os dados do cartão direto com o segurado."
+      : tipoTokio === "debito"
+        ? "Débito em conta · informe o titular e a conta que será debitada."
+        : tipoTokio === "cartao"
+          ? "Cartão de crédito · a Tokio não pede os dados do cartão aqui; escolha como será informado."
+          : tipo === "debito"
+            ? "Débito em conta · informe a conta que será debitada."
+            : tipo === "cartao_terceiros"
+              ? "Cartão Porto Bank (Terceiros) · dados do cartão e do pagador."
+              : tipo === "cartao"
+                ? "Cartão de crédito · informe os dados do cartão."
+                : "Cartão de crédito · dados coletados diretamente pela seguradora.";
 
   return (
     <>
@@ -268,9 +292,26 @@ export function TransmissaoPagamento({
       {tipo === "cartao_terceiros" && (
         <PagamentoPagadorCampos valor={pagador} erros={errosPagador} onChange={upPagador} />
       )}
-      {tipo === null && tipoTokio === null && <PagamentoIlustrativo />}
+      {debitoMapfre && (
+        <PagamentoMapfreDebitoCampos
+          valor={conta}
+          erros={errosConta}
+          bancos={bancos}
+          ciente={cienteMapfre}
+          erroCiente={erroCienteMapfre}
+          onChange={upConta}
+          onCiente={(v) => {
+            setCienteMapfre(v);
+            setErroCienteMapfre(undefined);
+          }}
+        />
+      )}
+      {cartaoMapfre && <PagamentoMapfreCartaoAviso />}
+      {tipo === null && tipoTokio === null && !debitoMapfre && !cartaoMapfre && (
+        <PagamentoIlustrativo />
+      )}
 
-      {(tipo !== null || tipoTokio === "debito") && (
+      {(tipo !== null || tipoTokio === "debito" || debitoMapfre) && (
         <div className="clt-note" style={{ marginTop: 12 }}>
           <svg width="15" height="15">
             <use href="#i-lock" />
@@ -278,7 +319,10 @@ export function TransmissaoPagamento({
           <div>
             Estes dados <strong>não são gravados</strong> pelo CoteCerto: seguem direto ao robô de
             transmissão.
-            {tipo !== null && tipo !== "debito" && " Não pedimos o código de segurança (CVV)."}
+            {tipo !== null &&
+              tipo !== "debito" &&
+              !debitoMapfre &&
+              " Não pedimos o código de segurança (CVV)."}
           </div>
         </div>
       )}

@@ -7,6 +7,7 @@ import {
   RENDAS_MENSAIS_PORTO,
   RENDAS_MENSAIS_TOKIO,
 } from "@/components/venda/novo-lead/enumsPorto";
+import { errosDadosMapfre, RENDAS_MENSAIS_MAPFRE } from "@/lib/transmissao-mapfre";
 import { RAMOS_ATIVIDADE_ALLIANZ } from "@/components/venda/novo-lead/enumsRamoAtividadeAllianz";
 import { RAMOS_ATIVIDADE_PORTO } from "@/components/venda/novo-lead/enumsRamoAtividade";
 
@@ -54,7 +55,13 @@ const camposBase = z.object({
   // respostas pelo cliente. Não são persistidas (ver useRetomarTransmissao:
   // "nenhuma fonte com dado pessoal") — vivem só no estado do passo.
   // União das opções (Porto + Tokio): cada seguradora restringe no refinamento abaixo.
-  rendaMensal: z.enum([...RENDAS_MENSAIS_TOKIO, ...RENDAS_MENSAIS_ALLIANZ]).optional(),
+  rendaMensal: z
+    .enum([...RENDAS_MENSAIS_TOKIO, ...RENDAS_MENSAIS_ALLIANZ, ...RENDAS_MENSAIS_MAPFRE])
+    .optional(),
+  // Só Mapfre: tipo do documento (declaração do vendedor, sem padrão), kit da apólice por e-mail e em nome de quem sai o certificado.
+  tipoDocumento: z.string().trim().optional(),
+  kitApolicePorEmail: z.enum(["Sim", "Não"]).optional(),
+  certificadoEmNomeDe: z.string().trim().max(60, "Nome muito longo (máx. 60).").optional(),
   // Só Allianz: "Veículo Alienado" (do cadastro do veículo; o vendedor pode corrigir).
   veiculoAlienado: z.enum(["Sim", "Não"]).optional(),
   // Sem `.max`: o limite é a própria lista fechada (alguns ramos do portal
@@ -83,6 +90,11 @@ const camposBaseTokio = camposBase.partial({
   desejaReceberPropostaPorEmail: true,
 });
 
+// Mapfre: sem RG (número), renavam nem cor. O órgão emissor dela tem texto longo ("MAE - MIN. DA AERONAUTICA").
+const camposBaseMapfre = camposBase
+  .partial({ rg: true, renavam: true, corVeiculo: true, diaVencimentoDemaisParcelas: true })
+  .extend({ orgaoEmissorRg: z.string().trim().min(1, "Informe o órgão emissor.").max(40) });
+
 type OpcoesSchema = {
   /** true quando a seguradora do card é a Porto: renda, ramo e PEP viram obrigatórios. */
   exigePorto: boolean;
@@ -90,19 +102,29 @@ type OpcoesSchema = {
   exigeTokio?: boolean;
   /** Allianz: faixa de renda, ramo e veículo alienado; sem RG/renavam/cor/PEP. */
   exigeAllianz?: boolean;
+  /** Mapfre: tipo de documento, emissão, órgão, ramo e renda (sem padrão); sem RG/renavam/cor. */
+  exigeMapfre?: boolean;
 };
 
 export function criarSchemaDadosComplementares({
   exigePorto,
   exigeTokio = false,
   exigeAllianz = false,
+  exigeMapfre = false,
 }: OpcoesSchema) {
   // O cast mantém o tipo de saída (strict) do schema geral: na Tokio o estado do formulário sempre traz esses
   // campos (strings vazias), só a obrigatoriedade deixa de valer em tempo de execução.
-  const base = (exigeTokio || exigeAllianz
-    ? camposBaseTokio
-    : camposBase) as unknown as typeof camposBase;
+  const base = (exigeMapfre
+    ? camposBaseMapfre
+    : exigeTokio || exigeAllianz
+      ? camposBaseTokio
+      : camposBase) as unknown as typeof camposBase;
   return base.superRefine((val, ctx) => {
+    if (exigeMapfre) {
+      for (const [campo, message] of Object.entries(errosDadosMapfre(val))) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
+      }
+    }
     if (exigeAllianz) {
       const add = (campo: string, message: string) =>
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
@@ -268,6 +290,42 @@ export function validarDadosComplementaresAllianz(dados: DadosComplementaresTran
     } as DadosComplementaresTransmissao,
   };
 }
+
+/** Campos do formulário geral que a Efetivação da Mapfre NÃO tem (o estado do form os guarda como ""). */
+const CAMPOS_AUSENTES_NA_MAPFRE = [
+  "rg",
+  "renavam",
+  "corVeiculo",
+  "diaVencimentoDemaisParcelas",
+] as const;
+
+/**
+ * Valida os dados da Mapfre (mesma técnica: campos que ela não tem saem ANTES e voltam como ""). Tipo de documento,
+ * data de emissão, órgão, ramo e renda são obrigatórios e sem valor padrão.
+ */
+export function validarDadosComplementaresMapfre(dados: DadosComplementaresTransmissao) {
+  const copia: Record<string, unknown> = { ...dados };
+  for (const campo of CAMPOS_AUSENTES_NA_MAPFRE) delete copia[campo];
+  const r = dadosComplementaresTransmissaoMapfreSchema.safeParse(copia);
+  if (!r.success) return r;
+  return {
+    success: true as const,
+    data: {
+      ...r.data,
+      rg: "",
+      renavam: "",
+      corVeiculo: "",
+      diaVencimentoDemaisParcelas: "",
+      desejaReceberPropostaPorEmail: dados.desejaReceberPropostaPorEmail,
+    } as DadosComplementaresTransmissao,
+  };
+}
+
+/** Não exportado: só `validarDadosComplementaresMapfre` pode chamá-lo (ele tira os campos ausentes antes). */
+const dadosComplementaresTransmissaoMapfreSchema = criarSchemaDadosComplementares({
+  exigePorto: false,
+  exigeMapfre: true,
+});
 
 /** Não exportado: só `validarDadosComplementaresAllianz` pode chamá-lo (ele tira os campos ausentes antes). */
 const dadosComplementaresTransmissaoAllianzSchema = criarSchemaDadosComplementares({

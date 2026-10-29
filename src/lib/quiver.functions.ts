@@ -23,6 +23,12 @@ import {
 } from "@/lib/transmissao-contato";
 import { camposPortoPayload, erroDeclaracoesPorto } from "@/lib/transmissao-porto";
 import { campoSimulacao, roboSuportaSimulacao } from "@/lib/transmissao-simulacao";
+import {
+  camposMapfrePayload,
+  camposPagamentoMapfrePayload,
+  erroDadosMapfre,
+  erroPagamentoMapfre,
+} from "@/lib/transmissao-mapfre";
 import { camposAllianzPayload, erroDadosAllianz } from "@/lib/transmissao-allianz";
 import { camposTokioPayload, erroDadosTokio } from "@/lib/transmissao-tokio";
 import {
@@ -919,6 +925,10 @@ type TransmitirPropostaPayload = {
     tipoLogradouro?: string;
     // Só na Allianz: "Veículo Alienado" (do cadastro do veículo, corrigível no passo).
     veiculoAlienado?: "Sim" | "Não";
+    // Só na Mapfre: declarações do vendedor (sem padrão) e opções do kit/certificado.
+    tipoDocumento?: string;
+    kitApolicePorEmail?: "Sim" | "Não";
+    certificadoEmNomeDe?: string;
   };
   /**
    * Pagamento da Porto (débito em conta / cartão / pagador). DADOS SENSÍVEIS:
@@ -1041,6 +1051,16 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     const erroAllianz = erroDadosAllianz(data.seguradora, data.dadosComplementares, data.parcelas);
     if (erroAllianz) throw new Error(erroAllianz);
 
+    // Mapfre: tipo de documento, emissão, órgão, ramo e renda (sem padrão) e, no débito, conta + aceite do titular.
+    const erroMapfre = erroDadosMapfre(data.seguradora, data.dadosComplementares);
+    if (erroMapfre) throw new Error(erroMapfre);
+    const erroPagamentoDaMapfre = erroPagamentoMapfre(
+      data.seguradora,
+      data.formaPagamento,
+      data.pagamento?.mapfre,
+    );
+    if (erroPagamentoDaMapfre) throw new Error(erroPagamentoDaMapfre);
+
     // Pagamento da Porto (débito/cartão/pagador): dados obrigatórios e válidos.
     // A mensagem nunca repete o valor recebido (dado financeiro/pessoal).
     const erroPagamento = erroPagamentoPorto(data.seguradora, data.formaPagamento, data.pagamento);
@@ -1075,6 +1095,9 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       ...camposPortoPayload(data.seguradora, data.opcao, data.dadosComplementares),
       ...camposTokioPayload(data.seguradora, data.dadosComplementares),
       ...camposAllianzPayload(data.seguradora, data.dadosComplementares, veiculo?.alienado),
+      ...camposMapfrePayload(data.seguradora, data.dadosComplementares),
+      // Cartão da Mapfre não envia `cartao` (o robô recusa): só o débito leva conta + aceite.
+      ...camposPagamentoMapfrePayload(data.seguradora, data.formaPagamento, data.pagamento?.mapfre),
       ...camposPagamentoPayload(data.seguradora, data.formaPagamento, data.pagamento),
       // Modo simulação (só se SELF_QUIVER_TRANSMISSAO_SIMULACAO=1): o robô preenche
       // tudo e para antes do Efetivar; nada é transmitido.
