@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/database.types";
 import type { OfertaTransmissao } from "@/components/venda/novo-lead/steps/StepCalculo";
+import { produtoDaOferta } from "@/lib/transmissao-allianz";
 import type { ResultadoTransmissaoEstado } from "@/components/venda/novo-lead/steps/transmissao/TransmissaoResultado";
 import type { Fase as FaseTransmissao } from "@/components/venda/novo-lead/steps/transmissao/StepTransmissao";
 
@@ -254,7 +255,12 @@ export async function gravarTransmissaoOfertaSnapshot(
   const snapshot: TransmissaoOfertaSnapshot = {
     seguradora: escolha.resultado.seguradora,
     produto_id: escolha.resultado.produtoId ?? null,
-    produto: escolha.resultado.produto ?? escolha.resultado.nome ?? null,
+    produto:
+      produtoDaOferta(
+        escolha.resultado.seguradora,
+        escolha.resultado.produto,
+        escolha.resultado.nome,
+      ) ?? null,
     forma_pagamento: escolha.formaPagamento,
     parcelas: escolha.parcelas || null,
     premio: escolha.premio ?? null,

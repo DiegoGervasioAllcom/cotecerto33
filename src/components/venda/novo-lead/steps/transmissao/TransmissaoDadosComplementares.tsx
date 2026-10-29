@@ -4,15 +4,18 @@ import type { ResultadoCalculo } from "@/components/venda/novo-lead/hooks/useSim
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { ehSeguradoraPorto } from "@/lib/transmissao-porto";
+import { ehParcelado, ehSeguradoraAllianz } from "@/lib/transmissao-allianz";
 import { mascararData } from "@/lib/transmissao-pagador";
 import { baseDoForm } from "@/lib/transmissao-rascunho";
 import {
   dadosComplementaresTransmissaoPortoSchema,
+  validarDadosComplementaresAllianz,
   validarDadosComplementaresTokio,
   dadosComplementaresTransmissaoSchema,
   type DadosComplementaresTransmissao,
 } from "../TransmissaoDadosComplementares.schema";
 import { tipoLogradouroDoEndereco, vencimentoPadraoTokio } from "@/lib/transmissao-tokio";
+import { TransmissaoDadosAllianz, type CamposAllianz } from "./TransmissaoDadosAllianz";
 import { TransmissaoDadosPorto, type CamposPorto } from "./TransmissaoDadosPorto";
 import { TransmissaoDadosTokio, type CamposTokio } from "./TransmissaoDadosTokio";
 
@@ -56,6 +59,8 @@ export function TransmissaoDadosComplementares({
   const ehPorto = ehSeguradoraPorto(resultado.seguradora);
   // Tokio: Efetivação própria — sem RG, renavam, cor nem "dia de vencimento das demais parcelas".
   const ehTokio = nomeCanonicoSeguradora(resultado.seguradora) === "tokio";
+  // Allianz: Efetivação própria — sem RG, renavam, cor nem PEP; renda, ramo e "veículo alienado" próprios.
+  const ehAllianz = ehSeguradoraAllianz(resultado.seguradora);
   const [dados, setDados] = useState<DadosComplementaresTransmissao>(
     () =>
       inicial ?? {
@@ -75,6 +80,7 @@ export function TransmissaoDadosComplementares({
         },
         diaVencimentoDemaisParcelas: "",
         desejaReceberPropostaPorEmail: "Não",
+        ...(ehAllianz ? { veiculoAlienado: f.alienado ? ("Sim" as const) : ("Não" as const) } : {}),
         ...(ehTokio
           ? { vencimentoPrimeiraParcela: vencimentoPadraoTokio(new Date(), formaPagamento) }
           : {}),
@@ -102,6 +108,11 @@ export function TransmissaoDadosComplementares({
     setErros((atual) => ({ ...atual, [key]: undefined }));
   }
 
+  function upAllianz<K extends keyof CamposAllianz>(key: K, value: CamposAllianz[K]) {
+    setDados((atual) => ({ ...atual, [key]: value }));
+    setErros((atual) => ({ ...atual, [key]: undefined }));
+  }
+
   function upTokio<K extends keyof CamposTokio>(key: K, value: CamposTokio[K]) {
     setDados((atual) => ({ ...atual, [key]: value }));
     setErros((atual) => ({ ...atual, [key]: undefined }));
@@ -122,12 +133,14 @@ export function TransmissaoDadosComplementares({
   }
 
   function confirmar() {
-    const validacao = ehTokio
-      ? validarDadosComplementaresTokio(dados)
-      : (ehPorto
-          ? dadosComplementaresTransmissaoPortoSchema
-          : dadosComplementaresTransmissaoSchema
-        ).safeParse(dados);
+    const validacao = ehAllianz
+      ? validarDadosComplementaresAllianz(dados)
+      : ehTokio
+        ? validarDadosComplementaresTokio(dados)
+        : (ehPorto
+            ? dadosComplementaresTransmissaoPortoSchema
+            : dadosComplementaresTransmissaoSchema
+          ).safeParse(dados);
     if (!validacao.success) {
       const proximos: Erros = {};
       for (const issue of validacao.error.issues) {
@@ -143,6 +156,10 @@ export function TransmissaoDadosComplementares({
         if (!proximos[key]) proximos[key] = issue.message as never;
       }
       setErros(proximos);
+      return;
+    }
+    if (ehAllianz && ehParcelado(parcelas) && !dados.diaVencimentoDemaisParcelas) {
+      setErros({ diaVencimentoDemaisParcelas: "Escolha o dia de vencimento das demais parcelas." });
       return;
     }
     onConfirmar(
@@ -268,10 +285,11 @@ export function TransmissaoDadosComplementares({
           <label>Nome do segurado</label>
           <input className="input" value={f.nome} disabled />
         </div>
-        {!ehTokio && field("rg", "RG", "00.000.000-0")}
+        {!ehTokio && !ehAllianz && field("rg", "RG", "00.000.000-0")}
         {!ehTokio &&
+          !ehAllianz &&
           field("dataEmissaoRg", "Data de emissão", "dd/mm/aaaa", "numeric", 10, mascararData)}
-        {!ehTokio && field("orgaoEmissorRg", "Órgão emissor", "SSP")}
+        {!ehTokio && !ehAllianz && field("orgaoEmissorRg", "Órgão emissor", "SSP")}
         {field("email", "E-mail", "cliente@email.com")}
       </div>
 
@@ -359,12 +377,21 @@ export function TransmissaoDadosComplementares({
           <label>Placa</label>
           <input className="input" value={f.placa} disabled />
         </div>
-        {!ehTokio && field("renavam", "Renavam", "11 dígitos", "numeric")}
-        {!ehTokio && field("corVeiculo", "Cor", "Ex.: Branco")}
+        {!ehTokio && !ehAllianz && field("renavam", "Renavam", "11 dígitos", "numeric")}
+        {!ehTokio && !ehAllianz && field("corVeiculo", "Cor", "Ex.: Branco")}
       </div>
 
       {ehPorto && <TransmissaoDadosPorto dados={dados} erros={erros} onChange={upPorto} />}
       {ehTokio && <TransmissaoDadosTokio dados={dados} erros={erros} onChange={upTokio} />}
+      {ehAllianz && (
+        <TransmissaoDadosAllianz
+          dados={dados}
+          erros={erros}
+          plano={resultado.nome ?? undefined}
+          alienadoPadrao={f.alienado ? "Sim" : "Não"}
+          onChange={upAllianz}
+        />
+      )}
 
       {!ehTokio && (
         <>

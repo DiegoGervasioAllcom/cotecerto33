@@ -26,3 +26,18 @@ export const BANCOS_DEBITO_PORTO = [
 ] as const;
 
 export type BancoDebitoPorto = (typeof BANCOS_DEBITO_PORTO)[number];
+
+// Bancos do débito em conta da ALLIANZ: select #Padrao2000_Cobertura1411 da Efetivação (forma "Débito em Conta"),
+// lido ao vivo em 29/10/2026 (leitura somente). `codigo` = value do select. Não editar à mão: regerar lendo o portal.
+export const BANCOS_DEBITO_ALLIANZ = [
+  { codigo: "237", nome: "Banco Bradesco S.A." },
+  { codigo: "70", nome: "BRB - BANCO DE BRASILIA S.A." },
+  { codigo: "748", nome: "BANCO COOPERATIVO SICREDI S.A." },
+  { codigo: "756", nome: "Banco Cooperativo do Brasil S.A. – BANCOOB" },
+  { codigo: "1", nome: "Banco do Brasil S.A." },
+  { codigo: "341", nome: "Banco Itaú S.A." },
+  { codigo: "422", nome: "Banco Safra S.A." },
+  { codigo: "33", nome: "Banco Santander S.A." },
+  { codigo: "104", nome: "Caixa Econômica Federal" },
+  { codigo: "47", nome: "BANESE" },
+] as const;

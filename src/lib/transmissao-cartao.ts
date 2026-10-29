@@ -4,10 +4,18 @@
 // DADO FINANCEIRO SENSÍVEL (PCI): nunca persistido, nunca logado, nunca em
 // cache; as mensagens de erro NUNCA repetem o valor. Vive só no estado do passo
 // "Pagamento" e no body do fetch ao robô. Não há CVV: o portal não pede.
-import { ehSeguradoraPorto } from "@/lib/transmissao-porto";
+import { ehSeguradoraComPagamentoPorto } from "@/lib/transmissao-porto";
+import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 
 export const BANDEIRAS_CARTAO = ["Visa", "Mastercard", "Diners", "Elo"] as const;
 export type BandeiraCartao = (typeof BANDEIRAS_CARTAO)[number];
+
+/** Bandeiras aceitas pelo portal por seguradora: a Allianz não tem Diners. */
+export function bandeirasDaSeguradora(seguradora: string): readonly BandeiraCartao[] {
+  return nomeCanonicoSeguradora(seguradora) === "allianz"
+    ? BANDEIRAS_CARTAO.filter((b) => b !== "Diners")
+    : BANDEIRAS_CARTAO;
+}
 
 /** O portal recusa titular com mais de 20 caracteres (a tela deixa digitar 50). */
 export const LIMITE_TITULAR_CARTAO = 20;
@@ -35,7 +43,7 @@ function normalizar(texto: string): string {
 export function ehCartaoPorto(seguradora: string, formaPagamento: string): boolean {
   const forma = normalizar(formaPagamento);
   return (
-    ehSeguradoraPorto(seguradora) &&
+    ehSeguradoraComPagamentoPorto(seguradora) &&
     (forma.startsWith("cartao de credito") || forma.startsWith("cartao porto bank"))
   );
 }
@@ -81,6 +89,7 @@ export function luhnValido(numero: string): boolean {
 export function validarCartao(
   cartao: Partial<CartaoTransmissao> | undefined,
   agora: Date = new Date(),
+  bandeiras: readonly BandeiraCartao[] = BANDEIRAS_CARTAO,
 ): ErrosCartao {
   const erros: ErrosCartao = {};
   const c = cartao ?? {};
@@ -88,7 +97,7 @@ export function validarCartao(
   if (typeof c.nomeTitular !== "string" || c.nomeTitular.trim() === "") {
     erros.nomeTitular = "Informe o nome do titular.";
   }
-  if (!BANDEIRAS_CARTAO.some((b) => b === c.bandeira)) {
+  if (!bandeiras.some((b) => b === c.bandeira)) {
     erros.bandeira = "Escolha a bandeira.";
   }
   const digitos = typeof c.numero === "string" ? c.numero.replace(/\D/g, "") : "";

@@ -35,6 +35,15 @@ export type CamposPortoPayload = Pick<
  */
 const GRUPO_PORTO = new Set(["porto", "azul"]);
 
+/**
+ * Seguradoras cujo passo "Pagamento" (débito em conta e cartão de crédito) usa as MESMAS formas e campos da Porto:
+ * o grupo Porto e a Allianz (formas "Débito em Conta" / "Cartão de Crédito", mesmos ids de agência, conta, número e
+ * validade — conferido ao vivo em 29/10/2026). A lista de bancos e as bandeiras mudam por seguradora.
+ */
+export function ehSeguradoraComPagamentoPorto(seguradora: string): boolean {
+  return ehSeguradoraPorto(seguradora) || nomeCanonicoSeguradora(seguradora) === "allianz";
+}
+
 export function ehSeguradoraPorto(seguradora: string): boolean {
   return GRUPO_PORTO.has(nomeCanonicoSeguradora(seguradora));
 }

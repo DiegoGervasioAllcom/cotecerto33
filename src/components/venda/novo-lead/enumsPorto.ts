@@ -18,5 +18,15 @@ export const RENDAS_MENSAIS_TOKIO = [
   ...RENDAS_MENSAIS_PORTO,
 ] as const;
 
+// Allianz: select #Padrao2000_Cobertura7253 ("Faixa de Renda Allianz"), lido ao vivo em 29/10/2026 — faixas PRÓPRIAS
+// (diferentes das da Porto/Tokio). Texto exato do portal: o robô casa por ele.
+export const RENDAS_MENSAIS_ALLIANZ = [
+  "Até R$ 1.500,00",
+  "De R$ 1.501,00 até R$ 3.000,00",
+  "De R$ 3.001,00 até R$ 5.000,00",
+  "De R$ 5.001,00 até R$ 10.000,00",
+  "Acima de R$ 10.000,00",
+] as const;
+
 export type RendaMensalPorto = (typeof RENDAS_MENSAIS_PORTO)[number];
 export type PepPorto = (typeof PEP_PORTO)[number];
