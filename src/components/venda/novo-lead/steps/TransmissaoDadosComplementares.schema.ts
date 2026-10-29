@@ -3,9 +3,11 @@ import { erroTelefoneFixo } from "@/lib/telefone-fixo";
 import { erroVencimentoTokio } from "@/lib/transmissao-tokio";
 import {
   PEP_PORTO,
+  RENDAS_MENSAIS_ALLIANZ,
   RENDAS_MENSAIS_PORTO,
   RENDAS_MENSAIS_TOKIO,
 } from "@/components/venda/novo-lead/enumsPorto";
+import { RAMOS_ATIVIDADE_ALLIANZ } from "@/components/venda/novo-lead/enumsRamoAtividadeAllianz";
 import { RAMOS_ATIVIDADE_PORTO } from "@/components/venda/novo-lead/enumsRamoAtividade";
 
 // Espelha as colunas endereco_corresp_* de `proposta_dados_complementares`
@@ -52,7 +54,9 @@ const camposBase = z.object({
   // respostas pelo cliente. Não são persistidas (ver useRetomarTransmissao:
   // "nenhuma fonte com dado pessoal") — vivem só no estado do passo.
   // União das opções (Porto + Tokio): cada seguradora restringe no refinamento abaixo.
-  rendaMensal: z.enum(RENDAS_MENSAIS_TOKIO).optional(),
+  rendaMensal: z.enum([...RENDAS_MENSAIS_TOKIO, ...RENDAS_MENSAIS_ALLIANZ]).optional(),
+  // Só Allianz: "Veículo Alienado" (do cadastro do veículo; o vendedor pode corrigir).
+  veiculoAlienado: z.enum(["Sim", "Não"]).optional(),
   // Sem `.max`: o limite é a própria lista fechada (alguns ramos do portal
   // passam de 100 caracteres — o maior tem 137). Ver `RAMOS_ATIVIDADE_PORTO`.
   ramoAtividade: z.string().trim().optional(),
@@ -84,13 +88,34 @@ type OpcoesSchema = {
   exigePorto: boolean;
   /** Tokio: renda, PEP, vencimento e telefone fixo; sem RG/renavam/cor. */
   exigeTokio?: boolean;
+  /** Allianz: faixa de renda, ramo e veículo alienado; sem RG/renavam/cor/PEP. */
+  exigeAllianz?: boolean;
 };
 
-export function criarSchemaDadosComplementares({ exigePorto, exigeTokio = false }: OpcoesSchema) {
+export function criarSchemaDadosComplementares({
+  exigePorto,
+  exigeTokio = false,
+  exigeAllianz = false,
+}: OpcoesSchema) {
   // O cast mantém o tipo de saída (strict) do schema geral: na Tokio o estado do formulário sempre traz esses
   // campos (strings vazias), só a obrigatoriedade deixa de valer em tempo de execução.
-  const base = (exigeTokio ? camposBaseTokio : camposBase) as unknown as typeof camposBase;
+  const base = (exigeTokio || exigeAllianz
+    ? camposBaseTokio
+    : camposBase) as unknown as typeof camposBase;
   return base.superRefine((val, ctx) => {
+    if (exigeAllianz) {
+      const add = (campo: string, message: string) =>
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
+      if (
+        !val.rendaMensal ||
+        !(RENDAS_MENSAIS_ALLIANZ as readonly string[]).includes(val.rendaMensal)
+      ) {
+        add("rendaMensal", "Informe a faixa de renda.");
+      }
+      if (!val.ramoAtividade || !RAMOS_ATIVIDADE_ALLIANZ.includes(val.ramoAtividade)) {
+        add("ramoAtividade", "Escolha o ramo de atividade na lista.");
+      }
+    }
     if (exigeTokio) {
       const add = (campo: string, message: string) =>
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
@@ -209,6 +234,46 @@ export function validarDadosComplementaresTokio(dados: DadosComplementaresTransm
     } as DadosComplementaresTransmissao,
   };
 }
+
+/** Campos do formulário geral que a Efetivação da Allianz NÃO tem (o estado do form os guarda como ""). */
+const CAMPOS_AUSENTES_NA_ALLIANZ = [
+  "rg",
+  "dataEmissaoRg",
+  "orgaoEmissorRg",
+  "renavam",
+  "corVeiculo",
+] as const;
+
+/**
+ * Valida os dados da Allianz (mesma técnica da Tokio: os campos que ela não tem saem ANTES da validação, e voltam
+ * como ""). O dia de vencimento das demais parcelas é opcional aqui (só vale no parcelado) — vazio sai antes da regex.
+ */
+export function validarDadosComplementaresAllianz(dados: DadosComplementaresTransmissao) {
+  const copia: Record<string, unknown> = { ...dados };
+  for (const campo of CAMPOS_AUSENTES_NA_ALLIANZ) delete copia[campo];
+  if (!dados.diaVencimentoDemaisParcelas) delete copia.diaVencimentoDemaisParcelas;
+  const r = dadosComplementaresTransmissaoAllianzSchema.safeParse(copia);
+  if (!r.success) return r;
+  return {
+    success: true as const,
+    data: {
+      ...r.data,
+      rg: "",
+      dataEmissaoRg: "",
+      orgaoEmissorRg: "",
+      renavam: "",
+      corVeiculo: "",
+      diaVencimentoDemaisParcelas: dados.diaVencimentoDemaisParcelas ?? "",
+      desejaReceberPropostaPorEmail: dados.desejaReceberPropostaPorEmail,
+    } as DadosComplementaresTransmissao,
+  };
+}
+
+/** Não exportado: só `validarDadosComplementaresAllianz` pode chamá-lo (ele tira os campos ausentes antes). */
+const dadosComplementaresTransmissaoAllianzSchema = criarSchemaDadosComplementares({
+  exigePorto: false,
+  exigeAllianz: true,
+});
 
 /**
  * Tokio: renda, PEP e vencimento obrigatórios; RG, renavam e cor não existem na Efetivação dela. NÃO exportado de

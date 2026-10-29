@@ -23,6 +23,7 @@ import {
 } from "@/lib/transmissao-contato";
 import { camposPortoPayload, erroDeclaracoesPorto } from "@/lib/transmissao-porto";
 import { campoSimulacao, roboSuportaSimulacao } from "@/lib/transmissao-simulacao";
+import { camposAllianzPayload, erroDadosAllianz } from "@/lib/transmissao-allianz";
 import { camposTokioPayload, erroDadosTokio } from "@/lib/transmissao-tokio";
 import {
   camposPagamentoPayload,
@@ -843,6 +844,7 @@ type VeiculoTransmissao = {
   renavam?: string | null;
   cor?: string | null;
   chassi_remarcado?: boolean | null;
+  alienado?: boolean | null;
 };
 
 type TransmitirPropostaPayload = {
@@ -915,6 +917,8 @@ type TransmitirPropostaPayload = {
     // Só na Tokio: vencimento da 1ª parcela / do boleto (dd/mm/aaaa).
     vencimentoPrimeiraParcela?: string;
     tipoLogradouro?: string;
+    // Só na Allianz: "Veículo Alienado" (do cadastro do veículo, corrigível no passo).
+    veiculoAlienado?: "Sim" | "Não";
   };
   /**
    * Pagamento da Porto (débito em conta / cartão / pagador). DADOS SENSÍVEIS:
@@ -977,7 +981,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       .select(
         "id,quiver_resultado_raw," +
           "segurado:cotacao_segurado(cpf_cnpj,nome,celular,cep,numero,complemento,email)," +
-          "veiculo:cotacao_veiculo(renavam,cor,chassi_remarcado)",
+          "veiculo:cotacao_veiculo(renavam,cor,chassi_remarcado,alienado)",
       )
       .eq("id", data.cotacaoId)
       .maybeSingle();
@@ -1033,6 +1037,10 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     const erroTokio = erroDadosTokio(data.seguradora, data.produto, data.dadosComplementares);
     if (erroTokio) throw new Error(erroTokio);
 
+    // Allianz: faixa de renda, ramo, veículo alienado e, no parcelado, o dia de vencimento das demais parcelas.
+    const erroAllianz = erroDadosAllianz(data.seguradora, data.dadosComplementares, data.parcelas);
+    if (erroAllianz) throw new Error(erroAllianz);
+
     // Pagamento da Porto (débito/cartão/pagador): dados obrigatórios e válidos.
     // A mensagem nunca repete o valor recebido (dado financeiro/pessoal).
     const erroPagamento = erroPagamentoPorto(data.seguradora, data.formaPagamento, data.pagamento);
@@ -1066,6 +1074,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       // cliente. Ver `camposPortoPayload`.
       ...camposPortoPayload(data.seguradora, data.opcao, data.dadosComplementares),
       ...camposTokioPayload(data.seguradora, data.dadosComplementares),
+      ...camposAllianzPayload(data.seguradora, data.dadosComplementares, veiculo?.alienado),
       ...camposPagamentoPayload(data.seguradora, data.formaPagamento, data.pagamento),
       // Modo simulação (só se SELF_QUIVER_TRANSMISSAO_SIMULACAO=1): o robô preenche
       // tudo e para antes do Efetivar; nada é transmitido.

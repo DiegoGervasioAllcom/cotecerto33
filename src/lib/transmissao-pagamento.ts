@@ -7,6 +7,7 @@
 // de erro NUNCA repetem o valor. Vivem só no estado do passo "Pagamento" e no
 // body do fetch ao robô.
 import {
+  bandeirasDaSeguradora,
   ehCartaoPorto,
   ehCartaoTerceirosPorto,
   validarCartao,
@@ -65,7 +66,9 @@ export function erroPagamentoPorto(
 
   if (tipo === "debito") return erroContaDebito(seguradora, formaPagamento, p.contaDebito);
 
-  const erroCartao = primeiroErro(validarCartao(p.cartao));
+  const erroCartao = primeiroErro(
+    validarCartao(p.cartao, undefined, bandeirasDaSeguradora(seguradora)),
+  );
   if (erroCartao) return `Cartão: ${erroCartao}`;
 
   if (tipo === "cartao_terceiros") {

@@ -1,6 +1,12 @@
 import { useState } from "react";
-import { validarCartao, type CartaoTransmissao, type ErrosCartao } from "@/lib/transmissao-cartao";
 import {
+  bandeirasDaSeguradora,
+  validarCartao,
+  type CartaoTransmissao,
+  type ErrosCartao,
+} from "@/lib/transmissao-cartao";
+import {
+  bancosDaSeguradora,
   validarContaDebito,
   type ContaDebito,
   type ErrosContaDebito,
@@ -82,6 +88,9 @@ export function TransmissaoPagamento({
 }: Props) {
   const tipo = tipoPagamentoPorto(seguradora, formaPagamento);
   const tipoTokio = tipoPagamentoTokio(seguradora, formaPagamento);
+  // Listas do portal por seguradora (a Allianz tem outros bancos e não tem Diners).
+  const bancos = bancosDaSeguradora(seguradora);
+  const bandeiras = bandeirasDaSeguradora(seguradora);
   const [debitoTokio, setDebitoTokio] = useState<DebitoTokio>(DEBITO_TOKIO_VAZIO);
   const [cartaoTokio, setCartaoTokio] = useState<CartaoTokio>(CARTAO_TOKIO_VAZIO);
   const [errosDebitoTokio, setErrosDebitoTokio] = useState<ErrosDebitoTokio>({});
@@ -157,7 +166,7 @@ export function TransmissaoPagamento({
       return onEfetivar({ tokio: { cartao: cartaoTokio } });
     }
     if (tipo === "debito") {
-      const erros = validarContaDebito(conta);
+      const erros = validarContaDebito(conta, bancos);
       if (Object.keys(erros).length > 0) {
         setErrosConta(erros);
         return focar(
@@ -168,7 +177,7 @@ export function TransmissaoPagamento({
     }
     if (tipo === "cartao" || tipo === "cartao_terceiros") {
       const comPagador = tipo === "cartao_terceiros";
-      const ec = validarCartao(cartao);
+      const ec = validarCartao(cartao, undefined, bandeiras);
       const ep = comPagador ? validarPagador(pagador) : {};
       setErrosCartao(ec);
       setErrosPagador(ep);
@@ -241,10 +250,20 @@ export function TransmissaoPagamento({
         />
       )}
       {tipo === "debito" && (
-        <PagamentoDebitoCampos valor={conta} erros={errosConta} onChange={upConta} />
+        <PagamentoDebitoCampos
+          valor={conta}
+          erros={errosConta}
+          bancos={bancos}
+          onChange={upConta}
+        />
       )}
       {(tipo === "cartao" || tipo === "cartao_terceiros") && (
-        <PagamentoCartaoCampos valor={cartao} erros={errosCartao} onChange={upCartao} />
+        <PagamentoCartaoCampos
+          valor={cartao}
+          erros={errosCartao}
+          bandeiras={bandeiras}
+          onChange={upCartao}
+        />
       )}
       {tipo === "cartao_terceiros" && (
         <PagamentoPagadorCampos valor={pagador} erros={errosPagador} onChange={upPagador} />

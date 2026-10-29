@@ -5,8 +5,21 @@
 // DADO FINANCEIRO SENSÍVEL — mesma regra do cartão: nunca persistido, nunca
 // logado, nunca em cache. Vive só no estado do passo "Pagamento" e segue direto
 // no body do fetch ao robô.
-import { BANCOS_DEBITO_PORTO } from "@/components/venda/novo-lead/enumsBancosDebito";
-import { ehSeguradoraPorto } from "@/lib/transmissao-porto";
+import {
+  BANCOS_DEBITO_ALLIANZ,
+  BANCOS_DEBITO_PORTO,
+} from "@/components/venda/novo-lead/enumsBancosDebito";
+import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
+import { ehSeguradoraComPagamentoPorto } from "@/lib/transmissao-porto";
+
+type BancoDebito = { readonly codigo: string; readonly nome: string };
+
+/** Bancos do débito por seguradora (os selects do portal diferem entre a Porto e a Allianz). */
+export function bancosDaSeguradora(seguradora: string): readonly BancoDebito[] {
+  return nomeCanonicoSeguradora(seguradora) === "allianz"
+    ? BANCOS_DEBITO_ALLIANZ
+    : BANCOS_DEBITO_PORTO;
+}
 
 export type ContaDebito = {
   /** Código do banco (value do select do portal, ex.: "104"). */
@@ -30,18 +43,23 @@ function normalizar(texto: string): string {
  * (ex.: Mapfre "Débito c/ 1ª em Boleto") — não entram aqui.
  */
 export function ehDebitoEmContaPorto(seguradora: string, formaPagamento: string): boolean {
-  return ehSeguradoraPorto(seguradora) && normalizar(formaPagamento) === "debito em conta";
+  return (
+    ehSeguradoraComPagamentoPorto(seguradora) && normalizar(formaPagamento) === "debito em conta"
+  );
 }
 
 export type ErrosContaDebito = Partial<Record<keyof ContaDebito, string>>;
 
 /** Valida a conta; devolve os erros por campo ({} se estiver tudo certo). */
-export function validarContaDebito(conta: Partial<ContaDebito> | undefined): ErrosContaDebito {
+export function validarContaDebito(
+  conta: Partial<ContaDebito> | undefined,
+  bancos: readonly BancoDebito[] = BANCOS_DEBITO_PORTO,
+): ErrosContaDebito {
   const erros: ErrosContaDebito = {};
   const c = conta ?? {};
   // No servidor o valor chega de JSON arbitrário: confere o tipo antes de
   // chamar `.trim()` (erro controlado em vez de TypeError).
-  if (typeof c.banco !== "string" || !BANCOS_DEBITO_PORTO.some((b) => b.codigo === c.banco)) {
+  if (typeof c.banco !== "string" || !bancos.some((b) => b.codigo === c.banco)) {
     erros.banco = "Escolha o banco.";
   }
   if (typeof c.agencia !== "string" || !REGEX_AGENCIA.test(c.agencia.trim())) {
@@ -64,7 +82,7 @@ export function erroContaDebito(
   conta: Partial<ContaDebito> | undefined,
 ): string | null {
   if (!ehDebitoEmContaPorto(seguradora, formaPagamento)) return null;
-  const erros = validarContaDebito(conta);
+  const erros = validarContaDebito(conta, bancosDaSeguradora(seguradora));
   const primeiro = erros.banco ?? erros.agencia ?? erros.conta;
   return primeiro ? `Débito em conta: ${primeiro}` : null;
 }

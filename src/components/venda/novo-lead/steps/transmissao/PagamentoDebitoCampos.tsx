@@ -5,11 +5,18 @@ import { CampoPagamento } from "./PagamentoCampo";
 type Props = {
   valor: ContaDebito;
   erros: ErrosContaDebito;
+  /** Bancos do select do portal da seguradora (padrão: os da Porto). */
+  bancos?: readonly { readonly codigo: string; readonly nome: string }[];
   onChange: <K extends keyof ContaDebito>(chave: K, valor: ContaDebito[K]) => void;
 };
 
 // Campos do débito em conta (Porto). Dado financeiro sensível: só em memória.
-export function PagamentoDebitoCampos({ valor, erros, onChange }: Props) {
+export function PagamentoDebitoCampos({
+  valor,
+  erros,
+  bancos = BANCOS_DEBITO_PORTO,
+  onChange,
+}: Props) {
   return (
     <div className="wizard-grid cols-3" data-testid="pagamento-debito">
       <CampoPagamento
@@ -28,7 +35,7 @@ export function PagamentoDebitoCampos({ valor, erros, onChange }: Props) {
           onChange={(e) => onChange("banco", e.target.value)}
         >
           <option value="">Selecione</option>
-          {BANCOS_DEBITO_PORTO.map((b) => (
+          {bancos.map((b) => (
             <option key={b.codigo} value={b.codigo}>
               {b.codigo} · {b.nome}
             </option>

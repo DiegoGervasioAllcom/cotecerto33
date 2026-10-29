@@ -3,6 +3,7 @@ import {
   LIMITE_TITULAR_CARTAO,
   formatarNumeroCartao,
   mascararValidade,
+  type BandeiraCartao,
   type CartaoTransmissao,
   type ErrosCartao,
 } from "@/lib/transmissao-cartao";
@@ -11,12 +12,19 @@ import { CampoPagamento } from "./PagamentoCampo";
 type Props = {
   valor: CartaoTransmissao;
   erros: ErrosCartao;
+  /** Bandeiras do portal da seguradora (padrão: todas; a Allianz não tem Diners). */
+  bandeiras?: readonly BandeiraCartao[];
   onChange: <K extends keyof CartaoTransmissao>(chave: K, valor: CartaoTransmissao[K]) => void;
 };
 
 // Campos do cartão de crédito (Porto). Dado financeiro sensível (PCI): só em
 // memória; não pedimos o código de segurança (o portal não pede).
-export function PagamentoCartaoCampos({ valor, erros, onChange }: Props) {
+export function PagamentoCartaoCampos({
+  valor,
+  erros,
+  bandeiras = BANDEIRAS_CARTAO,
+  onChange,
+}: Props) {
   return (
     <div className="wizard-grid cols-3" data-testid="pagamento-cartao">
       <CampoPagamento
@@ -51,7 +59,7 @@ export function PagamentoCartaoCampos({ valor, erros, onChange }: Props) {
           onChange={(e) => onChange("bandeira", e.target.value as CartaoTransmissao["bandeira"])}
         >
           <option value="">Selecione</option>
-          {BANDEIRAS_CARTAO.map((b) => (
+          {bandeiras.map((b) => (
             <option key={b}>{b}</option>
           ))}
         </select>

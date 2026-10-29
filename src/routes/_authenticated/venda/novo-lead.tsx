@@ -45,6 +45,7 @@ import { ClassificarPerdaModal } from "@/components/venda/novo-lead/ClassificarP
 import { LeadManualGate } from "@/components/venda/novo-lead/LeadManualGate";
 import { useTutorialController } from "@/components/tutorial/tutorial-controller-context";
 import { useTutorialPreview } from "@/components/tutorial/tutorial-preview-context";
+import { produtoDaOferta } from "@/lib/transmissao-allianz";
 import { CalculoListaTutorialPreview } from "@/components/venda/calculo-lista-tutorial-preview";
 import {
   TransmissaoConfirmacaoTutorialPreview,
@@ -518,7 +519,7 @@ function Page() {
           caller_token: sess.session?.access_token ?? "",
           seguradora: r.seguradora,
           produtoId: r.produtoId,
-          produto: r.produto || r.nome || undefined,
+          produto: produtoDaOferta(r.seguradora, r.produto, r.nome),
           formaPagamento,
           parcelas,
           opcao,
