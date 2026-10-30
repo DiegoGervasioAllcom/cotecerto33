@@ -21,6 +21,7 @@ import {
   type ContaDebito,
 } from "@/lib/transmissao-debito";
 import { validarPagador, type PagadorTransmissao } from "@/lib/transmissao-pagador";
+import type { PagamentoBradesco } from "@/lib/transmissao-bradesco";
 import type { PagamentoMapfre } from "@/lib/transmissao-mapfre";
 import type { PagamentoTokio } from "@/lib/transmissao-tokio-pagamento";
 
@@ -34,6 +35,8 @@ export type PagamentoTransmissao = {
   tokio?: PagamentoTokio;
   /** Só na Mapfre: conta do débito + aceite do titular. Cartão da Mapfre não envia nada. */
   mapfre?: PagamentoMapfre;
+  /** Só na Bradesco: débito (conta + aceite), cartão e crédito em conta para devoluções. */
+  bradesco?: PagamentoBradesco;
 };
 
 export type TipoPagamentoPorto = "debito" | "cartao" | "cartao_terceiros";

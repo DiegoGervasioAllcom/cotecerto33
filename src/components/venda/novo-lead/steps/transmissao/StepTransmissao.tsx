@@ -13,6 +13,8 @@ import {
 import { TransmissaoConfirmacao } from "./TransmissaoConfirmacao";
 import { TransmissaoPagamento } from "./TransmissaoPagamento";
 import { ehDebitoEmContaPorto } from "@/lib/transmissao-debito";
+import { ehSeguradoraBradesco } from "@/lib/transmissao-bradesco";
+import { TransmissaoPagamentoBradesco } from "./TransmissaoPagamentoBradesco";
 import { ehCartaoMapfre, ehDebitoMapfre } from "@/lib/transmissao-mapfre";
 import { tipoPagamentoTokio } from "@/lib/transmissao-tokio-pagamento";
 import { type PagamentoTransmissao } from "@/lib/transmissao-pagamento";
@@ -91,6 +93,7 @@ export function StepTransmissao({
   const temPassoPagamento =
     ehCartao ||
     ehDebitoPorto ||
+    ehSeguradoraBradesco(oferta.resultado.seguradora) || // pergunta de crédito em conta vale p/ toda forma
     ehDebitoMapfre(oferta.resultado.seguradora, oferta.formaPagamento) ||
     ehCartaoMapfre(oferta.resultado.seguradora, oferta.formaPagamento) ||
     tipoPagamentoTokio(oferta.resultado.seguradora, oferta.formaPagamento) !== null;
@@ -175,8 +178,11 @@ export function StepTransmissao({
       />
     );
   } else if (faseAtual === "pagamento") {
+    const PagamentoDaSeguradora = ehSeguradoraBradesco(oferta.resultado.seguradora)
+      ? TransmissaoPagamentoBradesco
+      : TransmissaoPagamento;
     body = (
-      <TransmissaoPagamento
+      <PagamentoDaSeguradora
         seguradora={oferta.resultado.seguradora}
         formaPagamento={oferta.formaPagamento}
         enviando={enviando}

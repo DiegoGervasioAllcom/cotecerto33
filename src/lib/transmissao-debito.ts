@@ -7,6 +7,7 @@
 // no body do fetch ao robô.
 import {
   BANCOS_DEBITO_ALLIANZ,
+  BANCOS_DEBITO_BRADESCO,
   BANCOS_DEBITO_MAPFRE,
   BANCOS_DEBITO_PORTO,
 } from "@/components/venda/novo-lead/enumsBancosDebito";
@@ -19,6 +20,7 @@ type BancoDebito = { readonly codigo: string; readonly nome: string };
 export function bancosDaSeguradora(seguradora: string): readonly BancoDebito[] {
   const s = nomeCanonicoSeguradora(seguradora);
   if (s === "mapfre") return BANCOS_DEBITO_MAPFRE;
+  if (s === "bradesco") return BANCOS_DEBITO_BRADESCO;
   return s === "allianz" ? BANCOS_DEBITO_ALLIANZ : BANCOS_DEBITO_PORTO;
 }
 

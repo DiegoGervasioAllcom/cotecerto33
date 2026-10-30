@@ -63,3 +63,24 @@ export const BANCOS_DEBITO_MAPFRE = [
   { codigo: "33", nome: "Banco Santander Brasil S.A." },
   { codigo: "3", nome: "Banco da Amazônia S.A." },
 ] as const;
+
+// Bancos do débito em conta e do crédito em conta da BRADESCO (16), conforme o mapa da Efetivação. `codigo` = código do banco
+// (o robô aceita código ou nome). Não editar à mão: regerar lendo o portal.
+export const BANCOS_DEBITO_BRADESCO = [
+  { codigo: "121", nome: "Agibank" },
+  { codigo: "85", nome: "Ailos" },
+  { codigo: "3", nome: "Banco da Amazônia" },
+  { codigo: "1", nome: "Banco do Brasil" },
+  { codigo: "77", nome: "Banco Inter" },
+  { codigo: "79", nome: "Banco Original" },
+  { codigo: "756", nome: "Bancoob" },
+  { codigo: "237", nome: "Bradesco" },
+  { codigo: "336", nome: "C6 Bank" },
+  { codigo: "133", nome: "Cresol" },
+  { codigo: "10", nome: "Credicoamo" },
+  { codigo: "260", nome: "NuBank" },
+  { codigo: "341", nome: "Itaú" },
+  { codigo: "33", nome: "Santander" },
+  { codigo: "748", nome: "Sicredi" },
+  { codigo: "4", nome: "Banco do Nordeste do Brasil S.A" },
+] as const;

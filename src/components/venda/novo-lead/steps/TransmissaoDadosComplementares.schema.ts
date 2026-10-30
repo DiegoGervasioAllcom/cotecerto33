@@ -7,6 +7,7 @@ import {
   RENDAS_MENSAIS_PORTO,
   RENDAS_MENSAIS_TOKIO,
 } from "@/components/venda/novo-lead/enumsPorto";
+import { errosDadosBradesco, RENDAS_MENSAIS_BRADESCO } from "@/lib/transmissao-bradesco";
 import { errosDadosMapfre, RENDAS_MENSAIS_MAPFRE } from "@/lib/transmissao-mapfre";
 import { RAMOS_ATIVIDADE_ALLIANZ } from "@/components/venda/novo-lead/enumsRamoAtividadeAllianz";
 import { RAMOS_ATIVIDADE_PORTO } from "@/components/venda/novo-lead/enumsRamoAtividade";
@@ -56,7 +57,12 @@ const camposBase = z.object({
   // "nenhuma fonte com dado pessoal") — vivem só no estado do passo.
   // União das opções (Porto + Tokio): cada seguradora restringe no refinamento abaixo.
   rendaMensal: z
-    .enum([...RENDAS_MENSAIS_TOKIO, ...RENDAS_MENSAIS_ALLIANZ, ...RENDAS_MENSAIS_MAPFRE])
+    .enum([
+      ...RENDAS_MENSAIS_TOKIO,
+      ...RENDAS_MENSAIS_ALLIANZ,
+      ...RENDAS_MENSAIS_MAPFRE,
+      ...RENDAS_MENSAIS_BRADESCO,
+    ])
     .optional(),
   // Só Mapfre: tipo do documento (declaração do vendedor, sem padrão), kit da apólice por e-mail e em nome de quem sai o certificado.
   tipoDocumento: z.string().trim().optional(),
@@ -95,6 +101,16 @@ const camposBaseMapfre = camposBase
   .partial({ rg: true, renavam: true, corVeiculo: true, diaVencimentoDemaisParcelas: true })
   .extend({ orgaoEmissorRg: z.string().trim().min(1, "Informe o órgão emissor.").max(40) });
 
+// Bradesco: documento e órgão vêm do cadastro no portal; sem renavam nem cor.
+const camposBaseBradesco = camposBase.partial({
+  rg: true,
+  dataEmissaoRg: true,
+  orgaoEmissorRg: true,
+  renavam: true,
+  corVeiculo: true,
+  diaVencimentoDemaisParcelas: true,
+});
+
 type OpcoesSchema = {
   /** true quando a seguradora do card é a Porto: renda, ramo e PEP viram obrigatórios. */
   exigePorto: boolean;
@@ -104,6 +120,8 @@ type OpcoesSchema = {
   exigeAllianz?: boolean;
   /** Mapfre: tipo de documento, emissão, órgão, ramo e renda (sem padrão); sem RG/renavam/cor. */
   exigeMapfre?: boolean;
+  /** Bradesco: ramo, renda e tipo de logradouro (sem padrão); sem documento/renavam/cor. */
+  exigeBradesco?: boolean;
 };
 
 export function criarSchemaDadosComplementares({
@@ -111,15 +129,23 @@ export function criarSchemaDadosComplementares({
   exigeTokio = false,
   exigeAllianz = false,
   exigeMapfre = false,
+  exigeBradesco = false,
 }: OpcoesSchema) {
   // O cast mantém o tipo de saída (strict) do schema geral: na Tokio o estado do formulário sempre traz esses
   // campos (strings vazias), só a obrigatoriedade deixa de valer em tempo de execução.
-  const base = (exigeMapfre
-    ? camposBaseMapfre
-    : exigeTokio || exigeAllianz
-      ? camposBaseTokio
-      : camposBase) as unknown as typeof camposBase;
+  const base = (exigeBradesco
+    ? camposBaseBradesco
+    : exigeMapfre
+      ? camposBaseMapfre
+      : exigeTokio || exigeAllianz
+        ? camposBaseTokio
+        : camposBase) as unknown as typeof camposBase;
   return base.superRefine((val, ctx) => {
+    if (exigeBradesco) {
+      for (const [campo, message] of Object.entries(errosDadosBradesco(val))) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
+      }
+    }
     if (exigeMapfre) {
       for (const [campo, message] of Object.entries(errosDadosMapfre(val))) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
@@ -320,6 +346,46 @@ export function validarDadosComplementaresMapfre(dados: DadosComplementaresTrans
     } as DadosComplementaresTransmissao,
   };
 }
+
+/** Campos do formulário geral que a Efetivação da Bradesco NÃO tem (o estado do form os guarda como ""). */
+const CAMPOS_AUSENTES_NA_BRADESCO = [
+  "rg",
+  "dataEmissaoRg",
+  "orgaoEmissorRg",
+  "renavam",
+  "corVeiculo",
+  "diaVencimentoDemaisParcelas",
+] as const;
+
+/**
+ * Valida os dados da Bradesco (mesma técnica: campos que ela não tem saem ANTES e voltam como ""). Ramo, renda e tipo
+ * de logradouro são obrigatórios e sem valor padrão.
+ */
+export function validarDadosComplementaresBradesco(dados: DadosComplementaresTransmissao) {
+  const copia: Record<string, unknown> = { ...dados };
+  for (const campo of CAMPOS_AUSENTES_NA_BRADESCO) delete copia[campo];
+  const r = dadosComplementaresTransmissaoBradescoSchema.safeParse(copia);
+  if (!r.success) return r;
+  return {
+    success: true as const,
+    data: {
+      ...r.data,
+      rg: "",
+      dataEmissaoRg: "",
+      orgaoEmissorRg: "",
+      renavam: "",
+      corVeiculo: "",
+      diaVencimentoDemaisParcelas: "",
+      desejaReceberPropostaPorEmail: dados.desejaReceberPropostaPorEmail,
+    } as DadosComplementaresTransmissao,
+  };
+}
+
+/** Não exportado: só `validarDadosComplementaresBradesco` pode chamá-lo (ele tira os campos ausentes antes). */
+const dadosComplementaresTransmissaoBradescoSchema = criarSchemaDadosComplementares({
+  exigePorto: false,
+  exigeBradesco: true,
+});
 
 /** Não exportado: só `validarDadosComplementaresMapfre` pode chamá-lo (ele tira os campos ausentes antes). */
 const dadosComplementaresTransmissaoMapfreSchema = criarSchemaDadosComplementares({

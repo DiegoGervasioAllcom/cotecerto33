@@ -5,12 +5,18 @@ import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { ehSeguradoraPorto } from "@/lib/transmissao-porto";
 import { ehParcelado, ehSeguradoraAllianz } from "@/lib/transmissao-allianz";
+import {
+  AVISO_FORMA_NAO_SUPORTADA_BRADESCO,
+  ehFormaNaoSuportadaBradesco,
+  ehSeguradoraBradesco,
+} from "@/lib/transmissao-bradesco";
 import { ehSeguradoraMapfre } from "@/lib/transmissao-mapfre";
 import { mascararData } from "@/lib/transmissao-pagador";
 import { baseDoForm } from "@/lib/transmissao-rascunho";
 import {
   dadosComplementaresTransmissaoPortoSchema,
   validarDadosComplementaresAllianz,
+  validarDadosComplementaresBradesco,
   validarDadosComplementaresMapfre,
   validarDadosComplementaresTokio,
   dadosComplementaresTransmissaoSchema,
@@ -18,6 +24,7 @@ import {
 } from "../TransmissaoDadosComplementares.schema";
 import { tipoLogradouroDoEndereco, vencimentoPadraoTokio } from "@/lib/transmissao-tokio";
 import { TransmissaoDadosAllianz, type CamposAllianz } from "./TransmissaoDadosAllianz";
+import { TransmissaoDadosBradesco, type CamposBradesco } from "./TransmissaoDadosBradesco";
 import { TransmissaoDadosMapfre, type CamposMapfre } from "./TransmissaoDadosMapfre";
 import { TransmissaoDadosPorto, type CamposPorto } from "./TransmissaoDadosPorto";
 import { TransmissaoDadosTokio, type CamposTokio } from "./TransmissaoDadosTokio";
@@ -66,7 +73,11 @@ export function TransmissaoDadosComplementares({
   const ehAllianz = ehSeguradoraAllianz(resultado.seguradora);
   // Mapfre: Efetivação própria — documento/emissão/órgão/ramo/renda do vendedor; sem RG (número), renavam nem cor.
   const ehMapfre = ehSeguradoraMapfre(resultado.seguradora);
-  const semDocumentoPadrao = ehTokio || ehAllianz || ehMapfre;
+  // Bradesco: ramo, renda e tipo de logradouro do vendedor; documento/órgão vêm do portal; sem renavam nem cor.
+  const ehBradesco = ehSeguradoraBradesco(resultado.seguradora);
+  // "Cartão Bradesco Seguros" não foi mapeado: não dá para transmitir.
+  const formaBloqueada = ehFormaNaoSuportadaBradesco(resultado.seguradora, formaPagamento);
+  const semDocumentoPadrao = ehTokio || ehAllianz || ehMapfre || ehBradesco;
   const [dados, setDados] = useState<DadosComplementaresTransmissao>(
     () =>
       inicial ?? {
@@ -86,6 +97,7 @@ export function TransmissaoDadosComplementares({
         },
         diaVencimentoDemaisParcelas: "",
         desejaReceberPropostaPorEmail: "Não",
+        ...(ehBradesco ? { tipoLogradouro: tipoLogradouroDoEndereco(f.logradouro) } : {}),
         ...(ehAllianz ? { veiculoAlienado: f.alienado ? ("Sim" as const) : ("Não" as const) } : {}),
         ...(ehTokio
           ? { vencimentoPrimeiraParcela: vencimentoPadraoTokio(new Date(), formaPagamento) }
@@ -119,6 +131,11 @@ export function TransmissaoDadosComplementares({
     setErros((atual) => ({ ...atual, [key]: undefined }));
   }
 
+  function upBradesco<K extends keyof CamposBradesco>(key: K, value: CamposBradesco[K]) {
+    setDados((atual) => ({ ...atual, [key]: value }));
+    setErros((atual) => ({ ...atual, [key]: undefined }));
+  }
+
   function upMapfre<K extends keyof CamposMapfre>(key: K, value: CamposMapfre[K]) {
     setDados((atual) => ({ ...atual, [key]: value }));
     setErros((atual) => ({ ...atual, [key]: undefined }));
@@ -144,16 +161,19 @@ export function TransmissaoDadosComplementares({
   }
 
   function confirmar() {
-    const validacao = ehMapfre
-      ? validarDadosComplementaresMapfre(dados)
-      : ehAllianz
-        ? validarDadosComplementaresAllianz(dados)
-        : ehTokio
-          ? validarDadosComplementaresTokio(dados)
-          : (ehPorto
-              ? dadosComplementaresTransmissaoPortoSchema
-              : dadosComplementaresTransmissaoSchema
-            ).safeParse(dados);
+    if (formaBloqueada) return;
+    const validacao = ehBradesco
+      ? validarDadosComplementaresBradesco(dados)
+      : ehMapfre
+        ? validarDadosComplementaresMapfre(dados)
+        : ehAllianz
+          ? validarDadosComplementaresAllianz(dados)
+          : ehTokio
+            ? validarDadosComplementaresTokio(dados)
+            : (ehPorto
+                ? dadosComplementaresTransmissaoPortoSchema
+                : dadosComplementaresTransmissaoSchema
+              ).safeParse(dados);
     if (!validacao.success) {
       const proximos: Erros = {};
       for (const issue of validacao.error.issues) {
@@ -414,7 +434,17 @@ export function TransmissaoDadosComplementares({
         />
       )}
 
-      {!ehTokio && !ehMapfre && (
+      {ehBradesco && <TransmissaoDadosBradesco dados={dados} erros={erros} onChange={upBradesco} />}
+      {formaBloqueada && (
+        <div className="clt-note" role="alert" data-testid="bradesco-forma-nao-suportada">
+          <svg width="15" height="15">
+            <use href="#i-info" />
+          </svg>
+          <div>{AVISO_FORMA_NAO_SUPORTADA_BRADESCO}</div>
+        </div>
+      )}
+
+      {!ehTokio && !ehMapfre && !ehBradesco && (
         <>
           <div className="acc-sec-t">Transmissão e envio</div>
           <div className="wizard-grid cols-3">
@@ -467,7 +497,12 @@ export function TransmissaoDadosComplementares({
           Voltar ao cálculo
         </button>
         <span className="spacer" />
-        <button className="btn btn-yellow" type="button" onClick={confirmar}>
+        <button
+          className="btn btn-yellow"
+          type="button"
+          onClick={confirmar}
+          disabled={formaBloqueada}
+        >
           <svg width="14" height="14">
             <use href="#i-check" />
           </svg>{" "}

@@ -24,6 +24,12 @@ import {
 import { camposPortoPayload, erroDeclaracoesPorto } from "@/lib/transmissao-porto";
 import { campoSimulacao, roboSuportaSimulacao } from "@/lib/transmissao-simulacao";
 import {
+  camposBradescoPayload,
+  camposPagamentoBradescoPayload,
+  erroDadosBradesco,
+  erroPagamentoBradesco,
+} from "@/lib/transmissao-bradesco";
+import {
   camposMapfrePayload,
   camposPagamentoMapfrePayload,
   erroDadosMapfre,
@@ -1061,6 +1067,20 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     );
     if (erroPagamentoDaMapfre) throw new Error(erroPagamentoDaMapfre);
 
+    // Bradesco: ramo, renda e tipo de logradouro (sem padrão); forma "Cartão Bradesco Seguros" não suportada; pagamento válido.
+    const erroBradesco = erroDadosBradesco(
+      data.seguradora,
+      data.formaPagamento,
+      data.dadosComplementares,
+    );
+    if (erroBradesco) throw new Error(erroBradesco);
+    const erroPagamentoDaBradesco = erroPagamentoBradesco(
+      data.seguradora,
+      data.formaPagamento,
+      data.pagamento?.bradesco,
+    );
+    if (erroPagamentoDaBradesco) throw new Error(erroPagamentoDaBradesco);
+
     // Pagamento da Porto (débito/cartão/pagador): dados obrigatórios e válidos.
     // A mensagem nunca repete o valor recebido (dado financeiro/pessoal).
     const erroPagamento = erroPagamentoPorto(data.seguradora, data.formaPagamento, data.pagamento);
@@ -1098,6 +1118,13 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
       ...camposMapfrePayload(data.seguradora, data.dadosComplementares),
       // Cartão da Mapfre não envia `cartao` (o robô recusa): só o débito leva conta + aceite.
       ...camposPagamentoMapfrePayload(data.seguradora, data.formaPagamento, data.pagamento?.mapfre),
+      ...camposBradescoPayload(data.seguradora, data.dadosComplementares),
+      // Bradesco: débito (conta + aceite), cartão e, só com "Sim", `creditoEmConta`.
+      ...camposPagamentoBradescoPayload(
+        data.seguradora,
+        data.formaPagamento,
+        data.pagamento?.bradesco,
+      ),
       ...camposPagamentoPayload(data.seguradora, data.formaPagamento, data.pagamento),
       // Modo simulação (só se SELF_QUIVER_TRANSMISSAO_SIMULACAO=1): o robô preenche
       // tudo e para antes do Efetivar; nada é transmitido.
