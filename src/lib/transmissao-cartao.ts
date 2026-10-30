@@ -8,13 +8,25 @@ import { ehSeguradoraComPagamentoPorto } from "@/lib/transmissao-porto";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 
 export const BANDEIRAS_CARTAO = ["Visa", "Mastercard", "Diners", "Elo"] as const;
-export type BandeiraCartao = (typeof BANDEIRAS_CARTAO)[number];
+/** Select de bandeira da Bradesco (texto exato do portal). */
+export const BANDEIRAS_BRADESCO = [
+  "Visa",
+  "AMEX",
+  "ELO",
+  "Mastercard",
+  "Diners",
+  "Aura",
+  "JCB",
+] as const;
+export type BandeiraCartao =
+  | (typeof BANDEIRAS_CARTAO)[number]
+  | (typeof BANDEIRAS_BRADESCO)[number];
 
 /** Bandeiras aceitas pelo portal por seguradora: a Allianz não tem Diners. */
 export function bandeirasDaSeguradora(seguradora: string): readonly BandeiraCartao[] {
-  return nomeCanonicoSeguradora(seguradora) === "allianz"
-    ? BANDEIRAS_CARTAO.filter((b) => b !== "Diners")
-    : BANDEIRAS_CARTAO;
+  const s = nomeCanonicoSeguradora(seguradora);
+  if (s === "bradesco") return BANDEIRAS_BRADESCO;
+  return s === "allianz" ? BANDEIRAS_CARTAO.filter((b) => b !== "Diners") : BANDEIRAS_CARTAO;
 }
 
 /** O portal recusa titular com mais de 20 caracteres (a tela deixa digitar 50). */
