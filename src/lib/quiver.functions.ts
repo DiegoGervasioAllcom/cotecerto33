@@ -35,6 +35,7 @@ import {
   erroDadosYelum,
   erroPagamentoYelum,
 } from "@/lib/transmissao-yelum";
+import { camposHdiPayload, erroDadosHdi } from "@/lib/transmissao-hdi";
 import {
   camposMapfrePayload,
   camposPagamentoMapfrePayload,
@@ -943,6 +944,8 @@ type TransmitirPropostaPayload = {
     certificadoEmNomeDe?: string;
     // Só na Yelum: CPF do vendedor (dado pessoal: nunca logado nem persistido).
     cpfVendedor?: string;
+    // Só na HDI: UF da placa (sigla). Ocupação/faixa/PEP vão em ramoAtividade/rendaMensal/pessoaPoliticamenteExposta.
+    ufPlaca?: string;
   };
   /**
    * Pagamento da Porto (débito em conta / cartão / pagador). DADOS SENSÍVEIS:
@@ -1099,6 +1102,10 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     );
     if (erroPagamentoDaYelum) throw new Error(erroPagamentoDaYelum);
 
+    // HDI: ocupação, faixa salarial, PEP (Sim/Não), UF da placa e produtoId obrigatório (a Confirmação não exibe o produto).
+    const erroHdi = erroDadosHdi(data.seguradora, data.dadosComplementares, data.produtoId);
+    if (erroHdi) throw new Error(erroHdi);
+
     // Pagamento da Porto (débito/cartão/pagador): dados obrigatórios e válidos.
     // A mensagem nunca repete o valor recebido (dado financeiro/pessoal).
     const erroPagamento = erroPagamentoPorto(data.seguradora, data.formaPagamento, data.pagamento);
@@ -1144,6 +1151,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
         data.pagamento?.bradesco,
       ),
       ...camposYelumPayload(data.seguradora, data.dadosComplementares, veiculo?.alienado),
+      ...camposHdiPayload(data.seguradora, data.dadosComplementares),
       // Yelum: só o débito leva conta + aceite (sem `cartao`, sem `agenciaDv`).
       ...camposPagamentoYelumPayload(data.seguradora, data.formaPagamento, data.pagamento?.yelum),
       ...camposPagamentoPayload(data.seguradora, data.formaPagamento, data.pagamento),

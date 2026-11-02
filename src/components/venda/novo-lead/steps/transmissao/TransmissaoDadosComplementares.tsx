@@ -17,6 +17,7 @@ import {
   ehSeguradoraYelum,
   tipoLogradouroYelumDoEndereco,
 } from "@/lib/transmissao-yelum";
+import { ehSeguradoraHdi, ERRO_PRODUTO_SEM_ID_HDI, ufPlacaDoEndereco } from "@/lib/transmissao-hdi";
 import { ehSeguradoraMapfre } from "@/lib/transmissao-mapfre";
 import { mascararData } from "@/lib/transmissao-pagador";
 import { baseDoForm } from "@/lib/transmissao-rascunho";
@@ -24,6 +25,7 @@ import {
   dadosComplementaresTransmissaoPortoSchema,
   validarDadosComplementaresAllianz,
   validarDadosComplementaresBradesco,
+  validarDadosComplementaresHdi,
   validarDadosComplementaresMapfre,
   validarDadosComplementaresTokio,
   validarDadosComplementaresYelum,
@@ -33,6 +35,7 @@ import {
 import { tipoLogradouroDoEndereco, vencimentoPadraoTokio } from "@/lib/transmissao-tokio";
 import { TransmissaoDadosAllianz, type CamposAllianz } from "./TransmissaoDadosAllianz";
 import { TransmissaoDadosBradesco, type CamposBradesco } from "./TransmissaoDadosBradesco";
+import { TransmissaoDadosHdi, type CamposHdi } from "./TransmissaoDadosHdi";
 import { TransmissaoDadosMapfre, type CamposMapfre } from "./TransmissaoDadosMapfre";
 import { TransmissaoDadosPorto, type CamposPorto } from "./TransmissaoDadosPorto";
 import { TransmissaoDadosYelum, type CamposYelum } from "./TransmissaoDadosYelum";
@@ -89,9 +92,13 @@ export function TransmissaoDadosComplementares({
   // Yelum: ramo, renda, tipo de logradouro e CPF do vendedor; sem documento, órgão nem renavam.
   const ehYelum = ehFamiliaYelum(resultado.seguradora);
   const exigeCpfVendedor = ehSeguradoraYelum(resultado.seguradora);
+  // HDI: ocupação, faixa salarial, PEP (Sim/Não) e UF da placa; sem documento, renavam, logradouro nem CPF do vendedor.
+  const ehHdi = ehSeguradoraHdi(resultado.seguradora);
+  // A Confirmação da HDI não exibe o produto: sem `produtoId` não dá para garantir Fit/Básico/Compreensiva.
+  const produtoSemId = ehHdi && !resultado.produtoId?.trim();
   // CPF do vendedor logado (perfil do próprio usuário; nunca o de outro): pré-preenche, o vendedor pode corrigir.
   const { profile } = useAuth();
-  const semDocumentoPadrao = ehTokio || ehAllianz || ehMapfre || ehBradesco || ehYelum;
+  const semDocumentoPadrao = ehTokio || ehAllianz || ehMapfre || ehBradesco || ehYelum || ehHdi;
   const [dados, setDados] = useState<DadosComplementaresTransmissao>(
     () =>
       inicial ?? {
@@ -119,6 +126,7 @@ export function TransmissaoDadosComplementares({
               veiculoAlienado: f.alienado ? ("Sim" as const) : ("Não" as const),
             }
           : {}),
+        ...(ehHdi ? { ufPlaca: ufPlacaDoEndereco(f.uf) } : {}),
         ...(ehAllianz ? { veiculoAlienado: f.alienado ? ("Sim" as const) : ("Não" as const) } : {}),
         ...(ehTokio
           ? { vencimentoPrimeiraParcela: vencimentoPadraoTokio(new Date(), formaPagamento) }
@@ -162,6 +170,11 @@ export function TransmissaoDadosComplementares({
     setErros((atual) => ({ ...atual, [key]: undefined }));
   }
 
+  function upHdi<K extends keyof CamposHdi>(key: K, value: CamposHdi[K]) {
+    setDados((atual) => ({ ...atual, [key]: value }));
+    setErros((atual) => ({ ...atual, [key]: undefined }));
+  }
+
   function upMapfre<K extends keyof CamposMapfre>(key: K, value: CamposMapfre[K]) {
     setDados((atual) => ({ ...atual, [key]: value }));
     setErros((atual) => ({ ...atual, [key]: undefined }));
@@ -187,21 +200,23 @@ export function TransmissaoDadosComplementares({
   }
 
   function confirmar() {
-    if (formaBloqueada) return;
-    const validacao = ehYelum
-      ? validarDadosComplementaresYelum(dados, resultado.seguradora)
-      : ehBradesco
-        ? validarDadosComplementaresBradesco(dados)
-        : ehMapfre
-          ? validarDadosComplementaresMapfre(dados)
-          : ehAllianz
-            ? validarDadosComplementaresAllianz(dados)
-            : ehTokio
-              ? validarDadosComplementaresTokio(dados)
-              : (ehPorto
-                  ? dadosComplementaresTransmissaoPortoSchema
-                  : dadosComplementaresTransmissaoSchema
-                ).safeParse(dados);
+    if (formaBloqueada || produtoSemId) return;
+    const validacao = ehHdi
+      ? validarDadosComplementaresHdi(dados)
+      : ehYelum
+        ? validarDadosComplementaresYelum(dados, resultado.seguradora)
+        : ehBradesco
+          ? validarDadosComplementaresBradesco(dados)
+          : ehMapfre
+            ? validarDadosComplementaresMapfre(dados)
+            : ehAllianz
+              ? validarDadosComplementaresAllianz(dados)
+              : ehTokio
+                ? validarDadosComplementaresTokio(dados)
+                : (ehPorto
+                    ? dadosComplementaresTransmissaoPortoSchema
+                    : dadosComplementaresTransmissaoSchema
+                  ).safeParse(dados);
     if (!validacao.success) {
       const proximos: Erros = {};
       for (const issue of validacao.error.issues) {
@@ -472,6 +487,16 @@ export function TransmissaoDadosComplementares({
         />
       )}
 
+      {ehHdi && <TransmissaoDadosHdi dados={dados} erros={erros} onChange={upHdi} />}
+      {produtoSemId && (
+        <div className="clt-note" role="alert" data-testid="hdi-produto-sem-id">
+          <svg width="15" height="15">
+            <use href="#i-info" />
+          </svg>
+          <div>{ERRO_PRODUTO_SEM_ID_HDI}</div>
+        </div>
+      )}
+
       {ehBradesco && <TransmissaoDadosBradesco dados={dados} erros={erros} onChange={upBradesco} />}
       {formaBloqueada && (
         <div className="clt-note" role="alert" data-testid="bradesco-forma-nao-suportada">
@@ -482,7 +507,7 @@ export function TransmissaoDadosComplementares({
         </div>
       )}
 
-      {!ehTokio && !ehMapfre && !ehBradesco && !ehYelum && (
+      {!ehTokio && !ehMapfre && !ehBradesco && !ehYelum && !ehHdi && (
         <>
           <div className="acc-sec-t">Transmissão e envio</div>
           <div className="wizard-grid cols-3">

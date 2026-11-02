@@ -112,3 +112,24 @@ export const BANCOS_DEBITO_YELUM = [
 /** Bancos do débito da ALIRO: os da Yelum sem o Banco Inter (código 77). */
 export const BANCOS_DEBITO_ALIRO: readonly { readonly codigo: string; readonly nome: string }[] =
   BANCOS_DEBITO_YELUM.filter((b) => (b.codigo as string) !== "77");
+
+// Bancos do débito em conta da HDI (16), conforme o mapa da Efetivação. `codigo` = código do banco (o robô aceita código ou
+// nome). Não editar à mão: regerar lendo o portal.
+export const BANCOS_DEBITO_HDI = [
+  { codigo: "85", nome: "COOP CENTRAL AILOS" },
+  { codigo: "1", nome: "Banco do Brasil" },
+  { codigo: "133", nome: "CRESOL" },
+  { codigo: "237", nome: "Banco Bradesco S.A." },
+  { codigo: "756", nome: "Banco Cooperativo do Brasil S.A. – BANCOOB" },
+  { codigo: "41", nome: "Banco do Estado do Rio Grande do Sul S.A." },
+  { codigo: "4", nome: "Banco do Nordeste do Brasil S.A." },
+  { codigo: "389", nome: "Banco Mercantil do Brasil S.A." },
+  { codigo: "33", nome: "Banco Santander S.A." },
+  { codigo: "104", nome: "Caixa Econômica Federal" },
+  { codigo: "991", nome: "Credicoamo" },
+  { codigo: "399", nome: "HSBC Bank Brasil S.A. – Banco Múltiplo" },
+  { codigo: "212", nome: "Banco Original" },
+  { codigo: "748", nome: "SICREDI" },
+  { codigo: "341", nome: "Banco Itaú S.A." },
+  { codigo: "70", nome: "Banco de Brasilia S/A (BRB)" },
+] as const;
