@@ -7,6 +7,8 @@ type Props = {
   erros: ErrosContaDebito;
   /** Bancos do select do portal da seguradora (padrão: os da Porto). */
   bancos?: readonly { readonly codigo: string; readonly nome: string }[];
+  /** Tamanho máximo do campo da conta (padrão 11; a Yelum aceita até 10 dígitos + hífen + dígito). */
+  contaMaxLength?: number;
   onChange: <K extends keyof ContaDebito>(chave: K, valor: ContaDebito[K]) => void;
 };
 
@@ -15,6 +17,7 @@ export function PagamentoDebitoCampos({
   valor,
   erros,
   bancos = BANCOS_DEBITO_PORTO,
+  contaMaxLength = 11,
   onChange,
 }: Props) {
   return (
@@ -65,7 +68,7 @@ export function PagamentoDebitoCampos({
           autoComplete="off"
           spellCheck={false}
           autoCorrect="off"
-          maxLength={11}
+          maxLength={contaMaxLength}
           placeholder="Ex.: 12345-6"
           value={valor.conta}
           aria-invalid={Boolean(erros.conta)}

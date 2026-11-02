@@ -22,6 +22,7 @@ import {
 } from "@/lib/transmissao-debito";
 import { validarPagador, type PagadorTransmissao } from "@/lib/transmissao-pagador";
 import type { PagamentoBradesco } from "@/lib/transmissao-bradesco";
+import type { PagamentoYelum } from "@/lib/transmissao-yelum";
 import type { PagamentoMapfre } from "@/lib/transmissao-mapfre";
 import type { PagamentoTokio } from "@/lib/transmissao-tokio-pagamento";
 
@@ -37,6 +38,8 @@ export type PagamentoTransmissao = {
   mapfre?: PagamentoMapfre;
   /** Só na Bradesco: débito (conta + aceite), cartão e crédito em conta para devoluções. */
   bradesco?: PagamentoBradesco;
+  /** Só na Yelum: conta do débito + aceite. Cartão da Yelum não envia nada. */
+  yelum?: PagamentoYelum;
 };
 
 export type TipoPagamentoPorto = "debito" | "cartao" | "cartao_terceiros";

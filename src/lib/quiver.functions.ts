@@ -30,6 +30,12 @@ import {
   erroPagamentoBradesco,
 } from "@/lib/transmissao-bradesco";
 import {
+  camposPagamentoYelumPayload,
+  camposYelumPayload,
+  erroDadosYelum,
+  erroPagamentoYelum,
+} from "@/lib/transmissao-yelum";
+import {
   camposMapfrePayload,
   camposPagamentoMapfrePayload,
   erroDadosMapfre,
@@ -935,6 +941,8 @@ type TransmitirPropostaPayload = {
     tipoDocumento?: string;
     kitApolicePorEmail?: "Sim" | "Não";
     certificadoEmNomeDe?: string;
+    // Só na Yelum: CPF do vendedor (dado pessoal: nunca logado nem persistido).
+    cpfVendedor?: string;
   };
   /**
    * Pagamento da Porto (débito em conta / cartão / pagador). DADOS SENSÍVEIS:
@@ -1081,6 +1089,16 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
     );
     if (erroPagamentoDaBradesco) throw new Error(erroPagamentoDaBradesco);
 
+    // Yelum: ramo, renda, tipo de logradouro e CPF do vendedor (sem padrão) e, no débito, conta com dígito + aceite do titular.
+    const erroYelum = erroDadosYelum(data.seguradora, data.dadosComplementares);
+    if (erroYelum) throw new Error(erroYelum);
+    const erroPagamentoDaYelum = erroPagamentoYelum(
+      data.seguradora,
+      data.formaPagamento,
+      data.pagamento?.yelum,
+    );
+    if (erroPagamentoDaYelum) throw new Error(erroPagamentoDaYelum);
+
     // Pagamento da Porto (débito/cartão/pagador): dados obrigatórios e válidos.
     // A mensagem nunca repete o valor recebido (dado financeiro/pessoal).
     const erroPagamento = erroPagamentoPorto(data.seguradora, data.formaPagamento, data.pagamento);
@@ -1125,6 +1143,9 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
         data.formaPagamento,
         data.pagamento?.bradesco,
       ),
+      ...camposYelumPayload(data.seguradora, data.dadosComplementares, veiculo?.alienado),
+      // Yelum: só o débito leva conta + aceite (sem `cartao`, sem `agenciaDv`).
+      ...camposPagamentoYelumPayload(data.seguradora, data.formaPagamento, data.pagamento?.yelum),
       ...camposPagamentoPayload(data.seguradora, data.formaPagamento, data.pagamento),
       // Modo simulação (só se SELF_QUIVER_TRANSMISSAO_SIMULACAO=1): o robô preenche
       // tudo e para antes do Efetivar; nada é transmitido.
