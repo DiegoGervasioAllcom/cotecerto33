@@ -9,6 +9,7 @@ import {
   BANCOS_DEBITO_ALIRO,
   BANCOS_DEBITO_ALLIANZ,
   BANCOS_DEBITO_BRADESCO,
+  BANCOS_DEBITO_HDI,
   BANCOS_DEBITO_MAPFRE,
   BANCOS_DEBITO_PORTO,
   BANCOS_DEBITO_YELUM,
@@ -24,6 +25,7 @@ export function bancosDaSeguradora(seguradora: string): readonly BancoDebito[] {
   if (s === "mapfre") return BANCOS_DEBITO_MAPFRE;
   if (s === "bradesco") return BANCOS_DEBITO_BRADESCO;
   if (s === "aliro") return BANCOS_DEBITO_ALIRO;
+  if (s === "hdi seguros") return BANCOS_DEBITO_HDI;
   if (s === "yelum") return BANCOS_DEBITO_YELUM;
   return s === "allianz" ? BANCOS_DEBITO_ALLIANZ : BANCOS_DEBITO_PORTO;
 }

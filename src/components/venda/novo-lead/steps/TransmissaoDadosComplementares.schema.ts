@@ -9,6 +9,7 @@ import {
 } from "@/components/venda/novo-lead/enumsPorto";
 import { errosDadosBradesco, RENDAS_MENSAIS_BRADESCO } from "@/lib/transmissao-bradesco";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
+import { errosDadosHdi, FAIXAS_SALARIAIS_HDI } from "@/lib/transmissao-hdi";
 import { errosDadosYelum, RENDAS_MENSAIS_YELUM } from "@/lib/transmissao-yelum";
 import { errosDadosMapfre, RENDAS_MENSAIS_MAPFRE } from "@/lib/transmissao-mapfre";
 import { RAMOS_ATIVIDADE_ALLIANZ } from "@/components/venda/novo-lead/enumsRamoAtividadeAllianz";
@@ -65,6 +66,7 @@ const camposBase = z.object({
       ...RENDAS_MENSAIS_MAPFRE,
       ...RENDAS_MENSAIS_BRADESCO,
       ...RENDAS_MENSAIS_YELUM,
+      ...FAIXAS_SALARIAIS_HDI,
     ])
     .optional(),
   // Só Mapfre: tipo do documento (declaração do vendedor, sem padrão), kit da apólice por e-mail e em nome de quem sai o certificado.
@@ -73,6 +75,8 @@ const camposBase = z.object({
   certificadoEmNomeDe: z.string().trim().max(60, "Nome muito longo (máx. 60).").optional(),
   // Só Yelum: CPF do vendedor (campanha da seguradora). Dado pessoal: só em memória, nunca persistido nem logado.
   cpfVendedor: z.string().trim().optional(),
+  // Só HDI: UF da placa (pré-selecionada da UF do endereço do segurado; o vendedor corrige).
+  ufPlaca: z.string().trim().optional(),
   // Só Allianz: "Veículo Alienado" (do cadastro do veículo; o vendedor pode corrigir).
   veiculoAlienado: z.enum(["Sim", "Não"]).optional(),
   // Sem `.max`: o limite é a própria lista fechada (alguns ramos do portal
@@ -126,6 +130,9 @@ const camposBaseYelum = camposBase.partial({
   diaVencimentoDemaisParcelas: true,
 });
 
+// HDI: sem documento (RG/emissão/órgão), renavam nem cor.
+const camposBaseHdi = camposBaseYelum;
+
 type OpcoesSchema = {
   /** true quando a seguradora do card é a Porto: renda, ramo e PEP viram obrigatórios. */
   exigePorto: boolean;
@@ -141,6 +148,8 @@ type OpcoesSchema = {
   exigeYelum?: boolean;
   /** Yelum/Aliro: só a Yelum exige o CPF do vendedor (a Aliro não tem a seção "Campanhas"). */
   exigeCpfVendedor?: boolean;
+  /** HDI: ocupação, faixa salarial, PEP (Sim/Não) e UF da placa (sem padrão); sem documento/renavam/cor/CPF do vendedor. */
+  exigeHdi?: boolean;
 };
 
 export function criarSchemaDadosComplementares({
@@ -151,19 +160,27 @@ export function criarSchemaDadosComplementares({
   exigeBradesco = false,
   exigeYelum = false,
   exigeCpfVendedor = true,
+  exigeHdi = false,
 }: OpcoesSchema) {
   // O cast mantém o tipo de saída (strict) do schema geral: na Tokio o estado do formulário sempre traz esses
   // campos (strings vazias), só a obrigatoriedade deixa de valer em tempo de execução.
-  const base = (exigeYelum
-    ? camposBaseYelum
-    : exigeBradesco
-      ? camposBaseBradesco
-      : exigeMapfre
-        ? camposBaseMapfre
-        : exigeTokio || exigeAllianz
-          ? camposBaseTokio
-          : camposBase) as unknown as typeof camposBase;
+  const base = (exigeHdi
+    ? camposBaseHdi
+    : exigeYelum
+      ? camposBaseYelum
+      : exigeBradesco
+        ? camposBaseBradesco
+        : exigeMapfre
+          ? camposBaseMapfre
+          : exigeTokio || exigeAllianz
+            ? camposBaseTokio
+            : camposBase) as unknown as typeof camposBase;
   return base.superRefine((val, ctx) => {
+    if (exigeHdi) {
+      for (const [campo, message] of Object.entries(errosDadosHdi(val))) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
+      }
+    }
     if (exigeYelum) {
       for (const [campo, message] of Object.entries(errosDadosYelum(val, exigeCpfVendedor))) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
@@ -497,3 +514,33 @@ export const dadosComplementaresTransmissaoPortoSchema = criarSchemaDadosComplem
 });
 
 export type DadosComplementaresTransmissao = z.infer<typeof dadosComplementaresTransmissaoSchema>;
+
+/** Não exportado: só `validarDadosComplementaresHdi` pode chamá-lo (ele tira os campos ausentes antes). */
+const dadosComplementaresTransmissaoHdiSchema = criarSchemaDadosComplementares({
+  exigePorto: false,
+  exigeHdi: true,
+});
+
+/**
+ * Valida os dados da HDI (mesma técnica da Yelum: campos que ela não tem saem ANTES e voltam como ""). Ocupação, faixa
+ * salarial, PEP (Sim/Não) e UF da placa são obrigatórias e sem valor padrão. Sem CPF do vendedor nem tipo de logradouro.
+ */
+export function validarDadosComplementaresHdi(dados: DadosComplementaresTransmissao) {
+  const copia: Record<string, unknown> = { ...dados };
+  for (const campo of CAMPOS_AUSENTES_NA_YELUM) delete copia[campo];
+  const r = dadosComplementaresTransmissaoHdiSchema.safeParse(copia);
+  if (!r.success) return r;
+  return {
+    success: true as const,
+    data: {
+      ...r.data,
+      rg: "",
+      dataEmissaoRg: "",
+      orgaoEmissorRg: "",
+      renavam: "",
+      corVeiculo: "",
+      diaVencimentoDemaisParcelas: "",
+      desejaReceberPropostaPorEmail: dados.desejaReceberPropostaPorEmail,
+    } as DadosComplementaresTransmissao,
+  };
+}

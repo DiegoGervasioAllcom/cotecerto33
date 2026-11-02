@@ -9,6 +9,7 @@ import { RAMOS_ATIVIDADE_YELUM } from "@/components/venda/novo-lead/enumsRamoAti
 import { cpfValido } from "@/lib/documento";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { bancosDaSeguradora, validarContaDebito, type ContaDebito } from "@/lib/transmissao-debito";
+import { ehSeguradoraHdi } from "@/lib/transmissao-hdi";
 import { tipoLogradouroDoEndereco } from "@/lib/transmissao-tokio";
 
 export const RENDAS_MENSAIS_YELUM = [
@@ -66,6 +67,11 @@ export function ehFamiliaYelum(seguradora: string): boolean {
   return s === "yelum" || s === "aliro";
 }
 
+/** Pagamento compartilhado (débito com dígito + aceite, cartão sem dados): Yelum, Aliro e HDI. */
+export function ehPagamentoFamiliaYelum(seguradora: string): boolean {
+  return ehFamiliaYelum(seguradora) || ehSeguradoraHdi(seguradora);
+}
+
 /** Nome para mensagens ao usuário. */
 export function nomeFamiliaYelum(seguradora: string): string {
   return nomeCanonicoSeguradora(seguradora) === "aliro" ? "Aliro" : "Yelum";
@@ -77,12 +83,12 @@ function normalizar(texto: string): string {
 
 /** Formas que contêm "Débito" (Débito em Conta, Boleto + Débito em Conta, PIX + Débito em conta). */
 export function ehDebitoYelum(seguradora: string, formaPagamento: string): boolean {
-  return ehFamiliaYelum(seguradora) && normalizar(formaPagamento).includes("debito");
+  return ehPagamentoFamiliaYelum(seguradora) && normalizar(formaPagamento).includes("debito");
 }
 
 /** Formas que contêm "Cartão" (Cartão de Crédito, Boleto + Cartão de Crédito): o portal não pede dados de cartão. */
 export function ehCartaoYelum(seguradora: string, formaPagamento: string): boolean {
-  return ehFamiliaYelum(seguradora) && normalizar(formaPagamento).includes("cartao");
+  return ehPagamentoFamiliaYelum(seguradora) && normalizar(formaPagamento).includes("cartao");
 }
 
 /** Pré-seleção do tipo de logradouro: só devolve o valor se casar (sem acento/caixa) com uma das 16 opções da Yelum. */
