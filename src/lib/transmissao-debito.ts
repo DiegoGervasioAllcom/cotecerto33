@@ -6,6 +6,7 @@
 // logado, nunca em cache. Vive só no estado do passo "Pagamento" e segue direto
 // no body do fetch ao robô.
 import {
+  BANCOS_DEBITO_ALIRO,
   BANCOS_DEBITO_ALLIANZ,
   BANCOS_DEBITO_BRADESCO,
   BANCOS_DEBITO_MAPFRE,
@@ -22,6 +23,7 @@ export function bancosDaSeguradora(seguradora: string): readonly BancoDebito[] {
   const s = nomeCanonicoSeguradora(seguradora);
   if (s === "mapfre") return BANCOS_DEBITO_MAPFRE;
   if (s === "bradesco") return BANCOS_DEBITO_BRADESCO;
+  if (s === "aliro") return BANCOS_DEBITO_ALIRO;
   if (s === "yelum") return BANCOS_DEBITO_YELUM;
   return s === "allianz" ? BANCOS_DEBITO_ALLIANZ : BANCOS_DEBITO_PORTO;
 }

@@ -15,7 +15,7 @@ import { TransmissaoPagamento } from "./TransmissaoPagamento";
 import { ehDebitoEmContaPorto } from "@/lib/transmissao-debito";
 import { ehSeguradoraBradesco } from "@/lib/transmissao-bradesco";
 import { TransmissaoPagamentoBradesco } from "./TransmissaoPagamentoBradesco";
-import { ehCartaoYelum, ehDebitoYelum, ehSeguradoraYelum } from "@/lib/transmissao-yelum";
+import { ehCartaoYelum, ehDebitoYelum, ehFamiliaYelum } from "@/lib/transmissao-yelum";
 import { TransmissaoPagamentoYelum } from "./TransmissaoPagamentoYelum";
 import { ehCartaoMapfre, ehDebitoMapfre } from "@/lib/transmissao-mapfre";
 import { tipoPagamentoTokio } from "@/lib/transmissao-tokio-pagamento";
@@ -184,7 +184,7 @@ export function StepTransmissao({
   } else if (faseAtual === "pagamento") {
     const PagamentoDaSeguradora = ehSeguradoraBradesco(oferta.resultado.seguradora)
       ? TransmissaoPagamentoBradesco
-      : ehSeguradoraYelum(oferta.resultado.seguradora)
+      : ehFamiliaYelum(oferta.resultado.seguradora)
         ? TransmissaoPagamentoYelum
         : TransmissaoPagamento;
     body = (

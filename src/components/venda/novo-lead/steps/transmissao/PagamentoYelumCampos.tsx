@@ -4,6 +4,7 @@ import { bancosDaSeguradora } from "@/lib/transmissao-debito";
 import { PagamentoDebitoCampos } from "./PagamentoDebitoCampos";
 
 type PropsDebito = {
+  seguradora: string;
   valor: ContaYelum;
   erros: ErrosContaYelum;
   ciente: boolean;
@@ -15,6 +16,7 @@ type PropsDebito = {
 // Débito da Yelum: banco, agência e conta COM o dígito + aceite de que o CPF/CNPJ pertence ao titular. O titular é sempre o
 // próprio segurado (o robô lê da tela). Sem dígito da agência. Dado sensível: só em memória.
 export function PagamentoYelumDebitoCampos({
+  seguradora,
   valor,
   erros,
   ciente,
@@ -27,7 +29,7 @@ export function PagamentoYelumDebitoCampos({
       <PagamentoDebitoCampos
         valor={valor}
         erros={erros}
-        bancos={bancosDaSeguradora("yelum")}
+        bancos={bancosDaSeguradora(seguradora)}
         contaMaxLength={11}
         onChange={onChange}
       />
