@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import {
   cpfVendedorDigitos,
+  ehFamiliaYelum,
   ehSeguradoraYelum,
   tipoLogradouroYelumDoEndereco,
 } from "@/lib/transmissao-yelum";
@@ -86,7 +87,8 @@ export function TransmissaoDadosComplementares({
   // "Cartão Bradesco Seguros" não foi mapeado: não dá para transmitir.
   const formaBloqueada = ehFormaNaoSuportadaBradesco(resultado.seguradora, formaPagamento);
   // Yelum: ramo, renda, tipo de logradouro e CPF do vendedor; sem documento, órgão nem renavam.
-  const ehYelum = ehSeguradoraYelum(resultado.seguradora);
+  const ehYelum = ehFamiliaYelum(resultado.seguradora);
+  const exigeCpfVendedor = ehSeguradoraYelum(resultado.seguradora);
   // CPF do vendedor logado (perfil do próprio usuário; nunca o de outro): pré-preenche, o vendedor pode corrigir.
   const { profile } = useAuth();
   const semDocumentoPadrao = ehTokio || ehAllianz || ehMapfre || ehBradesco || ehYelum;
@@ -113,7 +115,7 @@ export function TransmissaoDadosComplementares({
         ...(ehYelum
           ? {
               tipoLogradouro: tipoLogradouroYelumDoEndereco(f.logradouro),
-              cpfVendedor: cpfVendedorDigitos(profile?.cpf),
+              ...(exigeCpfVendedor ? { cpfVendedor: cpfVendedorDigitos(profile?.cpf) } : {}),
               veiculoAlienado: f.alienado ? ("Sim" as const) : ("Não" as const),
             }
           : {}),
@@ -187,7 +189,7 @@ export function TransmissaoDadosComplementares({
   function confirmar() {
     if (formaBloqueada) return;
     const validacao = ehYelum
-      ? validarDadosComplementaresYelum(dados)
+      ? validarDadosComplementaresYelum(dados, resultado.seguradora)
       : ehBradesco
         ? validarDadosComplementaresBradesco(dados)
         : ehMapfre
@@ -465,6 +467,7 @@ export function TransmissaoDadosComplementares({
           dados={dados}
           erros={erros}
           alienadoPadrao={f.alienado ? "Sim" : "Não"}
+          seguradora={resultado.seguradora}
           onChange={upYelum}
         />
       )}

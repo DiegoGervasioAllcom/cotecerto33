@@ -43,7 +43,7 @@ export const TIPOS_LOGRADOURO_YELUM = [
 ] as const;
 
 export const AVISO_CARTAO_YELUM =
-  "A Yelum não pede os dados do cartão na transmissão. A cobrança no cartão é combinada diretamente com o segurado pela seguradora.";
+  "A seguradora não pede os dados do cartão na transmissão. A cobrança no cartão é combinada diretamente com o segurado pela seguradora.";
 export const AVISO_CONTA_DO_SEGURADO = "A conta deve ser do próprio segurado.";
 export const ERRO_CONTA_SEM_DIGITO = "Informe a conta com o dígito, ex.: 12345-6";
 
@@ -60,18 +60,29 @@ export function ehSeguradoraYelum(seguradora: string): boolean {
   return nomeCanonicoSeguradora(seguradora) === "yelum";
 }
 
+/** Família da Efetivação compartilhada: Yelum e Aliro (mesmos campos e listas; a Aliro não tem CPF do vendedor). */
+export function ehFamiliaYelum(seguradora: string): boolean {
+  const s = nomeCanonicoSeguradora(seguradora);
+  return s === "yelum" || s === "aliro";
+}
+
+/** Nome para mensagens ao usuário. */
+export function nomeFamiliaYelum(seguradora: string): string {
+  return nomeCanonicoSeguradora(seguradora) === "aliro" ? "Aliro" : "Yelum";
+}
+
 function normalizar(texto: string): string {
   return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 /** Formas que contêm "Débito" (Débito em Conta, Boleto + Débito em Conta, PIX + Débito em conta). */
 export function ehDebitoYelum(seguradora: string, formaPagamento: string): boolean {
-  return ehSeguradoraYelum(seguradora) && normalizar(formaPagamento).includes("debito");
+  return ehFamiliaYelum(seguradora) && normalizar(formaPagamento).includes("debito");
 }
 
 /** Formas que contêm "Cartão" (Cartão de Crédito, Boleto + Cartão de Crédito): o portal não pede dados de cartão. */
 export function ehCartaoYelum(seguradora: string, formaPagamento: string): boolean {
-  return ehSeguradoraYelum(seguradora) && normalizar(formaPagamento).includes("cartao");
+  return ehFamiliaYelum(seguradora) && normalizar(formaPagamento).includes("cartao");
 }
 
 /** Pré-seleção do tipo de logradouro: só devolve o valor se casar (sem acento/caixa) com uma das 16 opções da Yelum. */
@@ -90,6 +101,7 @@ export function cpfVendedorDigitos(valor: string | undefined | null): string {
 /** Erro por campo dos 4 obrigatórios da Yelum ({} se tudo certo). Usado pelo schema e pelo servidor. */
 export function errosDadosYelum(
   dados: DadosYelum | undefined,
+  exigeCpfVendedor = true,
 ): Partial<Record<"ramoAtividade" | "rendaMensal" | "tipoLogradouro" | "cpfVendedor", string>> {
   const d = dados ?? {};
   const erros: ReturnType<typeof errosDadosYelum> = {};
@@ -105,7 +117,7 @@ export function errosDadosYelum(
   ) {
     erros.tipoLogradouro = "Escolha o tipo de logradouro.";
   }
-  if (typeof d.cpfVendedor !== "string" || !cpfValido(d.cpfVendedor)) {
+  if (exigeCpfVendedor && (typeof d.cpfVendedor !== "string" || !cpfValido(d.cpfVendedor))) {
     erros.cpfVendedor = "Informe um CPF válido do vendedor.";
   }
   return erros;
@@ -113,9 +125,9 @@ export function errosDadosYelum(
 
 /** Regra de bloqueio (servidor). Devolve a mensagem, ou `null` (também para outras seguradoras). */
 export function erroDadosYelum(seguradora: string, dados: DadosYelum | undefined): string | null {
-  if (!ehSeguradoraYelum(seguradora)) return null;
-  const primeiro = Object.values(errosDadosYelum(dados))[0];
-  if (primeiro) return `${primeiro} (exigido pela Yelum)`;
+  if (!ehFamiliaYelum(seguradora)) return null;
+  const primeiro = Object.values(errosDadosYelum(dados, ehSeguradoraYelum(seguradora)))[0];
+  if (primeiro) return `${primeiro} (exigido pela ${nomeFamiliaYelum(seguradora)})`;
   const k = dados?.kitApolicePorEmail;
   if (k !== undefined && k !== "Sim" && k !== "Não")
     return "Informe se o kit da apólice vai por e-mail.";
@@ -130,12 +142,12 @@ export function camposYelumPayload(
   dados: DadosYelum | undefined,
   alienadoCadastro?: boolean | null,
 ): DadosYelum {
-  if (!ehSeguradoraYelum(seguradora) || !dados) return {};
+  if (!ehFamiliaYelum(seguradora) || !dados) return {};
   const c: DadosYelum = {};
   if (dados.ramoAtividade) c.ramoAtividade = dados.ramoAtividade;
   if (dados.rendaMensal) c.rendaMensal = dados.rendaMensal;
   if (dados.tipoLogradouro) c.tipoLogradouro = dados.tipoLogradouro;
-  const cpf = cpfVendedorDigitos(dados.cpfVendedor);
+  const cpf = ehSeguradoraYelum(seguradora) ? cpfVendedorDigitos(dados.cpfVendedor) : "";
   if (cpf) c.cpfVendedor = cpf;
   c.veiculoAlienado = dados.veiculoAlienado ?? (alienadoCadastro ? "Sim" : "Não");
   if (dados.kitApolicePorEmail) c.kitApolicePorEmail = dados.kitApolicePorEmail;
@@ -151,8 +163,11 @@ export type PagamentoYelum = { contaDebito?: ContaYelum; cienteTitularConta?: bo
 
 const REGEX_CONTA_YELUM = /^\d{1,9}-[\dxX]$/; // o campo do portal aceita 11 caracteres
 
-export function validarContaYelum(conta: Partial<ContaYelum> | undefined): ErrosContaYelum {
-  const erros: ErrosContaYelum = validarContaDebito(conta, bancosDaSeguradora("yelum"));
+export function validarContaYelum(
+  conta: Partial<ContaYelum> | undefined,
+  seguradora = "yelum",
+): ErrosContaYelum {
+  const erros: ErrosContaYelum = validarContaDebito(conta, bancosDaSeguradora(seguradora));
   delete erros.conta; // a regra da conta da Yelum é própria (dígito obrigatório)
   if (typeof conta?.conta !== "string" || !REGEX_CONTA_YELUM.test(conta.conta.trim())) {
     erros.conta = ERRO_CONTA_SEM_DIGITO;
@@ -166,7 +181,7 @@ export function erroPagamentoYelum(
   pagamento: PagamentoYelum | undefined,
 ): string | null {
   if (!ehDebitoYelum(seguradora, formaPagamento)) return null;
-  const erros = validarContaYelum(pagamento?.contaDebito);
+  const erros = validarContaYelum(pagamento?.contaDebito, seguradora);
   const primeiro = erros.banco ?? erros.agencia ?? erros.conta;
   if (primeiro) return `Débito em conta: ${primeiro}`;
   if (pagamento?.cienteTitularConta !== true) {

@@ -8,6 +8,7 @@ import {
   RENDAS_MENSAIS_TOKIO,
 } from "@/components/venda/novo-lead/enumsPorto";
 import { errosDadosBradesco, RENDAS_MENSAIS_BRADESCO } from "@/lib/transmissao-bradesco";
+import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { errosDadosYelum, RENDAS_MENSAIS_YELUM } from "@/lib/transmissao-yelum";
 import { errosDadosMapfre, RENDAS_MENSAIS_MAPFRE } from "@/lib/transmissao-mapfre";
 import { RAMOS_ATIVIDADE_ALLIANZ } from "@/components/venda/novo-lead/enumsRamoAtividadeAllianz";
@@ -138,6 +139,8 @@ type OpcoesSchema = {
   exigeBradesco?: boolean;
   /** Yelum: ramo, renda, tipo de logradouro e CPF do vendedor (sem padrão); sem documento/renavam/cor. */
   exigeYelum?: boolean;
+  /** Yelum/Aliro: só a Yelum exige o CPF do vendedor (a Aliro não tem a seção "Campanhas"). */
+  exigeCpfVendedor?: boolean;
 };
 
 export function criarSchemaDadosComplementares({
@@ -147,6 +150,7 @@ export function criarSchemaDadosComplementares({
   exigeMapfre = false,
   exigeBradesco = false,
   exigeYelum = false,
+  exigeCpfVendedor = true,
 }: OpcoesSchema) {
   // O cast mantém o tipo de saída (strict) do schema geral: na Tokio o estado do formulário sempre traz esses
   // campos (strings vazias), só a obrigatoriedade deixa de valer em tempo de execução.
@@ -161,7 +165,7 @@ export function criarSchemaDadosComplementares({
           : camposBase) as unknown as typeof camposBase;
   return base.superRefine((val, ctx) => {
     if (exigeYelum) {
-      for (const [campo, message] of Object.entries(errosDadosYelum(val))) {
+      for (const [campo, message] of Object.entries(errosDadosYelum(val, exigeCpfVendedor))) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
       }
     }
@@ -419,10 +423,17 @@ const CAMPOS_AUSENTES_NA_YELUM = [
  * Valida os dados da Yelum (mesma técnica: campos que ela não tem saem ANTES e voltam como ""). Ramo, renda, tipo de
  * logradouro e CPF do vendedor são obrigatórios e sem valor padrão (o CPF só vem pré-preenchido do perfil).
  */
-export function validarDadosComplementaresYelum(dados: DadosComplementaresTransmissao) {
+export function validarDadosComplementaresYelum(
+  dados: DadosComplementaresTransmissao,
+  seguradora = "yelum",
+) {
   const copia: Record<string, unknown> = { ...dados };
   for (const campo of CAMPOS_AUSENTES_NA_YELUM) delete copia[campo];
-  const r = dadosComplementaresTransmissaoYelumSchema.safeParse(copia);
+  const ehAliro = nomeCanonicoSeguradora(seguradora) === "aliro";
+  if (ehAliro) delete copia.cpfVendedor;
+  const r = (
+    ehAliro ? dadosComplementaresTransmissaoAliroSchema : dadosComplementaresTransmissaoYelumSchema
+  ).safeParse(copia);
   if (!r.success) return r;
   return {
     success: true as const,
@@ -443,6 +454,13 @@ export function validarDadosComplementaresYelum(dados: DadosComplementaresTransm
 const dadosComplementaresTransmissaoYelumSchema = criarSchemaDadosComplementares({
   exigePorto: false,
   exigeYelum: true,
+});
+
+/** Aliro: mesma Efetivação da Yelum, sem CPF do vendedor. */
+const dadosComplementaresTransmissaoAliroSchema = criarSchemaDadosComplementares({
+  exigePorto: false,
+  exigeYelum: true,
+  exigeCpfVendedor: false,
 });
 
 /** Não exportado: só `validarDadosComplementaresBradesco` pode chamá-lo (ele tira os campos ausentes antes). */

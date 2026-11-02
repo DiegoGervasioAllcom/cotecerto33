@@ -40,7 +40,7 @@ export function TransmissaoPagamentoYelum({
 
   function efetivar() {
     if (!debito) return onEfetivar();
-    const e = validarContaYelum(conta);
+    const e = validarContaYelum(conta, seguradora);
     const faltaCiente = !ciente;
     setErros(e);
     setErroCiente(
@@ -73,6 +73,7 @@ export function TransmissaoPagamentoYelum({
 
       {debito && (
         <PagamentoYelumDebitoCampos
+          seguradora={seguradora}
           valor={conta}
           erros={erros}
           ciente={ciente}

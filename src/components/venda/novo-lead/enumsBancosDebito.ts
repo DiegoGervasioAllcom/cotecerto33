@@ -108,3 +108,7 @@ export const BANCOS_DEBITO_YELUM = [
   { codigo: "212", nome: "Banco Original" },
   { codigo: "77", nome: "Banco Inter S.A" },
 ] as const;
+
+/** Bancos do débito da ALIRO: os da Yelum sem o Banco Inter (código 77). */
+export const BANCOS_DEBITO_ALIRO: readonly { readonly codigo: string; readonly nome: string }[] =
+  BANCOS_DEBITO_YELUM.filter((b) => (b.codigo as string) !== "77");
