@@ -8,6 +8,7 @@ import {
   RENDAS_MENSAIS_TOKIO,
 } from "@/components/venda/novo-lead/enumsPorto";
 import { errosDadosBradesco, RENDAS_MENSAIS_BRADESCO } from "@/lib/transmissao-bradesco";
+import { errosDadosYelum, RENDAS_MENSAIS_YELUM } from "@/lib/transmissao-yelum";
 import { errosDadosMapfre, RENDAS_MENSAIS_MAPFRE } from "@/lib/transmissao-mapfre";
 import { RAMOS_ATIVIDADE_ALLIANZ } from "@/components/venda/novo-lead/enumsRamoAtividadeAllianz";
 import { RAMOS_ATIVIDADE_PORTO } from "@/components/venda/novo-lead/enumsRamoAtividade";
@@ -62,12 +63,15 @@ const camposBase = z.object({
       ...RENDAS_MENSAIS_ALLIANZ,
       ...RENDAS_MENSAIS_MAPFRE,
       ...RENDAS_MENSAIS_BRADESCO,
+      ...RENDAS_MENSAIS_YELUM,
     ])
     .optional(),
   // Só Mapfre: tipo do documento (declaração do vendedor, sem padrão), kit da apólice por e-mail e em nome de quem sai o certificado.
   tipoDocumento: z.string().trim().optional(),
   kitApolicePorEmail: z.enum(["Sim", "Não"]).optional(),
   certificadoEmNomeDe: z.string().trim().max(60, "Nome muito longo (máx. 60).").optional(),
+  // Só Yelum: CPF do vendedor (campanha da seguradora). Dado pessoal: só em memória, nunca persistido nem logado.
+  cpfVendedor: z.string().trim().optional(),
   // Só Allianz: "Veículo Alienado" (do cadastro do veículo; o vendedor pode corrigir).
   veiculoAlienado: z.enum(["Sim", "Não"]).optional(),
   // Sem `.max`: o limite é a própria lista fechada (alguns ramos do portal
@@ -111,6 +115,16 @@ const camposBaseBradesco = camposBase.partial({
   diaVencimentoDemaisParcelas: true,
 });
 
+// Yelum: sem documento (RG/emissão/órgão), renavam nem cor.
+const camposBaseYelum = camposBase.partial({
+  rg: true,
+  dataEmissaoRg: true,
+  orgaoEmissorRg: true,
+  renavam: true,
+  corVeiculo: true,
+  diaVencimentoDemaisParcelas: true,
+});
+
 type OpcoesSchema = {
   /** true quando a seguradora do card é a Porto: renda, ramo e PEP viram obrigatórios. */
   exigePorto: boolean;
@@ -122,6 +136,8 @@ type OpcoesSchema = {
   exigeMapfre?: boolean;
   /** Bradesco: ramo, renda e tipo de logradouro (sem padrão); sem documento/renavam/cor. */
   exigeBradesco?: boolean;
+  /** Yelum: ramo, renda, tipo de logradouro e CPF do vendedor (sem padrão); sem documento/renavam/cor. */
+  exigeYelum?: boolean;
 };
 
 export function criarSchemaDadosComplementares({
@@ -130,17 +146,25 @@ export function criarSchemaDadosComplementares({
   exigeAllianz = false,
   exigeMapfre = false,
   exigeBradesco = false,
+  exigeYelum = false,
 }: OpcoesSchema) {
   // O cast mantém o tipo de saída (strict) do schema geral: na Tokio o estado do formulário sempre traz esses
   // campos (strings vazias), só a obrigatoriedade deixa de valer em tempo de execução.
-  const base = (exigeBradesco
-    ? camposBaseBradesco
-    : exigeMapfre
-      ? camposBaseMapfre
-      : exigeTokio || exigeAllianz
-        ? camposBaseTokio
-        : camposBase) as unknown as typeof camposBase;
+  const base = (exigeYelum
+    ? camposBaseYelum
+    : exigeBradesco
+      ? camposBaseBradesco
+      : exigeMapfre
+        ? camposBaseMapfre
+        : exigeTokio || exigeAllianz
+          ? camposBaseTokio
+          : camposBase) as unknown as typeof camposBase;
   return base.superRefine((val, ctx) => {
+    if (exigeYelum) {
+      for (const [campo, message] of Object.entries(errosDadosYelum(val))) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
+      }
+    }
     if (exigeBradesco) {
       for (const [campo, message] of Object.entries(errosDadosBradesco(val))) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message });
@@ -380,6 +404,46 @@ export function validarDadosComplementaresBradesco(dados: DadosComplementaresTra
     } as DadosComplementaresTransmissao,
   };
 }
+
+/** Campos do formulário geral que a Efetivação da Yelum NÃO tem (o estado do form os guarda como ""). */
+const CAMPOS_AUSENTES_NA_YELUM = [
+  "rg",
+  "dataEmissaoRg",
+  "orgaoEmissorRg",
+  "renavam",
+  "corVeiculo",
+  "diaVencimentoDemaisParcelas",
+] as const;
+
+/**
+ * Valida os dados da Yelum (mesma técnica: campos que ela não tem saem ANTES e voltam como ""). Ramo, renda, tipo de
+ * logradouro e CPF do vendedor são obrigatórios e sem valor padrão (o CPF só vem pré-preenchido do perfil).
+ */
+export function validarDadosComplementaresYelum(dados: DadosComplementaresTransmissao) {
+  const copia: Record<string, unknown> = { ...dados };
+  for (const campo of CAMPOS_AUSENTES_NA_YELUM) delete copia[campo];
+  const r = dadosComplementaresTransmissaoYelumSchema.safeParse(copia);
+  if (!r.success) return r;
+  return {
+    success: true as const,
+    data: {
+      ...r.data,
+      rg: "",
+      dataEmissaoRg: "",
+      orgaoEmissorRg: "",
+      renavam: "",
+      corVeiculo: "",
+      diaVencimentoDemaisParcelas: "",
+      desejaReceberPropostaPorEmail: dados.desejaReceberPropostaPorEmail,
+    } as DadosComplementaresTransmissao,
+  };
+}
+
+/** Não exportado: só `validarDadosComplementaresYelum` pode chamá-lo (ele tira os campos ausentes antes). */
+const dadosComplementaresTransmissaoYelumSchema = criarSchemaDadosComplementares({
+  exigePorto: false,
+  exigeYelum: true,
+});
 
 /** Não exportado: só `validarDadosComplementaresBradesco` pode chamá-lo (ele tira os campos ausentes antes). */
 const dadosComplementaresTransmissaoBradescoSchema = criarSchemaDadosComplementares({

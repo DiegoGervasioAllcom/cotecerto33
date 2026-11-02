@@ -10,6 +10,12 @@ import {
   ehFormaNaoSuportadaBradesco,
   ehSeguradoraBradesco,
 } from "@/lib/transmissao-bradesco";
+import { useAuth } from "@/lib/auth";
+import {
+  cpfVendedorDigitos,
+  ehSeguradoraYelum,
+  tipoLogradouroYelumDoEndereco,
+} from "@/lib/transmissao-yelum";
 import { ehSeguradoraMapfre } from "@/lib/transmissao-mapfre";
 import { mascararData } from "@/lib/transmissao-pagador";
 import { baseDoForm } from "@/lib/transmissao-rascunho";
@@ -19,6 +25,7 @@ import {
   validarDadosComplementaresBradesco,
   validarDadosComplementaresMapfre,
   validarDadosComplementaresTokio,
+  validarDadosComplementaresYelum,
   dadosComplementaresTransmissaoSchema,
   type DadosComplementaresTransmissao,
 } from "../TransmissaoDadosComplementares.schema";
@@ -27,6 +34,7 @@ import { TransmissaoDadosAllianz, type CamposAllianz } from "./TransmissaoDadosA
 import { TransmissaoDadosBradesco, type CamposBradesco } from "./TransmissaoDadosBradesco";
 import { TransmissaoDadosMapfre, type CamposMapfre } from "./TransmissaoDadosMapfre";
 import { TransmissaoDadosPorto, type CamposPorto } from "./TransmissaoDadosPorto";
+import { TransmissaoDadosYelum, type CamposYelum } from "./TransmissaoDadosYelum";
 import { TransmissaoDadosTokio, type CamposTokio } from "./TransmissaoDadosTokio";
 
 export type { DadosComplementaresTransmissao } from "../TransmissaoDadosComplementares.schema";
@@ -77,7 +85,11 @@ export function TransmissaoDadosComplementares({
   const ehBradesco = ehSeguradoraBradesco(resultado.seguradora);
   // "Cartão Bradesco Seguros" não foi mapeado: não dá para transmitir.
   const formaBloqueada = ehFormaNaoSuportadaBradesco(resultado.seguradora, formaPagamento);
-  const semDocumentoPadrao = ehTokio || ehAllianz || ehMapfre || ehBradesco;
+  // Yelum: ramo, renda, tipo de logradouro e CPF do vendedor; sem documento, órgão nem renavam.
+  const ehYelum = ehSeguradoraYelum(resultado.seguradora);
+  // CPF do vendedor logado (perfil do próprio usuário; nunca o de outro): pré-preenche, o vendedor pode corrigir.
+  const { profile } = useAuth();
+  const semDocumentoPadrao = ehTokio || ehAllianz || ehMapfre || ehBradesco || ehYelum;
   const [dados, setDados] = useState<DadosComplementaresTransmissao>(
     () =>
       inicial ?? {
@@ -98,6 +110,13 @@ export function TransmissaoDadosComplementares({
         diaVencimentoDemaisParcelas: "",
         desejaReceberPropostaPorEmail: "Não",
         ...(ehBradesco ? { tipoLogradouro: tipoLogradouroDoEndereco(f.logradouro) } : {}),
+        ...(ehYelum
+          ? {
+              tipoLogradouro: tipoLogradouroYelumDoEndereco(f.logradouro),
+              cpfVendedor: cpfVendedorDigitos(profile?.cpf),
+              veiculoAlienado: f.alienado ? ("Sim" as const) : ("Não" as const),
+            }
+          : {}),
         ...(ehAllianz ? { veiculoAlienado: f.alienado ? ("Sim" as const) : ("Não" as const) } : {}),
         ...(ehTokio
           ? { vencimentoPrimeiraParcela: vencimentoPadraoTokio(new Date(), formaPagamento) }
@@ -136,6 +155,11 @@ export function TransmissaoDadosComplementares({
     setErros((atual) => ({ ...atual, [key]: undefined }));
   }
 
+  function upYelum<K extends keyof CamposYelum>(key: K, value: CamposYelum[K]) {
+    setDados((atual) => ({ ...atual, [key]: value }));
+    setErros((atual) => ({ ...atual, [key]: undefined }));
+  }
+
   function upMapfre<K extends keyof CamposMapfre>(key: K, value: CamposMapfre[K]) {
     setDados((atual) => ({ ...atual, [key]: value }));
     setErros((atual) => ({ ...atual, [key]: undefined }));
@@ -162,18 +186,20 @@ export function TransmissaoDadosComplementares({
 
   function confirmar() {
     if (formaBloqueada) return;
-    const validacao = ehBradesco
-      ? validarDadosComplementaresBradesco(dados)
-      : ehMapfre
-        ? validarDadosComplementaresMapfre(dados)
-        : ehAllianz
-          ? validarDadosComplementaresAllianz(dados)
-          : ehTokio
-            ? validarDadosComplementaresTokio(dados)
-            : (ehPorto
-                ? dadosComplementaresTransmissaoPortoSchema
-                : dadosComplementaresTransmissaoSchema
-              ).safeParse(dados);
+    const validacao = ehYelum
+      ? validarDadosComplementaresYelum(dados)
+      : ehBradesco
+        ? validarDadosComplementaresBradesco(dados)
+        : ehMapfre
+          ? validarDadosComplementaresMapfre(dados)
+          : ehAllianz
+            ? validarDadosComplementaresAllianz(dados)
+            : ehTokio
+              ? validarDadosComplementaresTokio(dados)
+              : (ehPorto
+                  ? dadosComplementaresTransmissaoPortoSchema
+                  : dadosComplementaresTransmissaoSchema
+                ).safeParse(dados);
     if (!validacao.success) {
       const proximos: Erros = {};
       for (const issue of validacao.error.issues) {
@@ -434,6 +460,15 @@ export function TransmissaoDadosComplementares({
         />
       )}
 
+      {ehYelum && (
+        <TransmissaoDadosYelum
+          dados={dados}
+          erros={erros}
+          alienadoPadrao={f.alienado ? "Sim" : "Não"}
+          onChange={upYelum}
+        />
+      )}
+
       {ehBradesco && <TransmissaoDadosBradesco dados={dados} erros={erros} onChange={upBradesco} />}
       {formaBloqueada && (
         <div className="clt-note" role="alert" data-testid="bradesco-forma-nao-suportada">
@@ -444,7 +479,7 @@ export function TransmissaoDadosComplementares({
         </div>
       )}
 
-      {!ehTokio && !ehMapfre && !ehBradesco && (
+      {!ehTokio && !ehMapfre && !ehBradesco && !ehYelum && (
         <>
           <div className="acc-sec-t">Transmissão e envio</div>
           <div className="wizard-grid cols-3">

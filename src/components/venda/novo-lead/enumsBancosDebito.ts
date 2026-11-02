@@ -84,3 +84,27 @@ export const BANCOS_DEBITO_BRADESCO = [
   { codigo: "748", nome: "Sicredi" },
   { codigo: "4", nome: "Banco do Nordeste do Brasil S.A" },
 ] as const;
+
+// Bancos do débito em conta da YELUM (19), conforme o mapa da Efetivação. `codigo` = código do banco (o robô aceita código ou
+// nome). Não editar à mão: regerar lendo o portal.
+export const BANCOS_DEBITO_YELUM = [
+  { codigo: "85", nome: "Coop Central Ailos" },
+  { codigo: "756", nome: "Bancoob" },
+  { codigo: "47", nome: "Banese" },
+  { codigo: "41", nome: "Banrisul" },
+  { codigo: "237", nome: "Bradesco - C/C" },
+  { codigo: "1", nome: "Banco do Brasil S.A." },
+  { codigo: "133", nome: "Cresol" },
+  { codigo: "104", nome: "Caixa Economica Federal" },
+  { codigo: "748", nome: "SICREDI" },
+  { codigo: "341", nome: "Itau" },
+  { codigo: "33", nome: "Santander Banespa" },
+  { codigo: "422", nome: "Banco Safra S.A." },
+  { codigo: "4", nome: "Banco do Nordeste do Brasil S.A" },
+  { codigo: "98", nome: "Credialiança" },
+  { codigo: "99", nome: "Uniprime Central Interestadual" },
+  { codigo: "10", nome: "Credicoamo" },
+  { codigo: "136", nome: "Unicred do Brasil" },
+  { codigo: "212", nome: "Banco Original" },
+  { codigo: "77", nome: "Banco Inter S.A" },
+] as const;

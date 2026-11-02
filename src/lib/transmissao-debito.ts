@@ -10,6 +10,7 @@ import {
   BANCOS_DEBITO_BRADESCO,
   BANCOS_DEBITO_MAPFRE,
   BANCOS_DEBITO_PORTO,
+  BANCOS_DEBITO_YELUM,
 } from "@/components/venda/novo-lead/enumsBancosDebito";
 import { nomeCanonicoSeguradora } from "@/lib/seguradora-canonica";
 import { ehSeguradoraComPagamentoPorto } from "@/lib/transmissao-porto";
@@ -21,6 +22,7 @@ export function bancosDaSeguradora(seguradora: string): readonly BancoDebito[] {
   const s = nomeCanonicoSeguradora(seguradora);
   if (s === "mapfre") return BANCOS_DEBITO_MAPFRE;
   if (s === "bradesco") return BANCOS_DEBITO_BRADESCO;
+  if (s === "yelum") return BANCOS_DEBITO_YELUM;
   return s === "allianz" ? BANCOS_DEBITO_ALLIANZ : BANCOS_DEBITO_PORTO;
 }
 
