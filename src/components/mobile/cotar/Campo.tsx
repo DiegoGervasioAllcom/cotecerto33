@@ -1,11 +1,20 @@
 import type { ReactNode } from "react";
 
-type Props = { label: string; erro?: string; dica?: ReactNode; children: ReactNode };
+type Props = {
+  label: string;
+  obrigatorio?: boolean;
+  erro?: string;
+  dica?: ReactNode;
+  children: ReactNode;
+};
 
-export function Campo({ label, erro, dica, children }: Props) {
+export function Campo({ label, obrigatorio, erro, dica, children }: Props) {
   return (
     <label className="m-field">
-      <span className="m-label">{label}</span>
+      <span className="m-label">
+        {label}
+        {obrigatorio ? <span style={{ color: "var(--alert)" }}> *</span> : null}
+      </span>
       {children}
       {dica ? <span className="m-hint">{dica}</span> : null}
       {erro ? <span className="m-err">{erro}</span> : null}
