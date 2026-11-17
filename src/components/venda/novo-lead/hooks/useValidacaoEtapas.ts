@@ -24,6 +24,7 @@ export function useValidacaoEtapas(
         cpf: f.cpf,
         pessoa: f.pessoa,
         nome: f.nome,
+        nasc: f.nasc,
         nomeSocial: f.nomeSocial,
         sexo: f.sexo,
         estadoCivil: f.estadoCivil,

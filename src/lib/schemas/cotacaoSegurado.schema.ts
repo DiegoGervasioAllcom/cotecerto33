@@ -35,12 +35,20 @@ function optionalMax(max: number, message: string) {
   return z.string().max(max, message).optional();
 }
 
+// Data local (não UTC): à noite no Brasil o UTC já está no dia seguinte.
+function hojeLocalISO(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
 export const seguradoSchema = z
   .object({
     cpf: optionalDigitsExact([11, 14], "CPF ou CNPJ inválido."),
     pessoa: optionalMax(20, "Campo muito longo."),
     nome: optionalMax(150, "Nome muito longo."),
     nomeSocial: optionalMax(150, "Nome social muito longo."),
+    nasc: z.string().optional(),
     sexo: optionalMax(30, "Campo muito longo."),
     estadoCivil: optionalMax(30, "Campo muito longo."),
     celular: optionalDigitsRange(10, 11, "Telefone celular inválido."),
@@ -72,6 +80,26 @@ export const seguradoSchema = z
         path: ["cpf"],
         message:
           "O robô de cotação só aceita Pessoa Física (CPF) por enquanto. CNPJ não é suportado.",
+      });
+    }
+    const nasc = (v.nasc ?? "").trim();
+    if (!nasc) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["nasc"],
+        message: "Informe a data de nascimento do segurado.",
+      });
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(nasc) || Number.isNaN(Date.parse(nasc))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["nasc"],
+        message: "Data de nascimento inválida.",
+      });
+    } else if (nasc > hojeLocalISO()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["nasc"],
+        message: "A data de nascimento não pode ser futura.",
       });
     }
     const nome = (v.nome ?? "").trim();

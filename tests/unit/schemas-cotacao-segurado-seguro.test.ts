@@ -10,6 +10,7 @@ import { seguroSchema } from "@/lib/schemas/cotacaoSeguro.schema";
 // avanço de etapa (só o Calcular, via useSimulacaoCalculo.ts).
 const CAMPOS_OBRIGATORIOS_VALIDOS = {
   nome: "Fulano de Tal",
+  nasc: "1990-05-10",
   estadoCivil: "Solteiro(a)",
   email: "fulano@email.com",
   numero: "123",
@@ -17,15 +18,35 @@ const CAMPOS_OBRIGATORIOS_VALIDOS = {
 };
 
 describe("seguradoSchema", () => {
+  it("rejeita nascimento inválido ou futuro", () => {
+    for (const nasc of ["10/05/1990", "2999-01-01"]) {
+      expect(seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, nasc }).success).toBe(
+        false,
+      );
+    }
+  });
+
+  it("rejeita sem data de nascimento", () => {
+    const r = seguradoSchema.safeParse({ ...CAMPOS_OBRIGATORIOS_VALIDOS, nasc: "" });
+    expect(r.success).toBe(false);
+  });
+
   it("rejeita objeto vazio (celular é obrigatório)", () => {
     expect(seguradoSchema.safeParse({}).success).toBe(false);
   });
 
   it("aceita e-mail e número vazios (opcionais; obrigatórios só na transmissão)", () => {
     expect(
-      seguradoSchema.safeParse({ celular: "(11) 98765-4321", email: "", numero: "" }).success,
+      seguradoSchema.safeParse({
+        celular: "(11) 98765-4321",
+        nasc: "1990-05-10",
+        email: "",
+        numero: "",
+      }).success,
     ).toBe(true);
-    expect(seguradoSchema.safeParse({ celular: "(11) 98765-4321" }).success).toBe(true);
+    expect(
+      seguradoSchema.safeParse({ celular: "(11) 98765-4321", nasc: "1990-05-10" }).success,
+    ).toBe(true);
   });
 
   it("e-mail preenchido com formato inválido continua falhando", () => {

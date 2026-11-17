@@ -102,13 +102,20 @@ export function StepSegurado({ f, up, erros, cpfConsultando, cpfStatus, consulta
           )}
         </div>
         <div className="field-group">
-          <label>Data de nascimento</label>
+          <label>
+            Data de nascimento<span className="req">*</span>
+          </label>
           <input
             className="input"
             type="date"
             value={f.nasc}
             onChange={(e) => up("nasc", e.target.value)}
           />
+          {erros.nasc && (
+            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+              {erros.nasc}
+            </span>
+          )}
         </div>
         <div className="field-group">
           <label>
