@@ -117,6 +117,29 @@ export function StepVeiculo({
             </span>
           )}
         </div>
+        {/* Versões FIPE da placa: logo abaixo da linha Placa/Chassi. */}
+        {placaVersoes.length > 1 && (
+          <div className="field-group full">
+            <label>Versão do veículo (consulta da placa)</label>
+            <div className="sub">
+              A placa corresponde a mais de uma versão na FIPE. Escolha a correta para preencher
+              marca, modelo e valor.
+            </div>
+            <div className="row" style={{ flexWrap: "wrap", gap: 8, paddingTop: 6 }}>
+              {placaVersoes.map((v) => (
+                <button
+                  key={v.codigo || v.modelo}
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => onEscolherVersao(v)}
+                >
+                  {v.modelo}
+                  {v.valor != null ? ` · ${brl(v.valor)}` : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="field-group">
           <label>Renavam</label>
           <input
@@ -161,28 +184,6 @@ export function StepVeiculo({
               />
             </div>
           </>
-        )}
-        {placaVersoes.length > 1 && (
-          <div className="field-group full">
-            <label>Versão do veículo (consulta da placa)</label>
-            <div className="sub">
-              A placa corresponde a mais de uma versão na FIPE. Escolha a correta para preencher
-              marca, modelo e valor.
-            </div>
-            <div className="row" style={{ flexWrap: "wrap", gap: 8, paddingTop: 6 }}>
-              {placaVersoes.map((v) => (
-                <button
-                  key={v.codigo || v.modelo}
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => onEscolherVersao(v)}
-                >
-                  {v.modelo}
-                  {v.valor != null ? ` · ${brl(v.valor)}` : ""}
-                </button>
-              ))}
-            </div>
-          </div>
         )}
         <div className="field-group">
           <label>
