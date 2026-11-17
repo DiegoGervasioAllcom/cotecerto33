@@ -270,7 +270,7 @@ function Page() {
     valorDeterminado: "",
   });
   const up = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
-  const { cepLoading, lookupCep } = useCepLookup(setF);
+  const { cepLoading, lookupCep, enderecoPernoite, lookupCepPernoite } = useCepLookup(setF);
   const { marcas, setMarcas, modelos, setModelos, fipeValor, setFipeValor } = useFipe(
     f.marca,
     f.modelo,
@@ -619,8 +619,6 @@ function Page() {
               f={f}
               up={up}
               erros={erros}
-              cepLoading={cepLoading}
-              lookupCep={lookupCep}
               cpfConsultando={cpfConsultando}
               cpfStatus={cpfStatus}
               consultarCpf={consultarCpf}
@@ -647,7 +645,17 @@ function Page() {
             />
           )}
 
-          {visibleStep === 3 && <StepPerfil f={f} up={up} erros={erros} />}
+          {visibleStep === 3 && (
+            <StepPerfil
+              f={f}
+              up={up}
+              erros={erros}
+              cepLoading={cepLoading}
+              lookupCep={lookupCep}
+              enderecoPernoite={enderecoPernoite}
+              lookupCepPernoite={lookupCepPernoite}
+            />
+          )}
 
           {visibleStep === 4 && (
             <StepCoberturas f={f} up={up} erros={erros} cotacaoId={cotacaoId} />
