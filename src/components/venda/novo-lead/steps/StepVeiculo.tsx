@@ -18,7 +18,7 @@ type Props = {
   placaConsultando: boolean;
   placaStatus: StatusPlaca | null;
   placaVersoes: PrecificadorFipe[];
-  onConsultarPlaca: (placa: string, opts?: { forcar?: boolean }) => void;
+  onConsultarPlaca: (placa: string, opts?: { forcar?: boolean; reaplicar?: boolean }) => void;
   onEscolherVersao: (v: PrecificadorFipe) => void;
 };
 
@@ -53,17 +53,26 @@ export function StepVeiculo({
       <div className="wizard-grid">
         <div className="field-group">
           <label>Placa</label>
-          <input
-            className="input"
-            value={f.placa}
-            maxLength={8}
-            onChange={(e) => up("placa", maskPlaca(e.target.value))}
-            // A consulta dispara ao sair do campo, com a placa completa. O
-            // hook ignora repetição da mesma placa, então voltar ao campo
-            // sem editar não gasta uma nova consulta.
-            onBlur={(e) => onConsultarPlaca(e.target.value)}
-            placeholder="AAA0A00"
-          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              className="input"
+              style={{ flex: 1 }}
+              value={f.placa}
+              maxLength={8}
+              onChange={(e) => up("placa", maskPlaca(e.target.value))}
+              // A API de placa é paga: a consulta só ocorre pelo botão Buscar,
+              // nunca ao sair do campo.
+              placeholder="AAA0A00"
+            />
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={placaConsultando || f.placa.replace(/[^A-Za-z0-9]/g, "").length < 7}
+              onClick={() => onConsultarPlaca(f.placa, { reaplicar: true })}
+            >
+              {placaConsultando ? "Buscando…" : "Buscar"}
+            </button>
+          </div>
           {erros.placa && (
             <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
               {erros.placa}
