@@ -5,7 +5,11 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
 import type { PagamentoTransmissao } from "@/lib/transmissao-pagamento";
-import { perfilEscolhidoTodos, type Form } from "@/components/venda/novo-lead/types";
+import {
+  perfilEscolhidoTodos,
+  usoEscolhidoTodos,
+  type Form,
+} from "@/components/venda/novo-lead/types";
 import { useClassificarPerda } from "@/components/venda/novo-lead/hooks/useClassificarPerda";
 import { useCepLookup } from "@/components/venda/novo-lead/hooks/useCepLookup";
 import { useFipe } from "@/components/venda/novo-lead/hooks/useFipe";
@@ -189,6 +193,7 @@ function Page() {
     zeroKm: false,
     zeroKmEscolhido: false,
     perfilEscolhido: perfilEscolhidoTodos(false),
+    usoEscolhido: usoEscolhidoTodos(false),
     dataSaidaConcessionaria: "",
     odometro: "",
     alienado: false,
