@@ -108,6 +108,17 @@ describe("veiculoSchema", () => {
   });
 });
 
+describe("perfilSchema — CEP residencial", () => {
+  it("aceita CEP residencial vazio ou com 8 dígitos", () => {
+    expect(perfilSchema.safeParse({ cep: "" }).success).toBe(true);
+    expect(perfilSchema.safeParse({ cep: "04717-914" }).success).toBe(true);
+  });
+
+  it("rejeita CEP residencial incompleto", () => {
+    expect(perfilSchema.safeParse({ cep: "04717" }).success).toBe(false);
+  });
+});
+
 describe("perfilSchema", () => {
   it("aceita objeto vazio (nenhum campo é obrigatório)", () => {
     expect(perfilSchema.safeParse({}).success).toBe(true);
