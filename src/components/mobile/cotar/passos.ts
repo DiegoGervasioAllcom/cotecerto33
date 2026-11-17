@@ -10,7 +10,7 @@ export type Up = <K extends keyof Form>(k: K, v: Form[K]) => void;
 
 /** Campos do gate de cálculo (calculoGate.ts) que cada passo precisa ter preenchidos para avançar. */
 export const CAMPOS_POR_PASSO: (keyof Form)[][] = [
-  ["cpf", "nome", "sexo", "estadoCivil", "celular", "cep"],
+  ["cpf", "nome", "nasc", "sexo", "estadoCivil", "celular", "cep"],
   ["placa"],
   ["kmMensal", "cepPernoite"],
   [],

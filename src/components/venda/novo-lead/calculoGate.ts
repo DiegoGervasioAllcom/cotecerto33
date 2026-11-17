@@ -7,6 +7,7 @@ import type { Form } from "./types";
 export const CAMPOS_OBRIGATORIOS_CALCULO: { campo: keyof Form; label: string }[] = [
   { campo: "cpf", label: "CPF" },
   { campo: "nome", label: "Nome completo" },
+  { campo: "nasc", label: "Data de nascimento" },
   { campo: "sexo", label: "Sexo" },
   { campo: "estadoCivil", label: "Estado civil" },
   { campo: "placa", label: "Placa" },

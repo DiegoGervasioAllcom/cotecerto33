@@ -56,6 +56,14 @@ export function PassoSegurado({
           autoComplete="name"
         />
       </Campo>
+      <Campo label="Data de nascimento" erro={erros.nasc}>
+        <input
+          className="m-input"
+          type="date"
+          value={f.nasc}
+          onChange={(e) => up("nasc", e.target.value)}
+        />
+      </Campo>
       <Campo label="Sexo" erro={erros.sexo}>
         <Escolha
           valor={f.sexo}

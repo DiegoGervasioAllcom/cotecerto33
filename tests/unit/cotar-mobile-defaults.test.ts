@@ -12,6 +12,7 @@ const preenchido = () => ({
   ...formPadraoMobile(),
   cpf: "123.456.789-09",
   nome: "Fulano de Tal",
+  nasc: "1990-05-10",
   sexo: "Masculino",
   estadoCivil: "Casado(a)",
   celular: "(11) 91234-5678",

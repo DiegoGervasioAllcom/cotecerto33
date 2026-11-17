@@ -5,6 +5,7 @@ import type { Form } from "@/components/venda/novo-lead/types";
 const base = {
   cpf: "1",
   nome: "n",
+  nasc: "1990-05-10",
   sexo: "F",
   estadoCivil: "Casado",
   placa: "ABC1D23",
