@@ -141,16 +141,6 @@ export function StepVeiculo({
           </div>
         )}
         <div className="field-group">
-          <label>Renavam</label>
-          <input
-            className="input"
-            value={f.renavam}
-            inputMode="numeric"
-            maxLength={11}
-            onChange={(e) => up("renavam", onlyDigits(e.target.value).slice(0, 11))}
-          />
-        </div>
-        <div className="field-group">
           <label>Zero KM</label>
           <div className="row" style={{ gap: 14, paddingTop: 6 }}>
             <label>
