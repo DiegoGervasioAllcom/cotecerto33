@@ -1630,6 +1630,7 @@ export async function preencherCamposCalculoE2E(cotacaoId: string): Promise<void
     cpf_cnpj: "529.982.247-25",
     nome: "Cliente Personalizar E2E",
     sexo: "Masculino",
+    nascimento: "1990-05-10",
     estado_civil: "Solteiro",
     email: "cliente-perso@teste.local",
     cep: "01310-100",
