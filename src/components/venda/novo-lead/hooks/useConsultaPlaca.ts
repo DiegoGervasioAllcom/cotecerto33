@@ -240,10 +240,12 @@ export function useConsultaPlaca({
    * a proteção contra reconsultar a mesma placa.
    */
   const consultar = useCallback(
-    async (placaBruta: string, opts?: { forcar?: boolean }) => {
+    async (placaBruta: string, opts?: { forcar?: boolean; reaplicar?: boolean }) => {
       const placa = normalizePlaca(placaBruta);
       if (placa.length < 7) return;
-      if (!opts?.forcar && placa === ultimaPlaca.current) return;
+      // `reaplicar` (botão Buscar) ignora só esta trava local; o servidor segue
+      // usando o cache de 30 dias, porque `forcar` não é enviado.
+      if (!opts?.forcar && !opts?.reaplicar && placa === ultimaPlaca.current) return;
 
       ultimaPlaca.current = placa;
       const minhaSequencia = ++sequencia.current;
