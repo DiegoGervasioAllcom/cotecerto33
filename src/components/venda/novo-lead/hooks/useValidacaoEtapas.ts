@@ -29,13 +29,6 @@ export function useValidacaoEtapas(
         estadoCivil: f.estadoCivil,
         celular: f.celular,
         email: f.email,
-        cep: f.cep,
-        numero: f.numero,
-        complemento: f.complemento,
-        logradouro: f.logradouro,
-        bairro: f.bairro,
-        cidade: f.cidade,
-        uf: f.uf,
       });
       if (!r.success) {
         const novos: Record<string, string> = {};
@@ -124,6 +117,7 @@ export function useValidacaoEtapas(
         condRelacao: f.condRelacao,
         condNomeSocial: f.condNomeSocial,
         condTempoHabilitacao: f.condTempoHabilitacao,
+        cep: f.cep,
         cepPernoite: f.cepPernoite,
         tipoGaragem: f.tipoGaragem,
         relacaoComProprietario: f.relacaoComProprietario,

@@ -8,6 +8,8 @@ import type { Form } from "../types";
  */
 export function useCepLookup(setF: React.Dispatch<React.SetStateAction<Form>>) {
   const [cepLoading, setCepLoading] = useState(false);
+  // Endereço do CEP de pernoite: só para exibir abaixo do campo (não vai ao Form).
+  const [enderecoPernoite, setEnderecoPernoite] = useState("");
 
   async function lookupCep(cep: string, prefix: "" | "cond" = "") {
     const d = onlyDigits(cep);
@@ -32,5 +34,26 @@ export function useCepLookup(setF: React.Dispatch<React.SetStateAction<Form>>) {
     }
   }
 
-  return { cepLoading, lookupCep };
+  async function lookupCepPernoite(cep: string) {
+    const d = onlyDigits(cep);
+    if (d.length !== 8) {
+      setEnderecoPernoite("");
+      return;
+    }
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`);
+      const j = await r.json();
+      setEnderecoPernoite(
+        j.erro
+          ? ""
+          : [j.logradouro, j.bairro, [j.localidade, j.uf].filter(Boolean).join(", ")]
+              .filter(Boolean)
+              .join(", "),
+      );
+    } catch {
+      setEnderecoPernoite("");
+    }
+  }
+
+  return { cepLoading, lookupCep, enderecoPernoite, lookupCepPernoite };
 }

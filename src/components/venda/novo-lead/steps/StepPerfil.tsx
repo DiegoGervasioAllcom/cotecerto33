@@ -1,4 +1,4 @@
-import { maskCpfCnpj } from "@/lib/masks";
+import { maskCpfCnpj, onlyDigits } from "@/lib/masks";
 import { maskCep } from "@/components/venda/novo-lead/masks";
 import {
   TIPO_GARAGEM,
@@ -25,9 +25,24 @@ type Props = {
   f: Form;
   up: <K extends keyof Form>(k: K, v: Form[K]) => void;
   erros: Record<string, string>;
+  cepLoading: boolean;
+  lookupCep: (cep: string) => void;
+  enderecoPernoite: string;
+  lookupCepPernoite: (cep: string) => void;
 };
 
-export function StepPerfil({ f, up, erros }: Props) {
+export function StepPerfil({
+  f,
+  up,
+  erros,
+  cepLoading,
+  lookupCep,
+  enderecoPernoite,
+  lookupCepPernoite,
+}: Props) {
+  const enderecoResidencial = [f.logradouro, f.bairro, [f.cidade, f.uf].filter(Boolean).join(", ")]
+    .filter(Boolean)
+    .join(", ");
   const isPessoaFisica = f.proprietarioTipoPessoa === "Física";
   const naoParticular = !!f.tipoUso && f.tipoUso !== "Particular";
   const precisaCondutores = (TIPOS_USO_COM_CONDUTORES as readonly string[]).includes(f.tipoUso);
@@ -352,19 +367,58 @@ export function StepPerfil({ f, up, erros }: Props) {
             </div>
           </>
         )}
-        <div className="field-group">
+        <div className="field-group full">
           <label>CEP de pernoite</label>
           <input
             className="input"
             value={f.cepPernoite}
             inputMode="numeric"
             maxLength={9}
-            onChange={(e) => up("cepPernoite", maskCep(e.target.value))}
+            onChange={(e) => {
+              const v = maskCep(e.target.value);
+              up("cepPernoite", v);
+              lookupCepPernoite(v);
+            }}
             placeholder="00000-000"
           />
+          {enderecoPernoite && (
+            <span className="hint" style={{ color: "var(--info)", display: "block" }}>
+              {enderecoPernoite}
+            </span>
+          )}
           {erros.cepPernoite && (
             <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
               {erros.cepPernoite}
+            </span>
+          )}
+        </div>
+        <div className="field-group full">
+          <label>
+            CEP residencial<span className="req">*</span>
+          </label>
+          <input
+            className="input"
+            data-tour="lead-cep"
+            value={f.cep}
+            inputMode="numeric"
+            maxLength={9}
+            onChange={(e) => {
+              const v = maskCep(e.target.value);
+              up("cep", v);
+              if (onlyDigits(v).length === 8) lookupCep(v);
+            }}
+            onBlur={() => lookupCep(f.cep)}
+            placeholder="00000-000"
+          />
+          {cepLoading && <span className="hint">Buscando CEP…</span>}
+          {!cepLoading && enderecoResidencial && (
+            <span className="hint" style={{ color: "var(--info)", display: "block" }}>
+              {enderecoResidencial}
+            </span>
+          )}
+          {erros.cep && (
+            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+              {erros.cep}
             </span>
           )}
         </div>
