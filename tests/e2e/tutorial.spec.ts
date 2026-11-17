@@ -257,8 +257,8 @@ test.describe("roteiro de vendas", () => {
     );
 
     await dialog.getByRole("button", { name: "Próximo" }).click();
-    dialog = await esperarPasso(page, "O CEP muda o preço", "4 / 12");
-    await expectSpotlightAround(page, page.locator('.wizard-grid input[placeholder="00000-000"]'));
+    dialog = await esperarPasso(page, "Etapa 2 — que item vai ser segurado", "4 / 12");
+    await expectSpotlightAround(page, page.locator(".tipo-item"));
 
     await page.waitForTimeout(1_700);
     expect(mutations, "o capítulo 3 não pode persistir rascunho nem chamar RPC").toEqual([]);
