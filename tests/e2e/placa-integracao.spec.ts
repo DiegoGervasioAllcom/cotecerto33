@@ -13,7 +13,7 @@ import {
 
 /**
  * E2E da integração de placa no passo Veículo do wizard de cotação:
- * digitar a placa e sair do campo dispara `consultarPlaca`, que preenche
+ * digitar a placa e clicar em Buscar dispara `consultarPlaca`, que preenche
  * chassi/anos/combustível e — como esta placa tem duas versões FIPE —
  * pede a escolha da versão antes de resolver marca e modelo.
  *
@@ -63,8 +63,9 @@ test.describe("integração de placa — passo Veículo", () => {
 
     const placa = page.locator('input[placeholder="AAA0A00"]');
     await placa.fill(PLACA_E2E);
-    // O disparo é no blur, não no change.
+    // A consulta (API paga) só dispara pelo botão Buscar, não no blur nem no change.
     await placa.blur();
+    await page.getByRole("button", { name: "Buscar", exact: true }).click();
 
     // Campos que não dependem da FIPE entram direto.
     const chassi = page.locator('input[placeholder="17 caracteres"]');
@@ -130,6 +131,7 @@ test.describe("integração de placa — passo Veículo", () => {
       const placa = page.locator('input[placeholder="AAA0A00"]');
       await placa.fill(PLACA_MISTA_E2E);
       await placa.blur();
+      await page.getByRole("button", { name: "Buscar", exact: true }).click();
 
       await expect(page.getByText(/Selecione a versão do veículo/)).toBeVisible({
         timeout: 15_000,
