@@ -10,7 +10,7 @@ type Props = {
   lookupCep: (cep: string) => void;
   cpfConsultando?: boolean;
   cpfStatus?: { tipo: "ok" | "erro" | "aviso"; texto: string } | null;
-  consultarCpf?: (cpf: string) => void;
+  consultarCpf?: (cpf: string, opts?: { forcar?: boolean; sobrescreverNome?: boolean }) => void;
 };
 
 export function StepSegurado({
@@ -34,17 +34,25 @@ export function StepSegurado({
           <label>
             CPF ou CNPJ<span className="req">*</span>
           </label>
-          <input
-            className="input"
-            value={f.cpf}
-            inputMode="numeric"
-            maxLength={18}
-            onChange={(e) => up("cpf", maskCpfCnpj(e.target.value))}
-            onBlur={() => {
-              if (onlyDigits(f.cpf).length === 11) consultarCpf?.(f.cpf);
-            }}
-            placeholder="000.000.000-00"
-          />
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              className="input"
+              style={{ flex: 1 }}
+              value={f.cpf}
+              inputMode="numeric"
+              maxLength={18}
+              onChange={(e) => up("cpf", maskCpfCnpj(e.target.value))}
+              placeholder="000.000.000-00"
+            />
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={cpfConsultando || onlyDigits(f.cpf).length !== 11}
+              onClick={() => consultarCpf?.(f.cpf, { sobrescreverNome: true })}
+            >
+              {cpfConsultando ? "Buscando…" : "Buscar"}
+            </button>
+          </div>
           {cpfConsultando && <span className="hint">Buscando cadastro…</span>}
           {!cpfConsultando && cpfStatus && (
             <span

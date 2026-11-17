@@ -29,10 +29,10 @@ export function useConsultaCpf({ setF, cotacaoId }: Params) {
   const sequencia = useRef(0);
 
   const aplicarDados = useCallback(
-    (dados: CpfDecodificado) => {
+    (dados: CpfDecodificado, sobrescreverNome: boolean) => {
       setF((p) => ({
         ...p,
-        nome: p.nome || dados.nome || p.nome,
+        nome: sobrescreverNome ? dados.nome || p.nome : p.nome || dados.nome || p.nome,
         sexo: p.sexo || dados.sexo || p.sexo,
         nasc: p.nasc || dados.dataNascimento || p.nasc,
       }));
@@ -46,10 +46,10 @@ export function useConsultaCpf({ setF, cotacaoId }: Params) {
    * a proteção contra reconsultar o mesmo CPF.
    */
   const consultar = useCallback(
-    async (cpfBruto: string, opts?: { forcar?: boolean }) => {
+    async (cpfBruto: string, opts?: { forcar?: boolean; sobrescreverNome?: boolean }) => {
       const cpf = onlyDigits(cpfBruto);
       if (cpf.length !== 11) return;
-      if (!opts?.forcar && cpf === ultimoCpf.current) return;
+      if (!opts?.forcar && !opts?.sobrescreverNome && cpf === ultimoCpf.current) return;
 
       ultimoCpf.current = cpf;
       const minhaSequencia = ++sequencia.current;
@@ -69,7 +69,7 @@ export function useConsultaCpf({ setF, cotacaoId }: Params) {
         });
         if (!souAtual()) return;
         if (r.ok && r.dados) {
-          aplicarDados(r.dados);
+          aplicarDados(r.dados, opts?.sobrescreverNome ?? false);
         } else {
           setStatus({
             tipo: "aviso",

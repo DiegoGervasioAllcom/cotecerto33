@@ -10,7 +10,7 @@ export function PassoUso({ f, up, erros }: Props) {
   const mesmoCep = !!f.cep && f.cepPernoite === f.cep;
   return (
     <>
-      <Campo label="Km por mês" erro={erros.kmMensal}>
+      <Campo label="Km por mês" obrigatorio erro={erros.kmMensal}>
         <input
           className="m-input"
           inputMode="numeric"

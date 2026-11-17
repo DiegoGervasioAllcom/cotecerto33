@@ -330,7 +330,9 @@ export function StepVeiculo({
           </div>
         )}
         <div className="field-group">
-          <label>KM mensal</label>
+          <label>
+            KM mensal<span className="req">*</span>
+          </label>
           <input
             className="input"
             value={f.kmMensal}
