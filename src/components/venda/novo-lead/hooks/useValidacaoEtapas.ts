@@ -66,6 +66,7 @@ export function useValidacaoEtapas(
     }
     if (atual === 2) {
       const r = veiculoSchema.safeParse({
+        zeroKmEscolhido: f.zeroKmEscolhido,
         placa: f.placa,
         chassi: f.chassi,
         renavam: f.renavam,

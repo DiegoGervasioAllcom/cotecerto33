@@ -65,4 +65,10 @@ describe("gate do Calcular com Zero km", () => {
       camposFaltantesCalculo({ ...base, dataSaidaConcessionaria: "2026-09-01", odometro: "5" }),
     ).toEqual([]);
   });
+  it("sem escolher Sim/Não em Zero KM, o Calcular fica bloqueado", () => {
+    expect(camposFaltantesCalculo({ ...base, zeroKmEscolhido: false })).toEqual(["Zero KM"]);
+  });
+  it("com Zero KM escolhido (Não), libera", () => {
+    expect(camposFaltantesCalculo({ ...base, zeroKmEscolhido: true })).toEqual([]);
+  });
 });

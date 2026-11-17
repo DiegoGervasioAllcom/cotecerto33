@@ -10,6 +10,11 @@ function optionalMax(max: number, message: string) {
 }
 
 export const veiculoSchema = z.object({
+  // Desktop: o vendedor precisa escolher Sim/Não. `undefined` (outros chamadores) passa.
+  zeroKmEscolhido: z
+    .boolean()
+    .optional()
+    .refine((v) => v !== false, { message: "Informe se o veículo é zero km." }),
   placa: optionalMax(8, "Placa muito longa."),
   chassi: optionalMax(17, "Chassi muito longo."),
   renavam: optionalMax(11, "Renavam muito longo."),

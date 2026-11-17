@@ -40,6 +40,8 @@ describe("cotar mobile: defaults x gate", () => {
 
   it("zero km fica desligado (senão o gate exige data/odômetro)", () => {
     expect(formPadraoMobile().zeroKm).toBe(false);
+    // O mobile não pergunta Zero KM: não pode ficar bloqueado pela obrigatoriedade do desktop.
+    expect(formPadraoMobile().zeroKmEscolhido).toBe(true);
   });
 
   it("moto só leva seguradoras que existem no portal e Auto volta ao padrão", () => {
