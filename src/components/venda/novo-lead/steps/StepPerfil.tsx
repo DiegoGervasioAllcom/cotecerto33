@@ -19,7 +19,7 @@ import {
 } from "@/components/venda/novo-lead/enumsQuiver";
 import { ComboboxBusca } from "@/components/venda/novo-lead/ComboboxBusca";
 import { PROFISSOES_CONDUTOR } from "@/components/venda/novo-lead/enumsProfissao";
-import type { Form } from "@/components/venda/novo-lead/types";
+import type { Form, PerfilEscolhido } from "@/components/venda/novo-lead/types";
 
 type Props = {
   f: Form;
@@ -40,6 +40,8 @@ export function StepPerfil({
   enderecoPernoite,
   lookupCepPernoite,
 }: Props) {
+  const escolher = (chave: keyof PerfilEscolhido, escolhido: boolean) =>
+    up("perfilEscolhido", { ...f.perfilEscolhido, [chave]: escolhido });
   const enderecoResidencial = [f.logradouro, f.bairro, [f.cidade, f.uf].filter(Boolean).join(", ")]
     .filter(Boolean)
     .join(", ");
@@ -73,12 +75,18 @@ export function StepPerfil({
 
       <div className="wizard-grid">
         <div className="field-group full">
-          <label>O segurado guarda o veículo em garagem?</label>
+          <label>
+            O segurado guarda o veículo em garagem?<span className="req">*</span>
+          </label>
           <select
             className="input"
-            value={f.tipoGaragem}
-            onChange={(e) => up("tipoGaragem", e.target.value)}
+            value={f.perfilEscolhido.garagem ? f.tipoGaragem : ""}
+            onChange={(e) => {
+              if (e.target.value) up("tipoGaragem", e.target.value);
+              escolher("garagem", e.target.value !== "");
+            }}
           >
+            <option value="">Selecione</option>
             {TIPO_GARAGEM.map((t) => (
               <option key={t}>{t}</option>
             ))}
@@ -92,14 +100,26 @@ export function StepPerfil({
       >
         Proprietário do veículo
       </div>
-      <label
-        className={`switch ${f.segProprietario ? "on" : ""}`}
-        onClick={() => up("segProprietario", !f.segProprietario)}
-      >
-        <span className="track"></span>
-        <span className="label">O segurado é o proprietário do veículo</span>
-      </label>
-      {!f.segProprietario && (
+      <div className="wizard-grid">
+        <div className="field-group full">
+          <label>
+            O segurado é o proprietário do veículo?<span className="req">*</span>
+          </label>
+          <select
+            className="input"
+            value={f.perfilEscolhido.proprietario ? (f.segProprietario ? "sim" : "nao") : ""}
+            onChange={(e) => {
+              if (e.target.value) up("segProprietario", e.target.value === "sim");
+              escolher("proprietario", e.target.value !== "");
+            }}
+          >
+            <option value="">Selecione</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </div>
+      </div>
+      {f.perfilEscolhido.proprietario && !f.segProprietario && (
         <div style={{ marginTop: 10 }}>
           <div className="wizard-grid">
             <div className="field-group">
@@ -248,25 +268,24 @@ export function StepPerfil({
       </div>
       <div className="wizard-grid">
         <div className="field-group full">
-          <label
-            className={`switch ${f.condutorMesmo === "sim" ? "on" : ""}`}
+          <label>
+            O segurado é o principal condutor do veículo?<span className="req">*</span>
+          </label>
+          <select
+            className="input"
             data-tour="perfil-condutor"
-            role="switch"
-            aria-checked={f.condutorMesmo === "sim"}
-            tabIndex={0}
-            onClick={() => up("condutorMesmo", f.condutorMesmo === "sim" ? "nao" : "sim")}
-            onKeyDown={(e) => {
-              if (e.key === " " || e.key === "Enter") {
-                e.preventDefault();
-                up("condutorMesmo", f.condutorMesmo === "sim" ? "nao" : "sim");
-              }
+            value={f.perfilEscolhido.condutor ? f.condutorMesmo : ""}
+            onChange={(e) => {
+              if (e.target.value) up("condutorMesmo", e.target.value as "sim" | "nao");
+              escolher("condutor", e.target.value !== "");
             }}
           >
-            <span className="track"></span>
-            <span className="label">O segurado é o principal condutor do veículo</span>
-          </label>
+            <option value="">Selecione</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
         </div>
-        {f.condutorMesmo === "nao" && (
+        {f.perfilEscolhido.condutor && f.condutorMesmo === "nao" && (
           <>
             <div className="field-group">
               <label>Relação do condutor com o segurado</label>
@@ -431,9 +450,13 @@ export function StepPerfil({
           </label>
           <select
             className="input"
-            value={f.tipoResidencia}
-            onChange={(e) => up("tipoResidencia", e.target.value)}
+            value={f.perfilEscolhido.residencia ? f.tipoResidencia : ""}
+            onChange={(e) => {
+              if (e.target.value) up("tipoResidencia", e.target.value);
+              escolher("residencia", e.target.value !== "");
+            }}
           >
+            <option value="">Selecione</option>
             {TIPO_RESIDENCIA.map((t) => (
               <option key={t}>{t}</option>
             ))}
@@ -532,29 +555,44 @@ export function StepPerfil({
         </>
       )}
 
-      <div style={{ marginTop: 14 }}>
-        <label
-          className={`switch ${f.seguroCorretorProximo === "sim" ? "on" : ""}`}
-          onClick={() =>
-            up("seguroCorretorProximo", f.seguroCorretorProximo === "sim" ? "nao" : "sim")
-          }
-        >
-          <span className="track"></span>
-          <span className="label">Seguro do corretor ou pessoa com relacionamento próximo</span>
-        </label>
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <label
-          className={`switch ${f.jovens1825 === "sim" ? "on" : ""}`}
-          onClick={() => up("jovens1825", f.jovens1825 === "sim" ? "nao" : "sim")}
-        >
-          <span className="track"></span>
-          <span className="label">
+      <div className="wizard-grid" style={{ marginTop: 14 }}>
+        <div className="field-group full">
+          <label>
+            Seguro do corretor ou pessoa com relacionamento próximo?<span className="req">*</span>
+          </label>
+          <select
+            className="input"
+            value={f.perfilEscolhido.corretor ? f.seguroCorretorProximo : ""}
+            onChange={(e) => {
+              if (e.target.value) up("seguroCorretorProximo", e.target.value as "sim" | "nao");
+              escolher("corretor", e.target.value !== "");
+            }}
+          >
+            <option value="">Selecione</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </div>
+        <div className="field-group full">
+          <label>
             Existem pessoas na faixa etária de 17 a 25 anos, que residem ou não com o condutor?
-          </span>
-        </label>
+            <span className="req">*</span>
+          </label>
+          <select
+            className="input"
+            value={f.perfilEscolhido.jovens ? f.jovens1825 : ""}
+            onChange={(e) => {
+              if (e.target.value) up("jovens1825", e.target.value as "sim" | "nao");
+              escolher("jovens", e.target.value !== "");
+            }}
+          >
+            <option value="">Selecione</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </div>
       </div>
-      {f.jovens1825 === "sim" && (
+      {f.perfilEscolhido.jovens && f.jovens1825 === "sim" && (
         <div style={{ marginTop: 10 }}>
           <div
             className="card"

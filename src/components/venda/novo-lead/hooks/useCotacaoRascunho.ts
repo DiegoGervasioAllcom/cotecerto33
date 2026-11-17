@@ -4,7 +4,7 @@ import { criarPersistenciaSerial } from "@/lib/persistencia-serial";
 import { maskCpfCnpj, normalizePlaca } from "@/lib/masks";
 import { maskCel, maskCep } from "../masks";
 import { ANOS_POR_TIPO_CALCULO, vigenciaAPartirDeHoje } from "../steps/StepSeguro";
-import type { Form } from "../types";
+import { perfilEscolhidoTodos, type Form } from "../types";
 import { PROFISSOES_CONDUTOR } from "../enumsProfissao";
 import { acharOpcao } from "@/lib/normalizaTexto";
 
@@ -382,6 +382,7 @@ export function useCotacaoRascunho(params: {
         tipoCambio: v.tipo_cambio ?? "",
         zeroKm: !!v.zero_km,
         zeroKmEscolhido: true,
+        perfilEscolhido: perfilEscolhidoTodos(true),
         dataSaidaConcessionaria: v.data_saida_concessionaria ?? "",
         odometro: v.odometro ?? "",
         alienado: !!v.alienado,

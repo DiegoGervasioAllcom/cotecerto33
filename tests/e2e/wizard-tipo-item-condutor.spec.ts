@@ -168,31 +168,29 @@ test.describe("wizard — tipo de item por ícone + principal condutor (V12.3.8)
       await irParaPasso(page, "Perfil");
       await expect(page.getByRole("heading", { name: "Perfil" })).toBeVisible();
 
-      const switchCondutor = page.locator('[data-tour="perfil-condutor"]');
-      // Default do form (`condutorMesmo: "sim"`): switch ligado, campos escondidos.
-      await expect(switchCondutor).toHaveClass(/on/);
+      const selectCondutor = page.locator('[data-tour="perfil-condutor"]');
+      // Obrigatório: começa em "Selecione" e os campos do condutor ficam escondidos.
+      await expect(selectCondutor).toHaveValue("");
       await expect(page.getByText("CPF do condutor")).toBeHidden();
 
-      await switchCondutor.click();
-      await expect(switchCondutor).not.toHaveClass(/on/);
+      await selectCondutor.selectOption("nao");
       await expect(page.getByText("CPF do condutor")).toBeVisible();
       await expect(page.getByText("Nome do condutor")).toBeVisible();
 
       await salvarRascunho(page);
-      expect(await lerCondutorMesmoE2E(cotacaoId), "condutor_mesmo após desligar").toBe(false);
+      expect(await lerCondutorMesmoE2E(cotacaoId), "condutor_mesmo após escolher Não").toBe(false);
 
       // Reabre a mesma cotação direto no passo Perfil — estado vem do banco.
       await page.goto(`/venda/novo-lead?id=${cotacaoId}&step=3`);
       await expect(page.getByRole("heading", { name: "Perfil" })).toBeVisible({
         timeout: 15_000,
       });
-      const switchReaberto = page.locator('[data-tour="perfil-condutor"]');
-      await expect(switchReaberto).not.toHaveClass(/on/);
+      const selectReaberto = page.locator('[data-tour="perfil-condutor"]');
+      await expect(selectReaberto).toHaveValue("nao");
       await expect(page.getByText("CPF do condutor")).toBeVisible();
 
-      // Liga de novo: campos do condutor voltam a ficar escondidos.
-      await switchReaberto.click();
-      await expect(switchReaberto).toHaveClass(/on/);
+      // Escolhe Sim: campos do condutor voltam a ficar escondidos.
+      await selectReaberto.selectOption("sim");
       await expect(page.getByText("CPF do condutor")).toBeHidden();
 
       await salvarRascunho(page);
