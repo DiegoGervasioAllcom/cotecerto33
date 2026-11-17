@@ -23,8 +23,6 @@ function render(cpf: string, consultarCpf = vi.fn(), consultando = false) {
     f: { cpf } as Form,
     up: vi.fn(),
     erros: {},
-    cepLoading: false,
-    lookupCep: vi.fn(),
     cpfConsultando: consultando,
     cpfStatus: null,
     consultarCpf,

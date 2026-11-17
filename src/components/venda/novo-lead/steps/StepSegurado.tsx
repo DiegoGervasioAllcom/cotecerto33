@@ -1,28 +1,17 @@
 import { onlyDigits, maskCpfCnpj } from "@/lib/masks";
-import { maskCel, maskCep } from "@/components/venda/novo-lead/masks";
+import { maskCel } from "@/components/venda/novo-lead/masks";
 import type { Form } from "@/components/venda/novo-lead/types";
 
 type Props = {
   f: Form;
   up: <K extends keyof Form>(k: K, v: Form[K]) => void;
   erros: Record<string, string>;
-  cepLoading: boolean;
-  lookupCep: (cep: string) => void;
   cpfConsultando?: boolean;
   cpfStatus?: { tipo: "ok" | "erro" | "aviso"; texto: string } | null;
   consultarCpf?: (cpf: string, opts?: { forcar?: boolean; sobrescreverNome?: boolean }) => void;
 };
 
-export function StepSegurado({
-  f,
-  up,
-  erros,
-  cepLoading,
-  lookupCep,
-  cpfConsultando,
-  cpfStatus,
-  consultarCpf,
-}: Props) {
+export function StepSegurado({ f, up, erros, cpfConsultando, cpfStatus, consultarCpf }: Props) {
   return (
     <>
       <h2>Dados do Segurado</h2>
@@ -198,84 +187,6 @@ export function StepSegurado({
               {erros.email}
             </span>
           )}
-        </div>
-        <div className="field-group">
-          <label>
-            CEP residencial<span className="req">*</span>
-          </label>
-          <input
-            className="input"
-            value={f.cep}
-            inputMode="numeric"
-            maxLength={9}
-            onChange={(e) => {
-              const v = maskCep(e.target.value);
-              up("cep", v);
-              if (onlyDigits(v).length === 8) lookupCep(v);
-            }}
-            onBlur={() => lookupCep(f.cep)}
-            placeholder="00000-000"
-          />
-          {cepLoading && <span className="hint">Buscando CEP…</span>}
-          {erros.cep && (
-            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
-              {erros.cep}
-            </span>
-          )}
-        </div>
-        <div className="field-group">
-          <label>
-            Número <span className="hint">(opcional)</span>
-          </label>
-          <input
-            className="input"
-            value={f.numero}
-            maxLength={10}
-            onChange={(e) => up("numero", e.target.value)}
-            placeholder="Nº"
-          />
-          {erros.numero && (
-            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
-              {erros.numero}
-            </span>
-          )}
-        </div>
-        <div className="field-group">
-          <label>
-            Complemento <span className="hint">(opcional)</span>
-          </label>
-          <input
-            className="input"
-            value={f.complemento}
-            maxLength={30}
-            onChange={(e) => up("complemento", e.target.value)}
-            placeholder="Apto, bloco…"
-          />
-          {erros.complemento && (
-            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
-              {erros.complemento}
-            </span>
-          )}
-        </div>
-        <div className="field-group full">
-          <label>Endereço</label>
-          <input
-            className="input"
-            value={f.logradouro}
-            readOnly
-            style={{ background: "var(--offwhite)" }}
-            placeholder="Preenche via CEP"
-          />
-        </div>
-        <div className="field-group">
-          <label>Cidade / UF</label>
-          <input
-            className="input"
-            value={f.cidade ? `${f.cidade} / ${f.uf}` : ""}
-            readOnly
-            style={{ background: "var(--offwhite)" }}
-            placeholder="Preenche via CEP"
-          />
         </div>
       </div>
     </>

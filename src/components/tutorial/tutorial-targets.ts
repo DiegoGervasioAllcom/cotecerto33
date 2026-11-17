@@ -101,7 +101,7 @@ const PAGE_TARGETS: Partial<Record<TutorialPage, Record<string, string>>> = {
   lead: {
     "#stepperBar": ".stepper",
     "#fldCpf": '.wizard-grid input[placeholder="000.000.000-00"]',
-    "#fldCep": '.wizard-grid input[placeholder="00000-000"]',
+    "#fldCep": '.wizard-grid input[data-tour="lead-cep"]',
     "#fldPlaca": '.wizard-grid input[placeholder="AAA0A00"]',
     "#foldComp": ".wizard-card .fold:nth-of-type(1)",
     "#foldVeic": ".wizard-card .fold:nth-of-type(2)",

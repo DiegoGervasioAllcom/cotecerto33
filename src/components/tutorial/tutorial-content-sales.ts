@@ -220,18 +220,6 @@ export const salesTutorialChapters = [
       },
       {
         page: "lead",
-        target: "#fldCep",
-        pos: "right",
-        title: "O CEP muda o preço",
-        body: "<p>O endereço onde o carro dorme é um dos maiores fatores de preço do seguro auto. O CEP puxa rua, bairro e cidade sozinho.</p>",
-        tip: {
-          label: "Cuidado aqui",
-          text: "CEP do trabalho no lugar do CEP de casa é um erro comum e caro: o cálculo sai com o risco errado e a seguradora pode recusar depois.",
-        },
-        prepare: "lead-step-0",
-      },
-      {
-        page: "lead",
         target: ".tipo-item",
         pos: "bottom",
         title: "Etapa 2 — que item vai ser segurado",
@@ -271,6 +259,18 @@ export const salesTutorialChapters = [
         tip: {
           label: "O que conta como garagem",
           text: "Vale garagem, box ou estacionamento fechado de uso do segurado. Rua, mesmo que tranquila, não conta.",
+        },
+        prepare: "lead-step-3",
+      },
+      {
+        page: "lead",
+        target: "#fldCep",
+        pos: "right",
+        title: "O CEP muda o preço",
+        body: "<p>O endereço onde o carro dorme é um dos maiores fatores de preço do seguro auto. O CEP puxa rua, bairro e cidade sozinho.</p>",
+        tip: {
+          label: "Cuidado aqui",
+          text: "CEP do trabalho no lugar do CEP de casa é um erro comum e caro: o cálculo sai com o risco errado e a seguradora pode recusar depois.",
         },
         prepare: "lead-step-3",
       },
