@@ -187,6 +187,7 @@ function Page() {
     cor: "",
     tipoCambio: "",
     zeroKm: false,
+    zeroKmEscolhido: false,
     dataSaidaConcessionaria: "",
     odometro: "",
     alienado: false,

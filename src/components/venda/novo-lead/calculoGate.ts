@@ -23,6 +23,7 @@ export function camposFaltantesCalculo(f: Pick<Form, "seguradorasSel"> & Partial
   const faltantes = CAMPOS_OBRIGATORIOS_CALCULO.filter((c) => !full[c.campo]).map((c) => c.label);
   // Zero km: o robô exige data de saída e odômetro (só então; sem zeroKm os
   // campos escondidos são ignorados). Não bloqueia etapa, só o Calcular.
+  if (full.zeroKmEscolhido === false) faltantes.push("Zero KM");
   if (full.zeroKm) {
     if (!full.dataSaidaConcessionaria?.trim()) faltantes.push("Data de saída da concessionária");
     if (!full.odometro?.trim()) faltantes.push("Odômetro (km)");

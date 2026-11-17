@@ -70,6 +70,9 @@ export type Form = {
   // cotação falha no robô.
   tipoCambio: string;
   zeroKm: boolean;
+  // true quando o vendedor escolheu Sim/Não em Zero KM (obrigatório no desktop). O banco só
+  // guarda boolean, então rascunhos carregados já contam como escolhido; o mobile não pergunta.
+  zeroKmEscolhido: boolean;
   // Só exigidos pelo robô quando zeroKm=true (mapeado em 17/08/2026).
   dataSaidaConcessionaria: string;
   odometro: string;

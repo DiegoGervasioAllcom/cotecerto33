@@ -89,6 +89,7 @@ export function formPadraoMobile(ramo: RamoMobile = "Automóvel"): Form {
     cor: "",
     tipoCambio: "",
     zeroKm: false,
+    zeroKmEscolhido: true,
     dataSaidaConcessionaria: "",
     odometro: "",
     alienado: false,

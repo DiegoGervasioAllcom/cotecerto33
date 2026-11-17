@@ -141,17 +141,26 @@ export function StepVeiculo({
           </div>
         )}
         <div className="field-group">
-          <label>Zero KM</label>
-          <div className="row" style={{ gap: 14, paddingTop: 6 }}>
-            <label>
-              <input
-                type="checkbox"
-                checked={f.zeroKm}
-                onChange={(e) => up("zeroKm", e.target.checked)}
-              />{" "}
-              Sim
-            </label>
-          </div>
+          <label>
+            Zero KM<span className="req">*</span>
+          </label>
+          <select
+            className="input"
+            value={f.zeroKmEscolhido ? (f.zeroKm ? "Sim" : "Não") : ""}
+            onChange={(e) => {
+              up("zeroKm", e.target.value === "Sim");
+              up("zeroKmEscolhido", e.target.value !== "");
+            }}
+          >
+            <option value="">Selecione</option>
+            <option value="Sim">Sim</option>
+            <option value="Não">Não</option>
+          </select>
+          {erros.zeroKmEscolhido && (
+            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
+              {erros.zeroKmEscolhido}
+            </span>
+          )}
         </div>
         {f.zeroKm && (
           <>

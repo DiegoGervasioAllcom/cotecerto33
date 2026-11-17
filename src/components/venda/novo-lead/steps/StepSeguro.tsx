@@ -12,12 +12,19 @@ export const ANOS_POR_TIPO_CALCULO: Record<string, number> = {
   Quinquenal: 5,
 };
 
+// Data no fuso local (toISOString usa UTC e, à noite no Brasil, já devolve o dia seguinte).
+function dataLocalISO(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${dia}`;
+}
+
 export function vigenciaAPartirDeHoje(anos: number): { ini: string; fim: string } {
   const ini = new Date();
   const fim = new Date(ini);
   fim.setFullYear(fim.getFullYear() + anos);
   fim.setDate(fim.getDate() - 1);
-  return { ini: ini.toISOString().slice(0, 10), fim: fim.toISOString().slice(0, 10) };
+  return { ini: dataLocalISO(ini), fim: dataLocalISO(fim) };
 }
 
 type Props = {

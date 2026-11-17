@@ -381,6 +381,7 @@ export function useCotacaoRascunho(params: {
         cor: v.cor ?? "",
         tipoCambio: v.tipo_cambio ?? "",
         zeroKm: !!v.zero_km,
+        zeroKmEscolhido: true,
         dataSaidaConcessionaria: v.data_saida_concessionaria ?? "",
         odometro: v.odometro ?? "",
         alienado: !!v.alienado,
