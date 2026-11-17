@@ -5,7 +5,11 @@
 // Campos ocultos (decisão de produto, v1): ajuste por seguradora, desconto
 // adicional, comissão, coberturas customizadas, renovação, condutor diferente,
 // proprietário, jovens condutores, blindagem/kit gás/acessórios, zero km.
-import { perfilEscolhidoTodos, type Form } from "@/components/venda/novo-lead/types";
+import {
+  perfilEscolhidoTodos,
+  usoEscolhidoTodos,
+  type Form,
+} from "@/components/venda/novo-lead/types";
 import { vigenciaAPartirDeHoje } from "@/components/venda/novo-lead/steps/StepSeguro";
 import { seguradoraAceitaMoto } from "@/lib/seguradora-canonica";
 
@@ -91,6 +95,7 @@ export function formPadraoMobile(ramo: RamoMobile = "Automóvel"): Form {
     zeroKm: false,
     zeroKmEscolhido: true,
     perfilEscolhido: perfilEscolhidoTodos(true),
+    usoEscolhido: usoEscolhidoTodos(true),
     dataSaidaConcessionaria: "",
     odometro: "",
     alienado: false,

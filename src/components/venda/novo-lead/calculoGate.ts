@@ -1,4 +1,4 @@
-import { PERFIL_CAMPOS, type Form } from "./types";
+import { PERFIL_CAMPOS, USO_CAMPOS, type Form } from "./types";
 
 // R.9 (revisão form vs robô Quiver, 2026-08): o gate reflete os campos que
 // o robô Playwright exige de fato — ele identifica o veículo pela placa via
@@ -32,6 +32,13 @@ export function camposFaltantesCalculo(f: Pick<Form, "seguradorasSel"> & Partial
   if (full.zeroKm) {
     if (!full.dataSaidaConcessionaria?.trim()) faltantes.push("Data de saída da concessionária");
     if (!full.odometro?.trim()) faltantes.push("Odômetro (km)");
+  }
+  // Uso do veículo: "uso comercial" só existe (e só é exigido) para finalidade Particular.
+  if (full.usoEscolhido) {
+    for (const c of USO_CAMPOS) {
+      if (c.chave === "comercial" && full.tipoUso !== "Particular") continue;
+      if (!full.usoEscolhido[c.chave]) faltantes.push(c.label);
+    }
   }
   if ((f.seguradorasSel?.length ?? 0) === 0) faltantes.push("Seguradoras selecionadas");
   return faltantes;

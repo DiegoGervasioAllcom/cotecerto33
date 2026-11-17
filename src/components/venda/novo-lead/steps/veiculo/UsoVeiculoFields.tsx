@@ -8,7 +8,7 @@ import {
   USO_ESTUDO,
   UTIL_LOCADORA,
 } from "@/components/venda/novo-lead/enumsQuiver";
-import type { Form } from "@/components/venda/novo-lead/types";
+import type { Form, UsoEscolhido } from "@/components/venda/novo-lead/types";
 
 type Props = {
   f: Form;
@@ -16,8 +16,10 @@ type Props = {
 };
 
 export function UsoVeiculoFields({ f, up }: Props) {
-  const isParticular = f.tipoUso === "Particular";
-  const isLocadoraContrato = f.tipoUso === "Locadora (Contrato)";
+  const escolher = (chave: keyof UsoEscolhido, escolhido: boolean) =>
+    up("usoEscolhido", { ...f.usoEscolhido, [chave]: escolhido });
+  const isParticular = f.usoEscolhido.tipoUso && f.tipoUso === "Particular";
+  const isLocadoraContrato = f.usoEscolhido.tipoUso && f.tipoUso === "Locadora (Contrato)";
 
   return (
     <>
@@ -29,12 +31,18 @@ export function UsoVeiculoFields({ f, up }: Props) {
       </div>
       <div className="wizard-grid">
         <div className="field-group full">
-          <label>Finalidade de uso</label>
+          <label>
+            Finalidade de uso<span className="req">*</span>
+          </label>
           <select
             className="input"
-            value={f.tipoUso}
-            onChange={(e) => up("tipoUso", e.target.value)}
+            value={f.usoEscolhido.tipoUso ? f.tipoUso : ""}
+            onChange={(e) => {
+              if (e.target.value) up("tipoUso", e.target.value);
+              escolher("tipoUso", e.target.value !== "");
+            }}
           >
+            <option value="">Selecione</option>
             {TIPO_USO.map((t) => (
               <option key={t}>{t}</option>
             ))}
@@ -43,12 +51,18 @@ export function UsoVeiculoFields({ f, up }: Props) {
 
         {isParticular && (
           <div className="field-group">
-            <label>Uso comercial 2+ dias/semana</label>
+            <label>
+              Uso comercial 2+ dias/semana<span className="req">*</span>
+            </label>
             <select
               className="input"
-              value={f.usoComercialDoisDias}
-              onChange={(e) => up("usoComercialDoisDias", e.target.value as "sim" | "nao")}
+              value={f.usoEscolhido.comercial ? f.usoComercialDoisDias : ""}
+              onChange={(e) => {
+                if (e.target.value) up("usoComercialDoisDias", e.target.value as "sim" | "nao");
+                escolher("comercial", e.target.value !== "");
+              }}
             >
+              <option value="">Selecione</option>
               <option value="nao">Não</option>
               <option value="sim">Sim</option>
             </select>
@@ -72,24 +86,36 @@ export function UsoVeiculoFields({ f, up }: Props) {
         )}
 
         <div className="field-group">
-          <label>Uso para trabalho</label>
+          <label>
+            Uso para trabalho<span className="req">*</span>
+          </label>
           <select
             className="input"
-            value={f.usoTrabalho}
-            onChange={(e) => up("usoTrabalho", e.target.value)}
+            value={f.usoEscolhido.trabalho ? f.usoTrabalho : ""}
+            onChange={(e) => {
+              if (e.target.value) up("usoTrabalho", e.target.value);
+              escolher("trabalho", e.target.value !== "");
+            }}
           >
+            <option value="">Selecione</option>
             {USO_TRABALHO.map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>
         </div>
         <div className="field-group">
-          <label>Uso para estudo</label>
+          <label>
+            Uso para estudo<span className="req">*</span>
+          </label>
           <select
             className="input"
-            value={f.usoEstudo}
-            onChange={(e) => up("usoEstudo", e.target.value)}
+            value={f.usoEscolhido.estudo ? f.usoEstudo : ""}
+            onChange={(e) => {
+              if (e.target.value) up("usoEstudo", e.target.value);
+              escolher("estudo", e.target.value !== "");
+            }}
           >
+            <option value="">Selecione</option>
             {USO_ESTUDO.map((t) => (
               <option key={t}>{t}</option>
             ))}

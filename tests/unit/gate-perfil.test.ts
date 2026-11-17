@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { camposFaltantesCalculo } from "@/components/venda/novo-lead/calculoGate";
-import { PERFIL_CAMPOS, perfilEscolhidoTodos } from "@/components/venda/novo-lead/types";
+import {
+  PERFIL_CAMPOS,
+  perfilEscolhidoTodos,
+  usoEscolhidoTodos,
+} from "@/components/venda/novo-lead/types";
 
 const BASE = {
   cpf: "52998224725",
@@ -14,6 +18,9 @@ const BASE = {
   cepPernoite: "01310-100",
   kmMensal: "1000",
   zeroKmEscolhido: true,
+  tipoUso: "Particular",
+  perfilEscolhido: perfilEscolhidoTodos(true),
+  usoEscolhido: usoEscolhidoTodos(true),
   seguradorasSel: ["porto"],
 };
 
@@ -33,7 +40,28 @@ describe("gate do Calcular: Perfil obrigatório", () => {
   });
 
   it("tudo respondido libera", () => {
-    const f = { ...BASE, perfilEscolhido: perfilEscolhidoTodos(true) };
+    const f = { ...BASE };
     expect(camposFaltantesCalculo(f)).toEqual([]);
+  });
+});
+
+describe("gate do Calcular: Uso do veículo obrigatório", () => {
+  it("nada escolhido (Particular) lista as 4 pendências", () => {
+    const f = { ...BASE, usoEscolhido: usoEscolhidoTodos(false) };
+    expect(camposFaltantesCalculo(f)).toEqual([
+      "Finalidade de uso",
+      "Uso comercial 2+ dias/semana",
+      "Uso para trabalho",
+      "Uso para estudo",
+    ]);
+  });
+
+  it("uso comercial só é exigido para Particular", () => {
+    const f = { ...BASE, tipoUso: "Taxi", usoEscolhido: usoEscolhidoTodos(false) };
+    expect(camposFaltantesCalculo(f)).not.toContain("Uso comercial 2+ dias/semana");
+  });
+
+  it("tudo escolhido libera", () => {
+    expect(camposFaltantesCalculo({ ...BASE })).toEqual([]);
   });
 });

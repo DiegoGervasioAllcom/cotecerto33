@@ -80,6 +80,9 @@ export type Form = {
   banco: string;
   kmMensal: string;
   // Veículo — uso (espelha a API real da Quiver, ver enumsQuiver.ts)
+  // Uso do veículo: escolha explícita (Selecione → opção), obrigatória no Calcular. Rascunhos
+  // carregados e o mobile já contam como escolhidos.
+  usoEscolhido: UsoEscolhido;
   tipoUso: string;
   usoTrabalho: string;
   usoEstudo: string;
@@ -226,4 +229,21 @@ export const perfilEscolhidoTodos = (v: boolean): PerfilEscolhido => ({
   residencia: v,
   corretor: v,
   jovens: v,
+});
+
+/** Perguntas de "Uso do veículo" que o vendedor responde explicitamente. */
+export const USO_CAMPOS = [
+  { chave: "tipoUso", label: "Finalidade de uso" },
+  { chave: "comercial", label: "Uso comercial 2+ dias/semana" },
+  { chave: "trabalho", label: "Uso para trabalho" },
+  { chave: "estudo", label: "Uso para estudo" },
+] as const;
+
+export type UsoEscolhido = Record<(typeof USO_CAMPOS)[number]["chave"], boolean>;
+
+export const usoEscolhidoTodos = (v: boolean): UsoEscolhido => ({
+  tipoUso: v,
+  comercial: v,
+  trabalho: v,
+  estudo: v,
 });
