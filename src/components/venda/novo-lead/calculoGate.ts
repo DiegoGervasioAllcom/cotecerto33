@@ -1,4 +1,4 @@
-import type { Form } from "./types";
+import { PERFIL_CAMPOS, type Form } from "./types";
 
 // R.9 (revisão form vs robô Quiver, 2026-08): o gate reflete os campos que
 // o robô Playwright exige de fato — ele identifica o veículo pela placa via
@@ -25,6 +25,10 @@ export function camposFaltantesCalculo(f: Pick<Form, "seguradorasSel"> & Partial
   // Zero km: o robô exige data de saída e odômetro (só então; sem zeroKm os
   // campos escondidos são ignorados). Não bloqueia etapa, só o Calcular.
   if (full.zeroKmEscolhido === false) faltantes.push("Zero KM");
+  // Perfil: cada pergunta precisa ter sido respondida (Selecione → opção).
+  if (full.perfilEscolhido) {
+    for (const c of PERFIL_CAMPOS) if (!full.perfilEscolhido[c.chave]) faltantes.push(c.label);
+  }
   if (full.zeroKm) {
     if (!full.dataSaidaConcessionaria?.trim()) faltantes.push("Data de saída da concessionária");
     if (!full.odometro?.trim()) faltantes.push("Odômetro (km)");

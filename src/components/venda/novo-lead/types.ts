@@ -123,6 +123,9 @@ export type Form = {
   condNomeSocial: string;
   condTempoHabilitacao: string;
   cepPernoite: string;
+  // Perfil: o vendedor precisa escolher explicitamente (Selecione → Sim/Não). O banco só guarda
+  // o valor, então rascunhos carregados já contam como escolhidos; o mobile usa defaults.
+  perfilEscolhido: PerfilEscolhido;
   tipoGaragem: string;
   // Perfil — proprietário do veículo
   segProprietario: boolean;
@@ -203,3 +206,24 @@ export const STEPS = [
   "Transmissão",
 ];
 export const SEGURADORAS = ["Porto Seguro", "Azul Seguros", "Bradesco Auto", "HDI", "Allianz"];
+
+/** Perguntas do Perfil que o vendedor responde explicitamente (obrigatórias no Calcular). */
+export const PERFIL_CAMPOS = [
+  { chave: "garagem", label: "Garagem" },
+  { chave: "proprietario", label: "Proprietário do veículo" },
+  { chave: "condutor", label: "Principal condutor" },
+  { chave: "residencia", label: "Tipo de residência" },
+  { chave: "corretor", label: "Seguro do corretor ou relacionamento próximo" },
+  { chave: "jovens", label: "Pessoas de 17 a 25 anos" },
+] as const;
+
+export type PerfilEscolhido = Record<(typeof PERFIL_CAMPOS)[number]["chave"], boolean>;
+
+export const perfilEscolhidoTodos = (v: boolean): PerfilEscolhido => ({
+  garagem: v,
+  proprietario: v,
+  condutor: v,
+  residencia: v,
+  corretor: v,
+  jovens: v,
+});

@@ -5,7 +5,7 @@ import { ProtoIcons } from "@/components/proto-icons";
 import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
 import type { PagamentoTransmissao } from "@/lib/transmissao-pagamento";
-import type { Form } from "@/components/venda/novo-lead/types";
+import { perfilEscolhidoTodos, type Form } from "@/components/venda/novo-lead/types";
 import { useClassificarPerda } from "@/components/venda/novo-lead/hooks/useClassificarPerda";
 import { useCepLookup } from "@/components/venda/novo-lead/hooks/useCepLookup";
 import { useFipe } from "@/components/venda/novo-lead/hooks/useFipe";
@@ -188,6 +188,7 @@ function Page() {
     tipoCambio: "",
     zeroKm: false,
     zeroKmEscolhido: false,
+    perfilEscolhido: perfilEscolhidoTodos(false),
     dataSaidaConcessionaria: "",
     odometro: "",
     alienado: false,
