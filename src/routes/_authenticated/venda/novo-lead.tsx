@@ -86,6 +86,9 @@ const SEGURADORAS_SEM_ROBO = new Set([
   "Sompo",
 ]);
 
+// Padrão enquanto as seguradoras do banco carregam (cotação nova passa a marcar todas).
+const SEGURADORAS_PADRAO_INICIAL = ["Mapfre", "Aliro", "Yelum", "HDI", "Suhai"];
+
 function Page() {
   const navigate = useNavigate();
   const focoNavigate = useNavigate({ from: Route.fullPath });
@@ -122,8 +125,19 @@ function Page() {
         // silêncio do payload (ver mapSeguradoras em quiver.functions.ts),
         // o que fazia o robô cotar TODAS as seguradoras quando o vendedor
         // marcava só não suportadas.
-        if (data)
-          setSeguradorasDb(data.map((x) => x.nome).filter((n) => !SEGURADORAS_SEM_ROBO.has(n)));
+        if (!data) return;
+        const nomes = data.map((x) => x.nome).filter((n) => !SEGURADORAS_SEM_ROBO.has(n));
+        setSeguradorasDb(nomes);
+        // Cotação nova: todas as seguradoras disponíveis já vêm marcadas (o vendedor
+        // desmarca as que não quiser). Rascunho (?id=) mantém a seleção salva.
+        if (!new URLSearchParams(window.location.search).has("id")) {
+          setF((s) =>
+            // Só se o vendedor ainda não mexeu na seleção (continua o padrão inicial).
+            s.seguradorasSel.join("|") === SEGURADORAS_PADRAO_INICIAL.join("|")
+              ? { ...s, seguradorasSel: nomes }
+              : s,
+          );
+        }
       });
   }, []);
 
@@ -155,7 +169,7 @@ function Page() {
     apoliceAtual: "",
     ciAtual: "",
     classeBonus: "0",
-    seguradorasSel: ["Mapfre", "Aliro", "Yelum", "HDI", "Suhai"],
+    seguradorasSel: [...SEGURADORAS_PADRAO_INICIAL],
     tipoCalculo: "Anual",
     observacoesCot: "",
     seguradoraAnterior: "",
