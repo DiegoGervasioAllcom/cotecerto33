@@ -48,7 +48,7 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
     setF((s) => ({ ...s, seguradorasSel: s.seguradorasSel.filter(seguradoraAceitaMoto) }));
   }, [selecaoForaDeMoto, setF]);
   const bonusClasses = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
-  const isRenov = (f.tipoSeguro || "").includes("Renovação");
+  const isRenov = f.dadosEscolhidos.tipoSeguro && (f.tipoSeguro || "").includes("Renovação");
   return (
     <>
       <div className="seg-topo">
@@ -129,9 +129,13 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
           </label>
           <select
             className="input"
-            value={f.tipoSeguro}
-            onChange={(e) => up("tipoSeguro", e.target.value)}
+            value={f.dadosEscolhidos.tipoSeguro ? f.tipoSeguro : ""}
+            onChange={(e) => {
+              if (e.target.value) up("tipoSeguro", e.target.value);
+              up("dadosEscolhidos", { ...f.dadosEscolhidos, tipoSeguro: e.target.value !== "" });
+            }}
           >
+            <option value="">Selecione</option>
             {["Seguro novo", "Renovação com nossa corretora", "Renovação de outra corretora"].map(
               (o) => (
                 <option key={o}>{o}</option>
@@ -140,24 +144,37 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
           </select>
         </div>
         <div className="field-group">
-          <label>Tipo de cálculo</label>
+          <label>
+            Tipo de cálculo<span className="req">*</span>
+          </label>
           <select
             className="input"
-            value={f.tipoCalculo}
+            value={f.dadosEscolhidos.tipoCalculo ? f.tipoCalculo : ""}
             onChange={(e) => {
               const tc = e.target.value;
+              const escolhidos = { ...f.dadosEscolhidos, tipoCalculo: tc !== "" };
+              if (!tc) {
+                up("dadosEscolhidos", escolhidos);
+                return;
+              }
               // Plurianual não tem duração fixa (varia por seguradora/negociação)
               // e Prazo curto é, por definição, período curto e manual — em
               // ambos os casos não recalculamos a vigência automaticamente.
               const anos = ANOS_POR_TIPO_CALCULO[tc];
               if (!anos) {
-                up("tipoCalculo", tc);
+                setF((s) => ({ ...s, tipoCalculo: tc, dadosEscolhidos: escolhidos }));
                 return;
               }
               // Assume a partir de hoje (decisão de negócio) — o vendedor pode
               // ajustar manualmente os dois campos de vigência depois.
               const { ini, fim } = vigenciaAPartirDeHoje(anos);
-              setF((s) => ({ ...s, tipoCalculo: tc, vigIni: ini, vigFim: fim }));
+              setF((s) => ({
+                ...s,
+                tipoCalculo: tc,
+                vigIni: ini,
+                vigFim: fim,
+                dadosEscolhidos: escolhidos,
+              }));
             }}
           >
             {[

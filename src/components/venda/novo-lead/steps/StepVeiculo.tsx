@@ -252,13 +252,19 @@ export function StepVeiculo({
           )}
         </div>
         <div className="field-group">
-          <label>Combustível</label>
+          <label>
+            Combustível<span className="req">*</span>
+          </label>
           <select
             className="input"
             aria-label="Combustível"
-            value={f.combustivel}
-            onChange={(e) => up("combustivel", e.target.value)}
+            value={f.dadosEscolhidos.combustivel ? f.combustivel : ""}
+            onChange={(e) => {
+              if (e.target.value) up("combustivel", e.target.value);
+              up("dadosEscolhidos", { ...f.dadosEscolhidos, combustivel: e.target.value !== "" });
+            }}
           >
+            <option value="">Selecione</option>
             <option>Flex</option>
             <option>Gasolina</option>
             <option>Álcool</option>

@@ -4,7 +4,8 @@ import { criarPersistenciaSerial } from "@/lib/persistencia-serial";
 import { maskCpfCnpj, normalizePlaca } from "@/lib/masks";
 import { maskCel, maskCep } from "../masks";
 import { ANOS_POR_TIPO_CALCULO, vigenciaAPartirDeHoje } from "../steps/StepSeguro";
-import { perfilEscolhidoTodos, usoEscolhidoTodos, type Form } from "../types";
+import type { Form } from "../types";
+import { aplicarPendentes, chavesPendentes } from "../escolhas";
 import { PROFISSOES_CONDUTOR } from "../enumsProfissao";
 import { acharOpcao } from "@/lib/normalizaTexto";
 
@@ -67,6 +68,8 @@ export function useCotacaoRascunho(params: {
   const serial = useRef(criarPersistenciaSerial()).current;
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
+  // Última lista de pendentes gravada em `cotacoes.campos_pendentes` (default do banco: vazia).
+  const pendentesGravadas = useRef<string>("");
   const loadingRef = useRef<boolean>(!!routeId);
   const [loading, setLoading] = useState<boolean>(!!routeId);
 
@@ -268,6 +271,17 @@ export function useCotacaoRascunho(params: {
         idRef.current = data as string;
         setCotacaoId(data as string);
       }
+      // Perguntas obrigatórias ainda sem resposta: só regrava quando muda.
+      const idSalvo = (data as string | null) ?? cotacaoId;
+      const pendentes = chavesPendentes(f);
+      const chave = pendentes.join(",");
+      if (idSalvo && chave !== pendentesGravadas.current) {
+        const { error: ePend } = await supabase
+          .from("cotacoes")
+          .update({ campos_pendentes: pendentes })
+          .eq("id", idSalvo);
+        if (!ePend) pendentesGravadas.current = chave;
+      }
       setSaveState("saved");
       setLastSavedAt(new Date());
       return true;
@@ -303,7 +317,7 @@ export function useCotacaoRascunho(params: {
       const { data, error } = await supabase
         .from("cotacoes")
         .select(
-          "id,step_atual,ramo,segurado:cotacao_segurado(*),seguro:cotacao_seguro(*),veiculo:cotacao_veiculo(*),perfil:cotacao_perfil(*),coberturas:cotacao_coberturas(*)",
+          "id,step_atual,ramo,segurado:cotacao_segurado(*),seguro:cotacao_seguro(*),veiculo:cotacao_veiculo(*),perfil:cotacao_perfil(*),coberturas:cotacao_coberturas(*),campos_pendentes",
         )
         .eq("id", routeId)
         .maybeSingle();
@@ -318,6 +332,7 @@ export function useCotacaoRascunho(params: {
       const v = data.veiculo ?? ({} as NonNullable<typeof data.veiculo>);
       const p = data.perfil ?? ({} as NonNullable<typeof data.perfil>);
       const c = data.coberturas ?? ({} as NonNullable<typeof data.coberturas>);
+      pendentesGravadas.current = (data.campos_pendentes ?? []).join(",");
       setStep(
         routeStep != null && !Number.isNaN(routeStep) ? routeStep : Number(data.step_atual ?? 0),
       );
@@ -381,9 +396,7 @@ export function useCotacaoRascunho(params: {
         cor: v.cor ?? "",
         tipoCambio: v.tipo_cambio ?? "",
         zeroKm: !!v.zero_km,
-        zeroKmEscolhido: true,
-        perfilEscolhido: perfilEscolhidoTodos(true),
-        usoEscolhido: usoEscolhidoTodos(true),
+        ...aplicarPendentes(data.campos_pendentes),
         dataSaidaConcessionaria: v.data_saida_concessionaria ?? "",
         odometro: v.odometro ?? "",
         alienado: !!v.alienado,
