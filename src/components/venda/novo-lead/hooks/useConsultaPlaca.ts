@@ -143,6 +143,13 @@ export function useConsultaPlaca({
         // só na primeira aplicação em aplicarDados.
         combustivel:
           normalizarCombustivel(v.combustivel) || normalizarCombustivel(v.modelo) || p.combustivel,
+        // Combustível veio da consulta: conta como respondido.
+        dadosEscolhidos: {
+          ...p.dadosEscolhidos,
+          combustivel:
+            p.dadosEscolhidos.combustivel ||
+            !!(normalizarCombustivel(v.combustivel) || normalizarCombustivel(v.modelo)),
+        },
       }));
 
       setStatus(
@@ -212,6 +219,15 @@ export function useConsultaPlaca({
           normalizarCombustivel(dados.fipe[0]?.combustivel) ||
           normalizarCombustivel(dados.fipe[0]?.modelo) ||
           p.combustivel,
+        dadosEscolhidos: {
+          ...p.dadosEscolhidos,
+          combustivel:
+            p.dadosEscolhidos.combustivel ||
+            !!(
+              normalizarCombustivel(dados.fipe[0]?.combustivel) ||
+              normalizarCombustivel(dados.fipe[0]?.modelo)
+            ),
+        },
       }));
 
       if (dados.fipe.length === 0) {

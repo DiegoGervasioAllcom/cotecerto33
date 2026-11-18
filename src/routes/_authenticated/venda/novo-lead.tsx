@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
 import type { PagamentoTransmissao } from "@/lib/transmissao-pagamento";
 import {
+  dadosEscolhidosTodos,
   perfilEscolhidoTodos,
   usoEscolhidoTodos,
   type Form,
@@ -194,6 +195,7 @@ function Page() {
     zeroKmEscolhido: false,
     perfilEscolhido: perfilEscolhidoTodos(false),
     usoEscolhido: usoEscolhidoTodos(false),
+    dadosEscolhidos: dadosEscolhidosTodos(false),
     dataSaidaConcessionaria: "",
     odometro: "",
     alienado: false,

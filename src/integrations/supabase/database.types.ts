@@ -1864,6 +1864,7 @@ export type Database = {
         Row: {
           atualizado_em: string;
           calculo_visto_em: string | null;
+          campos_pendentes: string[];
           criado_em: string;
           destino_perda: string | null;
           destino_perda_sugerido: string | null;
@@ -1888,6 +1889,7 @@ export type Database = {
         Insert: {
           atualizado_em?: string;
           calculo_visto_em?: string | null;
+          campos_pendentes?: string[];
           criado_em?: string;
           destino_perda?: string | null;
           destino_perda_sugerido?: string | null;
@@ -1912,6 +1914,7 @@ export type Database = {
         Update: {
           atualizado_em?: string;
           calculo_visto_em?: string | null;
+          campos_pendentes?: string[];
           criado_em?: string;
           destino_perda?: string | null;
           destino_perda_sugerido?: string | null;

@@ -6,6 +6,7 @@
 // adicional, comissão, coberturas customizadas, renovação, condutor diferente,
 // proprietário, jovens condutores, blindagem/kit gás/acessórios, zero km.
 import {
+  dadosEscolhidosTodos,
   perfilEscolhidoTodos,
   usoEscolhidoTodos,
   type Form,
@@ -96,6 +97,7 @@ export function formPadraoMobile(ramo: RamoMobile = "Automóvel"): Form {
     zeroKmEscolhido: true,
     perfilEscolhido: perfilEscolhidoTodos(true),
     usoEscolhido: usoEscolhidoTodos(true),
+    dadosEscolhidos: dadosEscolhidosTodos(true),
     dataSaidaConcessionaria: "",
     odometro: "",
     alienado: false,

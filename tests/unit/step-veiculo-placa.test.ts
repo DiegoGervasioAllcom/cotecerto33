@@ -1,3 +1,4 @@
+import { dadosEscolhidosTodos, usoEscolhidoTodos } from "@/components/venda/novo-lead/types";
 import { describe, expect, test, vi } from "vitest";
 import type { ReactElement } from "react";
 import { StepVeiculo } from "@/components/venda/novo-lead/steps/StepVeiculo";
@@ -20,7 +21,11 @@ function achar(el: unknown, pred: (e: ReactElement<P>) => boolean): ReactElement
 
 function render(placa: string, onConsultarPlaca = vi.fn(), consultando = false) {
   const tree = StepVeiculo({
-    f: { placa } as Form,
+    f: {
+      placa,
+      dadosEscolhidos: dadosEscolhidosTodos(true),
+      usoEscolhido: usoEscolhidoTodos(true),
+    } as Form,
     up: vi.fn(),
     erros: {},
     marcas: [],

@@ -83,6 +83,8 @@ export type Form = {
   // Uso do veículo: escolha explícita (Selecione → opção), obrigatória no Calcular. Rascunhos
   // carregados e o mobile já contam como escolhidos.
   usoEscolhido: UsoEscolhido;
+  // Seguro/Veículo: Tipo de seguro, Tipo de cálculo, Combustível idem.
+  dadosEscolhidos: DadosEscolhidos;
   tipoUso: string;
   usoTrabalho: string;
   usoEstudo: string;
@@ -246,4 +248,19 @@ export const usoEscolhidoTodos = (v: boolean): UsoEscolhido => ({
   comercial: v,
   trabalho: v,
   estudo: v,
+});
+
+/** Selects de Seguro/Veículo que o vendedor responde explicitamente. */
+export const DADOS_CAMPOS = [
+  { chave: "tipoSeguro", label: "Tipo de seguro" },
+  { chave: "tipoCalculo", label: "Tipo de cálculo" },
+  { chave: "combustivel", label: "Combustível" },
+] as const;
+
+export type DadosEscolhidos = Record<(typeof DADOS_CAMPOS)[number]["chave"], boolean>;
+
+export const dadosEscolhidosTodos = (v: boolean): DadosEscolhidos => ({
+  tipoSeguro: v,
+  tipoCalculo: v,
+  combustivel: v,
 });
