@@ -387,7 +387,9 @@ export function StepPerfil({
           </>
         )}
         <div className="field-group full">
-          <label>CEP de pernoite</label>
+          <label>
+            CEP de pernoite<span className="req">*</span>
+          </label>
           <input
             className="input"
             value={f.cepPernoite}

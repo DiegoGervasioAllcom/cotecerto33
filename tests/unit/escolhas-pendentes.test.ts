@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { aplicarPendentes, chavesPendentes } from "@/components/venda/novo-lead/escolhas";
+import {
+  aplicarPendentes,
+  chavesPendentes,
+  todasPendentes,
+} from "@/components/venda/novo-lead/escolhas";
 import { camposFaltantesCalculo } from "@/components/venda/novo-lead/calculoGate";
 import {
   dadosEscolhidosTodos,
@@ -38,6 +42,13 @@ describe("escolhas pendentes (persistência no banco)", () => {
     expect(aplicarPendentes(chaves)).toEqual(todos(false));
   });
 
+  it("cotação nunca salva pelo wizard (lead distribuído): tudo pendente", () => {
+    const chaves = todasPendentes();
+    expect(chaves).toHaveLength(14);
+    expect(chaves).toEqual(chavesPendentes(todos(false)));
+    expect(aplicarPendentes(chaves)).toEqual(todos(false));
+  });
+
   it("lista vazia/ausente (cotações antigas e mobile) = tudo respondido", () => {
     expect(aplicarPendentes([])).toEqual(todos(true));
     expect(aplicarPendentes(null)).toEqual(todos(true));
@@ -54,7 +65,7 @@ describe("gate: Tipo de seguro, cálculo e combustível", () => {
     placa: "ABC1D23",
     cep: "1",
     celular: "1",
-    cepPernoite: "1",
+    cepPernoite: "01310-100",
     kmMensal: "1",
     tipoUso: "Particular",
     seguradorasSel: ["porto"],

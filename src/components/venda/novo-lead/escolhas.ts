@@ -43,3 +43,17 @@ export function aplicarPendentes(pendentes: readonly string[] | null | undefined
     dadosEscolhidos: dados,
   };
 }
+
+/**
+ * Cotação que o wizard nunca salvou (ex.: criada por `assumir_lead`/distribuição,
+ * sem a linha de `cotacao_seguro`): nenhuma pergunta obrigatória foi respondida,
+ * mesmo que `campos_pendentes` esteja vazio (linhas anteriores à coluna).
+ */
+export function todasPendentes(): string[] {
+  return chavesPendentes({
+    zeroKmEscolhido: false,
+    perfilEscolhido: perfilEscolhidoTodos(false),
+    usoEscolhido: usoEscolhidoTodos(false),
+    dadosEscolhidos: dadosEscolhidosTodos(false),
+  });
+}

@@ -21,7 +21,12 @@ export const CAMPOS_OBRIGATORIOS_CALCULO: { campo: keyof Form; label: string }[]
  * "CEP circulação" (invisível em todos os usos), então nunca é exigido. */
 export function camposFaltantesCalculo(f: Pick<Form, "seguradorasSel"> & Partial<Form>): string[] {
   const full = f as Form;
-  const faltantes = CAMPOS_OBRIGATORIOS_CALCULO.filter((c) => !full[c.campo]).map((c) => c.label);
+  // CEP de pernoite precisa estar completo (8 dígitos); parcial conta como não preenchido.
+  const faltantes = CAMPOS_OBRIGATORIOS_CALCULO.filter((c) =>
+    c.campo === "cepPernoite"
+      ? (full.cepPernoite ?? "").replace(/\D/g, "").length !== 8
+      : !full[c.campo],
+  ).map((c) => c.label);
   // Zero km: o robô exige data de saída e odômetro (só então; sem zeroKm os
   // campos escondidos são ignorados). Não bloqueia etapa, só o Calcular.
   if (full.zeroKmEscolhido === false) faltantes.push("Zero KM");

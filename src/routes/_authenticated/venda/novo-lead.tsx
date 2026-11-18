@@ -128,16 +128,6 @@ function Page() {
         if (!data) return;
         const nomes = data.map((x) => x.nome).filter((n) => !SEGURADORAS_SEM_ROBO.has(n));
         setSeguradorasDb(nomes);
-        // Cotação nova: todas as seguradoras disponíveis já vêm marcadas (o vendedor
-        // desmarca as que não quiser). Rascunho (?id=) mantém a seleção salva.
-        if (!new URLSearchParams(window.location.search).has("id")) {
-          setF((s) =>
-            // Só se o vendedor ainda não mexeu na seleção (continua o padrão inicial).
-            s.seguradorasSel.join("|") === SEGURADORAS_PADRAO_INICIAL.join("|")
-              ? { ...s, seguradorasSel: nomes }
-              : s,
-          );
-        }
       });
   }, []);
 
@@ -314,20 +304,36 @@ function Page() {
   const tutorialPreview = useTutorialPreview();
   const [leadManualDone, setLeadManualDone] = useState(!!routeId);
   const leadManualGateAtivo = !leadManualDone && !tutorialIsOpen;
-  const { cotacaoId, saveState, lastSavedAt, loading, persistir } = useCotacaoRascunho({
-    f,
-    setF,
-    step,
-    setStep,
-    marcas,
-    setMarcas,
-    modelos,
-    setModelos,
-    fipeValor,
-    setFipeValor,
-    routeId,
-    routeStep,
-  });
+  const { cotacaoId, saveState, lastSavedAt, loading, persistir, selecaoSeguradorasSalva } =
+    useCotacaoRascunho({
+      f,
+      setF,
+      step,
+      setStep,
+      marcas,
+      setMarcas,
+      modelos,
+      setModelos,
+      fipeValor,
+      setFipeValor,
+      routeId,
+      routeStep,
+    });
+  // Seguradoras: todas as disponíveis já vêm marcadas (o vendedor desmarca as que não
+  // quiser) quando a cotação é nova OU o rascunho nunca teve seleção gravada (lead
+  // distribuído/assumido). Seleção salva pelo wizard é preservada. Roda uma vez.
+  const seguradorasAplicadas = useRef(false);
+  useEffect(() => {
+    if (loading || seguradorasAplicadas.current || seguradorasDb.length === 0) return;
+    seguradorasAplicadas.current = true;
+    if (selecaoSeguradorasSalva.current) return;
+    setF((s) =>
+      // Só se o vendedor ainda não mexeu na seleção (continua o padrão inicial).
+      s.seguradorasSel.join("|") === SEGURADORAS_PADRAO_INICIAL.join("|")
+        ? { ...s, seguradorasSel: seguradorasDb }
+        : s,
+    );
+  }, [loading, seguradorasDb, selecaoSeguradorasSalva]);
   // Integração de placa: depende de `marcas` (para casar a marca FIPE) e de
   // `cotacaoId` (para amarrar a consulta à cotação no histórico).
   const {
