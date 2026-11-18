@@ -68,8 +68,8 @@ export function useCotacaoRascunho(params: {
   const serial = useRef(criarPersistenciaSerial()).current;
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
-  // Última lista de pendentes gravada em `cotacoes.campos_pendentes` (default do banco: vazia).
-  const pendentesGravadas = useRef<string>("");
+  // Última lista de pendentes gravada em `cotacoes.campos_pendentes` (null = ainda não sincronizada; o default do banco é "tudo pendente").
+  const pendentesGravadas = useRef<string | null>(null);
   const loadingRef = useRef<boolean>(!!routeId);
   const [loading, setLoading] = useState<boolean>(!!routeId);
 
