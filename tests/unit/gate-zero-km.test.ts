@@ -12,7 +12,7 @@ const base = {
   email: "a@b.c",
   cep: "1",
   celular: "1",
-  cepPernoite: "1",
+  cepPernoite: "01310-100",
   kmMensal: "1",
   seguradorasSel: ["Porto"],
   zeroKm: false,

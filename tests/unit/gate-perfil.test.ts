@@ -65,3 +65,14 @@ describe("gate do Calcular: Uso do veículo obrigatório", () => {
     expect(camposFaltantesCalculo({ ...BASE })).toEqual([]);
   });
 });
+
+describe("gate do Calcular: CEP de pernoite", () => {
+  const f = { ...BASE };
+  it("vazio ou incompleto bloqueia", () => {
+    expect(camposFaltantesCalculo({ ...f, cepPernoite: "" })).toEqual(["CEP de pernoite"]);
+    expect(camposFaltantesCalculo({ ...f, cepPernoite: "01310" })).toEqual(["CEP de pernoite"]);
+  });
+  it("completo libera", () => {
+    expect(camposFaltantesCalculo({ ...f, cepPernoite: "01310-100" })).toEqual([]);
+  });
+});

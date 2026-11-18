@@ -1625,6 +1625,8 @@ export async function marcarCalculoVistoE2E(cotacaoId: string): Promise<void> {
 
 /** Preenche os campos exigidos pelo gate do Recalcular geral (`podeCalcular`). */
 export async function preencherCamposCalculoE2E(cotacaoId: string): Promise<void> {
+  // Requer que a cotação já tenha `cotacao_seguro` (ex.: via `definirSeguradorasSelE2E`):
+  // sem essa linha o wizard trata a cotação como nunca salva e mantém tudo pendente.
   // Cotação semeada por insert direto nasce com as perguntas obrigatórias pendentes
   // (default de `campos_pendentes`); aqui o gate do Recalcular precisa estar liberado.
   const pend = await admin.from("cotacoes").update({ campos_pendentes: [] }).eq("id", cotacaoId);

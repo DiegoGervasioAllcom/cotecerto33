@@ -5,7 +5,7 @@ import { maskCpfCnpj, normalizePlaca } from "@/lib/masks";
 import { maskCel, maskCep } from "../masks";
 import { ANOS_POR_TIPO_CALCULO, vigenciaAPartirDeHoje } from "../steps/StepSeguro";
 import type { Form } from "../types";
-import { aplicarPendentes, chavesPendentes } from "../escolhas";
+import { aplicarPendentes, chavesPendentes, todasPendentes } from "../escolhas";
 import { PROFISSOES_CONDUTOR } from "../enumsProfissao";
 import { acharOpcao } from "@/lib/normalizaTexto";
 
@@ -70,6 +70,8 @@ export function useCotacaoRascunho(params: {
   const firstRender = useRef(true);
   // Última lista de pendentes gravada em `cotacoes.campos_pendentes` (null = ainda não sincronizada; o default do banco é "tudo pendente").
   const pendentesGravadas = useRef<string | null>(null);
+  // true quando o rascunho carregado já tinha seleção de seguradoras gravada pelo wizard.
+  const selecaoSeguradorasSalva = useRef(false);
   const loadingRef = useRef<boolean>(!!routeId);
   const [loading, setLoading] = useState<boolean>(!!routeId);
 
@@ -332,7 +334,13 @@ export function useCotacaoRascunho(params: {
       const v = data.veiculo ?? ({} as NonNullable<typeof data.veiculo>);
       const p = data.perfil ?? ({} as NonNullable<typeof data.perfil>);
       const c = data.coberturas ?? ({} as NonNullable<typeof data.coberturas>);
-      pendentesGravadas.current = (data.campos_pendentes ?? []).join(",");
+      // Sem linha de cotacao_seguro = o wizard nunca salvou esta cotação (lead
+      // distribuído/assumido): tudo pendente, e a 1ª gravação sincroniza o banco.
+      const nuncaSalva = !data.seguro;
+      const pendentesCarregadas = nuncaSalva ? todasPendentes() : (data.campos_pendentes ?? []);
+      pendentesGravadas.current = nuncaSalva ? null : pendentesCarregadas.join(",");
+      selecaoSeguradorasSalva.current =
+        Array.isArray(sg.seguradoras_sel) && sg.seguradoras_sel.length > 0;
       setStep(
         routeStep != null && !Number.isNaN(routeStep) ? routeStep : Number(data.step_atual ?? 0),
       );
@@ -396,7 +404,7 @@ export function useCotacaoRascunho(params: {
         cor: v.cor ?? "",
         tipoCambio: v.tipo_cambio ?? "",
         zeroKm: !!v.zero_km,
-        ...aplicarPendentes(data.campos_pendentes),
+        ...aplicarPendentes(pendentesCarregadas),
         dataSaidaConcessionaria: v.data_saida_concessionaria ?? "",
         odometro: v.odometro ?? "",
         alienado: !!v.alienado,
@@ -512,5 +520,13 @@ export function useCotacaoRascunho(params: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeId]);
 
-  return { cotacaoId, saveState, lastSavedAt, loading, buildPayload, persistir };
+  return {
+    cotacaoId,
+    saveState,
+    lastSavedAt,
+    loading,
+    buildPayload,
+    persistir,
+    selecaoSeguradorasSalva,
+  };
 }
