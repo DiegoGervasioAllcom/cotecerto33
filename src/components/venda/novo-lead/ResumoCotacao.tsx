@@ -158,11 +158,6 @@ export function ResumoCotacao({
                     <b>Combustível:</b> {f.combustivel}
                   </div>
                 )}
-                {f.cor && (
-                  <div>
-                    <b>Cor:</b> {f.cor}
-                  </div>
-                )}
                 {f.chassi && (
                   <div>
                     <b>Chassi:</b> {f.chassi}
