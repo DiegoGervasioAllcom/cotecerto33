@@ -273,20 +273,6 @@ export function StepVeiculo({
           </select>
         </div>
         <div className="field-group">
-          <label>Cor</label>
-          <input
-            className="input"
-            value={f.cor}
-            maxLength={50}
-            onChange={(e) => up("cor", e.target.value)}
-          />
-          {erros.cor && (
-            <span className="hint" style={{ color: "var(--alert)", display: "block" }}>
-              {erros.cor}
-            </span>
-          )}
-        </div>
-        <div className="field-group">
           <label>Tipo de Câmbio</label>
           <select
             className="input"
