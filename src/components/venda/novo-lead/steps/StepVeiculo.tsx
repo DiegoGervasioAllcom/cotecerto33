@@ -3,6 +3,7 @@ import { maskPlaca, maskAno, maskKm, maskCep } from "@/components/venda/novo-lea
 import { UsoVeiculoFields } from "@/components/venda/novo-lead/steps/veiculo/UsoVeiculoFields";
 import { DadosComplementaresFold } from "@/components/venda/novo-lead/steps/veiculo/DadosComplementaresFold";
 import { AcessoriosFold } from "@/components/venda/novo-lead/steps/veiculo/AcessoriosFold";
+import { BOTAO_BUSCAR_STYLE } from "@/components/venda/novo-lead/botaoBuscar";
 import type { Form } from "@/components/venda/novo-lead/types";
 import type { StatusPlaca } from "@/components/venda/novo-lead/hooks/useConsultaPlaca";
 import type { PrecificadorFipe } from "@/lib/placa-decodificador";
@@ -66,7 +67,8 @@ export function StepVeiculo({
             />
             <button
               type="button"
-              className="btn btn-ghost"
+              className="btn btn-yellow"
+              style={BOTAO_BUSCAR_STYLE}
               disabled={placaConsultando || f.placa.replace(/[^A-Za-z0-9]/g, "").length < 7}
               onClick={() => onConsultarPlaca(f.placa, { reaplicar: true })}
             >

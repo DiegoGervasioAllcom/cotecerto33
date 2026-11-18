@@ -1,5 +1,6 @@
 import { onlyDigits, maskCpfCnpj } from "@/lib/masks";
 import { maskCel } from "@/components/venda/novo-lead/masks";
+import { BOTAO_BUSCAR_STYLE } from "@/components/venda/novo-lead/botaoBuscar";
 import type { Form } from "@/components/venda/novo-lead/types";
 
 type Props = {
@@ -35,7 +36,8 @@ export function StepSegurado({ f, up, erros, cpfConsultando, cpfStatus, consulta
             />
             <button
               type="button"
-              className="btn btn-ghost"
+              className="btn btn-yellow"
+              style={BOTAO_BUSCAR_STYLE}
               disabled={cpfConsultando || onlyDigits(f.cpf).length !== 11}
               onClick={() => consultarCpf?.(f.cpf, { sobrescreverNome: true })}
             >
