@@ -1625,6 +1625,10 @@ export async function marcarCalculoVistoE2E(cotacaoId: string): Promise<void> {
 
 /** Preenche os campos exigidos pelo gate do Recalcular geral (`podeCalcular`). */
 export async function preencherCamposCalculoE2E(cotacaoId: string): Promise<void> {
+  // Cotação semeada por insert direto nasce com as perguntas obrigatórias pendentes
+  // (default de `campos_pendentes`); aqui o gate do Recalcular precisa estar liberado.
+  const pend = await admin.from("cotacoes").update({ campos_pendentes: [] }).eq("id", cotacaoId);
+  if (pend.error) throw new Error(`limpar campos_pendentes: ${pend.error.message}`);
   const seg = await admin.from("cotacao_segurado").upsert({
     cotacao_id: cotacaoId,
     cpf_cnpj: "529.982.247-25",

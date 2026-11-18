@@ -26,8 +26,11 @@ describe("RLS cotacoes.campos_pendentes", () => {
       .single();
     if (error || !data) throw error ?? new Error("falha ao criar cotação de fixture");
     cotacaoId = data.id;
-    // Default: vazio (= tudo respondido), estado das cotações existentes.
-    expect(data.campos_pendentes).toEqual([]);
+    // Default: cotação nova nasce com TODAS as perguntas pendentes (a lista
+    // bate com `chavesPendentes` do front; linhas antigas ficam '{}').
+    expect(data.campos_pendentes).toHaveLength(14);
+    expect(data.campos_pendentes).toContain("zeroKm");
+    expect(data.campos_pendentes).toContain("dados:tipoCalculo");
   });
 
   it("dono grava e lê as chaves pendentes", async () => {
