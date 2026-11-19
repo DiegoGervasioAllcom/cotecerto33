@@ -177,6 +177,7 @@ export function StepSeguro({ f, up, setF, seguradorasDb }: Props) {
               }));
             }}
           >
+            <option value="">Selecione</option>
             {[
               "Anual",
               "Bianual",
