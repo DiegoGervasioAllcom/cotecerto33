@@ -476,6 +476,9 @@ export function ComparativoQuiver({
             }}
             style={{
               maxWidth: "100%",
+              // Como na Quiver: a tabela rola por dentro e o cabeçalho (logos) fica fixo no topo.
+              maxHeight: "calc(100dvh - 160px)",
+              overflowY: "auto",
               overflowX: "auto",
               overscrollBehaviorX: "contain",
               WebkitOverflowScrolling: "touch",
@@ -488,7 +491,8 @@ export function ComparativoQuiver({
                     style={{
                       position: "sticky",
                       left: 0,
-                      zIndex: 3,
+                      top: 0,
+                      zIndex: 4,
                       width: DETAIL_COLUMN_WIDTH,
                       minWidth: DETAIL_COLUMN_WIDTH,
                       background: "var(--offwhite)",
@@ -501,7 +505,13 @@ export function ComparativoQuiver({
                       key={resultado.cardId}
                       className="col-ins"
                       colSpan={nFaixas}
-                      style={{ minWidth: offerColumnWidth }}
+                      style={{
+                        minWidth: offerColumnWidth,
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 3,
+                        background: "var(--offwhite)",
+                      }}
                     >
                       <div style={{ display: "flex", justifyContent: "center" }}>
                         <SeguradoraBadge nome={resultado.seguradora} />
