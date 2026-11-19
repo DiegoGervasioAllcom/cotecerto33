@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ordenarCoberturaLabels } from "@/components/venda/cotacoes/quiver-resultado";
+import {
+  ehLinhaModalidade,
+  modalidadeComValor,
+  ordenarCoberturaLabels,
+  parseValorBRL,
+} from "@/components/venda/cotacoes/quiver-resultado";
 
 describe("ordenarCoberturaLabels (ordem do comparativo, como a Quiver)", () => {
   it("ordena pela ordem fixa independente da chegada", () => {
@@ -75,5 +80,41 @@ describe("logos das seguradoras (arquivos em public/seguradoras)", () => {
     expect(logoSeguradora("hdi seguros")).toBe("/seguradoras/hdi.png");
     expect(logoSeguradora("tokio")).toBe("/seguradoras/tokio.png");
     expect(logoSeguradora("Seguradora Desconhecida")).toBeNull();
+  });
+});
+
+describe("Modalidade com o valor da FIPE", () => {
+  it("lê valores em reais", () => {
+    expect(parseValorBRL("R$ 43.726,00")).toBe(43726);
+    expect(parseValorBRL("43726")).toBe(43726);
+    expect(parseValorBRL("R$ 1.234,56")).toBe(1234.56);
+    expect(parseValorBRL("43726.50")).toBe(43726.5);
+    expect(parseValorBRL("")).toBeNull();
+    expect(parseValorBRL(null)).toBeNull();
+  });
+
+  it("acrescenta o valor em reais (percentual × FIPE) quando falta", () => {
+    expect(modalidadeComValor("100% V.R. (FIPE)", 43726)).toMatch(
+      /^100% V\.R\. \(FIPE\) R\$\s43\.726,00$/,
+    );
+    expect(modalidadeComValor("80% V.R. (FIPE)", 43726)).toMatch(/R\$\s34\.980,80$/);
+    expect(modalidadeComValor("90,0% V.R. (FIPE)", 40000)).toMatch(/R\$\s36\.000,00$/);
+  });
+
+  it("não mexe quando já tem R$, sem percentual ou sem FIPE", () => {
+    expect(modalidadeComValor("100% V.R. (FIPE) R$ 43.726,00", 43726)).toBe(
+      "100% V.R. (FIPE) R$ 43.726,00",
+    );
+    expect(modalidadeComValor("Valor determinado", 43726)).toBe("Valor determinado");
+    // percentual sem referência à FIPE/V.R.: não calcula (evita valor enganoso)
+    expect(modalidadeComValor("Cobertura 100%", 43726)).toBe("Cobertura 100%");
+    expect(modalidadeComValor("100% V.R. (FIPE)", null)).toBe("100% V.R. (FIPE)");
+  });
+
+  it("reconhece as linhas de modalidade pelo rótulo", () => {
+    expect(ehLinhaModalidade("Modalidade")).toBe(true);
+    expect(ehLinhaModalidade("Valor mercado")).toBe(true);
+    expect(ehLinhaModalidade("Valor determinado")).toBe(false);
+    expect(ehLinhaModalidade("Danos Morais")).toBe(false);
   });
 });

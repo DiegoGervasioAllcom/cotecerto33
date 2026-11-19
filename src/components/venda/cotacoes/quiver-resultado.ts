@@ -468,6 +468,35 @@ export function ordenarCoberturaLabels(labels: readonly string[]): string[] {
     .map((x) => x.label);
 }
 
+/** "R$ 43.726,00" / "43.726,00" → 43726. Texto sem número devolve null. */
+export function parseValorBRL(texto: string | null | undefined): number | null {
+  // Ponto decimal sem vírgula ("43726.50"): número já normalizado.
+  const simples = /^\s*(?:R\$\s*)?(\d+\.\d{1,2})\s*$/.exec(texto ?? "");
+  if (simples) return Number(simples[1]) > 0 ? Number(simples[1]) : null;
+  const m = /(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)/.exec(texto ?? "");
+  if (!m) return null;
+  const n = Number(m[1].replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+const rotuloModalidade = (label: string) => /^(modalidade|valor mercado)/.test(semAcento(label));
+export const ehLinhaModalidade = rotuloModalidade;
+
+/**
+ * Modalidade "100% V.R. (FIPE)" → acrescenta o valor em reais (percentual × FIPE do veículo), como
+ * a visualização Colunado da Quiver. Só quando o texto traz o percentual e ainda não traz "R$".
+ */
+export function modalidadeComValor(texto: string, fipe: number | null | undefined): string {
+  // Só quando o percentual é declaradamente sobre a FIPE / valor de referência (V.R.).
+  if (!fipe || /R\$/.test(texto) || !/fipe|v\.?\s?r\./i.test(texto)) return texto;
+  const pct = /(\d+(?:[.,]\d+)?)\s*%/.exec(texto);
+  if (!pct) return texto;
+  const fator = Number(pct[1].replace(",", ".")) / 100;
+  if (!Number.isFinite(fator) || fator <= 0) return texto;
+  const valor = (fipe * fator).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return `${texto} ${valor}`;
+}
+
 export function tituloResultado(resultado: ResultadoCalculo): string {
   return [resultado.produto, resultado.nome].filter(Boolean).join(" · ") || "Produto não informado";
 }
