@@ -6,6 +6,7 @@ import { fmtBRL } from "@/lib/print";
 import { salvarFocoMotivo, serializeFoco } from "@/lib/use-foco-ao-chegar";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { CalculoFiltroSecao } from "@/components/venda/novo-lead/steps/calculo/CalculoFiltroSecao";
+import { ComparativoParcelamento, montarGradeParcelamento } from "./ComparativoParcelamento";
 import { useImprimirCotacaoModal } from "./ImprimirCotacaoModal";
 import { docDadosDoBanco, type DocDadosCabecalho } from "./doc-dados";
 import {
@@ -17,11 +18,9 @@ import {
 } from "./useDescontoAdicional";
 import {
   coberturaEntries,
-  faixasComParcelas,
   filtrarPorSecao,
   ordenarCoberturaLabels,
   secoesDisponiveis,
-  formasPagamentoResultado,
   gruposOpcoesResultado,
   ordenarResultados,
   premioNumerico,
@@ -59,6 +58,8 @@ type Props = {
 
 const DETAIL_COLUMN_WIDTH = 190;
 const OFFER_COLUMN_WIDTH = 280;
+// Largura extra por faixa de franquia além da primeira (subcolunas lado a lado).
+const LARGURA_POR_FAIXA_EXTRA = 70;
 
 export function ComparativoQuiver({
   cotacaoId,
@@ -100,7 +101,12 @@ export function ComparativoQuiver({
   // Um recálculo pode remover a seção escolhida: volta para "Todas" em vez de esvaziar a tabela.
   const secao = secoes.includes(secaoEscolhida) ? secaoEscolhida : "";
   const offers = useMemo(() => filtrarPorSecao(todasOfertas, secao), [todasOfertas, secao]);
-  const tableMinWidth = DETAIL_COLUMN_WIDTH + offers.length * OFFER_COLUMN_WIDTH;
+  // Com duas faixas de franquia lado a lado a coluna da oferta precisa de mais largura.
+  const grade = montarGradeParcelamento(offers, escolhaDoCard);
+  const nFaixas = Math.max(grade.faixas.length, 1);
+  const offerColumnWidth =
+    nFaixas > 1 ? OFFER_COLUMN_WIDTH + LARGURA_POR_FAIXA_EXTRA * (nFaixas - 1) : OFFER_COLUMN_WIDTH;
+  const tableMinWidth = DETAIL_COLUMN_WIDTH + offers.length * offerColumnWidth;
   const updateScrollState = useCallback(() => {
     const element = scrollRef.current;
     if (!element) return;
@@ -129,7 +135,7 @@ export function ComparativoQuiver({
 
   const scrollOffers = (direction: -1 | 1) => {
     scrollRef.current?.scrollBy({
-      left: direction * OFFER_COLUMN_WIDTH,
+      left: direction * offerColumnWidth,
       behavior: "smooth",
     });
   };
@@ -485,7 +491,8 @@ export function ComparativoQuiver({
                     <th
                       key={resultado.cardId}
                       className="col-ins"
-                      style={{ minWidth: OFFER_COLUMN_WIDTH }}
+                      colSpan={nFaixas}
+                      style={{ minWidth: offerColumnWidth }}
                     >
                       <div style={{ display: "flex", justifyContent: "center" }}>
                         <SeguradoraBadge nome={resultado.seguradora} />
@@ -527,7 +534,7 @@ export function ComparativoQuiver({
                       {label}
                     </td>
                     {offers.map((resultado) => (
-                      <td key={resultado.cardId} className="cell">
+                      <td key={resultado.cardId} className="cell" colSpan={nFaixas}>
                         <span className="v-lmi">
                           {coberturaEntries(resultado).find(
                             ([candidate]) => candidate === label,
@@ -537,68 +544,7 @@ export function ComparativoQuiver({
                     ))}
                   </tr>
                 ))}
-                <tr>
-                  <td
-                    className="cov-name"
-                    style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--white)" }}
-                  >
-                    OPÇÕES DE PRÊMIO
-                    <small>Plano · franquia · à vista · parcelado · desconto</small>
-                  </td>
-                  {offers.map((resultado) => (
-                    <td key={resultado.cardId} className="cell">
-                      {gruposOpcoesResultado(resultado).length === 0 ? (
-                        <span className="muted">Não informado</span>
-                      ) : (
-                        gruposOpcoesResultado(resultado).map((grupo, grupoIndex) => (
-                          <div
-                            key={`${grupo.formaPagamento}-${grupoIndex}`}
-                            style={{ marginBottom: 10 }}
-                          >
-                            <strong>{grupo.formaPagamento}</strong>
-                            {faixasComParcelas(grupo.opcoes).map((faixa, faixaIndex) => (
-                              <div key={faixaIndex} style={{ marginTop: 6 }}>
-                                <span>{faixa.tipo || "Opção"}</span>
-                                <br />
-                                <span className="small">Franquia: {faixa.franquia || "—"}</span>
-                                <br />
-                                <span className="v-lmi">{faixa.avista || "—"}</span>
-                                <br />
-                                {faixa.parcelas.length === 0 ? (
-                                  <span className="small muted">Parcelamento não informado</span>
-                                ) : (
-                                  faixa.parcelas.map((parcela, parcelaIndex) => (
-                                    <span className="small muted" key={parcelaIndex}>
-                                      {parcela}
-                                      {parcelaIndex < faixa.parcelas.length - 1 ? " · " : ""}
-                                    </span>
-                                  ))
-                                )}
-                                {faixa.desconto && (
-                                  <div className="chip chip-ok">{faixa.desconto}</div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ))
-                      )}
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <td
-                    className="cov-name"
-                    style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--white)" }}
-                  >
-                    FORMAS DE PAGAMENTO
-                    <small>Condições retornadas pela seguradora</small>
-                  </td>
-                  {offers.map((resultado) => (
-                    <td key={resultado.cardId} className="cell">
-                      {formasPagamentoResultado(resultado).join(" · ") || "—"}
-                    </td>
-                  ))}
-                </tr>
+                <ComparativoParcelamento ofertas={offers} grade={grade} setEscolha={setEscolha} />
                 <tr className="total-row">
                   <td
                     className="cov-name"
@@ -615,7 +561,7 @@ export function ComparativoQuiver({
                   {offers.map((resultado) => {
                     const premio = vinculados.get(resultado.cardId);
                     return (
-                      <td key={resultado.cardId} className="cell">
+                      <td key={resultado.cardId} className="cell" colSpan={nFaixas}>
                         {premio ? fmtBRL(Number(premio.premio)) : "Vínculo ambíguo"}
                       </td>
                     );
@@ -638,7 +584,7 @@ export function ComparativoQuiver({
                       (opcao) => opcao.id === escolha.opcaoId,
                     );
                     return (
-                      <td key={resultado.cardId}>
+                      <td key={resultado.cardId} colSpan={nFaixas}>
                         <div className="ins-actions" style={{ flexWrap: "wrap", gap: 6 }}>
                           <select
                             className="select-mini"
@@ -724,7 +670,7 @@ export function ComparativoQuiver({
                     const info = infoFor(resultado);
                     const { solicitacao } = info;
                     return (
-                      <td key={resultado.cardId}>
+                      <td key={resultado.cardId} colSpan={nFaixas}>
                         {solicitacao && (
                           <div style={{ marginBottom: 6 }}>
                             <span
