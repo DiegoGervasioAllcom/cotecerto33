@@ -22,6 +22,8 @@ import {
 } from "./useDescontoAdicional";
 import {
   coberturaEntries,
+  ehLinhaModalidade,
+  modalidadeComValor,
   filtrarPorSecao,
   ordenarCoberturaLabels,
   secoesDisponiveis,
@@ -58,6 +60,8 @@ type Props = {
   /** Cabeçalho (segurado/veículo/seguro/perfil) para o modal "Imprimir
    * cotação". */
   docCabecalho: DocDadosCabecalho;
+  /** Valor FIPE do veículo (R$), para completar a linha de Modalidade com o valor em reais. */
+  fipeValor?: number | null;
 };
 
 const DETAIL_COLUMN_WIDTH = 190;
@@ -76,6 +80,7 @@ export function ComparativoQuiver({
   onCancelar,
   onDescontoEnviado,
   docCabecalho,
+  fipeValor,
 }: Props) {
   const imprimir = useImprimirCotacaoModal();
   // Escolha de forma de pagamento/parcelas por card — mesmo mecanismo do
@@ -529,25 +534,41 @@ export function ComparativoQuiver({
                 </tr>
               </thead>
               <tbody>
-                {coberturaLabels.map((label) => (
-                  <tr key={label}>
-                    <td
-                      className="cov-name"
-                      style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--white)" }}
-                    >
-                      {label}
-                    </td>
-                    {offers.map((resultado) => (
-                      <td key={resultado.cardId} className="cell" colSpan={nFaixas}>
-                        <span className="v-lmi">
-                          {coberturaEntries(resultado).find(
-                            ([candidate]) => candidate === label,
-                          )?.[1] ?? "Indisponível"}
-                        </span>
+                {coberturaLabels.map((label, linhaIndex) => {
+                  // Zebra: linhas alternadas com fundo suave, como na Quiver.
+                  const fundo = linhaIndex % 2 === 1 ? "var(--offwhite)" : "var(--white)";
+                  return (
+                    <tr key={label}>
+                      <td
+                        className="cov-name"
+                        style={{ position: "sticky", left: 0, zIndex: 2, background: fundo }}
+                      >
+                        {label}
                       </td>
-                    ))}
-                  </tr>
-                ))}
+                      {offers.map((resultado) => {
+                        const valor = coberturaEntries(resultado).find(
+                          ([candidate]) => candidate === label,
+                        )?.[1];
+                        return (
+                          <td
+                            key={resultado.cardId}
+                            className="cell"
+                            colSpan={nFaixas}
+                            style={{ background: fundo }}
+                          >
+                            <span className="v-lmi">
+                              {valor === undefined
+                                ? "Indisponível"
+                                : ehLinhaModalidade(label)
+                                  ? modalidadeComValor(valor, fipeValor)
+                                  : valor}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
                 <ComparativoParcelamento ofertas={offers} grade={grade} setEscolha={setEscolha} />
                 <tr className="total-row">
                   <td

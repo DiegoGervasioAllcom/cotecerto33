@@ -8,7 +8,7 @@ import {
   type PremioComparativo,
   type SolicitacaoComparativo,
 } from "@/components/venda/cotacoes/ComparativoQuiver";
-import { parseQuiverResultado } from "@/components/venda/cotacoes/quiver-resultado";
+import { parseQuiverResultado, parseValorBRL } from "@/components/venda/cotacoes/quiver-resultado";
 import { supabase } from "@/integrations/supabase/client";
 import { formatarNumeroCotacao } from "@/lib/cotacao-numero";
 import { maskCpfCnpj } from "@/lib/masks";
@@ -39,6 +39,7 @@ type Data = {
     placa: string | null;
     chassi: string | null;
     combustivel: string | null;
+    fipe_valor: string | null;
   } | null;
   // Usados só pelo modal "Imprimir cotação" (Frente 3 V12 · 7a) — a tela do
   // comparativo em si não exibe esses dados.
@@ -66,7 +67,7 @@ async function fetchComparativo(id: string): Promise<ComparativoData> {
       .select(
         "id,numero,status,criado_em,quiver_resultado_raw," +
           "segurado:cotacao_segurado(nome,cpf_cnpj,nascimento,sexo,estado_civil)," +
-          "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,ano_fab,placa,chassi,combustivel)," +
+          "veiculo:cotacao_veiculo(marca_nome,modelo_nome,ano_modelo,ano_fab,placa,chassi,combustivel,fipe_valor)," +
           "seguro:cotacao_seguro(tipo_seguro,vig_ini,vig_fim,grupo_producao)," +
           "perfil:cotacao_perfil(condutor_mesmo,jovens_18_25,cep_pernoite)," +
           "premios:cotacao_premios(id,seguradora,cobertura,premio)",
@@ -214,6 +215,7 @@ function Page() {
         onAceitar={(solicitacaoId) => void handleAceitar(solicitacaoId)}
         onCancelar={(solicitacaoId) => void handleCancelar(solicitacaoId)}
         onDescontoEnviado={() => void queryClient.invalidateQueries({ queryKey })}
+        fipeValor={parseValorBRL(data.veiculo?.fipe_valor)}
         docCabecalho={{
           cotacaoNumero: `#${numero}`,
           cotacaoId: data.id,
