@@ -460,13 +460,19 @@ test.describe("Quiver webhook — wizard reage aos 3 estados", () => {
       "Básico",
       "15 dias",
       "7 dias",
-      "7% no débito",
     ]) {
       await expect(page.getByText(valor).first()).toBeVisible();
     }
     await expect(page.getByText(/Cartão de crédito.*Débito em conta.*Boleto/)).toBeVisible();
+    // A grade mostra só a forma de pagamento escolhida (como a Quiver): as condições do débito
+    // (faixa, franquia, desconto) aparecem depois de escolher "Débito em conta" no card.
+    await page
+      .locator('select[aria-label="Forma de pagamento"]:has(option:text-is("Débito em conta"))')
+      .first()
+      .selectOption({ label: "Débito em conta" });
     await expect(page.getByText("Compreensiva débito", { exact: true })).toBeVisible();
     await expect(page.getByText(/Reduzida débito · R\$ 2\.300,00/)).toBeVisible();
+    await expect(page.getByText("7% no débito").first()).toBeVisible();
 
     // Os dois produtos Alfa têm pareamentos financeiros distintos e inequívocos,
     // mas desconto é uma ação da seguradora inteira: ambos permanecem bloqueados.

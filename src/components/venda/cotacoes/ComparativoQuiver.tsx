@@ -6,7 +6,11 @@ import { fmtBRL } from "@/lib/print";
 import { salvarFocoMotivo, serializeFoco } from "@/lib/use-foco-ao-chegar";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
 import { CalculoFiltroSecao } from "@/components/venda/novo-lead/steps/calculo/CalculoFiltroSecao";
-import { ComparativoParcelamento, montarGradeParcelamento } from "./ComparativoParcelamento";
+import {
+  ComparativoParcelamento,
+  colunasPorOferta,
+  montarGradeParcelamento,
+} from "./ComparativoParcelamento";
 import { useImprimirCotacaoModal } from "./ImprimirCotacaoModal";
 import { docDadosDoBanco, type DocDadosCabecalho } from "./doc-dados";
 import {
@@ -103,7 +107,7 @@ export function ComparativoQuiver({
   const offers = useMemo(() => filtrarPorSecao(todasOfertas, secao), [todasOfertas, secao]);
   // Com duas faixas de franquia lado a lado a coluna da oferta precisa de mais largura.
   const grade = montarGradeParcelamento(offers, escolhaDoCard);
-  const nFaixas = Math.max(grade.faixas.length, 1);
+  const nFaixas = colunasPorOferta(grade);
   const offerColumnWidth =
     nFaixas > 1 ? OFFER_COLUMN_WIDTH + LARGURA_POR_FAIXA_EXTRA * (nFaixas - 1) : OFFER_COLUMN_WIDTH;
   const tableMinWidth = DETAIL_COLUMN_WIDTH + offers.length * offerColumnWidth;

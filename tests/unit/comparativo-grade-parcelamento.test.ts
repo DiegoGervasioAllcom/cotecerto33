@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { montarGradeParcelamento } from "@/components/venda/cotacoes/ComparativoParcelamento";
+import {
+  colunasPorOferta,
+  montarGradeParcelamento,
+} from "@/components/venda/cotacoes/ComparativoParcelamento";
 import {
   gruposOpcoesResultado,
   parseQuiverResultado,
@@ -92,6 +95,59 @@ describe("montarGradeParcelamento (franquias lado a lado)", () => {
     expect(grade.formas.map((f) => f?.formaPagamento).sort()).toEqual([
       "Cartão de Crédito",
       "Débito em Conta",
+    ]);
+  });
+});
+
+describe("colunasPorOferta", () => {
+  const base = { formas: [], franquias: [], avistas: [], linhas: [] };
+  it("1 faixa = 1 coluna; 2 faixas lado a lado; mais de 2 empilha (1 coluna)", () => {
+    expect(colunasPorOferta({ ...base, faixas: ["a"] })).toBe(1);
+    expect(colunasPorOferta({ ...base, faixas: ["a", "b"] })).toBe(2);
+    expect(colunasPorOferta({ ...base, faixas: ["a", "b", "c"] })).toBe(1);
+    expect(colunasPorOferta({ ...base, faixas: [] })).toBe(1);
+  });
+});
+
+describe("avistas por faixa (informativo)", () => {
+  const comAvista = parseQuiverResultado({
+    temPremios: true,
+    cards: [
+      {
+        index: 1,
+        seguradora: "porto",
+        produto: "Auto",
+        nome: "Plano A",
+        premiosPorFormaPagamento: [
+          {
+            formaPagamento: "Débito em Conta",
+            opcoes: [
+              {
+                tipo: "normal 100%",
+                franquia: "Franquia: R$ 3.000,00",
+                avista: "R$ 2.000,00",
+                desconto: "7% no débito",
+                parcelas: "10x R$ 210,00",
+              },
+              {
+                tipo: "reduzida 50%",
+                franquia: "Franquia: R$ 1.500,00",
+                avista: "R$ 2.300,00",
+                parcelas: "10x R$ 240,00",
+              },
+            ],
+          },
+        ],
+        coberturasBasicas: {},
+      },
+    ],
+  });
+  const grade = montarGradeParcelamento(comAvista, escolhaPadrao);
+
+  it("valor à vista e desconto por oferta e faixa", () => {
+    expect(grade.avistas[0]).toEqual([
+      { avista: "R$ 2.000,00", desconto: "7% no débito" },
+      { avista: "R$ 2.300,00", desconto: "" },
     ]);
   });
 });
