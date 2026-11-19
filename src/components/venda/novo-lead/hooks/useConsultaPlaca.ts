@@ -178,6 +178,31 @@ export function useConsultaPlaca({
         anoFab: parcial.anoFabricacao || p.anoFab,
       }));
 
+      // O fornecedor devolveu versões FIPE junto do erro: segue o mesmo
+      // caminho de uma consulta completa (1 versão aplica, várias o
+      // vendedor escolhe).
+      const fipe = parcial.fipe ?? [];
+      if (fipe.length === 1) {
+        await aplicarVersao(fipe[0]);
+        return;
+      }
+      if (fipe.length > 1) {
+        const f0 = fipe[0];
+        setF((p) => ({
+          ...p,
+          combustivel:
+            normalizarCombustivel(f0.combustivel) ||
+            normalizarCombustivel(f0.modelo) ||
+            p.combustivel,
+        }));
+        setVersoes(fipe);
+        setStatus({
+          tipo: "aviso",
+          texto: `${parcial.marca || fipe[0].marca} ${parcial.anoModelo}. Selecione a versão do veículo abaixo.`,
+        });
+        return;
+      }
+
       if (!parcial.marca) {
         setStatus({
           tipo: "aviso",
@@ -199,7 +224,7 @@ export function useConsultaPlaca({
         texto: `${mensagemProvedor} Marca preenchida (${marcaMatch.nome}) — selecione o modelo manualmente.`,
       });
     },
-    [resolverMarca, setF],
+    [resolverMarca, aplicarVersao, setF],
   );
 
   const aplicarDados = useCallback(
