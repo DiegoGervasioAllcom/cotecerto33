@@ -16,6 +16,9 @@ import type { DescontoInfo } from "@/components/venda/cotacoes/useDescontoAdicio
 import {
   coberturaEntries,
   coberturaLabelsUnion,
+  ehLinhaModalidade,
+  modalidadeComValor,
+  ordenarCoberturaLabels,
   gruposOpcoesResultado,
   semRetornoPorFaixa,
   seguradorasSemRetorno,
@@ -23,6 +26,10 @@ import {
   type SemRetornoItem,
   type SeguradoraSemRetorno,
 } from "@/components/venda/cotacoes/quiver-resultado";
+import {
+  colunasPorOferta,
+  montarGradeParcelamento,
+} from "@/components/venda/cotacoes/ComparativoParcelamento";
 import { CalculoParcelamento } from "./CalculoParcelamento";
 import { SegAcoes } from "./SegAcoes";
 import { SeloPersonalizada } from "./SeloPersonalizada";
@@ -50,6 +57,8 @@ type Props = {
   onAbrirDesconto: (r: ResultadoCalculo) => void;
   onRecalcularSeguradora: (r: ResultadoCalculo) => Promise<void>;
   coberturaGlobal: CoberturaGlobal;
+  /** Valor FIPE do veículo (R$) para completar a Modalidade com o valor em reais. */
+  fipeValor?: number | null;
 };
 
 type ColunaOferta = { tipo: "oferta"; resultado: ResultadoCalculo };
@@ -74,6 +83,7 @@ export function CalculoLista({
   onAbrirDesconto,
   onRecalcularSeguradora,
   coberturaGlobal,
+  fipeValor,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [nav, setNav] = useState<Nav>(NAV_VAZIO);
@@ -95,7 +105,13 @@ export function CalculoLista({
     [resultados, semRetornoInteiro],
   );
 
-  const coberturaLabels = useMemo(() => coberturaLabelsUnion(resultados), [resultados]);
+  const coberturaLabels = useMemo(
+    () => ordenarCoberturaLabels(coberturaLabelsUnion(resultados)),
+    [resultados],
+  );
+  // Franquias lado a lado (até 2 faixas): cada oferta ocupa `nFaixas` subcolunas.
+  const grade = montarGradeParcelamento(resultados, escolhaDoCard);
+  const nFaixas = colunasPorOferta(grade);
 
   const atualizarNav = useCallback(() => {
     const el = containerRef.current;
@@ -230,7 +246,7 @@ export function CalculoLista({
                 const nome =
                   coluna.tipo === "oferta" ? coluna.resultado.seguradora : coluna.seguradora;
                 return (
-                  <th key={chave}>
+                  <th key={chave} colSpan={nFaixas}>
                     <div className="cl-seg">
                       <SeguradoraTile nome={nome} tam="t-sm" on={coluna.tipo === "oferta"} />
                       <small>
@@ -254,8 +270,12 @@ export function CalculoLista({
             </tr>
           </thead>
           <tbody>
-            {coberturaLabels.map((label) => (
-              <tr key={label}>
+            {coberturaLabels.map((label, linhaIndex) => (
+              // Zebra: linhas alternadas com fundo suave, como na Quiver.
+              <tr
+                key={label}
+                style={linhaIndex % 2 === 1 ? { background: "var(--offwhite)" } : undefined}
+              >
                 <td className="cl-lbl">{label}</td>
                 {colunas.map((coluna) => {
                   const chave = coluna.tipo === "oferta" ? coluna.resultado.cardId : coluna.chave;
@@ -265,7 +285,19 @@ export function CalculoLista({
                           ([candidato]) => candidato === label,
                         )?.[1]
                       : undefined;
-                  return <td key={chave}>{valor ?? <span className="nc">—</span>}</td>;
+                  return (
+                    <td key={chave} colSpan={nFaixas}>
+                      {valor === undefined ? (
+                        <span className="nc">
+                          {coluna.tipo === "oferta" ? "Indisponível" : "—"}
+                        </span>
+                      ) : ehLinhaModalidade(label) ? (
+                        modalidadeComValor(valor, fipeValor)
+                      ) : (
+                        valor
+                      )}
+                    </td>
+                  );
                 })}
               </tr>
             ))}
@@ -274,7 +306,7 @@ export function CalculoLista({
               {colunas.map((coluna) => {
                 if (coluna.tipo === "sem-retorno")
                   return (
-                    <td key={coluna.chave}>
+                    <td key={coluna.chave} colSpan={nFaixas}>
                       <span className="nc">—</span>
                     </td>
                   );
@@ -282,7 +314,7 @@ export function CalculoLista({
                 const gruposPagamento = gruposOpcoesResultado(resultado);
                 const escolha = escolhaDoCard(resultado);
                 return (
-                  <td key={resultado.cardId}>
+                  <td key={resultado.cardId} colSpan={nFaixas}>
                     <select
                       className="select-mini"
                       style={{ width: "100%" }}
@@ -310,7 +342,8 @@ export function CalculoLista({
             </tr>
             <CalculoParcelamento
               colunas={colunas}
-              escolhaDoCard={escolhaDoCard}
+              grade={grade}
+              nFaixas={nFaixas}
               setEscolha={setEscolha}
               onContratarParcela={onContratarParcela}
             />
@@ -320,7 +353,7 @@ export function CalculoLista({
                 {colunas.map((coluna) => {
                   if (coluna.tipo === "sem-retorno")
                     return (
-                      <td key={coluna.chave}>
+                      <td key={coluna.chave} colSpan={nFaixas}>
                         <span className="nc">—</span>
                       </td>
                     );
@@ -328,7 +361,7 @@ export function CalculoLista({
                     (item) => item.faixa === faixa,
                   )?.motivo;
                   return (
-                    <td key={coluna.resultado.cardId}>
+                    <td key={coluna.resultado.cardId} colSpan={nFaixas}>
                       {motivo ? (
                         <div className="small muted">{motivo}</div>
                       ) : (
@@ -342,7 +375,8 @@ export function CalculoLista({
             <tr>
               <td className="cl-lbl">Ações</td>
               {colunas.map((coluna) => {
-                if (coluna.tipo === "sem-retorno") return <td key={coluna.chave} />;
+                if (coluna.tipo === "sem-retorno")
+                  return <td key={coluna.chave} colSpan={nFaixas} />;
                 const { resultado } = coluna;
                 const outrasSeguradoras = colunas
                   .filter(
@@ -351,7 +385,7 @@ export function CalculoLista({
                   )
                   .map((item) => item.resultado.seguradora);
                 return (
-                  <td key={resultado.cardId}>
+                  <td key={resultado.cardId} colSpan={nFaixas}>
                     <SegAcoes
                       resultado={resultado}
                       cotacaoId={cotacaoId}
@@ -370,7 +404,7 @@ export function CalculoLista({
               {colunas.map((coluna) => {
                 if (coluna.tipo === "sem-retorno")
                   return (
-                    <td key={coluna.chave}>
+                    <td key={coluna.chave} colSpan={nFaixas}>
                       <span className="nc">Sem retorno</span>
                       {coluna.motivo ? (
                         <div className="small muted u-mt-4">{coluna.motivo}</div>
@@ -386,7 +420,7 @@ export function CalculoLista({
                 const escolha = item?.escolha;
                 const opcaoSelecionada = item?.grupo?.opcoes.find((o) => o.id === escolha?.opcaoId);
                 return (
-                  <td key={resultado.cardId}>
+                  <td key={resultado.cardId} colSpan={nFaixas}>
                     <button
                       className="btn btn-yellow btn-sm"
                       type="button"

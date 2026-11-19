@@ -12,6 +12,7 @@ import {
 import {
   filtrarPorFaixaDePreco,
   filtrarPorSecao,
+  parseValorBRL,
   secoesDisponiveis,
   gruposOpcoesResultado,
   ordenarPorEscolha,
@@ -49,6 +50,8 @@ export type OfertaTransmissao = {
 
 type Props = {
   f: Form;
+  /** Valor FIPE do veículo (texto do wizard) — completa a Modalidade com o valor em reais. */
+  fipeValor?: string;
   resultados: ResultadoCalculo[];
   semRetorno: SemRetornoItem[];
   calculando: boolean;
@@ -69,6 +72,7 @@ type Props = {
 
 export function StepCalculo({
   f,
+  fipeValor,
   resultados,
   semRetorno,
   calculando,
@@ -350,6 +354,7 @@ export function StepCalculo({
               onAbrirDesconto={onAbrirDesconto}
               onRecalcularSeguradora={(r) => onRecalcularSeguradora(r)}
               coberturaGlobal={coberturaGlobal}
+              fipeValor={parseValorBRL(fipeValor)}
             />
           ) : (
             <CalculoCardsGrid
