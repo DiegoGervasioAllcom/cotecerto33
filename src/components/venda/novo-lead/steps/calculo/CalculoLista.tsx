@@ -68,6 +68,9 @@ type Coluna = ColunaOferta | ColunaSemRetorno;
 type Nav = { n: number; esq: number; dir: number; colW: number };
 const NAV_VAZIO: Nav = { n: 0, esq: 0, dir: 0, colW: 0 };
 
+// Altura máxima da caixa da tabela: cabe na janela (o cabeçalho com os logos fica fixo ao rolar).
+const ALTURA_MAX_TABELA = "calc(100dvh - 160px)";
+
 export function CalculoLista({
   f,
   resultados,
@@ -236,7 +239,17 @@ export function CalculoLista({
         </button>
       </div>
 
-      <div className="calc-lista" ref={containerRef} onScroll={atualizarNav} data-tour="calc-lista">
+      <div
+        className="calc-lista"
+        ref={containerRef}
+        onScroll={atualizarNav}
+        data-tour="calc-lista"
+        role="region"
+        aria-label="Lista de cálculo com rolagem"
+        tabIndex={0}
+        // Como na Quiver: a tabela rola por dentro e o cabeçalho (logos) fica fixo no topo da caixa.
+        style={{ maxHeight: ALTURA_MAX_TABELA, overflowY: "auto" }}
+      >
         <table className="calc-table">
           <thead>
             <tr>
@@ -246,7 +259,7 @@ export function CalculoLista({
                 const nome =
                   coluna.tipo === "oferta" ? coluna.resultado.seguradora : coluna.seguradora;
                 return (
-                  <th key={chave} colSpan={nFaixas}>
+                  <th key={chave} colSpan={nFaixas} style={{ zIndex: 2 }}>
                     <div className="cl-seg">
                       <SeguradoraTile nome={nome} tam="t-sm" on={coluna.tipo === "oferta"} />
                       <small>

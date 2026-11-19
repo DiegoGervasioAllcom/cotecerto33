@@ -66,27 +66,30 @@ const escolhaPadrao = (r: (typeof ofertas)[number]) => {
   return { grupoId: g?.id ?? "", opcaoId: g?.opcoes[0]?.id ?? "" };
 };
 
-describe("montarGradeParcelamento (franquias lado a lado)", () => {
+describe("montarGradeParcelamento (franquias lado a lado, por oferta)", () => {
   const grade = montarGradeParcelamento(ofertas, escolhaPadrao);
+  const porto = ofertas.findIndex((o) => o.seguradora === "porto");
+  const azul = ofertas.findIndex((o) => o.seguradora === "azul");
 
-  it("uma subcoluna por faixa, na ordem em que aparecem", () => {
-    expect(grade.faixas).toEqual(["normal 100%", "reduzida 50%"]);
+  it("subcolunas = maior número de faixas de uma oferta", () => {
+    expect(grade.nSlots).toBe(2);
+    expect(colunasPorOferta(grade)).toBe(2);
   });
 
-  it("franquia por oferta e faixa; oferta sem a faixa fica vazia", () => {
-    const porto = ofertas.findIndex((o) => o.seguradora === "porto");
-    const azul = ofertas.findIndex((o) => o.seguradora === "azul");
+  it("cada oferta usa as suas próprias faixas; a que tem menos fica com a subcoluna vazia", () => {
+    expect(grade.faixas[porto]).toEqual(["normal 100%", "reduzida 50%"]);
+    expect(grade.faixas[azul]).toEqual(["normal 100%", ""]);
+  });
+
+  it("franquia por oferta e subcoluna", () => {
     expect(grade.franquias[porto]).toEqual(["R$ 3.000,00", "R$ 1.500,00"]);
     expect(grade.franquias[azul]).toEqual(["R$ 4.000,00", ""]);
   });
 
-  it("linhas por quantidade de parcelas, em ordem crescente, uma célula por oferta e faixa", () => {
+  it("linhas por quantidade de parcelas, em ordem crescente, uma célula por oferta e subcoluna", () => {
     expect(grade.linhas.map((l) => l.rotulo)).toEqual(["2 parcelas", "10 parcelas", "12 parcelas"]);
-    const porto = ofertas.findIndex((o) => o.seguradora === "porto");
-    const linha2 = grade.linhas[0];
-    expect(linha2.celulas[porto][0]?.parcelas).toBe("2x R$ 600,00 *");
-    expect(linha2.celulas[porto][1]?.parcelas).toBe("2x R$ 700,00 *");
-    const azul = ofertas.findIndex((o) => o.seguradora === "azul");
+    expect(grade.linhas[0].celulas[porto][0]?.parcelas).toBe("2x R$ 600,00 *");
+    expect(grade.linhas[0].celulas[porto][1]?.parcelas).toBe("2x R$ 700,00 *");
     expect(grade.linhas[1].celulas[azul][0]?.parcelas).toBe("10x R$ 90,00");
     expect(grade.linhas[1].celulas[azul][1]).toBeUndefined();
   });
@@ -97,15 +100,39 @@ describe("montarGradeParcelamento (franquias lado a lado)", () => {
       "Débito em Conta",
     ]);
   });
-});
 
-describe("colunasPorOferta", () => {
-  const base = { formas: [], franquias: [], avistas: [], linhas: [] };
-  it("1 faixa = 1 coluna; 2 faixas lado a lado; mais de 2 empilha (1 coluna)", () => {
-    expect(colunasPorOferta({ ...base, faixas: ["a"] })).toBe(1);
-    expect(colunasPorOferta({ ...base, faixas: ["a", "b"] })).toBe(2);
-    expect(colunasPorOferta({ ...base, faixas: ["a", "b", "c"] })).toBe(1);
-    expect(colunasPorOferta({ ...base, faixas: [] })).toBe(1);
+  it("faixas com nomes diferentes entre ofertas continuam lado a lado (não vira bloco empilhado)", () => {
+    const g = montarGradeParcelamento(
+      parseQuiverResultado({
+        temPremios: true,
+        cards: [
+          {
+            index: 1,
+            seguradora: "porto",
+            produto: "A",
+            nome: "A",
+            opcoes: [{ tipo: "Compreensiva Gama", franquia: "F1", parcelas: "10x R$ 1,00" }],
+            formaPagamento: "Cartão",
+            coberturasBasicas: {},
+          },
+          {
+            index: 2,
+            seguradora: "azul",
+            produto: "B",
+            nome: "B",
+            opcoes: [
+              { tipo: "Compreensiva Ômega", franquia: "F2", parcelas: "10x R$ 2,00" },
+              { tipo: "Reduzida Ômega", franquia: "F3", parcelas: "10x R$ 3,00" },
+            ],
+            formaPagamento: "Cartão",
+            coberturasBasicas: {},
+          },
+        ],
+      }),
+      escolhaPadrao,
+    );
+    expect(g.nSlots).toBe(2);
+    expect(colunasPorOferta(g)).toBe(2);
   });
 });
 
