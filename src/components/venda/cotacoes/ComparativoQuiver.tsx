@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { transmitirPropostaQuiver } from "@/lib/quiver.functions";
 import { fmtBRL } from "@/lib/print";
 import { salvarFocoMotivo, serializeFoco } from "@/lib/use-foco-ao-chegar";
+import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
+import { CalculoFiltroSecao } from "@/components/venda/novo-lead/steps/calculo/CalculoFiltroSecao";
 import { useImprimirCotacaoModal } from "./ImprimirCotacaoModal";
 import { docDadosDoBanco, type DocDadosCabecalho } from "./doc-dados";
 import {
@@ -16,6 +18,9 @@ import {
 import {
   coberturaEntries,
   faixasComParcelas,
+  filtrarPorSecao,
+  ordenarCoberturaLabels,
+  secoesDisponiveis,
   formasPagamentoResultado,
   gruposOpcoesResultado,
   ordenarResultados,
@@ -88,7 +93,13 @@ export function ComparativoQuiver({
     canScrollBack: false,
     canScrollForward: false,
   });
-  const offers = useMemo(() => ordenarResultados(resultados), [resultados]);
+  const todasOfertas = useMemo(() => ordenarResultados(resultados), [resultados]);
+  // Abas de seção (Compreensiva / Assistência 24h / Demais / Todas), como na Quiver.
+  const [secaoEscolhida, setSecao] = useState("");
+  const secoes = useMemo(() => secoesDisponiveis(todasOfertas), [todasOfertas]);
+  // Um recálculo pode remover a seção escolhida: volta para "Todas" em vez de esvaziar a tabela.
+  const secao = secoes.includes(secaoEscolhida) ? secaoEscolhida : "";
+  const offers = useMemo(() => filtrarPorSecao(todasOfertas, secao), [todasOfertas, secao]);
   const tableMinWidth = DETAIL_COLUMN_WIDTH + offers.length * OFFER_COLUMN_WIDTH;
   const updateScrollState = useCallback(() => {
     const element = scrollRef.current;
@@ -128,16 +139,17 @@ export function ComparativoQuiver({
       : "Há mais propostas à esquerda."
     : "Há mais propostas à direita.";
   const coberturaLabels = useMemo(
-    () => [
-      ...new Set(
-        offers.flatMap((resultado) => coberturaEntries(resultado).map(([label]) => label)),
-      ),
-    ],
+    () =>
+      ordenarCoberturaLabels([
+        ...new Set(
+          offers.flatMap((resultado) => coberturaEntries(resultado).map(([label]) => label)),
+        ),
+      ]),
     [offers],
   );
   const desconto = useDescontoAdicional({
     cotacaoId,
-    resultados: offers,
+    resultados: todasOfertas,
     premios,
     seguradoras,
     solicitacoes,
@@ -245,11 +257,12 @@ export function ComparativoQuiver({
   // linha de uma oferta específica (`imprimir.abrir` ainda deixa o vendedor
   // trocar a seleção na porta "Configurar impressão").
   const abrirImpressao = (onlyCardId?: string) => {
-    const list = onlyCardId == null ? offers : offers.filter((item) => item.cardId === onlyCardId);
+    const list =
+      onlyCardId == null ? todasOfertas : todasOfertas.filter((item) => item.cardId === onlyCardId);
     imprimir.abrir(docDadosDoBanco(docCabecalho, list));
   };
 
-  if (offers.length === 0) {
+  if (todasOfertas.length === 0) {
     return (
       <div className="card">
         <div className="card-b muted" style={{ padding: 40, textAlign: "center" }}>
@@ -430,6 +443,7 @@ export function ComparativoQuiver({
       )}
       {!transmissaoEmAndamento && (
         <div className="compare-table">
+          <CalculoFiltroSecao secoes={secoes} atual={secao} onChange={setSecao} />
           <div
             ref={scrollRef}
             tabIndex={scrollState.hasOverflow ? 0 : undefined}
@@ -473,9 +487,32 @@ export function ComparativoQuiver({
                       className="col-ins"
                       style={{ minWidth: OFFER_COLUMN_WIDTH }}
                     >
-                      {resultado.seguradora}
-                      <br />
-                      <span className="chip chip-outline">{tituloResultado(resultado)}</span>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <SeguradoraBadge nome={resultado.seguradora} />
+                      </div>
+                      <span
+                        style={{
+                          position: "absolute",
+                          width: 1,
+                          height: 1,
+                          overflow: "hidden",
+                          clip: "rect(0 0 0 0)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {resultado.seguradora}
+                      </span>
+                      <div
+                        style={{
+                          color: "var(--ok)",
+                          fontWeight: 700,
+                          fontSize: 12,
+                          marginTop: 6,
+                          textTransform: "none",
+                        }}
+                      >
+                        {tituloResultado(resultado)}
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -494,7 +531,7 @@ export function ComparativoQuiver({
                         <span className="v-lmi">
                           {coberturaEntries(resultado).find(
                             ([candidate]) => candidate === label,
-                          )?.[1] ?? "—"}
+                          )?.[1] ?? "Indisponível"}
                         </span>
                       </td>
                     ))}

@@ -429,6 +429,45 @@ export function coberturaLabelsUnion(resultados: readonly ResultadoCalculo[]): s
   ];
 }
 
+// Ordem fixa das linhas do comparativo (a mesma da visualização "Colunado" da Quiver).
+// O portal varia a ordem entre cotações; aqui ela é estável para o vendedor comparar sempre
+// no mesmo lugar. Rótulo fora da lista vai para o fim, na ordem em que apareceu.
+const ORDEM_COBERTURAS = [
+  "modalidade",
+  "valor mercado",
+  "valor determinado",
+  "danos materiais",
+  "danos corporais",
+  "danos morais",
+  "carro reserva",
+  "assistencia",
+  "vidros",
+  "app morte",
+  "app invalidez",
+  "extensao de reboque",
+  "tipo de peca",
+  "tipo de oficina",
+];
+
+const semAcento = (t: string) =>
+  t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+export function ordenarCoberturaLabels(labels: readonly string[]): string[] {
+  const posicao = (label: string) => {
+    const l = semAcento(label);
+    const i = ORDEM_COBERTURAS.findIndex((o) => l.startsWith(o));
+    return i === -1 ? ORDEM_COBERTURAS.length : i;
+  };
+  return labels
+    .map((label, ordem) => ({ label, ordem }))
+    .sort((a, b) => posicao(a.label) - posicao(b.label) || a.ordem - b.ordem)
+    .map((x) => x.label);
+}
+
 export function tituloResultado(resultado: ResultadoCalculo): string {
   return [resultado.produto, resultado.nome].filter(Boolean).join(" · ") || "Produto não informado";
 }
