@@ -203,11 +203,19 @@ test.describe("Cálculo — lista comparativa como visão padrão (V12.3.5)", ()
     await expect(celulaSemRetorno).toBeVisible();
   });
 
-  test("faixas diferentes viram um bloco por faixa, com rótulo de parcelas", async ({ page }) => {
+  test("até 2 faixas ficam lado a lado (com a franquia de cada uma), com rótulo de parcelas", async ({
+    page,
+  }) => {
     await abrirCalculoComListaCarregada(page);
 
-    const blocos = page.getByTestId("cl-faixa-bloco");
-    await expect(blocos).toHaveText([/Compreensiva$/, /Compreensiva Plus/]);
+    // Colunado da Quiver: as faixas viram subcolunas na linha "Franquia", sem bloco empilhado.
+    await expect(page.getByTestId("cl-faixa-bloco")).toHaveCount(0);
+    const franquia = page
+      .locator(".calc-table tr.cl-parc")
+      .filter({ has: page.locator("td.cl-lbl", { hasText: "Franquia" }) })
+      .first();
+    await expect(franquia).toContainText("Compreensiva Plus");
+    await expect(franquia).toContainText("Compreensiva");
     const linha = page.locator(".calc-table tr.cl-preco");
     await expect(linha.locator("td.cl-lbl")).toHaveText("10 parcelas");
     await expect(linha.locator("td.cl-cell").filter({ hasText: "10x de R$ 251,90" })).toHaveCount(

@@ -692,6 +692,7 @@ function Page() {
           {visibleStep === 5 && (
             <StepCalculo
               f={f}
+              fipeValor={fipeValor}
               resultados={resultados}
               semRetorno={semRetorno}
               calculando={calculando}
