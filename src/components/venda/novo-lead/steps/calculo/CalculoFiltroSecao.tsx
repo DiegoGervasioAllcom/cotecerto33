@@ -9,10 +9,14 @@ type Props = {
   onChange: (secao: string) => void;
 };
 
+/** "Cotações para a cobertura Compreensiva" → "Compreensiva" (como as abas da Quiver). */
+export const rotuloSecao = (s: string) =>
+  s.replace(/^Cotações para a cobertura\s+/i, "").trim() || s;
+
 export function CalculoFiltroSecao({ secoes, atual, onChange }: Props) {
   if (secoes.length === 0) return null;
   const opcoes: Array<[string, string]> = [
-    ...secoes.map((s): [string, string] => [s, s]),
+    ...secoes.map((s): [string, string] => [s, rotuloSecao(s)]),
     ["", "Todas"],
   ];
   return (

@@ -6,12 +6,29 @@
 // banco semeia mas o robô Quiver não suporta e por isso não aparecem no
 // picker hoje) cai no fallback cinza com o próprio nome por extenso.
 
-import { SEG_MARCAS } from "@/lib/seguradora-marcas";
+import { logoSeguradora, marcaSeguradora } from "@/lib/seguradora-marcas";
 
 type Tamanho = "" | "sm" | "xs";
 
 export function SeguradoraBadge({ nome, tam = "" }: { nome: string; tam?: Tamanho }) {
-  const m = SEG_MARCAS[nome] ?? { cor: "#5B6770", wm: nome, sub: "" };
+  const m = marcaSeguradora(nome) ?? { cor: "#5B6770", wm: nome, sub: "" };
+  const logo = logoSeguradora(nome);
+  if (logo) {
+    return (
+      <span className={`seg-badge ${tam}`.trim()} style={{ padding: 3 }}>
+        <img
+          src={logo}
+          alt={nome}
+          loading="lazy"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+          }}
+        />
+      </span>
+    );
+  }
   return (
     <span className={`seg-badge ${tam}`.trim()}>
       <span className="wm" style={{ color: m.cor }}>
