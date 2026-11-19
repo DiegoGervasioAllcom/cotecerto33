@@ -183,12 +183,16 @@ export async function executarConsultaPlaca(
     ? { ok: false, codigo: null, mensagem: erroTransporte }
     : parseDecodificadorXml(xml);
 
-  // ---- Fallback: wdapi2, só quando a principal falhou de vez (erro de
-  // transporte ou "não identificado" sem nem dado parcial). Se a
-  // sisconsulta trouxe algo parcial, mantém o comportamento atual em vez
-  // de gastar uma segunda chamada paga.
+  // ---- Fallback: wdapi2, quando a principal não entregou o veículo
+  // completo: erro de transporte, "não identificado" (com ou sem dado
+  // parcial sem nenhuma versão FIPE) ou sucesso sem nenhuma versão FIPE. Se a wdapi2 também não resolver,
+  // mantém o resultado da sisconsulta (parcial incluído).
   let fonte: "sisconsulta" | "wdapi2" = "sisconsulta";
-  const precisaFallback = erroTransporte || (!resultado.ok && !resultado.parcial);
+  const semFipe = resultado.ok && resultado.dados.fipe.length === 0;
+  // Parcial COM versões FIPE já basta para o front (vendedor escolhe a
+  // versão): não gasta a segunda chamada.
+  const parcialComFipe = !resultado.ok && Boolean(resultado.parcial?.fipe?.length);
+  const precisaFallback = Boolean(erroTransporte) || (!resultado.ok && !parcialComFipe) || semFipe;
   const backupUrl = process.env.SELF_PLACA_API_BACKUP_URL;
   const backupToken = process.env.SELF_PLACA_API_BACKUP_TOKEN;
   if (precisaFallback) {
@@ -211,7 +215,9 @@ export async function executarConsultaPlaca(
       corpoWdapi2 = await res.json().catch(() => null);
       console.log("[placa] resposta wdapi2:", { placa, status: res.status, corpo: corpoWdapi2 });
       const resultadoBackup = parseWdapi2Json(corpoWdapi2);
-      if (resultadoBackup.ok) {
+      // Quando a sisconsulta já tinha identificado (sem FIPE), só troca se
+      // a wdapi2 trouxe FIPE — senão não há ganho.
+      if (resultadoBackup.ok && (!semFipe || resultadoBackup.dados.fipe.length > 0)) {
         resultado = resultadoBackup;
         erroTransporte = null;
         fonte = "wdapi2";

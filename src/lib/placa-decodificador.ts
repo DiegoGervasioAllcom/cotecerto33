@@ -54,6 +54,9 @@ export type PlacaParcial = {
   anoModelo: string;
   anoFabricacao: string;
   chassi: string;
+  /** Versões FIPE que o fornecedor devolveu junto do erro (ex.: retorno 8,
+   * "Inconsistência na codificação do ano ou modelo"). Ausente quando não há. */
+  fipe?: PrecificadorFipe[];
 };
 
 export type ResultadoConsultaPlaca =
@@ -115,6 +118,19 @@ function parseValor(v: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/** Versões FIPE (`<PrecificadorI>`) do bloco <Decodificador>. */
+function extrairFipe(dec: string): PrecificadorFipe[] {
+  return blocos(dec, "PrecificadorI")
+    .map((b) => ({
+      codigo: tag(b, "DsCodigo"),
+      combustivel: tag(b, "DsCombustivel"),
+      marca: tag(b, "DsMarca"),
+      modelo: tag(b, "DsModelo"),
+      valor: parseValor(tag(b, "NuValor")),
+    }))
+    .filter((p) => p.codigo || p.modelo);
+}
+
 /**
  * Traduz o XML do decodificador no resultado usado pelo app. Nunca lança:
  * qualquer coisa que não seja um `<Decodificador>` legível vira
@@ -153,6 +169,8 @@ export function parseDecodificadorXml(xml: string): ResultadoConsultaPlaca {
       anoFabricacao: tag(dec, "NuAnoFabricacao"),
       chassi: tag(dec, "DsChassiTratado") || tag(dec, "DsChassi"),
     };
+    const fipeParcial = extrairFipe(dec);
+    if (fipeParcial.length) parcial.fipe = fipeParcial;
     const temAlgumDado = Object.values(parcial).some(Boolean);
     return {
       ok: false,
@@ -162,15 +180,7 @@ export function parseDecodificadorXml(xml: string): ResultadoConsultaPlaca {
     };
   }
 
-  const fipe: PrecificadorFipe[] = blocos(dec, "PrecificadorI")
-    .map((b) => ({
-      codigo: tag(b, "DsCodigo"),
-      combustivel: tag(b, "DsCombustivel"),
-      marca: tag(b, "DsMarca"),
-      modelo: tag(b, "DsModelo"),
-      valor: parseValor(tag(b, "NuValor")),
-    }))
-    .filter((p) => p.codigo || p.modelo);
+  const fipe = extrairFipe(dec);
 
   return {
     ok: true,

@@ -138,6 +138,26 @@ describe("parseDecodificadorXml", () => {
     });
   });
 
+  it("retorno 8 (inconsistência modelo) mantém as versões FIPE em `parcial.fipe` — placa TJF0I66", () => {
+    const xml = `<Root><Decodificador>
+      <DsChassiTratado>9BWBH6BF7S4063099</DsChassiTratado>
+      <DsMarca>VOLKSWAGEN</DsMarca>
+      <DsModelo>T</DsModelo>
+      <DsRetorno>Inconsistencia na codificacao do ano ou modelo</DsRetorno>
+      <NuAnoModelo>2025</NuAnoModelo>
+      <NuAnoFabricacao>2024</NuAnoFabricacao>
+      <NuCdRetorno>8</NuCdRetorno>
+      <PrecificadorI><DsCodigo>005509-3</DsCodigo><DsCombustivel>Flex</DsCombustivel><DsMarca>VW - VolksWagen</DsMarca><DsModelo>T-Cross Comfor. 200 TSI 1.0 Flex 5p Aut.</DsModelo><NuValor>124588</NuValor></PrecificadorI>
+      <PrecificadorI><DsCodigo>005520-4</DsCodigo><DsCombustivel>Flex</DsCombustivel><DsMarca>VW - VolksWagen</DsMarca><DsModelo>T-Cross Sense 1.0 TSI Flex 5p Aut.</DsModelo><NuValor>105022</NuValor></PrecificadorI>
+    </Decodificador></Root>`;
+    const r = parseDecodificadorXml(xml);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.parcial?.marca).toBe("VOLKSWAGEN");
+    expect(r.parcial?.fipe).toHaveLength(2);
+    expect(r.parcial?.fipe?.[0]).toMatchObject({ codigo: "005509-3", valor: 124588 });
+  });
+
   it("sem nenhum campo aproveitável no bloco Decodificador, não devolve `parcial`", () => {
     const xml = `<Root><Decodificador>
       <DsRetorno>Veiculo nao localizado</DsRetorno>
