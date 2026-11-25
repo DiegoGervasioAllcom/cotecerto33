@@ -13,6 +13,7 @@
 // de cotação (SELF_QUIVER_WEBHOOK_CLIENT_KEY/SECRET) — nunca reaproveitar.
 import { createClient } from "@supabase/supabase-js";
 import { MOTIVO_SIMULACAO, montarMensagemSimulacao } from "@/lib/transmissao-simulacao";
+import { ocultarNumerosLongos } from "@/lib/transmissao-pagamento";
 import { requestAutenticado } from "@/lib/webhook-auth";
 
 export const QUIVER_TRANSMISSAO_WEBHOOK_PATH = "/api/webhooks/quiver-transmissao";
@@ -94,7 +95,7 @@ export async function handleQuiverTransmissaoWebhook(request: Request): Promise<
   // que foi pedido; `transmitido` é sempre false, então nada vira venda.
   const mensagem =
     montarMensagemSimulacao(payload) ??
-    (typeof payload.mensagem === "string" ? payload.mensagem : null);
+    (typeof payload.mensagem === "string" ? ocultarNumerosLongos(payload.mensagem) : null);
   const numeroCotacao = typeof payload.numeroCotacao === "string" ? payload.numeroCotacao : null;
   const capturadoEm = typeof payload.capturadoEm === "string" ? payload.capturadoEm : undefined;
 
@@ -120,6 +121,28 @@ export async function handleQuiverTransmissaoWebhook(request: Request): Promise<
       error.message,
     );
     return Response.json({ error: "Falha ao registrar o resultado." }, { status: 500 });
+  }
+
+  // Progresso da tela "Transmitindo sua proposta": best-effort, não derruba o
+  // webhook de resultado (o resultado já está gravado).
+  try {
+    const { error: progErr } = await admin.rpc("registrar_transmissao_etapa", {
+      p_tentativa_id: tentativa.id,
+      p_etapa: rpcArgs.p_transmitido ? "concluido" : "erro",
+      ...(rpcArgs.p_transmitido
+        ? {}
+        : {
+            p_erro: ocultarNumerosLongos(mensagem ?? motivo ?? "Falha na transmissão").slice(
+              0,
+              500,
+            ),
+          }),
+    });
+    if (progErr) {
+      console.error("[quiver-transmissao-webhook] Falha ao gravar progresso:", progErr.message);
+    }
+  } catch {
+    console.error("[quiver-transmissao-webhook] Falha ao gravar progresso.");
   }
 
   return Response.json({ ok: true });

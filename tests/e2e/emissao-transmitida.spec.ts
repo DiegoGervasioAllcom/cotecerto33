@@ -244,7 +244,7 @@ async function gerarPropostaComTentativaReal(page: Page, fixture: CotacaoQuiverF
   await page.getByTitle(`Gerar proposta (${CARD_ALFA.seguradora})`).click();
   await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
   await confirmarDadosComplementaresTransmissao(page);
-  await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible();
+  await expect(page.getByText("Transmitindo sua proposta")).toBeVisible();
 
   await page.unroute("**/_serverFn/**");
   return tentativaId;

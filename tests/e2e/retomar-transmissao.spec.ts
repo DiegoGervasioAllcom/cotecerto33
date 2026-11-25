@@ -142,7 +142,7 @@ async function gerarPropostaComTentativaReal(page: Page, fixture: CotacaoQuiverF
   });
 
   await confirmarDadosComplementaresTransmissao(page);
-  await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible();
+  await expect(page.getByText("Transmitindo sua proposta")).toBeVisible();
 
   return tentativaId;
 }
@@ -156,7 +156,7 @@ async function assertCalculoNuncaVisivel(page: Page) {
 /** Confirma que a Etapa 7 (Transmissão) nunca aparece — a retomada não deveria ter agido. */
 async function assertTransmissaoNuncaVisivel(page: Page) {
   await expect(page.getByRole("heading", { name: "Dados complementares" })).toHaveCount(0);
-  await expect(page.getByText("Aguardando confirmação da seguradora…")).toHaveCount(0);
+  await expect(page.getByText("Transmitindo sua proposta")).toHaveCount(0);
 }
 
 test.describe("Transmissão reabre no ponto certo (V12)", () => {
@@ -197,7 +197,7 @@ test.describe("Transmissão reabre no ponto certo (V12)", () => {
 
       await page.reload();
       await assertCalculoNuncaVisivel(page);
-      await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible({
+      await expect(page.getByText("Transmitindo sua proposta")).toBeVisible({
         timeout: 10_000,
       });
       await assertCalculoNuncaVisivel(page);
@@ -279,7 +279,7 @@ test.describe("Transmissão reabre no ponto certo (V12)", () => {
 
       await expect(page).toHaveURL(/\/venda\/novo-lead\?.*step=6/);
       await assertCalculoNuncaVisivel(page);
-      await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible({
+      await expect(page.getByText("Transmitindo sua proposta")).toBeVisible({
         timeout: 10_000,
       });
 

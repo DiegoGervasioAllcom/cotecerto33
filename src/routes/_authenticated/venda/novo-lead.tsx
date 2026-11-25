@@ -715,6 +715,7 @@ function Page() {
               enviando={enviandoProposta}
               erroEnvio={erroProposta}
               transmissaoEmAndamento={transmissaoEmAndamento !== null}
+              tentativaId={transmissaoEmAndamento?.tentativaId}
               resultadoTransmissao={resultadoTransmissao}
               onTransmitir={(dados, pagamento) => void onTransmitir(dados, pagamento)}
               onVoltarCalculo={() => {

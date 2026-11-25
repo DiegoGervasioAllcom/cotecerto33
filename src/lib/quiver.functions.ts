@@ -1306,7 +1306,7 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
           "x-client-key": clientKey,
           "x-client-secret": clientSecret,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, tentativaId }),
       });
     } catch {
       throw new Error("Não foi possível conectar à API de transmissão (Quiver).");
@@ -1334,6 +1334,17 @@ export const transmitirPropostaQuiver = createServerFn({ method: "POST" })
           ? `Transmissão rejeitada: ${data.pagamento ? ocultarNumerosLongos(mensagem) : mensagem}`
           : `Falha ao transmitir (HTTP ${res.status}).`,
       );
+    }
+
+    // Progresso inicial da tela "Transmitindo sua proposta" (best-effort).
+    try {
+      await admin.rpc("registrar_transmissao_etapa", {
+        p_tentativa_id: tentativaId,
+        p_etapa: "na_fila",
+        p_seq: 0,
+      });
+    } catch {
+      /* o progresso é informativo; não derruba a transmissão */
     }
 
     // O resultado real (transmitido: true/false, motivo, mensagem) chega

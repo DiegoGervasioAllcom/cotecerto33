@@ -1604,6 +1604,55 @@ export type Database = {
           },
         ];
       };
+      cotacao_transmissao_progresso: {
+        Row: {
+          atualizado_em: string;
+          cotacao_id: string;
+          erro: string | null;
+          etapa: string;
+          seq: number;
+          tentativa_id: string;
+        };
+        Insert: {
+          atualizado_em?: string;
+          cotacao_id: string;
+          erro?: string | null;
+          etapa: string;
+          seq: number;
+          tentativa_id: string;
+        };
+        Update: {
+          atualizado_em?: string;
+          cotacao_id?: string;
+          erro?: string | null;
+          etapa?: string;
+          seq?: number;
+          tentativa_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "cotacao_transmissao_progresso_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "cotacoes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cotacao_transmissao_progresso_cotacao_id_fkey";
+            columns: ["cotacao_id"];
+            isOneToOne: false;
+            referencedRelation: "pipeline_leads_etapa";
+            referencedColumns: ["cotacao_id"];
+          },
+          {
+            foreignKeyName: "cotacao_transmissao_progresso_tentativa_id_fkey";
+            columns: ["tentativa_id"];
+            isOneToOne: true;
+            referencedRelation: "cotacao_transmissoes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       cotacao_transmissoes: {
         Row: {
           capturado_em: string | null;
@@ -5911,6 +5960,15 @@ export type Database = {
           p_user_agent?: string;
         };
         Returns: string;
+      };
+      registrar_transmissao_etapa: {
+        Args: {
+          p_erro?: string;
+          p_etapa: string;
+          p_seq?: number;
+          p_tentativa_id: string;
+        };
+        Returns: boolean;
       };
       registrar_venda: {
         Args: { lead_id: string; observacao?: string; valor: number };
