@@ -151,7 +151,7 @@ async function gerarPropostaComTentativaReal(page: Page, fixture: CotacaoQuiverF
   // Modo "transmitindo": o passo Cálculo inteiro some, só sobra o painel de
   // espera (que mostra só a seguradora escolhida, Alfa — Beta não aparece
   // mais em lugar nenhum da tela).
-  await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible();
+  await expect(page.getByText("Transmitindo sua proposta")).toBeVisible();
   await expect(page.locator(".calc-lista")).toHaveCount(0);
   await expect(page.getByText(CARD_BETA.seguradora)).toHaveCount(0);
 
@@ -347,7 +347,7 @@ test.describe("Webhook de transmissão — StepCalculo reage ao resultado do rob
       await page.getByTitle(`Gerar proposta (${CARD_SO_PARCELADO.seguradora})`).click();
       await expect(page.getByRole("heading", { name: "Dados complementares" })).toBeVisible();
       await confirmarDadosComplementaresTransmissao(page);
-      await expect(page.getByText("Aguardando confirmação da seguradora…")).toBeVisible();
+      await expect(page.getByText("Transmitindo sua proposta")).toBeVisible();
       await page.unroute("**/_serverFn/**");
 
       // Em finalização: linha com status "enviada" antes do webhook — a

@@ -40,6 +40,7 @@ type Props = {
   enviando: boolean;
   erroEnvio: string | null;
   transmissaoEmAndamento: boolean;
+  tentativaId?: string | null;
   resultadoTransmissao: ResultadoTransmissaoEstado | null;
   onTransmitir: (dados: DadosComplementaresTransmissao, pagamento?: PagamentoTransmissao) => void;
   onVoltarCalculo: () => void;
@@ -66,6 +67,7 @@ export function StepTransmissao({
   enviando,
   erroEnvio,
   transmissaoEmAndamento,
+  tentativaId,
   resultadoTransmissao,
   onTransmitir,
   onVoltarCalculo,
@@ -161,6 +163,7 @@ export function StepTransmissao({
         resultado={resultadoTransmissao}
         tentarNovamente={tentarNovamente}
         f={f}
+        tentativaId={tentativaId}
       />
     );
   } else if (faseAtual === "confirmacao") {

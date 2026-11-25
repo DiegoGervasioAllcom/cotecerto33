@@ -6,6 +6,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { CALCULO_ETAPAS, CALCULO_ETAPA_SEQ } from "@/lib/calculo-etapas";
+import { transmissaoEtapaPayloadSchema } from "@/lib/transmissao-etapas";
 import { requestAutenticado } from "@/lib/webhook-auth";
 
 export const QUIVER_ETAPA_WEBHOOK_PATH = "/api/webhooks/quiver-etapa";
@@ -47,6 +48,26 @@ export async function handleQuiverEtapaWebhook(request: Request): Promise<Respon
     body = await request.json();
   } catch {
     return Response.json({ error: "JSON inválido." }, { status: 400 });
+  }
+
+  // Fluxo da transmissão: mesmo endpoint/segredo, distinguido por `fluxo`.
+  // Sem `fluxo` segue o caminho antigo (cálculo), intacto.
+  if (typeof body === "object" && body !== null && "fluxo" in body) {
+    const t = transmissaoEtapaPayloadSchema.safeParse(body);
+    if (!t.success) return Response.json({ error: "Payload inválido." }, { status: 400 });
+    const { data, error } = await getServiceClient().rpc("registrar_transmissao_etapa", {
+      p_tentativa_id: t.data.tentativaId,
+      p_etapa: t.data.etapa,
+      p_seq: t.data.seq,
+    });
+    if (error) {
+      console.error(
+        "[quiver-etapa-webhook] Falha ao registrar etapa da transmissão:",
+        error.message,
+      );
+      return Response.json({ error: "Falha ao registrar etapa." }, { status: 500 });
+    }
+    return Response.json({ aplicado: data === true });
   }
 
   const parsed = payloadSchema.safeParse(body);

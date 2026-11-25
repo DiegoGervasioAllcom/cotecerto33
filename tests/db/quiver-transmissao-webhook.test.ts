@@ -289,4 +289,45 @@ describe("webhook de transmissão Quiver — Onda 2 (endpoint HTTP)", () => {
       .single();
     expect(tentRecente?.status).toBe("transmitida");
   });
+
+  async function progresso(tentativaId: string) {
+    const { data } = await admin
+      .from("cotacao_transmissao_progresso")
+      .select("etapa, erro")
+      .eq("tentativa_id", tentativaId)
+      .maybeSingle();
+    return data;
+  }
+
+  it("resultado transmitido grava progresso 'concluido' sem erro", async () => {
+    const empresa = await criarEmpresa({ nome: uniq("Empresa Prog Ok") });
+    const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: empresa.id });
+    const cotacaoId = await criarCotacao(empresa.id, vendedor.userId);
+    const tentativaId = await criarTentativa(cotacaoId);
+    const res = await handleQuiverTransmissaoWebhook(
+      req({ cotacaoId, transmitido: true, numeroCotacao: "777666" }),
+    );
+    expect(res.status).toBe(200);
+    expect(await progresso(tentativaId)).toEqual({ etapa: "concluido", erro: null });
+  });
+
+  it("resultado com falha grava progresso 'erro' com a mensagem (números longos ocultados)", async () => {
+    const empresa = await criarEmpresa({ nome: uniq("Empresa Prog Erro") });
+    const vendedor = await criarPersonaComEmpresa("vendedor", { empresaId: empresa.id });
+    const cotacaoId = await criarCotacao(empresa.id, vendedor.userId);
+    const tentativaId = await criarTentativa(cotacaoId);
+    const res = await handleQuiverTransmissaoWebhook(
+      req({
+        cotacaoId,
+        transmitido: false,
+        motivo: "RECUSADA_PELO_PORTAL",
+        mensagem: "Portal recusou cartão 4111111111111111",
+      }),
+    );
+    expect(res.status).toBe(200);
+    const p = await progresso(tentativaId);
+    expect(p?.etapa).toBe("erro");
+    expect(p?.erro).toContain("Portal recusou");
+    expect(p?.erro).not.toContain("4111111111111111");
+  });
 });

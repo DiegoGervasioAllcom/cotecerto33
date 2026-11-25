@@ -1,7 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { Form } from "@/components/venda/novo-lead/types";
 import { SeguradoraBadge } from "@/components/venda/novo-lead/SeguradoraBadge";
+import { useTransmissaoProgresso } from "@/hooks/useTransmissaoProgresso";
 import { MOTIVO_SIMULACAO } from "@/lib/transmissao-simulacao";
+import { TransmissaoEspera } from "./TransmissaoEspera";
 import { TransmissaoTransmitidaCard } from "./TransmissaoTransmitidaCard";
 
 export type ResultadoTransmissaoEstado = {
@@ -16,6 +18,8 @@ type Props = {
   resultado: ResultadoTransmissaoEstado | null;
   tentarNovamente: () => void;
   f: Form;
+  /** Tentativa em aberto: alimenta os passos reais do robô. */
+  tentativaId?: string | null;
 };
 
 // Onda 3 (T.10): o resultado real (transmitido / recusado pelo portal) só
@@ -27,7 +31,14 @@ type Props = {
 // de `transmResultado()` do protótipo (`TransmissaoTransmitidaCard`), com os
 // dados persistidos da proposta. Os ramos `aguardando`/`falha` continuam
 // como estavam — nada de simular status aqui (V12.1.28).
-export function TransmissaoResultado({ seguradora, resultado, tentarNovamente, f }: Props) {
+export function TransmissaoResultado({
+  seguradora,
+  resultado,
+  tentarNovamente,
+  f,
+  tentativaId,
+}: Props) {
+  const progresso = useTransmissaoProgresso(resultado ? null : tentativaId);
   if (resultado?.status === "transmitida" && resultado.propostaId) {
     return <TransmissaoTransmitidaCard propostaId={resultado.propostaId} f={f} />;
   }
@@ -38,17 +49,7 @@ export function TransmissaoResultado({ seguradora, resultado, tentarNovamente, f
         <SeguradoraBadge nome={seguradora} tam="sm" /> {seguradora}
       </div>
 
-      {!resultado && (
-        <>
-          <svg width="28" height="28" className="pulse" style={{ margin: "0 auto 12px" }}>
-            <use href="#i-clock" />
-          </svg>
-          <div>Aguardando confirmação da seguradora…</div>
-          <div className="sub" style={{ marginTop: 4 }}>
-            O robô já enviou a proposta ao portal — o resultado costuma chegar em instantes.
-          </div>
-        </>
-      )}
+      {!resultado && <TransmissaoEspera v={progresso} />}
 
       {resultado?.status === "transmitida" && !resultado.propostaId && (
         <>
